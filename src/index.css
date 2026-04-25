@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Newsreader:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-background: #050505;
+  --color-on-background: #e0e0e0;
+  
+  --color-surface: #050505;
+  --color-surface-dim: #09090b;
+  --color-surface-bright: #27272a;
+  --color-surface-container-lowest: #000000;
+  --color-surface-container-low: #09090b;
+  --color-surface-container: #18181b;
+  --color-surface-container-high: #27272a;
+  --color-surface-container-highest: #3f3f46;
+  --color-surface-variant: #27272a;
+  
+  --color-glass: rgba(11,17,33,0.92);
+  
+  --color-on-surface: #e0e0e0;
+  --color-on-surface-variant: #a1a1aa;
+  
+  --color-primary: #f59e0b;
+  --color-on-primary: #050505;
+  --color-primary-container: #78350f;
+  --color-on-primary-container: #fde68a;
+  --color-primary-fixed: #fcd34d;
+  --color-primary-fixed-dim: #fbbf24;
+  --color-on-primary-fixed: #451a03;
+  --color-on-primary-fixed-variant: #78350f;
+
+  --color-secondary: #a1a1aa;
+  --color-on-secondary: #18181b;
+  --color-secondary-container: #3f3f46;
+  --color-on-secondary-container: #e4e4e7;
+  
+  --color-outline: #52525b;
+  --color-outline-variant: #27272a;
+
+  --color-warning: #f59e0b;
+  --color-warning-on-container: #451a03;
+  --color-warning-bg: rgba(245, 158, 11, 0.15);
+  
+  --font-sans: 'Be Vietnam Pro', sans-serif;
+  --font-serif: 'Newsreader', serif;
+  
+  --spacing-container: 16px;
+  --spacing-unit: 8px;
+  --spacing-gutter: 16px;
+  --spacing-reading-max: 680px;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+}
+
+@layer utilities {
+  .pb-safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 1.5rem);
+  }
+}
+
+body {
+  @apply bg-background text-on-background font-sans text-sm antialiased;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
