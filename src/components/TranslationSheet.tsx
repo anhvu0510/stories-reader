@@ -83,10 +83,10 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={onClose} />
       
       {/* Sheet Content */}
-      <div className="relative bg-surface-container text-on-surface w-full max-w-reading-max-width mx-auto rounded-t-3xl sm:rounded-2xl max-h-[90vh] h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.3)] z-10 overflow-hidden border-t sm:border border-outline-variant/30">
+      <div className="relative bg-surface-container text-on-surface w-full max-w-[680px] mx-auto rounded-t-3xl sm:rounded-2xl max-h-[90vh] h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.3)] z-10 overflow-hidden border-t sm:border border-outline-variant/30">
         
         {/* Drag Handle & Header */}
         <div className="flex-shrink-0 pt-3 px-4 sm:px-5 pb-3 border-b border-outline-variant/10">

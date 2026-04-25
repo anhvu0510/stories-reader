@@ -164,7 +164,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
         "fixed inset-0 z-[100] flex justify-end transition-opacity duration-300",
         showChapterDrawer ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
       )}>
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowChapterDrawer(false)} />
+        <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={() => setShowChapterDrawer(false)} />
         <div className={cn(
           "w-[85%] max-w-sm bg-surface-container h-full relative flex flex-col shadow-2xl transition-transform duration-300",
           showChapterDrawer ? "translate-x-0" : "translate-x-full"
