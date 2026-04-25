@@ -207,50 +207,71 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
 
       {/* Bottom Controls Overlay */}
       <nav className={cn(
-        "fixed bottom-0 left-0 w-full z-50 bg-[var(--color-glass)] backdrop-blur-[16px] border-t border-surface-variant transition-transform duration-300 pb-safe-bottom text-on-surface",
+        "fixed bottom-0 left-0 w-full z-50 transition-transform duration-300 pointer-events-none pb-safe-bottom",
         showControls ? "translate-y-0" : "translate-y-full"
       )}>
-        <div className="flex justify-between sm:justify-center gap-1 sm:gap-6 px-4 py-3 sm:py-3 items-center shadow-[0_-8px_32px_rgba(0,0,0,0.1)] max-w-reading-max-width mx-auto">
-           <button 
+        <div className="flex justify-between sm:justify-center gap-1 sm:gap-6 px-4 py-1.5 sm:py-2 items-center bg-[#18181b]/90 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.5)] border-t border-white/10 pointer-events-auto">
+          <button 
             disabled={!content.navigation?.prev?.chapterId}
             onClick={() => content.navigation?.prev?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.prev.chapterId })}
-            className="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors p-2 group disabled:opacity-30 disabled:hover:text-current flex-shrink-0 flex-1 sm:flex-none"
+            className="flex flex-col items-center justify-center text-on-surface-variant/80 hover:text-on-surface active:scale-90 transition-all duration-300 p-1.5 group disabled:opacity-30 disabled:active:scale-100 disabled:hover:text-on-surface-variant flex-1 sm:flex-none rounded-xl hover:bg-white/5"
           >
-             <ChevronLeft size={24} className="group-hover:-translate-x-1 transition-transform sm:w-6 sm:h-6 mb-1" />
-             <span className="text-[10px] font-medium hidden sm:block">Chương trước</span>
+             <ChevronLeft size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:-translate-x-1 group-active:-translate-x-2 transition-transform duration-300 text-on-surface" />
+             <span className="text-[10px] font-medium tracking-wide">Trước</span>
           </button>
+
+          <div className="w-[1px] h-5 bg-white/10 hidden sm:block mx-1"></div>
 
           <button 
             onClick={() => { setShowTranslation(true); setShowControls(false); }}
-            className="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors p-2 flex-shrink-0 flex-1 sm:flex-none"
+            className="flex flex-col items-center justify-center text-on-surface-variant/80 hover:text-on-surface active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl hover:bg-white/5 relative group"
           >
-             <Languages size={24} className="sm:w-6 sm:h-6 mb-1" />
-             <span className="text-[10px] font-medium hidden sm:block">Dịch</span>
+             <div className="relative mb-1 group-hover:-translate-y-0.5 transition-transform duration-300">
+               <Languages size={20} className="sm:w-5 sm:h-5 text-on-surface" />
+             </div>
+             <span className="text-[10px] font-medium tracking-wide">Dịch</span>
           </button>
+
+          <div className="w-[1px] h-5 bg-white/10 hidden sm:block mx-1"></div>
 
           <button 
             onClick={() => { setShowEditWord(true); setShowControls(false); }}
-            className={`flex flex-col items-center justify-center transition-colors p-2 flex-shrink-0 flex-1 sm:flex-none ${selectedText ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
+            className={cn(
+              "flex flex-col items-center justify-center active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl relative group",
+              selectedText ? "text-primary hover:bg-primary/10" : "text-on-surface-variant/80 hover:text-on-surface hover:bg-white/5"
+            )}
           >
-             <Edit3 size={24} className="sm:w-6 sm:h-6 mb-1" />
-             <span className="text-[10px] font-medium hidden sm:block">Từ thay thế</span>
+             <div className="relative mb-1 group-hover:-translate-y-0.5 transition-transform duration-300">
+               <Edit3 size={20} className={cn("sm:w-5 sm:h-5", selectedText ? "text-primary" : "text-on-surface")} />
+               {selectedText && (
+                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full animate-ping opacity-75"></span>
+               )}
+               {selectedText && (
+                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border border-[#18181b]"></span>
+               )}
+             </div>
+             <span className={cn("text-[10px] font-medium tracking-wide", selectedText && "text-primary/90")}>Thay thế</span>
           </button>
           
+          <div className="w-[1px] h-5 bg-white/10 hidden sm:block mx-1"></div>
+
           <button 
              onClick={() => { setShowSettings(true); setShowControls(false); }}
-            className="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors p-2 flex-shrink-0 flex-1 sm:flex-none"
+            className="flex flex-col items-center justify-center text-on-surface-variant/80 hover:text-on-surface active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl hover:bg-white/5 group"
           >
-             <Type size={24} className="sm:w-6 sm:h-6 mb-1" />
-             <span className="text-[10px] font-medium hidden sm:block">Cài đặt</span>
+             <Type size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:-translate-y-0.5 transition-transform duration-300 text-on-surface" />
+             <span className="text-[10px] font-medium tracking-wide">Cài đặt</span>
           </button>
           
+          <div className="w-[1px] h-5 bg-white/10 hidden sm:block mx-1"></div>
+
           <button 
             disabled={!content.navigation?.next?.chapterId}
             onClick={() => content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId })}
-            className="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors p-2 group disabled:opacity-30 disabled:hover:text-current flex-shrink-0 flex-1 sm:flex-none"
+            className="flex flex-col items-center justify-center text-on-surface-variant/80 hover:text-on-surface active:scale-90 transition-all duration-300 p-1.5 group disabled:opacity-30 disabled:active:scale-100 disabled:hover:text-on-surface-variant flex-1 sm:flex-none rounded-xl hover:bg-white/5"
           >
-             <ChevronRight size={24} className="group-hover:translate-x-1 transition-transform sm:w-6 sm:h-6 mb-1" />
-             <span className="text-[10px] font-medium hidden sm:block">Chương sau</span>
+             <ChevronRight size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:translate-x-1 group-active:translate-x-2 transition-transform duration-300 text-on-surface" />
+             <span className="text-[10px] font-medium tracking-wide">Sau</span>
           </button>
         </div>
       </nav>
