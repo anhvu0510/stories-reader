@@ -15,6 +15,8 @@ interface ReaderContextType {
   setLineHeight: (l: number) => void;
   groupLines: number;
   setGroupLines: (g: number) => void;
+  isEnabledReplace: boolean;
+  setIsEnabledReplace: (e: boolean) => void;
 }
 
 const ReaderContext = createContext<ReaderContextType | undefined>(undefined);
@@ -25,6 +27,7 @@ interface ReaderConfig {
   fontSize: number;
   lineHeight: number;
   groupLines: number;
+  isEnabledReplace: boolean;
 }
 
 const SETTINGS_KEY = 'stories.ui.config';
@@ -34,7 +37,8 @@ const defaultSettings: ReaderConfig = {
   font: 'default',
   fontSize: 20,
   lineHeight: 1.4,
-  groupLines: 1
+  groupLines: 1,
+  isEnabledReplace: true
 };
 
 function getInitialSettings(): ReaderConfig {
@@ -100,6 +104,7 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
   const setFontSize = (s: number) => updateSetting('fontSize', s);
   const setLineHeight = (l: number) => updateSetting('lineHeight', l);
   const setGroupLines = (g: number) => updateSetting('groupLines', g);
+  const setIsEnabledReplace = (e: boolean) => updateSetting('isEnabledReplace', e);
 
   return (
     <ReaderContext.Provider
@@ -108,7 +113,8 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
         font: settings.font, setFont,
         fontSize: settings.fontSize, setFontSize,
         lineHeight: settings.lineHeight, setLineHeight,
-        groupLines: settings.groupLines, setGroupLines
+        groupLines: settings.groupLines, setGroupLines,
+        isEnabledReplace: settings.isEnabledReplace, setIsEnabledReplace
       }}
     >
       {children}

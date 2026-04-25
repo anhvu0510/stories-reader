@@ -22,20 +22,27 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
   const [showControls, setShowControls] = useState(true);
   const [selectedText, setSelectedText] = useState('');
   const [isLoadingContent, setIsLoadingContent] = useState(false);
-  const { theme, font, fontSize, lineHeight, groupLines } = useReaderSettings();
+  const { theme, font, fontSize, lineHeight, groupLines, isEnabledReplace } = useReaderSettings();
   
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Keep track of the last loaded chapter to avoid scrolling to top on toggle
+  const [lastChapterId, setLastChapterId] = useState<string | null>(null);
+
   useEffect(() => {
     setIsLoadingContent(true);
-    api.getChapterContent(chapterId, groupLines).then(res => {
+    api.getChapterContent(chapterId, groupLines, isEnabledReplace).then(res => {
       setContent(res);
       setIsLoadingContent(false);
-      window.scrollTo(0, 0);
+      
+      if (lastChapterId !== chapterId) {
+        window.scrollTo(0, 0);
+        setLastChapterId(chapterId);
+      }
     }).catch(() => {
       setIsLoadingContent(false);
     });
-  }, [chapterId, groupLines]);
+  }, [chapterId, groupLines, isEnabledReplace]);
 
   const loadMoreChapters = async (pageToLoad: number) => {
     if (isLoadingChapters || !hasMoreChapters) return;
@@ -59,17 +66,25 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
 
   useEffect(() => {
     const handleSelection = () => {
-      const selection = window.getSelection();
-      if (selection && selection.toString().trim()) {
-        setSelectedText(selection.toString().trim());
-        setShowControls(true); // Auto show controls when text is selected
-      } else {
-        setSelectedText('');
-      }
+      // Delay slightly to ensure selection is registered
+      setTimeout(() => {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim()) {
+          setSelectedText(selection.toString().trim());
+          setShowControls(true); // Auto show controls when text is selected
+        } else {
+          setSelectedText('');
+        }
+      }, 50);
     };
 
-    document.addEventListener('selectionchange', handleSelection);
-    return () => document.removeEventListener('selectionchange', handleSelection);
+    document.addEventListener('mouseup', handleSelection);
+    document.addEventListener('touchend', handleSelection);
+    
+    return () => {
+      document.removeEventListener('mouseup', handleSelection);
+      document.removeEventListener('touchend', handleSelection);
+    };
   }, []);
 
   // Click outside to toggle controls

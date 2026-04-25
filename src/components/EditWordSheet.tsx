@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter } from 'lucide-react';
 import { api, Replacement } from '../lib/api';
+import { useReaderSettings } from '../contexts/ReaderContext';
 
 type RealScope = 'chapter' | 'book' | 'global';
 
@@ -12,10 +13,10 @@ interface EditWordSheetProps {
 }
 
 export function EditWordSheet({ onClose, initialMatch = '', currentBookId, currentChapterId }: EditWordSheetProps) {
+  const { isEnabledReplace, setIsEnabledReplace } = useReaderSettings();
   const [replacements, setReplacements] = useState<Replacement[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterScope, setFilterScope] = useState<RealScope | 'all'>('all');
-  const [isEnabled, setIsEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
 
   // Form state
@@ -135,8 +136,8 @@ export function EditWordSheet({ onClose, initialMatch = '', currentBookId, curre
                 <input 
                   type="checkbox" 
                   className="sr-only peer" 
-                  checked={isEnabled}
-                  onChange={(e) => setIsEnabled(e.target.checked)}
+                  checked={isEnabledReplace}
+                  onChange={(e) => setIsEnabledReplace(e.target.checked)}
                 />
                 <div className="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#1a1a1a] after:border-black after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-black"></div>
               </label>

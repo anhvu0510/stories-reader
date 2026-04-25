@@ -256,9 +256,9 @@ export const api = {
     }
   },
 
-  getChapterContent: async (chapterId: string, groupLines: number = 1): Promise<ChapterContent> => {
+  getChapterContent: async (chapterId: string, groupLines: number = 1, isEnabledReplace: boolean = true): Promise<ChapterContent> => {
     try {
-      const res = await fetchWithRetry(`/api/chapters/${chapterId}?groupLines=${groupLines}`);
+      const res = await fetchWithRetry(`/api/chapters/${chapterId}?groupLines=${groupLines}&isEnabledReplace=${isEnabledReplace}`);
       return await res.json();
     } catch (e: any) {
       if (e.message === 'API_DOMAIN_NOT_SET') {
