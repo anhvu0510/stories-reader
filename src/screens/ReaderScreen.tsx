@@ -97,20 +97,14 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
 
   // Calculate dynamic styles based on settings
   const containerStyle = {
-    backgroundColor: theme === 'amoled' ? '#000000' : theme === 'midnight' ? '#0f172a' : theme === 'obsidian' ? '#0d0d12' : theme === 'coffee' ? '#1c1814' : '#1e1e1e',
-    color: theme === 'amoled' ? '#8a8a8e' : theme === 'midnight' ? '#cbd5e1' : theme === 'obsidian' ? '#a1a1aa' : theme === 'coffee' ? '#d7c4b4' : '#d4d4d4',
     fontFamily: font === 'palatino' ? '"Palatino Linotype", "Book Antiqua", Palatino, serif' : 
                 font === 'bookerly' ? 'Bookerly, serif' : 
                 font === 'minhphung' ? '"Minh Phung", sans-serif' : 'var(--font-sans)',
   };
 
   useEffect(() => {
-    document.body.style.backgroundColor = containerStyle.backgroundColor;
-    
-    return () => {
-      document.body.style.backgroundColor = '';
-    };
-  }, [containerStyle.backgroundColor]);
+    // Colors are now handled globally via CSS variables and data-theme
+  }, []);
 
   if (!content) {
     return <div className="min-h-screen flex items-center justify-center bg-background text-on-surface">Đang tải nội dung...</div>;
@@ -124,11 +118,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
         aria-hidden="true"
         className={cn(
           "fixed top-0 left-0 w-full z-40 backdrop-blur-[16px] border-b transition-transform duration-300 translate-y-0 text-inherit",
-          theme === 'amoled' ? 'bg-[#000000]/90 border-white/5' :
-          theme === 'midnight' ? 'bg-[#0f172a]/90 border-white/5' :
-          theme === 'obsidian' ? 'bg-[#0d0d12]/90 border-white/5' :
-          theme === 'coffee' ? 'bg-[#1c1814]/90 border-white/5' :
-          'bg-[#1e1e1e]/90 border-white/10'
+          "bg-background/90 border-outline-variant/50"
         )}
       >
         <div className="max-w-reading-max-width mx-auto w-full px-4 sm:px-8 py-2 sm:py-4 flex justify-between items-center h-16">
@@ -267,11 +257,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
         className={cn(
           "fixed bottom-0 left-0 w-full z-50 transition-transform duration-300 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.1)] border-t pb-safe-bottom text-inherit",
           showControls ? "translate-y-0" : "translate-y-full",
-          theme === 'amoled' ? 'bg-[#000000]/95 border-white/5' :
-          theme === 'midnight' ? 'bg-[#0f172a]/95 border-white/5' :
-          theme === 'obsidian' ? 'bg-[#0d0d12]/95 border-white/5' :
-          theme === 'coffee' ? 'bg-[#1c1814]/95 border-white/5' :
-          'bg-[#1e1e1e]/95 border-white/10'
+          "bg-background/95 border-outline-variant/50"
         )}
       >
         <div className="flex justify-between sm:justify-center gap-1 sm:gap-6 px-4 py-1.5 sm:py-2 items-center opacity-90 max-w-reading-max-width mx-auto">

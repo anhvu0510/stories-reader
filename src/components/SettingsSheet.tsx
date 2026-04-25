@@ -11,7 +11,7 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
       
       {/* Sheet Content */}
-      <div className="relative bg-background text-on-background w-full max-w-reading-max-width rounded-t-3xl sm:rounded-2xl max-h-[90vh] overflow-y-auto hide-scrollbar shadow-2xl z-10 p-5 sm:p-6 flex flex-col gap-6 pb-safe">
+      <div className="relative bg-surface-container text-on-surface w-full max-w-reading-max-width rounded-t-3xl sm:rounded-2xl max-h-[90vh] overflow-y-auto hide-scrollbar shadow-[0_-10px_40px_rgba(0,0,0,0.3)] z-10 p-5 sm:p-6 flex flex-col gap-6 pb-safe border-t sm:border border-outline-variant/30">
         
         {/* Mobile drag handle */}
         <div className="w-12 h-1.5 bg-outline-variant/40 rounded-full mx-auto mb-2 sm:hidden" />

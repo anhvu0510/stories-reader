@@ -85,6 +85,10 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', settings.theme);
+  }, [settings.theme]);
+
   const updateSetting = (key: keyof ReaderConfig, value: any) => {
     setSettings(prev => {
       const next = { ...prev, [key]: value };

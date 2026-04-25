@@ -121,7 +121,7 @@ export function EditWordSheet({ onClose, initialMatch = '', currentBookId, curre
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity" onClick={onClose} />
       
       {/* Sheet Content */}
-      <div className="relative bg-background text-on-background w-full max-w-reading-max-width mx-auto rounded-t-3xl sm:rounded-2xl max-h-[90vh] h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-2xl z-10 overflow-hidden border-t sm:border border-outline-variant/20">
+      <div className="relative bg-surface-container text-on-surface w-full max-w-reading-max-width mx-auto rounded-t-3xl sm:rounded-2xl max-h-[90vh] h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.3)] z-10 overflow-hidden border-t sm:border border-outline-variant/30">
         
         {/* Drag Handle & Header */}
         <div className="flex-shrink-0 pt-3 px-5 pb-4 border-b border-outline-variant/10">
@@ -152,7 +152,7 @@ export function EditWordSheet({ onClose, initialMatch = '', currentBookId, curre
         <div className="flex-1 overflow-y-auto hide-scrollbar flex flex-col">
           
           {/* Add/Edit Form Fixed at Top of Scrollable area */}
-          <div className="p-4 sm:p-5 border-b border-outline-variant/10 sticky top-0 z-10 flex flex-col gap-3 bg-background">
+          <div className="p-4 sm:p-5 border-b border-outline-variant/10 sticky top-0 z-10 flex flex-col gap-3 bg-surface-container">
             <h3 className="text-[10px] sm:text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{editingId ? 'Sửa từ' : 'Thêm từ mới'}</h3>
             <div className="flex flex-col gap-3">
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-center">

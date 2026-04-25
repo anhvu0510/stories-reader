@@ -1,45 +1,162 @@
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Newsreader:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+:root, [data-theme="default"] {
+  --bg: #1e1e1e;
+  --on-bg: #d4d4d4;
+  
+  --surface: #1e1e1e;
+  --surface-dim: #121212;
+  --surface-bright: #2d2d2d;
+  --surface-container-lowest: #0a0a0a;
+  --surface-container-low: #121212;
+  --surface-container: #1e1e1e;
+  --surface-container-high: #2d2d2d;
+  --surface-container-highest: #3d3d3d;
+  --surface-variant: #2d2d2d;
+  
+  --glass: rgba(30,30,30,0.92);
+  
+  --on-surface: #d4d4d4;
+  --on-surface-variant: #9e9e9e;
+  
+  --primary: #f59e0b;
+  --on-primary: #050505;
+  --primary-container: #78350f;
+  --on-primary-container: #fde68a;
+  --primary-fixed: #fcd34d;
+  --primary-fixed-dim: #fbbf24;
+  --on-primary-fixed: #451a03;
+  --on-primary-fixed-variant: #78350f;
+
+  --secondary: #a1a1aa;
+  --on-secondary: #18181b;
+  --secondary-container: #3f3f46;
+  --on-secondary-container: #e4e4e7;
+  
+  --outline: #52525b;
+  --outline-variant: #3d3d3d;
+
+  --warning: #f59e0b;
+  --warning-on-container: #451a03;
+  --warning-bg: rgba(245, 158, 11, 0.15);
+}
+
+[data-theme="amoled"] {
+  --bg: #000000;
+  --on-bg: #8a8a8e;
+  --surface: #000000;
+  --surface-dim: #000000;
+  --surface-bright: #111111;
+  --surface-container-lowest: #000000;
+  --surface-container-low: #050505;
+  --surface-container: #0a0a0a;
+  --surface-container-high: #141414;
+  --surface-container-highest: #1f1f1f;
+  --surface-variant: #1a1a1a;
+  --glass: rgba(0,0,0,0.92);
+  --on-surface: #8a8a8e;
+  --on-surface-variant: #6b6b6e;
+  --outline: #333333;
+  --outline-variant: #1a1a1a;
+}
+
+[data-theme="midnight"] {
+  --bg: #0f172a;
+  --on-bg: #cbd5e1;
+  --surface: #0f172a;
+  --surface-dim: #020617;
+  --surface-bright: #1e293b;
+  --surface-container-lowest: #020617;
+  --surface-container-low: #0b1120;
+  --surface-container: #0f172a;
+  --surface-container-high: #1e293b;
+  --surface-container-highest: #334155;
+  --surface-variant: #1e293b;
+  --glass: rgba(15,23,42,0.92);
+  --on-surface: #cbd5e1;
+  --on-surface-variant: #94a3b8;
+  --outline: #475569;
+  --outline-variant: #1e293b;
+}
+
+[data-theme="obsidian"] {
+  --bg: #0d0d12;
+  --on-bg: #a1a1aa;
+  --surface: #0d0d12;
+  --surface-dim: #050508;
+  --surface-bright: #1c1c24;
+  --surface-container-lowest: #000000;
+  --surface-container-low: #0a0a0e;
+  --surface-container: #0d0d12;
+  --surface-container-high: #1c1c24;
+  --surface-container-highest: #272733;
+  --surface-variant: #1c1c24;
+  --glass: rgba(13,13,18,0.92);
+  --on-surface: #a1a1aa;
+  --on-surface-variant: #71717a;
+  --outline: #3f3f46;
+  --outline-variant: #1c1c24;
+}
+
+[data-theme="coffee"] {
+  --bg: #1c1814;
+  --on-bg: #d7c4b4;
+  --surface: #1c1814;
+  --surface-dim: #120f0c;
+  --surface-bright: #2e2822;
+  --surface-container-lowest: #090706;
+  --surface-container-low: #14110f;
+  --surface-container: #1c1814;
+  --surface-container-high: #2e2822;
+  --surface-container-highest: #453c33;
+  --surface-variant: #3b332b;
+  --glass: rgba(28,24,20,0.92);
+  --on-surface: #d7c4b4;
+  --on-surface-variant: #a38d7a;
+  --outline: #5c4f42;
+  --outline-variant: #3b332b;
+}
+
 @theme {
-  --color-background: #050505;
-  --color-on-background: #e0e0e0;
+  --color-background: var(--bg);
+  --color-on-background: var(--on-bg);
   
-  --color-surface: #050505;
-  --color-surface-dim: #09090b;
-  --color-surface-bright: #27272a;
-  --color-surface-container-lowest: #000000;
-  --color-surface-container-low: #09090b;
-  --color-surface-container: #18181b;
-  --color-surface-container-high: #27272a;
-  --color-surface-container-highest: #3f3f46;
-  --color-surface-variant: #27272a;
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-surface-variant: var(--surface-variant);
   
-  --color-glass: rgba(11,17,33,0.92);
+  --color-glass: var(--glass);
   
-  --color-on-surface: #e0e0e0;
-  --color-on-surface-variant: #a1a1aa;
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
   
-  --color-primary: #f59e0b;
-  --color-on-primary: #050505;
-  --color-primary-container: #78350f;
-  --color-on-primary-container: #fde68a;
-  --color-primary-fixed: #fcd34d;
-  --color-primary-fixed-dim: #fbbf24;
-  --color-on-primary-fixed: #451a03;
-  --color-on-primary-fixed-variant: #78350f;
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-primary-fixed: var(--primary-fixed);
+  --color-primary-fixed-dim: var(--primary-fixed-dim);
+  --color-on-primary-fixed: var(--on-primary-fixed);
+  --color-on-primary-fixed-variant: var(--on-primary-fixed-variant);
 
-  --color-secondary: #a1a1aa;
-  --color-on-secondary: #18181b;
-  --color-secondary-container: #3f3f46;
-  --color-on-secondary-container: #e4e4e7;
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--on-secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
   
-  --color-outline: #52525b;
-  --color-outline-variant: #27272a;
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
 
-  --color-warning: #f59e0b;
-  --color-warning-on-container: #451a03;
-  --color-warning-bg: rgba(245, 158, 11, 0.15);
+  --color-warning: var(--warning);
+  --color-warning-on-container: var(--warning-on-container);
+  --color-warning-bg: var(--warning-bg);
   
   --font-sans: 'Be Vietnam Pro', sans-serif;
   --font-serif: 'Newsreader', serif;
@@ -54,12 +171,6 @@
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
 }
-
-/* @layer utilities {
-  .pb-safe-bottom {
-    padding-bottom: max(env(safe-area-inset-bottom), 1.5rem);
-  }
-} */
 
 body {
   @apply bg-background text-on-background font-sans text-sm antialiased;
