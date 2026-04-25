@@ -1,42 +1,46 @@
 import React from 'react';
-import { X, Check, AlignJustify, AlignCenter, AlignLeft, AlignRight } from 'lucide-react';
+import { X, Check, AlignJustify, AlignCenter, AlignLeft, AlignRight, Layers } from 'lucide-react';
 import { useReaderSettings, ThemeType, FontType } from '../contexts/ReaderContext';
 
 export function SettingsSheet({ onClose }: { onClose: () => void }) {
-  const { theme, setTheme, font, setFont, fontSize, setFontSize, lineHeight, setLineHeight, textAlign, setTextAlign } = useReaderSettings();
+  const { theme, setTheme, font, setFont, fontSize, setFontSize, lineHeight, setLineHeight, groupLines, setGroupLines } = useReaderSettings();
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4">
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
       
       {/* Sheet Content */}
-      <div className="relative bg-background text-on-background w-full max-w-reading-max-width rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto hide-scrollbar shadow-xl border border-surface-variant z-10 p-6 flex flex-col gap-6 pb-auto">
+      <div className="relative bg-background text-on-background w-full max-w-reading-max-width rounded-t-3xl sm:rounded-2xl max-h-[90vh] overflow-y-auto hide-scrollbar shadow-2xl z-10 p-5 sm:p-6 flex flex-col gap-6 pb-safe">
         
+        {/* Mobile drag handle */}
+        <div className="w-12 h-1.5 bg-outline-variant/40 rounded-full mx-auto mb-2 sm:hidden" />
+
         <header className="flex justify-between items-center -mt-2">
           <div>
-            <h1 className="font-headline-md text-on-surface">Cài đặt giao diện đọc</h1>
+            <h1 className="text-lg font-bold text-on-surface">Cài đặt giao diện</h1>
           </div>
-          <button onClick={onClose} className="p-2 bg-surface-container rounded-full text-on-surface-variant hover:text-on-surface">
+          <button onClick={onClose} className="p-2 bg-surface-container-high rounded-full text-on-surface-variant hover:text-on-surface active:scale-95 transition-all">
              <X size={20} />
           </button>
         </header>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <section className="flex flex-col gap-3">
-            <h2 className="font-label-sm text-on-surface-variant uppercase tracking-widest">Màu nền</h2>
-            <div className="grid grid-cols-4 gap-2 sm:gap-4">
+            <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Màu nền</h2>
+            <div className="grid grid-cols-5 gap-2">
               <ThemeButton currentTheme={theme} targetTheme="default" bg="bg-[#1e1e1e]" ringColor="ring-primary" checkColor="text-white" label="Mặc định" onClick={() => setTheme('default')} />
-              <ThemeButton currentTheme={theme} targetTheme="light" bg="bg-white" ringColor="ring-gray-300" checkColor="text-gray-900" label="Sáng" onClick={() => setTheme('light')} />
-              <ThemeButton currentTheme={theme} targetTheme="paper" bg="bg-[#f4ecd8]" ringColor="ring-[#5c4d3c]" checkColor="text-[#5c4d3c]" label="Giấy" onClick={() => setTheme('paper')} />
-              <ThemeButton currentTheme={theme} targetTheme="dark" bg="bg-[#050505]" ringColor="ring-gray-400" checkColor="text-white" label="Tối" onClick={() => setTheme('dark')} />
+              <ThemeButton currentTheme={theme} targetTheme="amoled" bg="bg-[#000000]" ringColor="ring-gray-500" checkColor="text-[#8a8a8e]" label="Amoled" onClick={() => setTheme('amoled')} />
+              <ThemeButton currentTheme={theme} targetTheme="midnight" bg="bg-[#0f172a]" ringColor="ring-blue-500" checkColor="text-[#cbd5e1]" label="Midnight" onClick={() => setTheme('midnight')} />
+              <ThemeButton currentTheme={theme} targetTheme="obsidian" bg="bg-[#0d0d12]" ringColor="ring-purple-500" checkColor="text-[#a1a1aa]" label="Obsidian" onClick={() => setTheme('obsidian')} />
+              <ThemeButton currentTheme={theme} targetTheme="coffee" bg="bg-[#1c1814]" ringColor="ring-orange-900" checkColor="text-[#d7c4b4]" label="Coffee" onClick={() => setTheme('coffee')} />
             </div>
           </section>
 
-          <section className="flex flex-col gap-2">
-            <h2 className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest">Phông chữ</h2>
-            <div className="flex flex-col gap-1.5 sm:gap-2">
-              <FontButton currentFont={font} targetFont="palatino" label="Palatino Linotype" onClick={() => setFont('palatino')} fontFamily="font-serif" />
+          <section className="flex flex-col gap-3">
+            <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Phông chữ</h2>
+            <div className="grid grid-cols-2 gap-2">
+              <FontButton currentFont={font} targetFont="palatino" label="Palatino" onClick={() => setFont('palatino')} fontFamily="font-serif" />
               <FontButton currentFont={font} targetFont="bookerly" label="Bookerly" onClick={() => setFont('bookerly')} fontFamily="font-serif" />
               <FontButton currentFont={font} targetFont="minhphung" label="Minh Phụng" onClick={() => setFont('minhphung')} fontFamily="font-sans" />
               <FontButton currentFont={font} targetFont="default" label="Mặc định" onClick={() => setFont('default')} fontFamily="font-sans" />
@@ -44,33 +48,33 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
           </section>
         </div>
 
-        <section className="flex flex-col gap-5 sm:gap-6 bg-surface-container rounded-xl p-4 sm:p-6 border border-outline-variant/30 pb-safe">
+        <section className="flex flex-col gap-5 sm:gap-6 bg-surface-container rounded-2xl p-5 border border-outline-variant/30">
           <div className="flex flex-col gap-3">
             <div className="flex justify-between items-center">
-              <h2 className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest">Cỡ chữ</h2>
-              <span className="text-xs font-semibold text-primary">{fontSize}px</span>
+              <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Cỡ chữ</h2>
+              <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">{fontSize}px</span>
             </div>
-            <div className="flex items-center gap-3 sm:gap-4">
-              <button onClick={() => setFontSize(Math.max(12, fontSize - 1))} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface hover:bg-surface-bright active:scale-95 transition-all text-sm font-bold flex-shrink-0">
+            <div className="flex items-center gap-4">
+              <button onClick={() => setFontSize(Math.max(12, fontSize - 1))} className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface hover:bg-surface-bright active:scale-95 transition-all text-sm font-bold flex-shrink-0">
                 A-
               </button>
               <input 
                 type="range" min="14" max="32" step="1" 
                 value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))}
-                className="flex-1 accent-primary bg-surface-container-highest h-1 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full cursor-pointer"
+                className="flex-1 accent-primary h-1.5 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full cursor-pointer bg-surface-container-highest"
               />
-              <button onClick={() => setFontSize(Math.min(32, fontSize + 1))} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface hover:bg-surface-bright active:scale-95 transition-all text-sm font-bold flex-shrink-0">
+              <button onClick={() => setFontSize(Math.min(32, fontSize + 1))} className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface hover:bg-surface-bright active:scale-95 transition-all text-sm font-bold flex-shrink-0">
                 A+
               </button>
             </div>
           </div>
 
-          <hr className="border-outline-variant/20 -mx-4 sm:-mx-6" />
+          <hr className="border-outline-variant/10 -mx-5" />
 
-          <div className="grid grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 gap-5">
             <div className="flex flex-col gap-3">
-              <h2 className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest">Giãn dòng</h2>
-              <div className="flex bg-surface-container-highest rounded-lg p-1">
+              <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Giãn dòng</h2>
+              <div className="flex bg-surface-container-highest rounded-xl p-1 gap-1">
                 <OptionButton active={lineHeight === 1.2} onClick={() => setLineHeight(1.2)}>1.2</OptionButton>
                 <OptionButton active={lineHeight === 1.4} onClick={() => setLineHeight(1.4)}>1.4</OptionButton>
                 <OptionButton active={lineHeight === 1.6} onClick={() => setLineHeight(1.6)}>1.6</OptionButton>
@@ -79,17 +83,18 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
             </div>
 
             <div className="flex flex-col gap-3">
-              <h2 className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest">Căn lề</h2>
-              <div className="flex bg-surface-container-highest rounded-lg p-1">
-                <OptionButton active={textAlign === 'left'} onClick={() => setTextAlign('left')}>
-                  <AlignLeft size={16} />
-                </OptionButton>
-                <OptionButton active={textAlign === 'right'} onClick={() => setTextAlign('right')}>
-                  <AlignRight size={16} />
-                </OptionButton>
-                <OptionButton active={textAlign === 'justify'} onClick={() => setTextAlign('justify')}>
-                  <AlignJustify size={16} />
-                </OptionButton>
+              <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Gộp dòng (Đoạn)</h2>
+              <div className="flex bg-surface-container-highest rounded-xl p-1 items-center gap-1">
+                 <button onClick={() => setGroupLines(Math.max(1, groupLines - 1))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
+                  -
+                 </button>
+                 <div className="flex-1 text-center font-bold text-sm text-primary flex items-center justify-center gap-1.5">
+                   <Layers size={14} className="opacity-70" />
+                   {groupLines}
+                 </div>
+                 <button onClick={() => setGroupLines(Math.min(10, groupLines + 1))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
+                  +
+                 </button>
               </div>
             </div>
           </div>
@@ -102,11 +107,11 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
 function ThemeButton({ currentTheme, targetTheme, bg, ringColor, checkColor, label, onClick }: any) {
   const active = currentTheme === targetTheme;
   return (
-    <button onClick={onClick} className="flex flex-col items-center gap-2 group">
-      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${bg} flex items-center justify-center transition-transform shadow-sm ${active ? `ring-2 ring-offset-2 ring-offset-background ${ringColor} scale-105` : 'border border-outline-variant/50 group-hover:scale-105'}`}>
-        <Check size={18} className={`${checkColor} transition-opacity ${active ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+    <button onClick={onClick} className="flex flex-col items-center gap-2 group outline-none">
+      <div className={`w-12 h-12 rounded-full ${bg} flex items-center justify-center transition-all duration-300 shadow-sm ${active ? `ring-2 ring-offset-2 ring-offset-surface ${ringColor} scale-105` : 'border border-outline-variant/30 group-hover:scale-105'}`}>
+        <Check size={20} className={`${checkColor} transition-transform duration-300 ${active ? 'scale-100 opacity-100' : 'scale-50 opacity-0 group-hover:scale-100 group-hover:opacity-50'}`} />
       </div>
-      <span className={`text-[10px] sm:text-xs font-semibold ${active ? 'text-primary' : 'text-on-surface-variant'}`}>{label}</span>
+      <span className={`text-[11px] font-bold transition-colors ${active ? 'text-primary' : 'text-on-surface-variant'}`}>{label}</span>
     </button>
   );
 }
@@ -114,11 +119,8 @@ function ThemeButton({ currentTheme, targetTheme, bg, ringColor, checkColor, lab
 function FontButton({ currentFont, targetFont, label, onClick, fontFamily }: any) {
   const active = currentFont === targetFont;
   return (
-    <button onClick={onClick} className={`flex justify-between items-center px-4 py-3 rounded-lg transition-colors border ${active ? 'bg-surface-container-high border-outline-variant/30' : 'bg-surface-container border-outline-variant/10 hover:bg-surface-container-high'}`}>
-      <span className={`${fontFamily} text-sm ${active ? 'text-on-surface' : 'text-on-surface-variant'}`}>{label}</span>
-      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${active ? 'border-primary' : 'border-on-surface-variant'}`}>
-        {active && <div className="w-2 h-2 rounded-full bg-primary" />}
-      </div>
+    <button onClick={onClick} className={`flex justify-center items-center px-2 py-2.5 rounded-xl transition-all outline-none ${active ? 'bg-primary/10 text-primary font-bold' : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-bright font-medium'}`}>
+      <span className={`${fontFamily} text-sm line-clamp-1`}>{label}</span>
     </button>
   );
 }
@@ -127,7 +129,7 @@ function OptionButton({ active, children, onClick }: { active: boolean, children
   return (
     <button 
       onClick={onClick} 
-      className={`flex-1 py-1 sm:py-2 flex justify-center items-center rounded-md transition-colors ${active ? 'bg-surface-dim text-primary shadow-sm border border-outline-variant/10 font-bold' : 'text-on-surface-variant hover:bg-surface-bright font-medium'}`}
+      className={`flex-1 py-2 flex justify-center items-center rounded-lg transition-all outline-none ${active ? 'bg-background text-primary shadow-sm font-bold scale-100' : 'text-on-surface-variant hover:bg-surface hover:text-on-surface font-medium scale-95 hover:scale-100'}`}
     >
       {children}
     </button>

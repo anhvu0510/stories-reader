@@ -26,10 +26,12 @@ interface TranslationSheetProps {
   currentBookName?: string;
   currentChapterName?: string;
   currentBookId?: string;
+  initialTab?: Tab;
+  initialSelectedChapters?: string[];
 }
 
-export function TranslationSheet({ onClose, currentBookName, currentChapterName, currentBookId }: TranslationSheetProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('current');
+export function TranslationSheet({ onClose, currentBookName, currentChapterName, currentBookId, initialTab = 'current', initialSelectedChapters = [] }: TranslationSheetProps) {
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [options, setOptions] = useState<TranslationOptions>(() => {
     const saved = localStorage.getItem('novel_trans_opts_v1');
     return saved ? JSON.parse(saved) : defaultOptions;
@@ -37,7 +39,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
-  const [selectedChapters, setSelectedChapters] = useState<Set<string>>(new Set());
+  const [selectedChapters, setSelectedChapters] = useState<Set<string>>(new Set(initialSelectedChapters));
   const [selectedBooks, setSelectedBooks] = useState<Set<string>>(new Set());
   const [searchBook, setSearchBook] = useState('');
 
@@ -47,7 +49,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
 
   useEffect(() => {
     if (activeTab === 'batch_chapter' && currentBookId) {
-      api.getChapters(currentBookId).then(res => setChapters(res.chapters));
+      api.getChapters(currentBookId, 1, 9999, 'chapterNumber', 'ASC').then(res => setChapters(res.chapters));
     } else if (activeTab === 'story') {
       api.getBooks().then(res => setBooks(res.data));
     }
@@ -130,8 +132,13 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                     Chọn chưa dịch
                   </button>
                 </div>
-                <div className="max-h-60 overflow-y-auto hide-scrollbar flex flex-col gap-1 border border-outline-variant/20 rounded-lg p-1 bg-surface">
-                  {chapters.map(chap => (
+                <div className="max-h-[40vh] overflow-y-auto hide-scrollbar flex flex-col gap-1 border border-outline-variant/20 rounded-lg p-1 bg-surface">
+                  {[...chapters].sort((a, b) => {
+                    const aH = selectedChapters.has(a.chapterId) ? 1 : 0;
+                    const bH = selectedChapters.has(b.chapterId) ? 1 : 0;
+                    if (aH !== bH) return bH - aH;
+                    return a.chapterNumber - b.chapterNumber;
+                  }).map(chap => (
                     <div 
                       key={chap.chapterId} 
                       onClick={() => toggleChapter(chap.chapterId)}

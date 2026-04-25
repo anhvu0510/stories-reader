@@ -152,10 +152,16 @@ const MOCK_CONTENT: Record<string, ChapterContent> = {
 
 
 // API Implementation
-const NGROK_BASE_URL = 'https://vocal-apparently-spaniel.ngrok-free.app';
-const LOCAL_BASE_URL = 'http://localhost:3200';
+export const getApiDomain = () => {
+  return localStorage.getItem('API_DOMAIN_CONFIG') || '';
+};
 
 const fetchWithRetry = async (path: string, options: RequestInit = {}, retries = 3): Promise<Response> => {
+  const domain = getApiDomain();
+  if (!domain) {
+    throw new Error('API_DOMAIN_NOT_SET');
+  }
+
   const headers = {
     'ngrok-skip-browser-warning': 'true',
     'Content-Type': 'application/json',
@@ -163,33 +169,33 @@ const fetchWithRetry = async (path: string, options: RequestInit = {}, retries =
   };
 
   try {
-    const res = await fetch(`${NGROK_BASE_URL}${path}`, { ...options, headers });
+    const res = await fetch(`${domain}${path}`, { ...options, headers });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     return res;
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message === 'API_DOMAIN_NOT_SET') throw err;
     if (retries > 0) {
-      console.warn(`Request failed, retrying local (${retries} retries left)...`, err);
-      try {
-        const localRes = await fetch(`${LOCAL_BASE_URL}${path}`, { ...options, headers });
-        if (!localRes.ok) throw new Error(`Local HTTP error! status: ${localRes.status}`);
-        return localRes;
-      } catch (localErr) {
-        if (retries > 1) {
-           return fetchWithRetry(path, options, retries - 1);
-        }
-        throw localErr;
-      }
+      console.warn(`Request failed, retrying (${retries} retries left)...`, err);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return fetchWithRetry(path, options, retries - 1);
     }
     throw err;
   }
 };
 
 export const api = {
-  getBooks: async (page = 1, search = ''): Promise<{ data: Book[], pagination: any }> => {
+  getBooks: async (page = 1, search = '', state?: string, limit = 20): Promise<{ data: Book[], pagination: any }> => {
     try {
-      const res = await fetchWithRetry(`/api/books?page=${page}&limit=100&search=${search}`);
+      let url = `/api/books?page=${page}&limit=${limit}&search=${search}`;
+      if (state) {
+        url += `&state=${state}`;
+      }
+      const res = await fetchWithRetry(url);
       return await res.json();
-    } catch (e) {
+    } catch (e: any) {
+      if (e.message === 'API_DOMAIN_NOT_SET') {
+        return { data: [], pagination: { currentPage: 1, totalPages: 0, total: 0 } };
+      }
       console.warn("Failed to fetch from API, using mock data", e);
       return {
         data: MOCK_BOOKS.filter(b => b.bookName.toLowerCase().includes(search.toLowerCase())),
@@ -198,24 +204,66 @@ export const api = {
     }
   },
 
-  getChapters: async (bookId: string): Promise<{ chapters: Chapter[], pagination: any }> => {
+  getChapters: async (
+    bookId: string,
+    page: number = 1,
+    limit: number = 50,
+    sortBy: string = 'chapterNumber',
+    sortOrder: string = 'ASC',
+    state?: string,
+    search?: string
+  ): Promise<{ chapters: Chapter[], pagination: any }> => {
     try {
-      const res = await fetchWithRetry(`/api/books/${bookId}/chapters?page=1&limit=500&sortBy=chapterNumber&sortOrder=ASC`);
+      const query = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        sortBy,
+        sortOrder,
+      });
+      if (state && state !== 'all') query.append('state', state);
+      if (search) query.append('search', search);
+
+      const res = await fetchWithRetry(`/api/books/${bookId}/chapters?${query.toString()}`);
       return await res.json();
-    } catch (e) {
+    } catch (e: any) {
+      if (e.message === 'API_DOMAIN_NOT_SET') {
+        return { chapters: [], pagination: { currentPage: 1, totalPages: 0, total: 0 } };
+      }
       console.warn("Failed to fetch chapters, using mock data", e);
+      let mockChapters = [...(MOCK_CHAPTERS[bookId] || [])];
+      
+      if (state && state !== 'all') {
+        mockChapters = mockChapters.filter(c => c.state === state);
+      }
+      if (search) {
+        mockChapters = mockChapters.filter(c => c.title.toLowerCase().includes(search.toLowerCase()) || c.chapterNumber.toString().includes(search));
+      }
+      
+      if (sortBy === 'chapterNumber') {
+        mockChapters.sort((a, b) => sortOrder === 'ASC' ? a.chapterNumber - b.chapterNumber : b.chapterNumber - a.chapterNumber);
+      } else if (sortBy === 'updatedAt') {
+        mockChapters.sort((a, b) => sortOrder === 'ASC' ? new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime() : new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      }
+      
+      const total = mockChapters.length;
+      const totalPages = Math.ceil(total / limit);
+      const paginatedChapters = mockChapters.slice((page - 1) * limit, page * limit);
+      
       return {
-        chapters: MOCK_CHAPTERS[bookId] || [],
-        pagination: { currentPage: 1, totalPages: 1, total: MOCK_CHAPTERS[bookId]?.length || 0 }
+        chapters: paginatedChapters,
+        pagination: { currentPage: page, totalPages: Math.max(1, totalPages), total }
       };
     }
   },
 
-  getChapterContent: async (chapterId: string): Promise<ChapterContent> => {
+  getChapterContent: async (chapterId: string, groupLines: number = 1): Promise<ChapterContent> => {
     try {
-      const res = await fetchWithRetry(`/api/chapters/${chapterId}?groupLines=1`);
+      const res = await fetchWithRetry(`/api/chapters/${chapterId}?groupLines=${groupLines}`);
       return await res.json();
-    } catch (e) {
+    } catch (e: any) {
+      if (e.message === 'API_DOMAIN_NOT_SET') {
+        throw new Error("Không có kết nối API. Vui lòng cấu hình API Domain.");
+      }
       console.warn("Failed to fetch chapter content, using mock data", e);
       if (MOCK_CONTENT[chapterId]) {
         return MOCK_CONTENT[chapterId];
@@ -231,7 +279,10 @@ export const api = {
       if (chapterId) query.append('chapterId', chapterId);
       const res = await fetchWithRetry(`/api/replacements?${query.toString()}`);
       return await res.json();
-    } catch (e) {
+    } catch (e: any) {
+      if (e.message === 'API_DOMAIN_NOT_SET') {
+        return { data: [] };
+      }
       console.warn("Failed to fetch replacements, using mock data", e);
       return { data: MOCK_REPLACEMENTS };
     }
@@ -265,6 +316,31 @@ export const api = {
       await fetchWithRetry(`/api/replacements/${id}`, { method: 'DELETE' });
     } catch (e) {
       console.warn("Failed to delete replacement, mocking...", e);
+    }
+  },
+
+  getSettings: async (key: string): Promise<any> => {
+    try {
+      const res = await fetchWithRetry(`/api/stories/setting/${key}`);
+      const data = await res.json();
+      console.log('getSettings from API:', data);
+      return data;
+    } catch (e) {
+      console.warn(`Failed to fetch settings for key ${key}`, e);
+      return null;
+    }
+  },
+
+  updateSettings: async (key: string, value: any): Promise<any> => {
+    try {
+      const res = await fetchWithRetry(`/api/stories/setting`, {
+        method: 'POST',
+        body: JSON.stringify({ key, value })
+      });
+      return await res.json();
+    } catch (e) {
+      console.warn(`Failed to update settings for key ${key}`, e);
+      return null;
     }
   }
 };

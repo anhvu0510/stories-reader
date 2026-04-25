@@ -55,11 +55,11 @@
   --radius-xl: 1.5rem;
 }
 
-@layer utilities {
+/* @layer utilities {
   .pb-safe-bottom {
     padding-bottom: max(env(safe-area-inset-bottom), 1.5rem);
   }
-}
+} */
 
 body {
   @apply bg-background text-on-background font-sans text-sm antialiased;

@@ -1,16 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X } from 'lucide-react';
+import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home } from 'lucide-react';
 import { AppView } from '../App';
 import { api, ChapterContent, Chapter } from '../lib/api';
 import { SettingsSheet } from '../components/SettingsSheet';
 import { TranslationSheet } from '../components/TranslationSheet';
 import { EditWordSheet } from '../components/EditWordSheet';
+import { LoadingOverlay } from '../components/LoadingOverlay';
 import { useReaderSettings } from '../contexts/ReaderContext';
 import { cn } from '../lib/utils';
 
 export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string, chapterId: string, onNavigate: (v: AppView) => void }) {
   const [content, setContent] = useState<ChapterContent | null>(null);
   const [bookChapters, setBookChapters] = useState<Chapter[]>([]);
+  const [drawerPage, setDrawerPage] = useState(1);
+  const [hasMoreChapters, setHasMoreChapters] = useState(true);
+  const [isLoadingChapters, setIsLoadingChapters] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
   const [showEditWord, setShowEditWord] = useState(false);
@@ -18,13 +22,41 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
   const [showControls, setShowControls] = useState(true);
   const [readProgress, setReadProgress] = useState(0);
   const [selectedText, setSelectedText] = useState('');
-  const { theme, font, fontSize, lineHeight, textAlign } = useReaderSettings();
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const { theme, font, fontSize, lineHeight, groupLines } = useReaderSettings();
   
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api.getChapterContent(chapterId).then(res => setContent(res));
-  }, [chapterId]);
+    setIsLoadingContent(true);
+    api.getChapterContent(chapterId, groupLines).then(res => {
+      setContent(res);
+      setIsLoadingContent(false);
+      window.scrollTo(0, 0);
+    }).catch(() => {
+      setIsLoadingContent(false);
+    });
+  }, [chapterId, groupLines]);
+
+  const loadMoreChapters = async (pageToLoad: number) => {
+    if (isLoadingChapters || !hasMoreChapters) return;
+    setIsLoadingChapters(true);
+    try {
+      const res = await api.getChapters(bookId, pageToLoad, 50, 'chapterNumber', 'ASC');
+      setBookChapters(prev => {
+        const newChapters = res.chapters.filter(c => !prev.some(p => p.chapterId === c.chapterId));
+        return [...prev, ...newChapters];
+      });
+      if (res.chapters.length < 50 || pageToLoad >= res.pagination.totalPages) {
+        setHasMoreChapters(false);
+      }
+      setDrawerPage(pageToLoad + 1);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingChapters(false);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -67,51 +99,72 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
     setShowControls(!showControls);
   };
 
-  if (!content) {
-    return <div className="min-h-screen flex items-center justify-center bg-background text-on-surface">Đang tải nội dung...</div>;
-  }
-
   // Calculate dynamic styles based on settings
   const containerStyle = {
-    backgroundColor: theme === 'light' ? '#ffffff' : theme === 'paper' ? '#f4ecd8' : theme === 'dark' ? '#121212' : '#050505',
-    color: theme === 'light' ? '#111827' : theme === 'paper' ? '#5c4d3c' : theme === 'dark' ? '#e0e0e0' : '#d4d4d4',
+    backgroundColor: theme === 'amoled' ? '#000000' : theme === 'midnight' ? '#0f172a' : theme === 'obsidian' ? '#0d0d12' : theme === 'coffee' ? '#1c1814' : '#1e1e1e',
+    color: theme === 'amoled' ? '#8a8a8e' : theme === 'midnight' ? '#cbd5e1' : theme === 'obsidian' ? '#a1a1aa' : theme === 'coffee' ? '#d7c4b4' : '#d4d4d4',
     fontFamily: font === 'palatino' ? '"Palatino Linotype", "Book Antiqua", Palatino, serif' : 
                 font === 'bookerly' ? 'Bookerly, serif' : 
                 font === 'minhphung' ? '"Minh Phung", sans-serif' : 'var(--font-sans)',
   };
 
+  useEffect(() => {
+    document.body.style.backgroundColor = containerStyle.backgroundColor;
+    
+    return () => {
+      document.body.style.backgroundColor = '';
+    };
+  }, [containerStyle.backgroundColor]);
+
+  if (!content) {
+    return <div className="min-h-screen flex items-center justify-center bg-background text-on-surface">Đang tải nội dung...</div>;
+  }
+
   return (
     <div className="min-h-screen flex flex-col antialiased relative transition-colors duration-300" style={containerStyle}>
       
       {/* Top Header Overlay */}
-      <header className={cn(
-        "fixed top-0 left-0 w-full z-40 bg-[var(--color-glass)] backdrop-blur-[16px] border-b border-surface-variant transition-transform duration-300 translate-y-0 text-on-surface"
-      )}>
+      <header 
+        aria-hidden="true"
+        className={cn(
+          "fixed top-0 left-0 w-full z-40 backdrop-blur-[16px] border-b transition-transform duration-300 translate-y-0 text-inherit",
+          theme === 'amoled' ? 'bg-[#000000]/90 border-white/5' :
+          theme === 'midnight' ? 'bg-[#0f172a]/90 border-white/5' :
+          theme === 'obsidian' ? 'bg-[#0d0d12]/90 border-white/5' :
+          theme === 'coffee' ? 'bg-[#1c1814]/90 border-white/5' :
+          'bg-[#1e1e1e]/90 border-white/10'
+        )}
+      >
         <div className="max-w-reading-max-width mx-auto w-full px-4 sm:px-8 py-2 sm:py-4 flex justify-between items-center h-16">
-          <button onClick={() => onNavigate({ type: 'book', bookId })} className="text-on-surface hover:text-primary transition-colors p-2 -ml-2 rounded-full">
-            <ArrowLeft size={24} />
-          </button>
-          <div className="flex-1 text-center truncate px-4">
-            <h1 className="font-sans text-sm font-semibold truncate">{content.chapter.bookName}</h1>
-            <p className="text-[10px] text-on-surface-variant truncate">Chương {content.chapter.chapterNumber}: {content.chapter.title}</p>
+          <div className="flex items-center gap-1 -ml-4 sm:-ml-2">
+            <button onClick={() => onNavigate({ type: 'book', bookId })} className="hover:opacity-70 transition-opacity p-2 rounded-full" title="Về chi tiết truyện">
+              <ArrowLeft size={24} />
+            </button>
+            <button onClick={() => onNavigate({ type: 'library' })} className="hover:opacity-70 transition-opacity p-2 rounded-full" title="Về trang chủ">
+              <Home size={22} />
+            </button>
+          </div>
+          <div className="flex-1 text-center truncate px-2 opacity-90">
+            <h4 className="font-sans font-semibold truncate">{content.chapter.bookName}</h4>
+            <p className="opacity-80 truncate">Chương {content.chapter.chapterNumber}</p>
           </div>
           <div className="flex items-center gap-1 -mr-2">
-            <button onClick={() => { setShowTranslation(true); setShowControls(false); }} className="text-on-surface hover:text-primary transition-colors p-2 rounded-full hidden sm:block">
+            <button onClick={() => { setShowTranslation(true); setShowControls(false); }} className="hover:opacity-70 transition-opacity p-2 rounded-full hidden sm:block">
               <Languages size={20} />
             </button>
-            <button onClick={() => { setShowEditWord(true); setShowControls(false); }} className="text-on-surface hover:text-primary transition-colors p-2 rounded-full hidden sm:block">
+            <button onClick={() => { setShowEditWord(true); setShowControls(false); }} className="hover:opacity-70 transition-opacity p-2 rounded-full hidden sm:block">
               <Edit3 size={20} />
             </button>
-            <button onClick={() => { setShowSettings(true); setShowControls(false); }} className="text-on-surface hover:text-primary transition-colors p-2 rounded-full hidden sm:block">
+            <button onClick={() => { setShowSettings(true); setShowControls(false); }} className="hover:opacity-70 transition-opacity p-2 rounded-full hidden sm:block">
               <Type size={20} />
             </button>
             <button onClick={() => { 
               setShowChapterDrawer(true); 
               setShowControls(false); 
               if (bookChapters.length === 0) {
-                api.getChapters(bookId).then(res => setBookChapters(res.chapters));
+                loadMoreChapters(1);
               }
-            }} className="text-on-surface hover:text-primary transition-colors p-2 rounded-full">
+            }} className="hover:opacity-70 transition-opacity p-2 rounded-full">
               <Menu size={20} />
             </button>
           </div>
@@ -119,7 +172,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
       </header>
 
       {/* Progress Bar (always visible) */}
-      <div className="fixed top-0 left-0 w-full h-[3px] z-50 bg-transparent">
+      <div aria-hidden="true" className="fixed top-0 left-0 w-full h-[3px] z-50 bg-transparent">
         <div 
           className="h-full bg-primary transition-all duration-100 ease-out" 
           style={{ width: `${readProgress}%` }}
@@ -127,7 +180,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
       </div>
 
       {/* Chapter Drawer */}
-      <div className={cn(
+      <div aria-hidden="true" className={cn(
         "fixed inset-0 z-[100] flex justify-end transition-opacity duration-300",
         showChapterDrawer ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
       )}>
@@ -143,24 +196,35 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
             </button>
           </div>
           <div className="flex-1 overflow-y-auto hide-scrollbar p-2">
-            {bookChapters.length === 0 ? (
+            {bookChapters.length === 0 && isLoadingChapters ? (
               <div className="flex justify-center items-center h-20 text-on-surface-variant text-sm">Đang tải mục lục...</div>
             ) : (
-              bookChapters.map((chap) => {
-                const isActive = chap.chapterId === chapterId;
-                return (
-                  <button
-                    key={chap.chapterId}
-                    className={`w-full text-left px-4 py-3 rounded-xl transition-colors border ${isActive ? 'bg-primary/10 border-primary text-primary font-semibold' : 'border-transparent text-on-surface-variant hover:bg-surface-container-high'}`}
-                    onClick={() => {
-                      setShowChapterDrawer(false);
-                      onNavigate({ type: 'reader', bookId, chapterId: chap.chapterId });
-                    }}
-                  >
-                    Chương {chap.chapterNumber}: {chap.title}
-                  </button>
-                );
-              })
+              <>
+                {bookChapters.map((chap) => {
+                  const isActive = chap.chapterId === chapterId;
+                  return (
+                    <button
+                      key={chap.chapterId}
+                      className={`w-full text-left px-4 py-3 rounded-xl transition-colors border ${isActive ? 'bg-primary/10 border-primary text-primary font-semibold' : 'border-transparent text-on-surface-variant hover:bg-surface-container-high'}`}
+                      onClick={() => {
+                        setShowChapterDrawer(false);
+                        onNavigate({ type: 'reader', bookId, chapterId: chap.chapterId });
+                      }}
+                    >
+                      Chương {chap.chapterNumber}: {chap.title}
+                    </button>
+                  );
+                })}
+                {hasMoreChapters && (
+                   <button 
+                     onClick={() => loadMoreChapters(drawerPage)}
+                     disabled={isLoadingChapters}
+                     className="w-full text-center py-3 text-sm text-primary hover:bg-surface-container-high rounded-xl mt-2"
+                   >
+                     {isLoadingChapters ? 'Đang tải...' : 'Tải thêm'}
+                   </button>
+                )}
+              </>
             )}
           </div>
           <div className="p-4 border-t border-surface-variant bg-surface pb-safe-bottom">
@@ -176,105 +240,119 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
 
       {/* Main Content */}
       <main 
-        className="flex-1 w-full max-w-reading-max-width mx-auto px-8 sm:px-12 lg:px-20 pt-24 pb-32 cursor-pointer"
+        className="flex-1 w-full max-w-reading-max-width mx-auto px-6 sm:px-12 lg:px-20 pt-24 pb-16 cursor-pointer"
         onClick={handleContentClick}
         ref={contentRef}
       >
         <article 
-          className="max-w-none space-y-6 will-change-contents"
+          className="max-w-none will-change-contents"
           style={{
             fontSize: `${fontSize}px`,
             lineHeight: lineHeight,
-            textAlign: textAlign,
+            textAlign: 'justify',
             color: 'inherit'
           }}
         >
-          <h2 className="font-headline-md text-primary mt-4 mb-8 text-center" style={{ fontSize: `${fontSize * 1.3}px`, lineHeight: 1.3 }}>
+          <h4 className="font-headline-md text-primary mt-2 mb-4 text-center font-bold" style={{ fontSize: `${Math.round(fontSize * 1.2)}px`, lineHeight: 1.35 }}>
             Chương {content.chapter.chapterNumber}: {content.chapter.title}
-          </h2>
+          </h4>
           
           {content.chapter.content.map((paragraph, index) => (
             <div key={index} className="mb-4" dangerouslySetInnerHTML={{ __html: paragraph }} />
           ))}
           
-          <div className="w-16 h-[2px] bg-outline-variant/30 my-16 mx-auto rounded-full"></div>
+          <div className="w-16 h-[2px] bg-outline-variant/30 mt-8 mx-auto rounded-full"></div>
         </article>
       </main>
 
-      {showSettings && <SettingsSheet onClose={() => setShowSettings(false)} />}
-      {showTranslation && <TranslationSheet onClose={() => setShowTranslation(false)} currentBookName={content.chapter.bookName} currentChapterName={`Chương ${content.chapter.chapterNumber}: ${content.chapter.title}`} currentBookId={bookId} />}
-      {showEditWord && <EditWordSheet onClose={() => setShowEditWord(false)} initialMatch={selectedText} currentBookId={bookId} currentChapterId={chapterId} />}
+      <div aria-hidden="true">
+        {showSettings && <SettingsSheet onClose={() => setShowSettings(false)} />}
+        {showTranslation && <TranslationSheet onClose={() => setShowTranslation(false)} currentBookName={content.chapter.bookName} currentChapterName={`Chương ${content.chapter.chapterNumber}: ${content.chapter.title}`} currentBookId={bookId} />}
+        {showEditWord && <EditWordSheet onClose={() => setShowEditWord(false)} initialMatch={selectedText} currentBookId={bookId} currentChapterId={chapterId} />}
+      </div>
 
       {/* Bottom Controls Overlay */}
-      <nav className={cn(
-        "fixed bottom-0 left-0 w-full z-50 transition-transform duration-300 pointer-events-none pb-safe-bottom",
-        showControls ? "translate-y-0" : "translate-y-full"
-      )}>
-        <div className="flex justify-between sm:justify-center gap-1 sm:gap-6 px-4 py-1.5 sm:py-2 items-center bg-[#18181b]/90 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.5)] border-t border-white/10 pointer-events-auto">
+      <nav 
+        aria-hidden="true"
+        className={cn(
+          "fixed bottom-0 left-0 w-full z-50 transition-transform duration-300 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.1)] border-t pb-safe-bottom text-inherit",
+          showControls ? "translate-y-0" : "translate-y-full",
+          theme === 'amoled' ? 'bg-[#000000]/95 border-white/5' :
+          theme === 'midnight' ? 'bg-[#0f172a]/95 border-white/5' :
+          theme === 'obsidian' ? 'bg-[#0d0d12]/95 border-white/5' :
+          theme === 'coffee' ? 'bg-[#1c1814]/95 border-white/5' :
+          'bg-[#1e1e1e]/95 border-white/10'
+        )}
+      >
+        <div className="flex justify-between sm:justify-center gap-1 sm:gap-6 px-4 py-1.5 sm:py-2 items-center opacity-90 max-w-reading-max-width mx-auto">
           <button 
             disabled={!content.navigation?.prev?.chapterId}
             onClick={() => content.navigation?.prev?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.prev.chapterId })}
-            className="flex flex-col items-center justify-center text-on-surface-variant/80 hover:text-on-surface active:scale-90 transition-all duration-300 p-1.5 group disabled:opacity-30 disabled:active:scale-100 disabled:hover:text-on-surface-variant flex-1 sm:flex-none rounded-xl hover:bg-white/5"
+            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 group disabled:opacity-30 flex-1 sm:flex-none rounded-xl"
           >
-             <ChevronLeft size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:-translate-x-1 group-active:-translate-x-2 transition-transform duration-300 text-on-surface" />
+             <ChevronLeft size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:-translate-x-1 group-active:-translate-x-2 transition-transform duration-300" />
              <span className="text-[10px] font-medium tracking-wide">Trước</span>
           </button>
 
-          <div className="w-[1px] h-5 bg-white/10 hidden sm:block mx-1"></div>
+          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
 
           <button 
             onClick={() => { setShowTranslation(true); setShowControls(false); }}
-            className="flex flex-col items-center justify-center text-on-surface-variant/80 hover:text-on-surface active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl hover:bg-white/5 relative group"
+            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl relative group"
           >
              <div className="relative mb-1 group-hover:-translate-y-0.5 transition-transform duration-300">
-               <Languages size={20} className="sm:w-5 sm:h-5 text-on-surface" />
+               <Languages size={20} className="sm:w-5 sm:h-5" />
              </div>
              <span className="text-[10px] font-medium tracking-wide">Dịch</span>
           </button>
 
-          <div className="w-[1px] h-5 bg-white/10 hidden sm:block mx-1"></div>
+          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
 
           <button 
             onClick={() => { setShowEditWord(true); setShowControls(false); }}
             className={cn(
               "flex flex-col items-center justify-center active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl relative group",
-              selectedText ? "text-primary hover:bg-primary/10" : "text-on-surface-variant/80 hover:text-on-surface hover:bg-white/5"
+              selectedText ? "opacity-100 text-primary" : "hover:opacity-100 opacity-70"
             )}
           >
              <div className="relative mb-1 group-hover:-translate-y-0.5 transition-transform duration-300">
-               <Edit3 size={20} className={cn("sm:w-5 sm:h-5", selectedText ? "text-primary" : "text-on-surface")} />
+               <Edit3 size={20} className="sm:w-5 sm:h-5" />
                {selectedText && (
                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full animate-ping opacity-75"></span>
                )}
                {selectedText && (
-                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border border-[#18181b]"></span>
+                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border border-current opacity-50"></span>
                )}
              </div>
-             <span className={cn("text-[10px] font-medium tracking-wide", selectedText && "text-primary/90")}>Thay thế</span>
+             <span className="text-[10px] font-medium tracking-wide">Thay thế</span>
           </button>
           
-          <div className="w-[1px] h-5 bg-white/10 hidden sm:block mx-1"></div>
+          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
 
           <button 
              onClick={() => { setShowSettings(true); setShowControls(false); }}
-            className="flex flex-col items-center justify-center text-on-surface-variant/80 hover:text-on-surface active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl hover:bg-white/5 group"
+            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl group"
           >
-             <Type size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:-translate-y-0.5 transition-transform duration-300 text-on-surface" />
+             <Type size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:-translate-y-0.5 transition-transform duration-300" />
              <span className="text-[10px] font-medium tracking-wide">Cài đặt</span>
           </button>
           
-          <div className="w-[1px] h-5 bg-white/10 hidden sm:block mx-1"></div>
+          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
 
           <button 
             disabled={!content.navigation?.next?.chapterId}
             onClick={() => content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId })}
-            className="flex flex-col items-center justify-center text-on-surface-variant/80 hover:text-on-surface active:scale-90 transition-all duration-300 p-1.5 group disabled:opacity-30 disabled:active:scale-100 disabled:hover:text-on-surface-variant flex-1 sm:flex-none rounded-xl hover:bg-white/5"
+            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 group disabled:opacity-30 flex-1 sm:flex-none rounded-xl"
           >
-             <ChevronRight size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:translate-x-1 group-active:translate-x-2 transition-transform duration-300 text-on-surface" />
+             <ChevronRight size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:translate-x-1 group-active:translate-x-2 transition-transform duration-300" />
              <span className="text-[10px] font-medium tracking-wide">Sau</span>
           </button>
         </div>
       </nav>
+      
+      <div aria-hidden="true">
+        <LoadingOverlay isLoading={isLoadingContent} message="Đang tải nội dung chương..." />
+      </div>
     </div>
   );
 }
