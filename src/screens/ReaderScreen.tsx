@@ -20,7 +20,6 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
   const [showEditWord, setShowEditWord] = useState(false);
   const [showChapterDrawer, setShowChapterDrawer] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const [readProgress, setReadProgress] = useState(0);
   const [selectedText, setSelectedText] = useState('');
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const { theme, font, fontSize, lineHeight, groupLines } = useReaderSettings();
@@ -57,24 +56,6 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
       setIsLoadingChapters(false);
     }
   };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const scrollHeight = document.documentElement.scrollHeight;
-      const innerHeight = window.innerHeight;
-      
-      if (scrollHeight > innerHeight) {
-        const progress = (scrollY / (scrollHeight - innerHeight)) * 100;
-        setReadProgress(progress);
-      } else {
-        setReadProgress(0);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     const handleSelection = () => {
@@ -171,13 +152,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
         </div>
       </header>
 
-      {/* Progress Bar (always visible) */}
-      <div aria-hidden="true" className="fixed top-0 left-0 w-full h-[3px] z-50 bg-transparent">
-        <div 
-          className="h-full bg-primary transition-all duration-100 ease-out" 
-          style={{ width: `${readProgress}%` }}
-        />
-      </div>
+
 
       {/* Chapter Drawer */}
       <div aria-hidden="true" className={cn(
