@@ -3,6 +3,7 @@ import { ReaderProvider } from './contexts/ReaderContext';
 import { LibraryScreen } from './screens/LibraryScreen';
 import { ChapterListScreen } from './screens/ChapterListScreen';
 import { ReaderScreen } from './screens/ReaderScreen';
+import { ToastContainer } from './components/Toast';
 
 export type AppView = 
   | { type: 'library' }
@@ -52,6 +53,7 @@ export default function App() {
     <ReaderProvider>
       <HashRouter>
         <AppContent />
+        <ToastContainer />
       </HashRouter>
     </ReaderProvider>
   );

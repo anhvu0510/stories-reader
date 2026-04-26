@@ -39,7 +39,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
   // Keep track of the last loaded chapter to avoid scrolling to top on toggle
   const [lastChapterId, setLastChapterId] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchChapter = () => {
     setIsLoadingContent(true);
     api.getChapterContent(chapterId, groupLines, isEnabledReplace).then(res => {
       setContent(res);
@@ -52,6 +52,10 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
     }).catch(() => {
       setIsLoadingContent(false);
     });
+  };
+
+  useEffect(() => {
+    fetchChapter();
   }, [chapterId, groupLines, isEnabledReplace]);
 
   const loadMoreChapters = async (pageToLoad: number) => {
@@ -120,7 +124,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
   }), [fontSize, lineHeight]);
 
   const titleStyle = useMemo(() => ({ 
-    fontSize: `${Math.round(fontSize * 1.2)}px`, 
+    fontSize: `${Math.round(fontSize * 1)}px`, 
     lineHeight: 1.35 
   }), [fontSize]);
 
@@ -250,8 +254,8 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
           className="max-w-none will-change-contents"
           style={articleStyle}
         >
-          <h4 className="font-headline-md text-primary mt-2 mb-4 text-center font-bold" style={titleStyle}>
-            Chương {content.chapter.chapterNumber}: {content.chapter.title}
+          <h4 className="font-headline-md text-primary mb-2 text-center font-bold" style={titleStyle}>
+            {content.chapter.title}
           </h4>
           
           <ContentRenderer paragraphs={content.chapter.content} />
@@ -262,7 +266,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
 
       <div aria-hidden="true">
         {showSettings && <SettingsSheet onClose={() => setShowSettings(false)} />}
-        {showTranslation && <TranslationSheet onClose={() => setShowTranslation(false)} currentBookName={content.chapter.bookName} currentChapterName={`Chương ${content.chapter.chapterNumber}: ${content.chapter.title}`} currentBookId={bookId} />}
+        {showTranslation && <TranslationSheet onClose={() => setShowTranslation(false)} currentBookName={content.chapter.bookName} currentChapterName={`Chương ${content.chapter.chapterNumber}: ${content.chapter.title}`} currentBookId={bookId} initialSelectedChapters={[chapterId]} onSuccess={fetchChapter} />}
         {showEditWord && <EditWordSheet onClose={() => setShowEditWord(false)} initialMatch={selectedText} currentBookId={bookId} currentChapterId={chapterId} />}
       </div>
 

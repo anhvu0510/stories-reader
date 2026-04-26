@@ -347,10 +347,14 @@ export const api = {
     try {
       const res = await fetchWithRetry(`/api/stories/setting/${key}`);
       const data = await res.json();
-      console.log('getSettings from API:', data);
+      try { localStorage.setItem(`setting_${key}`, JSON.stringify(data)); } catch(e){}
       return data;
     } catch (e) {
       console.warn(`Failed to fetch settings for key ${key}`, e);
+      try {
+        const cached = localStorage.getItem(`setting_${key}`);
+        if (cached) return JSON.parse(cached);
+      } catch (err) {}
       return null;
     }
   },
@@ -366,5 +370,26 @@ export const api = {
       console.warn(`Failed to update settings for key ${key}`, e);
       return null;
     }
+  },
+
+  translate: async (data: {
+    mode: 'current' | 'batch_chapter' | 'story',
+    model: string,
+    minWords?: number,
+    maxWords?: number,
+    temperature?: number,
+    retryTranslate?: boolean,
+    bookId?: string | string[],
+    chapterId?: string[],
+    currentChapterId?: string,
+  }): Promise<any> => {
+    const res = await fetchWithRetry(`/stories/gemini-ai/translate`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    if (data.mode === 'current') {
+      return await res.json();
+    }
+    return res;
   }
 };
