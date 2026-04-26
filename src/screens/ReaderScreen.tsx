@@ -13,7 +13,7 @@ const ContentRenderer = memo(({ paragraphs }: { paragraphs: string[] }) => {
   return (
     <>
       {paragraphs.map((paragraph, index) => (
-        <p key={index} lang="vi" className="mb-4" dangerouslySetInnerHTML={{ __html: paragraph }} />
+        <div key={index} lang="vi" className="mb-4" dangerouslySetInnerHTML={{ __html: paragraph }} />
       ))}
     </>
   );
