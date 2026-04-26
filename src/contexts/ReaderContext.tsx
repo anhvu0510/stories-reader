@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { api } from '../lib/api';
 
-export type ThemeType = 'default' | 'amoled' | 'midnight' | 'obsidian' | 'coffee';
-export type FontType = 'default' | 'palatino' | 'bookerly' | 'minhphung';
+export type ThemeType = 'default' | 'amoled' | 'midnight' | 'obsidian' | 'coffee' | 'modern-vn';
+export type FontType = 'default' | 'palatino' | 'bookerly' | 'font_viet_tay';
 
 interface ReaderContextType {
   theme: ThemeType;

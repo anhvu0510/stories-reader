@@ -7,21 +7,21 @@ import { ToastContainer } from './components/Toast';
 
 export type AppView = 
   | { type: 'library' }
-  | { type: 'book', bookId: string, filterState?: 'all' | 'PENDING' }
-  | { type: 'reader', bookId: string, chapterId: string };
+  | { type: 'book', bookId: string, filterState?: 'all' | 'PENDING', rootTab: string }
+  | { type: 'reader', bookId: string, chapterId: string, rootTab: string };
 
 function BookProxy({ onNavigate }: { onNavigate: (v: AppView) => void }) {
-  const { bookId } = useParams<{ bookId: string }>();
+  const { bookId , rootTab } = useParams<{ bookId: string, rootTab: string }>();
   const [searchParams] = useSearchParams();
   if (!bookId) return null;
   const filterState = searchParams.get('filterState') === 'PENDING' ? 'PENDING' : 'all';
-  return <ChapterListScreen bookId={bookId} filterState={filterState} onNavigate={onNavigate} />;
+  return <ChapterListScreen bookId={bookId} filterState={filterState} rootTab={rootTab} onNavigate={onNavigate} />;
 }
 
 function ReaderProxy({ onNavigate }: { onNavigate: (v: AppView) => void }) {
-  const { bookId, chapterId } = useParams<{ bookId: string, chapterId: string }>();
+  const { bookId, chapterId, rootTab } = useParams<{ bookId: string, chapterId: string, rootTab: string }>();
   if (!bookId || !chapterId) return null;
-  return <ReaderScreen bookId={bookId} chapterId={chapterId} onNavigate={onNavigate} />;
+  return <ReaderScreen bookId={bookId} chapterId={chapterId} rootTab={rootTab} onNavigate={onNavigate} />;
 }
 
 function AppContent() {
@@ -31,9 +31,9 @@ function AppContent() {
     if (view.type === 'library') {
       navigate('/');
     } else if (view.type === 'book') {
-      navigate(`/book/${view.bookId}${view.filterState === 'PENDING' ? '?filterState=PENDING' : ''}`);
+      navigate(`/${view.rootTab ?? 'NONE'}/${view.bookId}${view.filterState === 'PENDING' ? '?filterState=PENDING' : ''}`);
     } else if (view.type === 'reader') {
-      navigate(`/book/${view.bookId}/chapter/${view.chapterId}`);
+      navigate(`/${view.rootTab ?? 'NONE'}/${view.bookId}/${view.chapterId}`);
     }
   };
 
@@ -41,8 +41,8 @@ function AppContent() {
     <div className="min-h-screen bg-background text-on-background flex flex-col">
       <Routes>
         <Route path="/" element={<LibraryScreen onNavigate={handleNavigate} />} />
-        <Route path="/book/:bookId" element={<BookProxy onNavigate={handleNavigate} />} />
-        <Route path="/book/:bookId/chapter/:chapterId" element={<ReaderProxy onNavigate={handleNavigate} />} />
+        <Route path="/:rootTab/:bookId" element={<BookProxy onNavigate={handleNavigate} />} />
+        <Route path="/:rootTab/:bookId/:chapterId" element={<ReaderProxy onNavigate={handleNavigate} />} />
       </Routes>
     </div>
   );

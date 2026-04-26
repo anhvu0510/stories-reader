@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
-import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home } from 'lucide-react';
+import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle } from 'lucide-react';
 import { AppView } from '../App';
 import { api, ChapterContent, Chapter } from '../lib/api';
 import { SettingsSheet } from '../components/SettingsSheet';
@@ -19,7 +19,7 @@ const ContentRenderer = memo(({ paragraphs }: { paragraphs: string[] }) => {
   );
 });
 
-export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string, chapterId: string, onNavigate: (v: AppView) => void }) {
+export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { bookId: string, chapterId: string, rootTab: string,  onNavigate: (v: AppView) => void }) {
   const [content, setContent] = useState<ChapterContent | null>(null);
   const [bookChapters, setBookChapters] = useState<Chapter[]>([]);
   const [drawerPage, setDrawerPage] = useState(1);
@@ -33,7 +33,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
   const [selectedText, setSelectedText] = useState('');
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const { theme, font, fontSize, lineHeight, groupLines, isEnabledReplace } = useReaderSettings();
-  
+
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Keep track of the last loaded chapter to avoid scrolling to top on toggle
@@ -41,7 +41,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
 
   const fetchChapter = () => {
     setIsLoadingContent(true);
-    api.getChapterContent(chapterId, groupLines, isEnabledReplace).then(res => {
+    api.getChapterContent(chapterId, groupLines, isEnabledReplace, rootTab).then(res => {
       setContent(res);
       setIsLoadingContent(false);
       
@@ -113,7 +113,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
   const containerStyle = useMemo(() => ({
     fontFamily: font === 'palatino' ? '"Palatino Linotype", "Book Antiqua", Palatino, serif' : 
                 font === 'bookerly' ? 'Bookerly, serif' : 
-                font === 'minhphung' ? '"Minh Phung", sans-serif' : 'var(--font-sans)',
+                font === 'font_viet_tay' ? '"Patrick Hand", cursive' : 'var(--font-sans)',
   }), [font]);
 
   const articleStyle = useMemo(() => ({
@@ -124,7 +124,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
   }), [fontSize, lineHeight]);
 
   const titleStyle = useMemo(() => ({ 
-    fontSize: `${Math.round(fontSize * 1)}px`, 
+    fontSize: `14px`, 
     lineHeight: 1.35 
   }), [fontSize]);
 
@@ -141,33 +141,50 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
       
       {/* Top Header Overlay */}
       <header 
-        aria-hidden="true"
+        aria-hidden={!showControls}
         className={cn(
-          "fixed top-0 left-0 w-full z-40 backdrop-blur-[16px] border-b transition-transform duration-300 translate-y-0 text-inherit",
-          "bg-background-90 border-outline-variant-50"
+          "fixed top-0 left-0 w-full z-40 transition-transform duration-500 will-change-transform ease-out", "translate-y-0" ,
+          "text-on-surface"
         )}
       >
-        <div className="max-w-reading-max-width mx-auto w-full px-4 sm:px-8 py-2 sm:py-4 flex justify-between items-center h-16">
-          <div className="flex items-center gap-1 -ml-4 sm:-ml-2">
-            <button onClick={() => onNavigate({ type: 'book', bookId })} className="hover:opacity-70 transition-opacity p-2 rounded-full" title="Về chi tiết truyện">
-              <ArrowLeft size={24} />
+        <div className="absolute inset-0 bg-surface/80 backdrop-blur-[32px] saturate-150 border-b border-outline-variant/20 shadow-[0_4px_32px_max(rgba(0,0,0,0.1),var(--color-shadow,transparent))]"></div>
+        <div className="relative z-10 max-w-reading-max-width mx-auto w-full px-2 sm:px-4 py-1.5 flex justify-between items-center h-14 sm:h-16 pt-[max(env(safe-area-inset-top),6px)]">
+          <div className="flex items-center shrink-0">
+            <button 
+              onClick={() => onNavigate({ type: 'book', bookId, rootTab })} 
+              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-primary/10 active:scale-95 transition-all text-primary" 
+              title="Về chi tiết truyện"
+            >
+              <ArrowLeft size={22} />
             </button>
-            <button onClick={() => onNavigate({ type: 'library' })} className="hover:opacity-70 transition-opacity p-2 rounded-full" title="Về trang chủ">
-              <Home size={22} />
+            <button 
+              onClick={() => onNavigate({ type: 'library' })} 
+              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-primary/10 active:scale-95 transition-all text-primary md:hidden ml-0.5" 
+              title="Về trang chủ"
+            >
+              <Home size={20} />
             </button>
           </div>
-          <div className="flex-1 text-center truncate px-2 opacity-90">
-            <h4 className="font-sans font-semibold truncate">{content.chapter.bookName}</h4>
-            <p className="opacity-80 truncate">Chương {content.chapter.chapterNumber}</p>
+
+          <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-2 sm:px-4">
+            <h1 className="font-sans font-bold truncate text-[10px] sm:text-[16px] max-w-[200px] sm:max-w-md w-full text-center leading-tight">
+              {content.chapter.bookName}
+            </h1>
+            <div className="flex items-center mt-1">
+              <span className="text-[6px] sm:text-[10px] font-extrabold text-primary bg-primary/10 border border-primary/20 px-2 sm:px-2.5 py-0.5 rounded-[6px] tracking-widest uppercase shadow-[inset_0_1px_rgba(255,255,255,0.1)]">
+                Chương {content.chapter.chapterNumber}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-1 -mr-2">
-            <button onClick={() => { setShowTranslation(true); setShowControls(false); }} className="hover:opacity-70 transition-opacity p-2 rounded-full hidden sm:block">
+          
+          <div className="flex items-center justify-end shrink-0">
+            <button onClick={() => { setShowTranslation(true); setShowControls(false); }} className="w-10 h-10 items-center justify-center rounded-full hover:bg-primary/10 transition-colors hidden sm:flex text-primary">
               <Languages size={20} />
             </button>
-            <button onClick={() => { setShowEditWord(true); setShowControls(false); }} className="hover:opacity-70 transition-opacity p-2 rounded-full hidden sm:block">
+            <button onClick={() => { setShowEditWord(true); setShowControls(false); }} className="w-10 h-10 items-center justify-center rounded-full hover:bg-primary/10 transition-colors hidden sm:flex text-primary">
               <Edit3 size={20} />
             </button>
-            <button onClick={() => { setShowSettings(true); setShowControls(false); }} className="hover:opacity-70 transition-opacity p-2 rounded-full hidden sm:block">
+            <button onClick={() => { setShowSettings(true); setShowControls(false); }} className="w-10 h-10 items-center justify-center rounded-full hover:bg-primary/10 transition-colors hidden sm:flex text-primary">
               <Type size={20} />
             </button>
             <button onClick={() => { 
@@ -176,8 +193,8 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
               if (bookChapters.length === 0) {
                 loadMoreChapters(1);
               }
-            }} className="hover:opacity-70 transition-opacity p-2 rounded-full">
-              <Menu size={20} />
+            }} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-primary/10 active:scale-95 transition-all text-primary">
+              <Menu size={22} />
             </button>
           </div>
         </div>
@@ -206,21 +223,66 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
               <div className="flex justify-center items-center h-20 text-on-surface-variant text-sm">Đang tải mục lục...</div>
             ) : (
               <>
-                {bookChapters.map((chap) => {
-                  const isActive = chap.chapterId === chapterId;
-                  return (
-                    <button
-                      key={chap.chapterId}
-                      className={`w-full text-left px-4 py-3 rounded-xl transition-colors border ${isActive ? 'bg-primary/10 border-primary text-primary font-semibold' : 'border-transparent text-on-surface-variant hover:bg-surface-container-high'}`}
-                      onClick={() => {
-                        setShowChapterDrawer(false);
-                        onNavigate({ type: 'reader', bookId, chapterId: chap.chapterId });
-                      }}
-                    >
-                      Chương {chap.chapterNumber}: {chap.title}
-                    </button>
-                  );
-                })}
+                <div className="flex flex-col gap-1.5 pb-4">
+                  {bookChapters.map((chap) => {
+                    const isActive = chap.chapterId === chapterId;
+                    const isPending = chap.state === 'PENDING';
+                    const isFailed = chap.state === 'FAILED';
+                    const isSucceeded = chap.state === 'SUCCEEDED';
+
+                    return (
+                      <button
+                        key={chap.chapterId}
+                        disabled={!isSucceeded && !isPending}
+                        className={`w-full text-left flex items-start gap-3 p-3 rounded-xl transition-all border ${
+                          isActive 
+                            ? 'bg-primary/10 border-primary/30 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-primary/20' 
+                            : isSucceeded 
+                              ? 'bg-surface border-transparent hover:bg-surface-container-high active:scale-[0.98]' 
+                              : isPending
+                                ? 'bg-surface border-transparent opacity-80 hover:bg-surface-container-high active:scale-[0.98]'
+                                : 'bg-surface-container-lowest border-transparent opacity-50 cursor-not-allowed'
+                        }`}
+                        onClick={() => {
+                          if (isSucceeded || isPending) {
+                            setShowChapterDrawer(false);
+                            onNavigate({ type: 'reader', bookId, chapterId: chap.chapterId, rootTab });
+                          }
+                        }}
+                      >
+                        <div className={`mt-0.5 shrink-0 flex items-center justify-center w-6 h-6 rounded-full border ${
+                          isActive ? 'bg-primary text-on-primary border-primary' :
+                          isSucceeded ? 'bg-surface-container-high text-on-surface-variant border-outline-variant/30' :
+                          isPending ? 'bg-warning/10 text-warning border-warning/20' :
+                          'bg-error/10 text-error border-error/20'
+                        }`}>
+                          {isActive ? <div className="w-1.5 h-1.5 rounded-full bg-current" /> :
+                           isSucceeded ? <span className="text-[10px] font-bold">{chap.chapterNumber}</span> :
+                           isPending ? <Lock size={12} /> :
+                           <AlertCircle size={12} />}
+                        </div>
+                        <div className="flex flex-col flex-1 min-w-0">
+                          <span className={`text-[13px] sm:text-[14px] leading-tight line-clamp-2 ${
+                            isActive ? 'text-primary font-bold' : 
+                            isSucceeded ? 'text-on-surface font-medium' :
+                            'text-on-surface-variant'
+                          }`}>
+                            {isActive && <span className="mr-1">Chương {chap.chapterNumber}:</span>}
+                            {!isActive && isSucceeded && <span className="mr-1 opacity-70">Chương {chap.chapterNumber}:</span>}
+                            {chap.title || 'Chương không có tựa đề'}
+                          </span>
+                          {!isSucceeded && (
+                            <span className={`text-[10px] font-semibold mt-1 tracking-wide uppercase ${
+                              isPending ? 'text-warning' : 'text-error'
+                            }`}>
+                              {isPending ? 'Chờ dịch' : 'Lỗi'}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
                 {hasMoreChapters && (
                    <button 
                      onClick={() => loadMoreChapters(drawerPage)}
@@ -235,7 +297,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
           </div>
           <div className="p-4 border-t border-surface-variant bg-surface pb-safe-bottom">
             <button
-               onClick={() => { setShowChapterDrawer(false); onNavigate({ type: 'book', bookId }); }}
+               onClick={() => { setShowChapterDrawer(false); onNavigate({ type: 'book', bookId , rootTab}); }}
                className="w-full py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-variant transition-colors text-sm font-semibold"
             >
               Xem chi tiết truyện
@@ -246,7 +308,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
 
       {/* Main Content */}
       <main 
-        className="flex-1 w-full max-w-reading-max-width mx-auto px-6 sm:px-12 lg:px-20 pt-24 pb-16 cursor-pointer"
+        className="flex-1 w-full max-w-reading-max-width mx-auto px-4 sm:px-12 lg:px-20 pt-18 pb-16 cursor-pointer"
         onClick={handleContentClick}
         ref={contentRef}
       >
@@ -275,75 +337,70 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
       <nav 
         aria-hidden="true"
         className={cn(
-          "fixed bottom-0 left-0 w-full z-50 transition-transform duration-300 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.1)] border-t pb-safe-bottom text-inherit",
+          "fixed bottom-0 left-0 w-full z-50 transition-transform duration-500 will-change-transform ease-out",
           showControls ? "translate-y-0" : "translate-y-full",
-          "bg-background-85 border-outline-variant-50"
+          "text-on-surface"
         )}
       >
-        <div className="flex justify-between sm:justify-center gap-1 sm:gap-6 px-4 py-1.5 sm:py-2 items-center opacity-90 max-w-reading-max-width mx-auto">
-          <button 
-            disabled={!content.navigation?.prev?.chapterId}
-            onClick={() => content.navigation?.prev?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.prev.chapterId })}
-            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 group disabled:opacity-30 flex-1 sm:flex-none rounded-xl"
-          >
-             <ChevronLeft size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:-translate-x-1 group-active:-translate-x-2 transition-transform duration-300" />
-             <span className="text-[10px] font-medium tracking-wide">Trước</span>
-          </button>
+        {/* Apple Glass Background */}
+        <div className="absolute inset-0 bg-surface/75 backdrop-blur-[32px] saturate-150 border-t border-outline-variant/30 shadow-[0_-4px_32px_max(rgba(0,0,0,0.15),var(--color-shadow,transparent))]"></div>
+        
+        {/* Content */}
+        <div className="relative z-10 w-full max-w-reading-max-width mx-auto pb-[env(safe-area-inset-bottom)]">
+          <div className="flex justify-between items-center px-1 sm:px-6 py-2">
+            <button 
+              disabled={!content.navigation?.prev?.chapterId}
+              onClick={() => content.navigation?.prev?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.prev.chapterId, rootTab })}
+              className="flex flex-col items-center justify-center p-2.5 min-w-[64px] sm:min-w-[80px] rounded-2xl group disabled:opacity-30 transition-all active:scale-95 text-primary hover:bg-primary/10"
+            >
+               <ChevronLeft size={22} className="mb-1 group-hover:-translate-x-1 group-active:-translate-x-1.5 transition-transform duration-300" />
+               <span className="text-[10px] font-semibold tracking-wide">Trước</span>
+            </button>
 
-          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
+            <button 
+              onClick={() => { setShowTranslation(true); setShowControls(false); }}
+              className="flex flex-col items-center justify-center p-2.5 min-w-[64px] sm:min-w-[80px] rounded-2xl group transition-all active:scale-95 text-primary hover:bg-primary/10"
+            >
+               <Languages size={22} className="mb-1 group-hover:-translate-y-0.5 transition-transform duration-300" />
+               <span className="text-[10px] font-semibold tracking-wide">Dịch</span>
+            </button>
 
-          <button 
-            onClick={() => { setShowTranslation(true); setShowControls(false); }}
-            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl relative group"
-          >
-             <div className="relative mb-1 group-hover:-translate-y-0.5 transition-transform duration-300">
-               <Languages size={20} className="sm:w-5 sm:h-5" />
-             </div>
-             <span className="text-[10px] font-medium tracking-wide">Dịch</span>
-          </button>
-
-          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
-
-         <button 
-             onClick={() => { setShowSettings(true); setShowControls(false); }}
-            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl group"
-          >
-             <Type size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:-translate-y-0.5 transition-transform duration-300" />
-             <span className="text-[10px] font-medium tracking-wide">Cài đặt</span>
-          </button>
-          
-          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
-
-          
-          <button 
-            onClick={() => { setShowEditWord(true); setShowControls(false); }}
-            className={cn(
-              "flex flex-col items-center justify-center active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl relative group",
-              selectedText ? "opacity-100 text-primary" : "hover:opacity-100 opacity-70"
-            )}
-          >
-             <div className="relative mb-1 group-hover:-translate-y-0.5 transition-transform duration-300">
-               <Edit3 size={20} className="sm:w-5 sm:h-5" />
-               {selectedText && (
-                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full animate-ping opacity-75"></span>
-               )}
-               {selectedText && (
-                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border border-current opacity-50"></span>
-               )}
-             </div>
-             <span className="text-[10px] font-medium tracking-wide">Thay thế</span>
-          </button>
-          
-          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
-
-          <button 
-            disabled={!content.navigation?.next?.chapterId}
-            onClick={() => content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId })}
-            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 group disabled:opacity-30 flex-1 sm:flex-none rounded-xl"
-          >
-             <ChevronRight size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:translate-x-1 group-active:translate-x-2 transition-transform duration-300" />
-             <span className="text-[10px] font-medium tracking-wide">Sau</span>
-          </button>
+           <button 
+               onClick={() => { setShowSettings(true); setShowControls(false); }}
+              className="flex flex-col items-center justify-center p-2.5 min-w-[64px] sm:min-w-[80px] rounded-2xl group transition-all active:scale-95 text-primary hover:bg-primary/10"
+            >
+               <Type size={22} className="mb-1 group-hover:-translate-y-0.5 transition-transform duration-300" />
+               <span className="text-[10px] font-semibold tracking-wide">Cài đặt</span>
+            </button>
+            
+            <button 
+              onClick={() => { setShowEditWord(true); setShowControls(false); }}
+              className={cn(
+                "flex flex-col items-center justify-center p-2.5 min-w-[64px] sm:min-w-[80px] rounded-2xl relative group transition-all active:scale-95 hover:bg-primary/10",
+                selectedText ? "text-primary bg-primary/10" : "text-primary"
+              )}
+            >
+               <div className="relative mb-1 group-hover:-translate-y-0.5 transition-transform duration-300">
+                 <Edit3 size={22} />
+                 {selectedText && (
+                   <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full animate-ping opacity-75"></span>
+                 )}
+                 {selectedText && (
+                   <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border border-surface opacity-90 shadow-sm"></span>
+                 )}
+               </div>
+               <span className="text-[10px] font-semibold tracking-wide">Thay thế</span>
+            </button>
+            
+            <button 
+              disabled={!content.navigation?.next?.chapterId}
+              onClick={() => content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId, rootTab })}
+              className="flex flex-col items-center justify-center p-2.5 min-w-[64px] sm:min-w-[80px] rounded-2xl group disabled:opacity-30 transition-all active:scale-95 text-primary hover:bg-primary/10"
+            >
+               <ChevronRight size={22} className="mb-1 group-hover:translate-x-1 group-active:translate-x-1.5 transition-transform duration-300" />
+               <span className="text-[10px] font-semibold tracking-wide">Sau</span>
+            </button>
+          </div>
         </div>
       </nav>
       

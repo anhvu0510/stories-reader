@@ -28,8 +28,9 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <section className="flex flex-col gap-3">
             <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Màu nền</h2>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-6 gap-2">
               <ThemeButton currentTheme={theme} targetTheme="default" bg="bg-[#1e1e1e]" ringColor="ring-primary" checkColor="text-white" label="Mặc định" onClick={() => setTheme('default')} />
+              <ThemeButton currentTheme={theme} targetTheme="modern-vn" bg="bg-[#0b1326]" ringColor="ring-orange-400" checkColor="text-[#dae2fd]" label="Modern" onClick={() => setTheme('modern-vn')} />
               <ThemeButton currentTheme={theme} targetTheme="amoled" bg="bg-[#000000]" ringColor="ring-gray-500" checkColor="text-[#8a8a8e]" label="Amoled" onClick={() => setTheme('amoled')} />
               <ThemeButton currentTheme={theme} targetTheme="midnight" bg="bg-[#0f172a]" ringColor="ring-blue-500" checkColor="text-[#cbd5e1]" label="Midnight" onClick={() => setTheme('midnight')} />
               <ThemeButton currentTheme={theme} targetTheme="obsidian" bg="bg-[#0d0d12]" ringColor="ring-purple-500" checkColor="text-[#a1a1aa]" label="Obsidian" onClick={() => setTheme('obsidian')} />
@@ -42,7 +43,7 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
             <div className="grid grid-cols-2 gap-2">
               <FontButton currentFont={font} targetFont="palatino" label="Palatino" onClick={() => setFont('palatino')} fontFamily="font-serif" />
               <FontButton currentFont={font} targetFont="bookerly" label="Bookerly" onClick={() => setFont('bookerly')} fontFamily="font-serif" />
-              <FontButton currentFont={font} targetFont="minhphung" label="Minh Phụng" onClick={() => setFont('minhphung')} fontFamily="font-sans" />
+              <FontButton currentFont={font} targetFont="font_viet_tay" label="Viết tay" onClick={() => setFont('font_viet_tay')} fontFamily='"Patrick Hand", cursive' />
               <FontButton currentFont={font} targetFont="default" label="Mặc định" onClick={() => setFont('default')} fontFamily="font-sans" />
             </div>
           </section>

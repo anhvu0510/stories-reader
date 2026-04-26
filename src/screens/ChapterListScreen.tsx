@@ -20,7 +20,7 @@ const formatDate = (dateStr: string) => {
   }
 };
 
-export function ChapterListScreen({ bookId, filterState: initialFilterState = 'all', onNavigate }: { bookId: string, filterState?: 'all' | 'PENDING', onNavigate: (v: AppView) => void }) {
+export function ChapterListScreen({ bookId, filterState: initialFilterState = 'all', rootTab, onNavigate }: { bookId: string, rootTab: string, filterState?: 'all' | 'PENDING', onNavigate: (v: AppView) => void }) {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [book, setBook] = useState<Book | null>(null);
   
@@ -70,15 +70,46 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
 
   return (
     <>
-      <header className="bg-background/90 backdrop-blur-xl sticky top-0 w-full z-50 border-b border-surface-variant">
-        <div className="flex justify-between items-center w-full px-4 h-14 max-w-reading-max-width mx-auto">
-          <button onClick={() => onNavigate({ type: 'library' })} className="text-primary hover:text-primary-fixed transition-colors active:opacity-70 p-2 -ml-2 rounded-full flex-shrink-0">
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-primary font-bold text-sm sm:text-base truncate px-4 flex-1 text-center">
-            {book?.bookName || 'Đang tải...'}
-          </h1>
-          <div className="w-9 flex-shrink-0"></div>
+      <header className="bg-surface/80 backdrop-blur-[32px] saturate-150 sticky top-0 w-full z-50 border-b border-outline-variant/20 shadow-sm relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-surface/50 to-transparent pointer-events-none" />
+        <div className="flex flex-col w-full px-3 pt-3 pb-4 max-w-reading-max-width mx-auto gap-2 relative z-10">
+          <div className="flex justify-between items-start w-full">
+            <button 
+              onClick={() => onNavigate({ type: 'library' })} 
+              className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            
+            <div className="flex-1 px-3 flex flex-col items-center pt-1">
+              <h1 className="text-on-surface font-extrabold text-[16px] sm:text-[18px] text-center line-clamp-2 leading-[1.25] tracking-tight">
+                {book?.bookName || 'Đang tải...'}
+              </h1>
+              
+              {book && (
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-on-surface bg-surface-container-high border border-outline-variant/20 px-2 py-1 rounded-md shadow-sm">
+                    {book.chapterCount} Chương
+                  </span>
+                  
+                  {book.totalPending > 0 && (
+                    <span className="flex items-center text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-warning bg-warning/10 border border-warning/20 px-2 py-1 rounded-md shadow-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-warning mr-1.5 animate-pulse" />
+                      Chờ dịch {book.totalPending}
+                    </span>
+                  )}
+                  
+                  {book.totalPending === 0 && book.totalTranslated > 0 && (
+                    <span className="flex items-center text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#10b981] bg-[#10b981]/10 border border-[#10b981]/20 px-2 py-1 rounded-md shadow-sm">
+                      Hoàn thành
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="w-10 flex-shrink-0"></div>
+          </div>
         </div>
       </header>
 
@@ -142,71 +173,72 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
                 key={chapter.chapterId}
                 onClick={(e) => {
                   e.preventDefault();
-                  if (isSucceeded || isPending) onNavigate({ type: 'reader', bookId, chapterId: chapter.chapterId });
+                  if (isSucceeded || isPending) onNavigate({ type: 'reader', bookId, chapterId: chapter.chapterId , rootTab });
                 }}
-                className={`relative overflow-hidden block rounded-xl p-3.5 sm:p-4 transition-all duration-300 group
-                  ${isSucceeded ? 'bg-surface-container border border-outline-variant/60 shadow-sm hover:border-primary/50 hover:shadow-md cursor-pointer active:scale-[0.98]' : 
-                    isPending ? 'bg-surface border border-outline-variant/30 hover:border-outline-variant/60 hover:shadow-sm cursor-pointer active:scale-[0.98]' : 
-                    'bg-surface-container-low border border-transparent opacity-60 cursor-not-allowed'}
+                className={`relative overflow-hidden block rounded-2xl p-3.5 sm:p-4 transition-all duration-300 group
+                  ${isSucceeded ? 'bg-surface-container-low border border-outline-variant/30 shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:bg-surface-container hover:border-primary/40 focus:border-primary/40 cursor-pointer active:scale-[0.98]' : 
+                    isPending ? 'bg-surface border border-outline-variant/20 hover:border-outline-variant/40 cursor-pointer active:scale-[0.98]' : 
+                    'bg-surface-container-lowest border border-transparent opacity-60 cursor-not-allowed'}
                 `}
               >
-                {/* Subtle background color tint & side bar effect */}
-                {isSucceeded && (
-                  <>
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/30 group-hover:bg-primary transition-colors" />
-                  </>
-                )}
-                {isPending && (
-                  <>
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none" />
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500/30 group-hover:bg-amber-500 transition-colors" />
-                  </>
-                )}
-                
-                <div className="flex flex-col gap-2 relative z-10 pl-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0 pt-0.5">
-                      <span className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md flex-shrink-0 border ${
-                        isSucceeded ? 'bg-primary/5 text-primary border-primary/20' : 
-                        isPending ? 'bg-amber-500/5 text-amber-500 border-amber-500/20' : 
-                        'bg-red-500/5 text-red-500 border-red-500/20'
-                      }`}>
-                        Chương {chapter.chapterNumber}
-                      </span>
-                      
-                      <div className="flex items-center text-[10px] text-on-surface-variant/70 font-medium whitespace-nowrap">
-                        <Clock size={10} className="mr-1" />
-                        <span>{formatDate(chapter.updatedAt)}</span>
+                {/* Subtle side indicator */}
+                <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${
+                  isSucceeded ? 'bg-primary/20 group-hover:bg-primary/60' :
+                  isPending ? 'bg-warning/20 group-hover:bg-warning/50' :
+                  'bg-error/20'
+                }`} />
+
+                <div className="flex items-center gap-3.5 sm:gap-4 pl-1">
+                  {/* Left Number Badge */}
+                  <div className={`shrink-0 w-[42px] h-[42px] sm:w-[48px] sm:h-[48px] rounded-full flex flex-col items-center justify-center border font-bold transition-colors ${
+                    isSucceeded ? 'bg-primary/10 text-primary border-primary/20 group-hover:bg-primary group-hover:text-on-primary' :
+                    isPending ? 'bg-warning/10 text-warning border-warning/20' :
+                    'bg-error/10 text-error border-error/20'
+                  }`}>
+                    <span className="text-[9px] sm:text-[10px] leading-none opacity-80 mt-0.5">CH</span>
+                    <span className="text-[14px] sm:text-[16px] leading-none mt-0.5">{chapter.chapterNumber}</span>
+                  </div>
+
+                  {/* Middle Content */}
+                  <div className="flex-1 min-w-0 py-0.5 flex flex-col justify-center">
+                    <h3 className={`text-[14px] sm:text-[15px] font-semibold leading-[1.3] truncate mb-1 ${
+                      isSucceeded ? 'text-on-surface group-hover:text-primary transition-colors' :
+                      isPending ? 'text-on-surface-variant' :
+                      'text-on-surface-variant/70'
+                    }`}>
+                      {chapter.title || `Chương ${chapter.chapterNumber}`}
+                    </h3>
+
+                    <div className="flex items-center flex-wrap gap-2.5">
+                      <div className="flex items-center text-[10px] sm:text-[11px] text-on-surface-variant/70 font-medium">
+                        <Clock size={10} className="mr-1 opacity-70 shrink-0" />
+                        <span className="truncate">{formatDate(chapter.updatedAt)}</span>
                       </div>
-                    
-                      {isFailed && <span className="text-[9px] font-bold text-red-500 bg-red-500/10 px-1 py-0.5 rounded tracking-wide ml-auto">LỖI</span>}
-                    </div>
-                    
-                    <div className="flex-shrink-0 self-start mt-0.5">
-                      {isSucceeded && (
-                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-primary/40 group-hover:text-primary group-hover:scale-110 group-active:scale-95 transition-all duration-300">
-                          <CheckCircle2 size={16} />
-                        </div>
-                      )}
+                      
                       {isPending && (
-                         <div className="w-5 h-5 rounded-full flex items-center justify-center text-amber-500/60">
-                          <Lock size={14} />
+                        <div className="flex items-center text-[9px] sm:text-[10px] font-bold text-warning uppercase tracking-wide bg-warning/10 px-1.5 py-0.5 rounded shrink-0">
+                          <Lock size={10} className="mr-1" /> Chờ dịch
                         </div>
                       )}
+                      
                       {isFailed && (
-                         <div className="w-5 h-5 rounded-full flex items-center justify-center text-red-500/60">
-                          <AlertCircle size={14} />
+                        <div className="flex items-center text-[9px] sm:text-[10px] font-bold text-error uppercase tracking-wide bg-error/10 px-1.5 py-0.5 rounded shrink-0">
+                          <AlertCircle size={10} className="mr-1" /> Lỗi dịch
                         </div>
                       )}
                     </div>
                   </div>
-                  
-                  <h3 className={`text-[13px] sm:text-[14px] font-semibold leading-[1.4] transition-colors pr-6 ${
-                    isSucceeded ? 'text-on-surface group-hover:text-primary' : 'text-on-surface-variant'
-                  }`}>
-                    {chapter.title}
-                  </h3>
+
+                  {/* Right Arrow (Optionally display status icon if not succeeded) */}
+                  <div className="shrink-0 pr-1">
+                    {isSucceeded ? (
+                      <ArrowRight size={18} className="text-on-surface-variant/30 group-hover:text-primary transition-colors transform group-hover:translate-x-0.5" />
+                    ) : isPending ? (
+                       <Lock size={16} className="text-warning/40" />
+                    ) : (
+                       <AlertCircle size={16} className="text-error/50" />
+                    )}
+                  </div>
                 </div>
               </a>
             );

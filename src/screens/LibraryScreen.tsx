@@ -29,7 +29,7 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
     setIsLoading(true);
     try {
       if (currentTab === 'ai') {
-        const res = await api.getBooks(pageNum, searchKeyword, 'PENDING', 20);
+        const res = await api.getBooks(pageNum, searchKeyword, currentTab.toUpperCase(), 20);
         setAiBooks(res.data);
         if (res.pagination) {
           const totalPages = Number(res.pagination.totalPages) || 1;
@@ -37,7 +37,7 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
           setHasMore(pageNum < totalPages);
         }
       } else {
-        const res = await api.getBooks(pageNum, searchKeyword, undefined, 20);
+        const res = await api.getBooks(pageNum, searchKeyword, currentTab.toUpperCase(), 20);
         setBooks(res.data);
         if (res.pagination) {
           const totalPages = Number(res.pagination.totalPages) || 1;
@@ -76,69 +76,77 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
 
   return (
     <>
-      <header className="bg-background/90 backdrop-blur-md sticky top-0 z-40 border-b border-surface-variant flex flex-col w-full pb-2 shadow-sm pt-2">
-        {/* Header Tabs */}
-        <div className="px-4 mt-1 flex items-center justify-between gap-2">
-          <div className="flex items-center bg-surface-container p-1 rounded-xl w-full mx-auto max-w-full overflow-x-auto hide-scrollbar">
-            <button 
-              onClick={() => setActiveTab('books')}
-              className={`flex-1 sm:px-6 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap min-w-[33%] ${activeTab === 'books' ? 'bg-background text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'}`}
-            >
-              <Library size={14} />
-              <span>Tất cả</span>
-            </button>
-            <button 
-              onClick={() => setActiveTab('history')}
-              className={`flex-1 sm:px-6 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap min-w-[33%] ${activeTab === 'history' ? 'bg-background text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'}`}
-            >
-              <Clock size={14} />
-              <span>Lịch sử</span>
-            </button>
-            <button 
-              onClick={() => setActiveTab('ai')}
-              className={`flex-1 sm:px-6 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap min-w-[33%] ${activeTab === 'ai' ? 'bg-primary/10 text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'}`}
-            >
-              <Sparkles size={14} className={activeTab === 'ai' ? 'text-primary' : ''} />
-              <span>Dịch AI</span>
-            </button>
+      <header className="bg-surface/75 backdrop-blur-[32px] sticky top-0 z-40 border-b border-outline-variant/20 flex flex-col w-full pb-4 pt-4 shadow-sm saturate-150">
+        {/* Top Header Row (Search + Settings) */}
+        <div className="px-4 flex items-center justify-between gap-3 w-full mx-auto">
+          {/* Search Bar */}
+          <div className="relative flex-1 group">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant group-focus-within:text-primary transition-colors">
+              <Search size={18} />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-10 py-2.5 sm:py-3 bg-surface-container-low/50 backdrop-blur-md border border-outline-variant/30 rounded-[18px] text-on-surface focus:bg-surface-container focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all text-[15px] sm:text-sm outline-none placeholder:text-on-surface-variant/50 shadow-inner"
+              placeholder="Tìm kiếm truyện, tác giả..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button 
+                onClick={() => setSearch('')}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none p-2"
+              >
+                <div className="bg-surface-variant/50 rounded-full p-1 border border-outline-variant/20 hover:bg-surface-variant">
+                  <X size={12} />
+                </div>
+              </button>
+            )}
           </div>
+
+          {/* Settings Button */}
           <button 
             onClick={() => {
               const currentDomain = localStorage.getItem('API_DOMAIN_CONFIG') || '';
               setApiDomainInput(currentDomain);
               setShowSettingsModal(true);
             }}
-            className="p-2 sm:px-4 sm:py-2.5 rounded-xl bg-surface-container text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors flex-shrink-0 flex items-center justify-center shadow-sm border border-transparent hover:border-primary/20"
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-[18px] bg-surface-container-low/50 backdrop-blur-md border border-outline-variant/30 text-on-surface-variant hover:text-primary hover:bg-surface-container hover:shadow-sm active:scale-95 transition-all shrink-0 flex items-center justify-center shadow-inner"
             title="Cài đặt API Domain"
           >
-            <Settings size={18} />
+            <Settings size={22} />
           </button>
+        </div>
+
+        {/* Header Tabs */}
+        <div className="px-4 w-full mx-auto mt-3.5">
+          <div className="flex items-center p-1.5 rounded-[20px] w-full bg-surface-container-lowest/40 backdrop-blur-xl border border-outline-variant/20 shadow-inner overflow-x-auto hide-scrollbar relative">
+             {/* We can use absolute positioning for active indicator if we want, but simple toggles work well too */}
+            <button 
+              onClick={() => setActiveTab('books')}
+              className={`flex-1 py-2 sm:py-2.5 rounded-[16px] text-[13px] sm:text-sm font-bold transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.96] min-w-[30%] ${activeTab === 'books' ? 'bg-surface shadow-[0_2px_12px_max(rgba(0,0,0,0.1),var(--color-shadow,transparent))] text-primary border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low/50 border border-transparent'}`}
+            >
+              <Library size={16} className={`transition-transform duration-300 ${activeTab === 'books' ? 'scale-110' : 'scale-100'}`} />
+              <span>Tất cả</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('history')}
+              className={`flex-1 py-2 sm:py-2.5 rounded-[16px] text-[13px] sm:text-sm font-bold transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.96] min-w-[30%] ${activeTab === 'history' ? 'bg-surface shadow-[0_2px_12px_max(rgba(0,0,0,0.1),var(--color-shadow,transparent))] text-primary border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low/50 border border-transparent'}`}
+            >
+              <Clock size={16} className={`transition-transform duration-300 ${activeTab === 'history' ? 'scale-110' : 'scale-100'}`} />
+              <span>Lịch sử</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('ai')}
+              className={`flex-1 py-2 sm:py-2.5 rounded-[16px] text-[13px] sm:text-sm font-bold transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.96] min-w-[30%] ${activeTab === 'ai' ? 'bg-surface shadow-[0_2px_12px_max(rgba(0,0,0,0.1),var(--color-shadow,transparent))] text-primary border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low/50 border border-transparent'}`}
+            >
+              <Sparkles size={16} className={`transition-transform duration-300 ${activeTab === 'ai' ? 'text-primary scale-110' : 'scale-100'}`} />
+              <span>Dịch AI</span>
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="flex-grow w-full mx-auto px-4 py-4 flex flex-col gap-4 pb-6">
-        {/* Search Bar */}
-        <div className="relative mb-1">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-on-surface-variant">
-            <Search size={18} />
-          </div>
-          <input
-            type="text"
-            className="block w-full pl-10 pr-10 py-3 bg-surface-container border-transparent rounded-2xl text-on-surface focus:bg-surface-container-high focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm outline-none placeholder:text-on-surface-variant/60 shadow-sm"
-            placeholder="Tìm kiếm truyện, tác giả..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <button 
-              onClick={() => setSearch('')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-on-surface-variant hover:text-on-surface transition-colors focus:outline-none"
-            >
-              <X size={18} />
-            </button>
-          )}
-        </div>
-
+      <main className="flex-grow w-full mx-auto px-4 py-4 sm:py-6 flex flex-col gap-4 pb-6">
         <section className="flex flex-col gap-4">
           {displayedBooks.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-on-surface-variant text-center px-4 py-12 bg-surface-container-lowest rounded-2xl border border-dashed border-outline-variant/30">
@@ -178,38 +186,45 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
             return (
             <article 
               key={book.bookId}
-              onClick={() => onNavigate({ type: 'book', bookId: book.bookId, filterState: activeTab === 'ai' ? 'PENDING' : 'all' })}
-              className={`relative overflow-hidden bg-surface-container p-3.5 sm:p-4 rounded-xl border border-outline-variant/60 shadow-sm hover:border-primary/50 hover:shadow-md transition-all duration-300 cursor-pointer active:scale-[0.98] group ${!isRead && activeTab === 'books' ? 'opacity-80' : ''}`}
+              onClick={() => book?.lastReadChapter && activeTab === 'history' ? onNavigate({ type: 'reader', bookId: book.bookId, chapterId: book.lastReadChapter.chapterId, rootTab: activeTab }) : onNavigate({ type: 'book', bookId: book.bookId, filterState: activeTab === 'ai' ? 'PENDING' : 'all', rootTab: activeTab })}
+              className={`group relative flex flex-col gap-3 p-4 rounded-2xl bg-surface-container-low border border-outline-variant/30 active:scale-[0.98] transition-all cursor-pointer shadow-sm hover:shadow-md hover:border-primary/40 ${!isRead && activeTab === 'books' ? 'opacity-80' : ''}`}
             >
-              {/* Subtle background color tint */}
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/30 group-hover:bg-primary transition-colors" />
-              
-              <div className="flex gap-3 relative z-10 pl-1">
-                <div className="flex-1 min-w-0 flex flex-col pt-0.5">
-                  <h2 className="text-[15px] sm:text-base font-bold text-on-surface leading-tight mb-2.5 break-words text-wrap group-hover:text-primary transition-colors">
-                    {book.bookName}
-                  </h2>
-                  
-                  <div className="mt-auto flex flex-wrap gap-1.5 sm:gap-2 text-[10px] sm:text-xs">
-                    <div className="flex items-center gap-1 border border-outline-variant/50 bg-surface-container-high px-2 py-1 rounded-md">
-                      <span className="opacity-70 text-on-surface-variant">Tổng:</span>
-                      <span className="font-semibold text-on-surface">{book.chapterCount}</span>
-                    </div>
-                    <div className="flex items-center gap-1 border border-primary/30 bg-primary/10 px-2 py-1 rounded-md text-primary">
-                      <span className="opacity-90">Đã dịch:</span>
-                      <span className="font-bold">{book.totalTranslated}</span>
-                    </div>
-                    <div className="flex items-center gap-1 border border-warning/40 bg-warning/10 px-2 py-1 rounded-md text-warning">
-                      <span className="opacity-90">Chờ dịch:</span>
-                      <span className="font-bold">{book.totalPending}</span>
-                    </div>
-                    <div className="flex items-center gap-1 border border-outline-variant/50 bg-surface-container-high px-2 py-1 rounded-md">
-                      <span className="opacity-70 text-on-surface-variant">Cập nhật:</span>
-                      <span className="font-semibold text-on-surface">{book.updatedAt ? book.updatedAt : book.createdAt ? book.createdAt : 'N/A'}</span>
-                    </div>
-                  </div>
+              <div className="flex flex-col gap-1.5">
+                <h2 className="text-[15px] sm:text-base font-bold text-on-surface leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+                  {book.bookName}
+                </h2>
+                <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-on-surface-variant/80">
+                  <Clock size={10} />
+                  <span>Cập nhật: {book.updatedAt ? book.updatedAt : book.createdAt ? book.createdAt : 'N/A'}</span>
                 </div>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1">
+                {activeTab !== 'history' ? (
+                  <>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-surface-variant/50 text-on-surface-variant text-[10px] sm:text-xs font-medium border border-outline-variant/20">
+                      <BookOpen size={10} className="sm:w-3 sm:h-3 opacity-70" />
+                      Tổng: {book.chapterCount}
+                    </span>
+                    
+                    {book.totalTranslated > 0 && (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-primary/10 text-primary text-[10px] sm:text-xs font-semibold border border-primary/20">
+                        Đã dịch: {book.totalTranslated}
+                      </span>
+                    )}
+                    
+                    {book.totalPending > 0 && (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-warning/10 text-warning text-[10px] sm:text-xs font-semibold border border-warning/20">
+                        Chờ dịch: {book.totalPending}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary text-[11px] sm:text-xs font-semibold border border-primary/20 w-fit max-w-full">
+                    <History size={12} className="shrink-0" />
+                    <span className="truncate">C.{book.lastReadChapter?.chapterNumber} {book.lastReadChapter?.title ? `- ${book.lastReadChapter.title}` : ''}</span>
+                  </span>
+                )}
               </div>
             </article>
           )})}
