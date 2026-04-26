@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Search, SortDesc, CheckCircle2, Lock, ArrowLeft, Loader2, ArrowRight, AlertCircle, Clock } from 'lucide-react';
+import { Search, SortDesc, CheckCircle2, Lock, ArrowLeft, Loader2, ArrowRight, AlertCircle, Clock, Settings } from 'lucide-react';
 import { api, Chapter, Book } from '../lib/api';
 import { AppView } from '../App';
 import { TranslationSheet } from '../components/TranslationSheet';
+import { GlobalSettingsSheet } from '../components/GlobalSettingsSheet';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 
 const formatDate = (dateStr: string) => {
@@ -32,6 +33,7 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, total: 0 });
   const [showTranslation, setShowTranslation] = useState(false);
+  const [showGlobalSettings, setShowGlobalSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const limit = 9999;
@@ -108,7 +110,13 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
               )}
             </div>
 
-            <div className="w-10 flex-shrink-0"></div>
+            <button 
+              onClick={() => setShowGlobalSettings(true)}
+              className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
+              title="Cài đặt hệ thống"
+            >
+              <Settings size={20} />
+            </button>
           </div>
         </div>
       </header>
@@ -261,6 +269,10 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
           initialTab="batch_chapter" 
           initialSelectedChapters={chapters.filter(c => c.state === 'PENDING').map(c => c.chapterId)} 
         />
+      )}
+
+      {showGlobalSettings && (
+        <GlobalSettingsSheet onClose={() => setShowGlobalSettings(false)} currentBookId={bookId} />
       )}
       
       <LoadingOverlay isLoading={isLoading} message="Đang tải danh sách chương..." />

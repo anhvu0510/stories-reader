@@ -1,0 +1,496 @@
+import React, { useState, useEffect } from 'react';
+import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Check, Layers, MonitorSmartphone, ChevronDown, ChevronUp } from 'lucide-react';
+import { api, Replacement } from '../lib/api';
+import { useReaderSettings } from '../contexts/ReaderContext';
+
+type RealScope = 'chapter' | 'book' | 'global';
+
+interface GlobalSettingsSheetProps {
+  onClose: () => void;
+  initialMatch?: string;
+  currentBookId?: string;
+  currentChapterId?: string;
+}
+
+export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId, currentChapterId }: GlobalSettingsSheetProps) {
+  const { 
+    isEnabledReplace, setIsEnabledReplace,
+    theme, setTheme, font, setFont, fontSize, setFontSize, lineHeight, setLineHeight, groupLines, setGroupLines
+  } = useReaderSettings();
+  const [activeTab, setActiveTab] = useState<'api' | 'names'>(initialMatch ? 'names' : 'api');
+
+  
+  // Names State
+  const [replacements, setReplacements] = useState<Replacement[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterScope, setFilterScope] = useState<RealScope | 'all'>('all');
+  const [loading, setLoading] = useState(true);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [matchStr, setMatchStr] = useState(initialMatch);
+  const [replacementStr, setReplacementStr] = useState('');
+  const [scope, setScope] = useState<RealScope>('chapter');
+
+  // API State
+  const [apiDomainInput, setApiDomainInput] = useState('');
+  const [isApiCollapsed, setIsApiCollapsed] = useState(true);
+
+  useEffect(() => {
+    setApiDomainInput(localStorage.getItem('API_DOMAIN_CONFIG') || '');
+  }, []);
+
+  useEffect(() => {
+    if (initialMatch) {
+      setMatchStr(initialMatch);
+      setActiveTab('names');
+    }
+  }, [initialMatch]);
+
+  useEffect(() => {
+    setLoading(true);
+    api.getReplacements(currentBookId, currentChapterId).then(res => {
+      setReplacements(res.data || []);
+      setLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, [currentBookId, currentChapterId]);
+
+  const handleSaveName = async () => {
+    if (!matchStr.trim() || !replacementStr.trim()) return;
+
+    try {
+      const data: Partial<Replacement> = {
+        match: matchStr,
+        replacement: replacementStr,
+        scope,
+        bookId: currentBookId,
+        chapterId: currentChapterId
+      };
+      
+      if (editingId) {
+        data.id = editingId;
+        const updated = await api.saveReplacement(data);
+        setReplacements(prev => prev.map(r => r.id === editingId ? updated : r));
+      } else {
+        const created = await api.saveReplacement(data);
+        setReplacements(prev => [created, ...prev]);
+      }
+
+      setEditingId(null);
+      setMatchStr('');
+      setReplacementStr('');
+    } catch (e) {
+      console.error("Failed to save replacement", e);
+    }
+  };
+
+  const handleEdit = (r: Replacement) => {
+    setEditingId(r.id);
+    setMatchStr(r.match);
+    setReplacementStr(r.replacement);
+    setScope(r.scope);
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await api.deleteReplacement(id);
+      setReplacements(prev => prev.filter(r => r.id !== id));
+      if (editingId === id) {
+        setEditingId(null);
+        setMatchStr('');
+        setReplacementStr('');
+      }
+    } catch (err) {
+      console.error("Failed to delete replacement", err);
+    }
+  };
+
+  const handleSaveDomain = () => {
+    localStorage.setItem('API_DOMAIN_CONFIG', apiDomainInput.trim());
+    window.location.reload();
+  };
+
+  const filteredReplacements = replacements.filter(r => {
+    const matchesSearch = r.match.toLowerCase().includes(searchQuery.toLowerCase()) || r.replacement.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesScope = filterScope === 'all' || r.scope === filterScope;
+    return matchesSearch && matchesScope;
+  });
+
+  const getScopeLabel = (s: RealScope) => {
+    if (s === 'chapter') return 'Chương';
+    if (s === 'book') return 'Truyện';
+    return 'Toàn cục';
+  };
+
+  const getScopeColor = (s: RealScope) => {
+    if (s === 'chapter') return 'text-primary';
+    if (s === 'book') return 'text-on-surface-variant';
+    return 'text-on-surface';
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4">
+      <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={onClose} />
+      
+      <div className="relative bg-surface-container text-on-surface w-full max-w-[680px] mx-auto rounded-t-3xl sm:rounded-2xl max-h-[90vh] h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.3)] z-10 overflow-hidden border-t sm:border border-outline-variant/30">
+        
+        <div className="flex-shrink-0 pt-2 px-3 sm:pt-4 sm:px-5 border-b border-outline-variant/10 bg-surface-container">
+          <div className="w-10 h-1 bg-outline-variant/30 rounded-full mx-auto mb-3 sm:hidden"></div>
+          <div className="flex justify-between items-center pb-2 sm:pb-3">
+            <div className="flex items-center bg-surface-container-highest/40 p-1 rounded-2xl sm:rounded-full border border-outline-variant/10 gap-1 overflow-hidden">
+              <button 
+                onClick={() => setActiveTab('api')}
+                className={`flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none ${activeTab === 'api' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+              >
+                <MonitorSmartphone size={16} className={activeTab === 'api' ? 'animate-pulse' : ''} />
+                <span className={activeTab === 'api' ? 'block' : 'hidden sm:block'}>Cơ bản</span>
+              </button>
+              
+              <button 
+                onClick={() => setActiveTab('names')}
+                className={`flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none ${activeTab === 'names' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+              >
+                <Edit3 size={16} />
+                <span className={activeTab === 'names' ? 'block' : 'hidden sm:block'}>Từ điển</span>
+              </button>
+            </div>
+
+            <button onClick={onClose} className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-surface-container-highest/30 hover:bg-surface-bright rounded-full text-on-surface-variant hover:text-on-surface hover:rotate-90 transition-all duration-300 active:scale-95">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto hide-scrollbar flex flex-col bg-surface">
+          
+          {activeTab === 'api' && (
+            <div className="p-5 flex flex-col gap-8">
+              
+              {/* API Domain Section */}
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => setIsApiCollapsed(!isApiCollapsed)}
+                  className="flex items-center justify-between font-bold text-on-surface border-b border-outline-variant/20 pb-2 w-full text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-4 bg-[#b47a18] rounded-full"></span>
+                    Nguồn dữ liệu API
+                  </div>
+                  {isApiCollapsed ? <ChevronDown size={20} className="text-on-surface-variant" /> : <ChevronUp size={20} className="text-on-surface-variant" />}
+                </button>
+                
+                <div className={`overflow-hidden transition-all duration-300 ${isApiCollapsed ? 'max-h-0 opacity-0 mb-0' : 'max-h-[300px] opacity-100 mb-2'}`}>
+                  <div className="bg-surface-container-lowest p-4 sm:p-5 rounded-2xl border border-outline-variant/20 flex flex-col gap-4 mt-2">
+                    <div>
+                      <label className="block text-[11px] sm:text-xs font-bold tracking-wide text-on-surface-variant mb-2">
+                        URL API CỦA HỆ THỐNG
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="url"
+                          value={apiDomainInput}
+                          onChange={(e) => setApiDomainInput(e.target.value)}
+                          placeholder="vd: https://api.my-domain.com"
+                          className="w-full bg-surface-container-highest/20 border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary/50 text-sm"
+                        />
+                      </div>
+                      <p className="text-[10px] sm:text-xs text-on-surface-variant/70 mt-2 leading-relaxed">
+                        Để trống nếu hệ thống đang chạy độc lập ở local.
+                      </p>
+                    </div>
+                    <div className="pt-1">
+                      <button
+                        onClick={handleSaveDomain}
+                        className="px-5 py-2.5 rounded-xl font-bold bg-[#b47a18] text-black hover:bg-[#c98a1b] active:scale-95 transition-all w-full sm:w-auto flex items-center justify-center gap-2 shadow-sm text-xs sm:text-[13px]"
+                      >
+                        <Save size={16} />
+                        Lưu & Khởi động lại
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Display Settings Section */}
+              <div className="flex flex-col gap-6">
+                <h3 className="font-bold text-on-surface flex items-center gap-2 border-b border-outline-variant/20 pb-2">
+                  <span className="w-1.5 h-4 bg-primary rounded-full"></span>
+                  Giao diện đọc
+                </h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <section className="flex flex-col gap-3">
+                    <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Màu nền</h2>
+                    <div className="grid grid-cols-6 gap-2">
+                      <ThemeButton currentTheme={theme} targetTheme="default" bg="bg-[#1e1e1e]" ringColor="ring-primary" checkColor="text-white" label="Mặc định" onClick={() => setTheme('default')} />
+                      <ThemeButton currentTheme={theme} targetTheme="modern-vn" bg="bg-[#0b1326]" ringColor="ring-orange-400" checkColor="text-[#dae2fd]" label="Modern" onClick={() => setTheme('modern-vn')} />
+                      <ThemeButton currentTheme={theme} targetTheme="amoled" bg="bg-[#000000]" ringColor="ring-gray-500" checkColor="text-[#8a8a8e]" label="Amoled" onClick={() => setTheme('amoled')} />
+                      <ThemeButton currentTheme={theme} targetTheme="midnight" bg="bg-[#0f172a]" ringColor="ring-blue-500" checkColor="text-[#cbd5e1]" label="Midnight" onClick={() => setTheme('midnight')} />
+                      <ThemeButton currentTheme={theme} targetTheme="obsidian" bg="bg-[#0d0d12]" ringColor="ring-purple-500" checkColor="text-[#a1a1aa]" label="Obsidian" onClick={() => setTheme('obsidian')} />
+                      <ThemeButton currentTheme={theme} targetTheme="coffee" bg="bg-[#1c1814]" ringColor="ring-orange-900" checkColor="text-[#d7c4b4]" label="Coffee" onClick={() => setTheme('coffee')} />
+                    </div>
+                  </section>
+
+                  <section className="flex flex-col gap-3">
+                    <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Phông chữ</h2>
+                    <div className="grid grid-cols-2 gap-2">
+                      <FontButton currentFont={font} targetFont="palatino" label="Palatino" onClick={() => setFont('palatino')} fontFamily='Monospace,font-serif' />
+                      <FontButton currentFont={font} targetFont="bookerly" label="Bookerly" onClick={() => setFont('bookerly')} fontFamily="font-serif" />
+                      <FontButton currentFont={font} targetFont="font_viet_tay" label="Viết tay" onClick={() => setFont('font_viet_tay')} fontFamily='"Patrick Hand", cursive' />
+                      <FontButton currentFont={font} targetFont="default" label="Mặc định" onClick={() => setFont('default')} fontFamily="font-sans" />
+                    </div>
+                  </section>
+                </div>
+
+                <section className="flex flex-col gap-5 sm:gap-6 bg-surface-container rounded-2xl p-5 border border-outline-variant/30">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex justify-between items-center">
+                      <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Cỡ chữ</h2>
+                      <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">{fontSize}px</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button onClick={() => setFontSize(Math.max(12, fontSize - 1))} className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface hover:bg-surface-bright active:scale-95 transition-all text-sm font-bold flex-shrink-0">
+                        A-
+                      </button>
+                      <input 
+                        type="range" min="14" max="32" step="1" 
+                        value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))}
+                        className="flex-1 accent-primary h-1.5 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full cursor-pointer bg-surface-container-highest"
+                      />
+                      <button onClick={() => setFontSize(Math.min(32, fontSize + 1))} className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface hover:bg-surface-bright active:scale-95 transition-all text-sm font-bold flex-shrink-0">
+                        A+
+                      </button>
+                    </div>
+                  </div>
+
+                  <hr className="border-outline-variant/10 -mx-5" />
+
+                  <div className="grid grid-cols-2 gap-5">
+                    <div className="flex flex-col gap-3">
+                      <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Giãn dòng</h2>
+                      <div className="flex bg-surface-container-highest rounded-xl p-1 gap-1">
+                        <OptionButton active={lineHeight === 1.2} onClick={() => setLineHeight(1.2)}>1.2</OptionButton>
+                        <OptionButton active={lineHeight === 1.4} onClick={() => setLineHeight(1.4)}>1.4</OptionButton>
+                        <OptionButton active={lineHeight === 1.6} onClick={() => setLineHeight(1.6)}>1.6</OptionButton>
+                        <OptionButton active={lineHeight === 1.8} onClick={() => setLineHeight(1.8)}>1.8</OptionButton>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Gộp dòng (Đoạn)</h2>
+                      <div className="flex bg-surface-container-highest rounded-xl p-1 items-center gap-1">
+                         <button onClick={() => setGroupLines(Math.max(1, groupLines - 1))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
+                          -
+                         </button>
+                         <div className="flex-1 text-center font-bold text-sm text-primary flex items-center justify-center gap-1.5">
+                           <Layers size={14} className="opacity-70" />
+                           {groupLines}
+                         </div>
+                         <button onClick={() => setGroupLines(Math.min(10, groupLines + 1))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
+                          +
+                         </button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'names' && (
+            <>
+              {/* Add/Edit Form Fixed at Top of Scrollable area */}
+              <div className="p-3 sm:p-4 border-b border-outline-variant/10 sticky top-0 z-10 flex flex-col gap-3 bg-surface-container/95 backdrop-blur-md shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                     <Edit3 size={14} className="text-primary" />
+                     <h3 className="text-[11px] font-bold text-on-surface uppercase tracking-widest">{editingId ? 'Chỉnh sửa' : 'Thêm từ'}</h3>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer group" title="Bật/Tắt Thay thế">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={isEnabledReplace}
+                      onChange={(e) => setIsEnabledReplace(e.target.checked)}
+                    />
+                    <div className="w-10 h-[22px] bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-[#1a1a1a] after:border-black after:border after:rounded-full after:h-[16px] after:w-[16px] after:transition-all peer-checked:bg-primary peer-checked:after:bg-black group-hover:opacity-90"></div>
+                  </label>
+                </div>
+                
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-center bg-surface-container-highest/20 border border-outline-variant/20 rounded-xl p-1 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                    <input 
+                      type="text" 
+                      placeholder="Từ gốc" 
+                      value={matchStr}
+                      onChange={(e) => setMatchStr(e.target.value)}
+                      className="flex-1 w-full min-w-0 bg-transparent py-2 pl-3 pr-2 text-[13px] sm:text-sm focus:outline-none text-on-surface placeholder-on-surface-variant/40 font-medium"
+                    />
+                    <div className="flex items-center justify-center px-1 text-primary opacity-60">
+                      <ArrowRight size={14} />
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="Thay thế bằng" 
+                      value={replacementStr}
+                      onChange={(e) => setReplacementStr(e.target.value)}
+                      className="flex-1 w-full min-w-0 bg-transparent py-2 pr-3 pl-2 text-[13px] sm:text-sm focus:outline-none text-primary placeholder-primary/40 font-bold"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex bg-surface-container-highest/30 rounded-lg p-1 border border-outline-variant/10">
+                      <button 
+                        onClick={() => setScope('chapter')}
+                        title="Trong chương này"
+                        className={`px-3 py-1.5 text-[11px] font-bold rounded-md transition-all flex items-center justify-center gap-1.5 ${scope === 'chapter' ? 'bg-background text-primary shadow-sm ring-1 ring-primary/20' : 'text-on-surface-variant hover:text-on-surface'}`}
+                      >
+                        Chương
+                      </button>
+                      <button 
+                        onClick={() => setScope('book')}
+                        title="Toàn bộ truyện"
+                        className={`px-3 py-1.5 text-[11px] font-bold rounded-md transition-all flex items-center justify-center gap-1.5 ${scope === 'book' ? 'bg-background text-primary shadow-sm ring-1 ring-primary/20' : 'text-on-surface-variant hover:text-on-surface'}`}
+                      >
+                        Truyện
+                      </button>
+                      <button 
+                        onClick={() => setScope('global')}
+                        title="Tất cả truyện"
+                        className={`px-3 py-1.5 text-[11px] font-bold rounded-md transition-all flex items-center justify-center gap-1.5 ${scope === 'global' ? 'bg-background text-primary shadow-sm ring-1 ring-primary/20' : 'text-on-surface-variant hover:text-on-surface'}`}
+                      >
+                        Toàn cục
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center gap-1.5">
+                      {editingId && (
+                        <button 
+                          onClick={() => { setEditingId(null); setMatchStr(''); setReplacementStr(''); }}
+                          className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-highest hover:text-error transition-colors"
+                          title="Hủy"
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
+                      <button 
+                        onClick={handleSaveName}
+                        disabled={!matchStr.trim() || !replacementStr.trim()}
+                        className="w-8 h-8 sm:w-auto sm:px-4 flex items-center justify-center rounded-full bg-primary text-on-primary hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed transition-all gap-1.5 shadow-sm"
+                        title="Lưu"
+                      >
+                        <Save size={14} />
+                        <span className="hidden sm:block text-[11px] font-bold">Lưu</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-5 flex flex-col gap-4 sm:gap-5 pb-24">
+                {/* Search & Filter */}
+                <div className="flex gap-2 sm:gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-70" size={16} />
+                    <input 
+                      type="text" 
+                      placeholder="Tìm kiếm từ thay thế..." 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-surface-container-highest/10 border border-outline-variant/20 rounded-full py-2 pl-9 pr-3 text-xs sm:text-[13px] focus:outline-none focus:border-primary/50 text-on-surface"
+                    />
+                  </div>
+                  <div className="relative">
+                    <select 
+                      value={filterScope}
+                      onChange={(e) => setFilterScope(e.target.value as RealScope | 'all')}
+                      className="h-full pl-8 pr-3 py-2 bg-surface-container-highest/10 text-xs sm:text-[13px] border border-outline-variant/20 rounded-full appearance-none focus:outline-none focus:border-primary/50 text-on-surface"
+                    >
+                      <option value="all">Tất cả</option>
+                      <option value="chapter">Chương</option>
+                      <option value="book">Truyện</option>
+                      <option value="global">Toàn cục</option>
+                    </select>
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-70 pointer-events-none" size={14} />
+                  </div>
+                </div>
+
+                {/* List */}
+                <div className="flex flex-col gap-2 sm:gap-3">
+                  {loading ? (
+                    <div className="text-center py-10 text-xs text-on-surface-variant">Đang tải...</div>
+                  ) : filteredReplacements.length === 0 ? (
+                    <div className="text-center py-8 sm:py-10 text-xs sm:text-[13px] text-on-surface-variant">Không tìm thấy từ thay thế nào.</div>
+                  ) : filteredReplacements.map(r => (
+                    <div 
+                      key={r.id}
+                      onClick={() => handleEdit(r)}
+                      className={`flex flex-col gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-xl sm:rounded-2xl border cursor-pointer transition-all ${editingId === r.id ? 'border-primary/50 bg-primary/5' : 'border-outline-variant/10 bg-surface-container-highest/10 hover:bg-surface-container-highest/20'}`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap text-sm sm:text-base">
+                          <span className="font-medium text-on-surface-variant line-through decoration-on-surface-variant/50">{r.match}</span>
+                          <ArrowRight size={14} className="text-on-surface-variant opacity-50 sm:hidden" />
+                          <ArrowRight size={16} className="text-on-surface-variant opacity-50 hidden sm:block" />
+                          <span className="font-bold text-primary">{r.replacement}</span>
+                        </div>
+                        <button 
+                          onClick={(e) => handleDelete(r.id, e)}
+                          className="p-1.5 sm:p-2 text-on-surface-variant opacity-70 hover:opacity-100 hover:text-error hover:bg-error/10 rounded-full transition-colors -mt-1 -mr-1"
+                        >
+                          <Trash2 size={16} className="sm:w-[18px] sm:h-[18px]" />
+                        </button>
+                      </div>
+                      <div className="flex justify-start">
+                        <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${getScopeColor(r.scope)} ${r.scope === 'chapter' ? 'bg-primary/10 px-1.5 sm:px-2 py-[1px] sm:py-0.5 rounded' : 'bg-surface-container-highest/30 px-1.5 sm:px-2 py-[1px] sm:py-0.5 rounded text-on-surface-variant'}`}>
+                          {getScopeLabel(r.scope)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ThemeButton({ currentTheme, targetTheme, bg, ringColor, checkColor, label, onClick }: any) {
+  const active = currentTheme === targetTheme;
+  return (
+    <button onClick={onClick} className="flex flex-col items-center gap-2 group outline-none">
+      <div className={`w-12 h-12 rounded-full ${bg} flex items-center justify-center transition-all duration-300 shadow-sm ${active ? `ring-2 ring-offset-2 ring-offset-surface ${ringColor} scale-105` : 'border border-outline-variant/30 group-hover:scale-105'}`}>
+        <Check size={20} className={`${checkColor} transition-transform duration-300 ${active ? 'scale-100 opacity-100' : 'scale-50 opacity-0 group-hover:scale-100 group-hover:opacity-50'}`} />
+      </div>
+      <span className={`text-[11px] font-bold transition-colors ${active ? 'text-primary' : 'text-on-surface-variant'}`}>{label}</span>
+    </button>
+  );
+}
+
+function FontButton({ currentFont, targetFont, label, onClick, fontFamily }: any) {
+  const active = currentFont === targetFont;
+  return (
+    <button onClick={onClick} className={`flex justify-center items-center px-2 py-2.5 rounded-xl transition-all outline-none ${active ? 'bg-primary/10 text-primary font-bold' : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-bright font-medium'}`}>
+      <span className={`${fontFamily} text-sm line-clamp-1`}>{label}</span>
+    </button>
+  );
+}
+
+function OptionButton({ active, children, onClick }: { active: boolean, children: React.ReactNode, onClick: () => void }) {
+  return (
+    <button 
+      onClick={onClick} 
+      className={`flex-1 py-2 flex justify-center items-center rounded-lg transition-all outline-none ${active ? 'bg-background text-primary shadow-sm font-bold scale-100' : 'text-on-surface-variant hover:bg-surface hover:text-on-surface font-medium scale-95 hover:scale-100'}`}
+    >
+      {children}
+    </button>
+  );
+}
+

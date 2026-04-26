@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
-import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle, Settings, Sparkles, BookOpen } from 'lucide-react';
 import { AppView } from '../App';
 import { api, ChapterContent, Chapter } from '../lib/api';
-import { SettingsSheet } from '../components/SettingsSheet';
 import { TranslationSheet } from '../components/TranslationSheet';
-import { EditWordSheet } from '../components/EditWordSheet';
+import { GlobalSettingsSheet } from '../components/GlobalSettingsSheet';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { useReaderSettings } from '../contexts/ReaderContext';
 import { cn } from '../lib/utils';
@@ -25,9 +24,8 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
   const [drawerPage, setDrawerPage] = useState(1);
   const [hasMoreChapters, setHasMoreChapters] = useState(true);
   const [isLoadingChapters, setIsLoadingChapters] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
-  const [showEditWord, setShowEditWord] = useState(false);
+  const [showGlobalSettings, setShowGlobalSettings] = useState(false);
   const [showChapterDrawer, setShowChapterDrawer] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [selectedText, setSelectedText] = useState('');
@@ -143,58 +141,41 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
       <header 
         aria-hidden={!showControls}
         className={cn(
-          "fixed top-0 left-0 w-full z-40 transition-transform duration-500 will-change-transform ease-out", "translate-y-0" ,
+          "fixed top-0 left-0 w-full z-40 transition-transform duration-500 will-change-transform ease-out", 
+          "translate-y-0",
           "text-on-surface"
         )}
       >
         <div className="absolute inset-0 bg-surface/80 backdrop-blur-[32px] saturate-150 border-b border-outline-variant/20 shadow-[0_4px_32px_max(rgba(0,0,0,0.1),var(--color-shadow,transparent))]"></div>
-        <div className="relative z-10 max-w-reading-max-width mx-auto w-full px-2 sm:px-4 py-1.5 flex justify-between items-center h-14 sm:h-16 pt-[max(env(safe-area-inset-top),6px)]">
+        <div className="relative z-10 max-w-reading-max-width mx-auto w-full px-3 py-2 flex justify-between items-center h-14 sm:h-16 pt-[max(env(safe-area-inset-top),8px)]">
           <div className="flex items-center shrink-0">
             <button 
               onClick={() => onNavigate({ type: 'book', bookId, rootTab })} 
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-primary/10 active:scale-95 transition-all text-primary" 
+              className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
               title="Về chi tiết truyện"
             >
-              <ArrowLeft size={22} />
-            </button>
-            <button 
-              onClick={() => onNavigate({ type: 'library' })} 
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-primary/10 active:scale-95 transition-all text-primary md:hidden ml-0.5" 
-              title="Về trang chủ"
-            >
-              <Home size={20} />
+              <ArrowLeft size={20} />
             </button>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-2 sm:px-4">
-            <h1 className="font-sans font-bold truncate text-[10px] sm:text-[16px] max-w-[200px] sm:max-w-md w-full text-center leading-tight">
+          <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-3">
+            <h1 className="font-sans font-extrabold truncate text-[13px] sm:text-base max-w-[200px] sm:max-w-md w-full text-center leading-tight text-on-surface tracking-tight">
               {content.chapter.bookName}
             </h1>
             <div className="flex items-center mt-1">
-              <span className="text-[6px] sm:text-[10px] font-extrabold text-primary bg-primary/10 border border-primary/20 px-2 sm:px-2.5 py-0.5 rounded-[6px] tracking-widest uppercase shadow-[inset_0_1px_rgba(255,255,255,0.1)]">
+              <span className="text-[9px] sm:text-[10px] font-bold text-on-surface bg-surface-container-high border border-outline-variant/20 px-2 sm:px-2.5 py-0.5 rounded-[6px] tracking-widest uppercase shadow-sm">
                 Chương {content.chapter.chapterNumber}
               </span>
             </div>
           </div>
           
-          <div className="flex items-center justify-end shrink-0">
-            <button onClick={() => { setShowTranslation(true); setShowControls(false); }} className="w-10 h-10 items-center justify-center rounded-full hover:bg-primary/10 transition-colors hidden sm:flex text-primary">
-              <Languages size={20} />
-            </button>
-            <button onClick={() => { setShowEditWord(true); setShowControls(false); }} className="w-10 h-10 items-center justify-center rounded-full hover:bg-primary/10 transition-colors hidden sm:flex text-primary">
-              <Edit3 size={20} />
-            </button>
-            <button onClick={() => { setShowSettings(true); setShowControls(false); }} className="w-10 h-10 items-center justify-center rounded-full hover:bg-primary/10 transition-colors hidden sm:flex text-primary">
-              <Type size={20} />
-            </button>
-            <button onClick={() => { 
-              setShowChapterDrawer(true); 
-              setShowControls(false); 
-              if (bookChapters.length === 0) {
-                loadMoreChapters(1);
-              }
-            }} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-primary/10 active:scale-95 transition-all text-primary">
-              <Menu size={22} />
+          <div className="flex items-center justify-end shrink-0 w-10">
+            <button 
+              onClick={() => onNavigate({ type: 'library' })} 
+              className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
+              title="Về trang chủ"
+            >
+              <Home size={20} />
             </button>
           </div>
         </div>
@@ -328,9 +309,8 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
       </main>
 
       <div aria-hidden="true">
-        {showSettings && <SettingsSheet onClose={() => setShowSettings(false)} />}
         {showTranslation && <TranslationSheet onClose={() => setShowTranslation(false)} currentBookName={content.chapter.bookName} currentChapterName={`Chương ${content.chapter.chapterNumber}: ${content.chapter.title}`} currentBookId={bookId} initialSelectedChapters={[chapterId]} onSuccess={fetchChapter} />}
-        {showEditWord && <EditWordSheet onClose={() => setShowEditWord(false)} initialMatch={selectedText} currentBookId={bookId} currentChapterId={chapterId} />}
+        {showGlobalSettings && <GlobalSettingsSheet onClose={() => setShowGlobalSettings(false)} initialMatch={selectedText} currentBookId={bookId} currentChapterId={chapterId} />}
       </div>
 
       {/* Bottom Controls Overlay */}
@@ -338,67 +318,81 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
         aria-hidden="true"
         className={cn(
           "fixed bottom-0 left-0 w-full z-50 transition-transform duration-500 will-change-transform ease-out",
-          showControls ? "translate-y-0" : "translate-y-full",
+          showControls ? "translate-y-0" : "translate-y-[calc(100%+48px)]",
           "text-on-surface"
         )}
       >
         {/* Apple Glass Background */}
-        <div className="absolute inset-0 bg-surface/75 backdrop-blur-[32px] saturate-150 border-t border-outline-variant/30 shadow-[0_-4px_32px_max(rgba(0,0,0,0.15),var(--color-shadow,transparent))]"></div>
+        <div className="absolute inset-0 bg-surface/70 backdrop-blur-xl saturate-[180%] border-t border-white/20 dark:border-white/10 shadow-[0_-8px_32px_rgba(0,0,0,0.12)]"></div>
         
         {/* Content */}
-        <div className="relative z-10 w-full max-w-reading-max-width mx-auto pb-[env(safe-area-inset-bottom)]">
-          <div className="flex justify-between items-center px-1 sm:px-6 py-2">
+        <div className="relative z-10 w-full pb-[env(safe-area-inset-bottom)]">
+          <div className="flex justify-between items-center px-2 sm:px-6 py-2 max-w-sm sm:max-w-md mx-auto">
+            {/* 1. Trước */}
             <button 
               disabled={!content.navigation?.prev?.chapterId}
               onClick={() => content.navigation?.prev?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.prev.chapterId, rootTab })}
-              className="flex flex-col items-center justify-center p-2.5 min-w-[64px] sm:min-w-[80px] rounded-2xl group disabled:opacity-30 transition-all active:scale-95 text-primary hover:bg-primary/10"
+              className="flex flex-col items-center justify-center w-[60px] h-[60px] rounded-2xl disabled:opacity-30 transition-all active:scale-95 hover:bg-on-surface/5 text-on-surface-variant hover:text-on-surface"
             >
-               <ChevronLeft size={22} className="mb-1 group-hover:-translate-x-1 group-active:-translate-x-1.5 transition-transform duration-300" />
-               <span className="text-[10px] font-semibold tracking-wide">Trước</span>
+               <ChevronLeft size={24} className="mb-1" strokeWidth={2.5} />
+               <span className="text-[10px] font-medium tracking-wide">Trước</span>
             </button>
 
+            {/* 2. Menu */}
             <button 
-              onClick={() => { setShowTranslation(true); setShowControls(false); }}
-              className="flex flex-col items-center justify-center p-2.5 min-w-[64px] sm:min-w-[80px] rounded-2xl group transition-all active:scale-95 text-primary hover:bg-primary/10"
+              onClick={() => { 
+                setShowChapterDrawer(true); 
+                setShowControls(false); 
+                if (bookChapters.length === 0) {
+                  loadMoreChapters(1);
+                }
+              }}
+              className="flex flex-col items-center justify-center w-[60px] h-[60px] rounded-2xl transition-all active:scale-95 hover:bg-on-surface/5 text-on-surface-variant hover:text-on-surface"
             >
-               <Languages size={22} className="mb-1 group-hover:-translate-y-0.5 transition-transform duration-300" />
-               <span className="text-[10px] font-semibold tracking-wide">Dịch</span>
+               <List size={22} className="mb-1.5" strokeWidth={2.5} />
+               <span className="text-[10px] font-medium tracking-wide">Menu</span>
             </button>
 
-           <button 
-               onClick={() => { setShowSettings(true); setShowControls(false); }}
-              className="flex flex-col items-center justify-center p-2.5 min-w-[64px] sm:min-w-[80px] rounded-2xl group transition-all active:scale-95 text-primary hover:bg-primary/10"
-            >
-               <Type size={22} className="mb-1 group-hover:-translate-y-0.5 transition-transform duration-300" />
-               <span className="text-[10px] font-semibold tracking-wide">Cài đặt</span>
-            </button>
+            {/* 3. Dịch AI */}
+            <div className="relative w-[60px] h-[60px] flex flex-col justify-end items-center">
+              <div className="absolute -top-7 rounded-full bg-surface/70 backdrop-blur-xl p-[6px] shadow-[0_-8px_24px_rgba(0,0,0,0.12)] border border-white/20 dark:border-white/10">
+                <button 
+                  onClick={() => { setShowTranslation(true); setShowControls(false); }}
+                  className="relative flex items-center justify-center w-[52px] h-[52px] rounded-full bg-primary text-on-primary shadow-[0_8px_16px_rgba(0,0,0,0.3)] transition-all duration-300 active:scale-90 active:rotate-[15deg] overflow-hidden"
+                >
+                   <span className="absolute inset-0 rounded-full animate-ping bg-white/20 opacity-0 active:opacity-100 duration-500"></span>
+                   <span className="absolute inset-0 rounded-full animate-[pulse_2s_ease-in-out_infinite] bg-white/10"></span>
+                   <Sparkles size={26} strokeWidth={2.5} className="relative z-10 drop-shadow-md" />
+                </button>
+              </div>
+              <span className="text-[10px] font-bold tracking-wide text-primary">Dịch AI</span>
+            </div>
             
+            {/* 4. Cài đặt */}
             <button 
-              onClick={() => { setShowEditWord(true); setShowControls(false); }}
+              onClick={() => { setShowGlobalSettings(true); setShowControls(false); }}
               className={cn(
-                "flex flex-col items-center justify-center p-2.5 min-w-[64px] sm:min-w-[80px] rounded-2xl relative group transition-all active:scale-95 hover:bg-primary/10",
-                selectedText ? "text-primary bg-primary/10" : "text-primary"
+                "flex flex-col items-center justify-center w-[60px] h-[60px] rounded-2xl transition-all active:scale-95",
+                selectedText ? "text-primary hover:bg-primary/10" : "text-on-surface-variant hover:text-on-surface hover:bg-on-surface/5"
               )}
             >
-               <div className="relative mb-1 group-hover:-translate-y-0.5 transition-transform duration-300">
-                 <Edit3 size={22} />
+               <div className="relative mb-1.5">
+                 <Settings size={22} strokeWidth={2.5} />
                  {selectedText && (
-                   <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full animate-ping opacity-75"></span>
-                 )}
-                 {selectedText && (
-                   <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border border-surface opacity-90 shadow-sm"></span>
+                   <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-surface"></span>
                  )}
                </div>
-               <span className="text-[10px] font-semibold tracking-wide">Thay thế</span>
+               <span className="text-[10px] font-medium tracking-wide">Cài đặt</span>
             </button>
-            
+
+            {/* 5. Sau */}
             <button 
               disabled={!content.navigation?.next?.chapterId}
               onClick={() => content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId, rootTab })}
-              className="flex flex-col items-center justify-center p-2.5 min-w-[64px] sm:min-w-[80px] rounded-2xl group disabled:opacity-30 transition-all active:scale-95 text-primary hover:bg-primary/10"
+              className="flex flex-col items-center justify-center w-[60px] h-[60px] rounded-2xl disabled:opacity-30 transition-all active:scale-95 hover:bg-on-surface/5 text-on-surface-variant hover:text-on-surface"
             >
-               <ChevronRight size={22} className="mb-1 group-hover:translate-x-1 group-active:translate-x-1.5 transition-transform duration-300" />
-               <span className="text-[10px] font-semibold tracking-wide">Sau</span>
+               <ChevronRight size={24} className="mb-1" strokeWidth={2.5} />
+               <span className="text-[10px] font-medium tracking-wide">Sau</span>
             </button>
           </div>
         </div>

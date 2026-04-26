@@ -3,6 +3,7 @@ import { User, Search, MoreVertical, BookOpen, Settings, History, Sparkles, Libr
 import { api, Book } from '../lib/api';
 import { AppView } from '../App';
 import { LoadingOverlay } from '../components/LoadingOverlay';
+import { GlobalSettingsSheet } from '../components/GlobalSettingsSheet';
 
 export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void }) {
   const [books, setBooks] = useState<Book[]>([]);
@@ -17,8 +18,7 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
   const [aiPagination, setAiPagination] = useState({ currentPage: 1, totalPages: 1 });
   const [booksPagination, setBooksPagination] = useState({ currentPage: 1, totalPages: 1 });
   
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [apiDomainInput, setApiDomainInput] = useState('');
+  const [showGlobalSettings, setShowGlobalSettings] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 500);
@@ -105,13 +105,9 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
 
           {/* Settings Button */}
           <button 
-            onClick={() => {
-              const currentDomain = localStorage.getItem('API_DOMAIN_CONFIG') || '';
-              setApiDomainInput(currentDomain);
-              setShowSettingsModal(true);
-            }}
-            className="w-11 h-11 sm:w-12 sm:h-12 rounded-[18px] bg-surface-container-low/50 backdrop-blur-md border border-outline-variant/30 text-on-surface-variant hover:text-primary hover:bg-surface-container hover:shadow-sm active:scale-95 transition-all shrink-0 flex items-center justify-center shadow-inner"
-            title="Cài đặt API Domain"
+            onClick={() => setShowGlobalSettings(true)}
+            className="w-11 h-11 sm:w-12 sm:h-12 rounded-[18px] bg-surface-container-low/50 backdrop-blur-md border border-outline-variant/30 text-on-surface-variant hover:text-primary hover:bg-primary/5 hover:shadow-sm active:scale-95 transition-all shrink-0 flex items-center justify-center shadow-inner"
+            title="Cài đặt Hệ thống"
           >
             <Settings size={22} />
           </button>
@@ -257,61 +253,8 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
         </section>
       </main>
 
-      {/* Settings Modal */}
-      {showSettingsModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-surface rounded-2xl w-full max-w-md shadow-xl border border-outline-variant/30 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-outline-variant/30 bg-surface-container-low">
-              <h3 className="font-bold text-on-surface">Cấu hình API</h3>
-              <button 
-                onClick={() => setShowSettingsModal(false)}
-                className="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="p-5 flex flex-col gap-4">
-              <div>
-                <label className="block text-sm font-medium text-on-surface-variant mb-1.5 ml-1">
-                  API Domain
-                </label>
-                <div className="relative">
-                  <input
-                    type="url"
-                    value={apiDomainInput}
-                    onChange={(e) => setApiDomainInput(e.target.value)}
-                    placeholder="vd: https://api.my-domain.com"
-                    className="w-full bg-surface-container-low border border-outline-variant/50 rounded-xl px-4 py-3 text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
-                  />
-                </div>
-                <p className="text-xs text-on-surface-variant/70 mt-2 ml-1">
-                  Nhập URL cơ sở của API backend (bao gồm cả http/https). Để trống nếu muốn chạy ở local fallback.
-                </p>
-              </div>
-            </div>
-            
-            <div className="p-4 bg-surface-container-lowest border-t border-outline-variant/30 flex justify-end gap-3">
-              <button
-                onClick={() => setShowSettingsModal(false)}
-                className="px-5 py-2.5 rounded-xl font-medium text-on-surface border border-outline-variant/50 hover:bg-surface-container-low transition-colors text-sm"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.setItem('API_DOMAIN_CONFIG', apiDomainInput.trim());
-                  setShowSettingsModal(false);
-                  window.location.reload();
-                }}
-                className="px-5 py-2.5 rounded-xl font-medium bg-primary text-on-primary hover:opacity-90 transition-opacity flex items-center gap-2 shadow-sm text-sm"
-              >
-                <Save size={16} />
-                Lưu cài đặt
-              </button>
-            </div>
-          </div>
-        </div>
+      {showGlobalSettings && (
+        <GlobalSettingsSheet onClose={() => setShowGlobalSettings(false)} />
       )}
 
       <LoadingOverlay isLoading={isLoading} message="Đang tải danh sách truyện..." />
