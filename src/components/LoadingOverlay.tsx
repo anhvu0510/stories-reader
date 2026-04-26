@@ -22,9 +22,9 @@ export function LoadingOverlay({ isLoading, message = 'Đang tải dữ liệu..
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.9, y: 10, opacity: 0 }}
             transition={{ type: 'spring', damping: 20, stiffness: 300, delay: 0.1 }}
-            className="flex flex-col items-center justify-center p-8 bg-surface-container-high rounded-3xl shadow-2xl border border-outline-variant/30 max-w-[80vw]"
+            className="flex flex-col items-center justify-center p-5 bg-surface-container-high rounded-[2rem] shadow-2xl border border-outline-variant/30"
           >
-            <div className="relative mb-6">
+            <div className="relative">
               {/* Outer pulsing ring */}
               <motion.div 
                 animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.1, 0.3] }}
@@ -48,27 +48,6 @@ export function LoadingOverlay({ isLoading, message = 'Đang tải dữ liệu..
                   <BookOpen className="w-3.5 h-3.5 text-primary opacity-80" />
                 </motion.div>
               </div>
-            </div>
-            
-            <h3 className="text-lg font-bold text-on-surface mb-1">Vui lòng đợi</h3>
-            <p className="text-sm text-on-surface-variant text-center max-w-[200px] leading-relaxed">
-              {message}
-            </p>
-            
-            <div className="mt-6 flex gap-1.5">
-              {[0, 1, 2].map((i) => (
-                <motion.div
-                  key={i}
-                  animate={{ y: [0, -5, 0] }}
-                  transition={{ 
-                    repeat: Infinity, 
-                    duration: 0.6, 
-                    delay: i * 0.1,
-                    ease: "easeInOut" 
-                  }}
-                  className="w-1.5 h-1.5 rounded-full bg-primary/60"
-                />
-              ))}
             </div>
           </motion.div>
         </motion.div>

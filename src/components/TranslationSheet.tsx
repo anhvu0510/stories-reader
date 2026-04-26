@@ -240,7 +240,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
               <div className="flex flex-col gap-2 sm:gap-3 bg-surface-container p-3 sm:p-4 rounded-xl sm:rounded-2xl">
                 <div className="flex justify-between items-center">
                   <label className="text-[11px] sm:text-xs font-bold text-on-surface">Độ sáng tạo (Temp)</label>
-                  <span className="text-[10px] sm:text-xs bg-primary/20 text-primary font-mono px-1.5 sm:px-2 py-0.5 rounded-md font-bold">{options.temperature.toFixed(1)}</span>
+                  <span className="text-[10px] sm:text-xs bg-primary/20 text-primary font-mono px-1.5 sm:px-2 py-0.5 rounded-md font-bold">{ options.temperature ? options.temperature.toFixed(1) : 1}</span>
                 </div>
                 <input 
                   type="range" min="0" max="1" step="0.1" 

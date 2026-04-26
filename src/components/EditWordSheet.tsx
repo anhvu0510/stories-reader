@@ -82,18 +82,16 @@ export function EditWordSheet({ onClose, initialMatch = '', currentBookId, curre
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm('Bạn có chắc chắn muốn xóa?')) {
-      try {
-        await api.deleteReplacement(id);
-        setReplacements(prev => prev.filter(r => r.id !== id));
-        if (editingId === id) {
-          setEditingId(null);
-          setMatchStr('');
-          setReplacementStr('');
-        }
-      } catch (e) {
-        console.error("Failed to delete replacement", e);
+    try {
+      await api.deleteReplacement(id);
+      setReplacements(prev => prev.filter(r => r.id !== id));
+      if (editingId === id) {
+        setEditingId(null);
+        setMatchStr('');
+        setReplacementStr('');
       }
+    } catch (err) {
+      console.error("Failed to delete replacement", err);
     }
   };
 

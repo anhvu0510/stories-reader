@@ -278,7 +278,19 @@ export const api = {
       if (bookId) query.append('bookId', bookId);
       if (chapterId) query.append('chapterId', chapterId);
       const res = await fetchWithRetry(`/api/replacements?${query.toString()}`);
-      return await res.json();
+      const rawData = await res.json();
+      
+      const dataArray = Array.isArray(rawData) ? rawData : (rawData.data || []);
+      
+      const mapped = dataArray.map((item: any) => ({
+        id: item.id,
+        match: item.original || item.match,
+        replacement: item.replacement,
+        scope: item.scope,
+        bookId: item.bookId,
+        chapterId: item.chapterId
+      }));
+      return { data: mapped };
     } catch (e: any) {
       if (e.message === 'API_DOMAIN_NOT_SET') {
         return { data: [] };
@@ -293,11 +305,23 @@ export const api = {
       const isEditing = !!data.id;
       const url = isEditing ? `/api/replacements/${data.id}` : `/api/replacements`;
       const method = isEditing ? 'PUT' : 'POST';
+      
+      const payload: any = { ...data, original: data.match };
+      delete payload.match;
+
       const res = await fetchWithRetry(url, {
         method,
-        body: JSON.stringify(data)
+        body: JSON.stringify(payload)
       });
-      return await res.json();
+      const resData = await res.json();
+      return {
+        id: resData.id || data.id || Date.now().toString(),
+        match: resData.original || payload.original || '',
+        replacement: resData.replacement || '',
+        scope: resData.scope || 'global',
+        bookId: resData.bookId,
+        chapterId: resData.chapterId,
+      };
     } catch (e) {
       console.warn("Failed to save replacement, mocking...", e);
       return {
