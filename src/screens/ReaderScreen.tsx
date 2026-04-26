@@ -13,7 +13,7 @@ const ContentRenderer = memo(({ paragraphs }: { paragraphs: string[] }) => {
   return (
     <>
       {paragraphs.map((paragraph, index) => (
-        <p key={index} className="mb-4" dangerouslySetInnerHTML={{ __html: paragraph }} />
+        <p key={index} lang="vi" className="mb-4" dangerouslySetInnerHTML={{ __html: paragraph }} />
       ))}
     </>
   );
@@ -250,7 +250,8 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
         onClick={handleContentClick}
         ref={contentRef}
       >
-        <article 
+        <article
+          lang="vi"
           className="max-w-none will-change-contents"
           style={articleStyle}
         >
