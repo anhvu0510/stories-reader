@@ -291,6 +291,28 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
 
           <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
 
+          <button 
+            onClick={() => { setShowTranslation(true); setShowControls(false); }}
+            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl relative group"
+          >
+             <div className="relative mb-1 group-hover:-translate-y-0.5 transition-transform duration-300">
+               <Languages size={20} className="sm:w-5 sm:h-5" />
+             </div>
+             <span className="text-[10px] font-medium tracking-wide">Dịch</span>
+          </button>
+
+          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
+
+         <button 
+             onClick={() => { setShowSettings(true); setShowControls(false); }}
+            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl group"
+          >
+             <Type size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:-translate-y-0.5 transition-transform duration-300" />
+             <span className="text-[10px] font-medium tracking-wide">Cài đặt</span>
+          </button>
+          
+          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
+
           
           <button 
             onClick={() => { setShowEditWord(true); setShowControls(false); }}
@@ -309,31 +331,6 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
                )}
              </div>
              <span className="text-[10px] font-medium tracking-wide">Thay thế</span>
-          </button>
-          
-          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
-
-
-            <button 
-            onClick={() => { setShowTranslation(true); setShowControls(false); }}
-            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl relative group"
-          >
-             <div className="relative mb-1 group-hover:-translate-y-0.5 transition-transform duration-300">
-               <Languages size={20} className="sm:w-5 sm:h-5" />
-             </div>
-             <span className="text-[10px] font-medium tracking-wide">Dịch</span>
-          </button>
-
-          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
-
-
-
-          <button 
-             onClick={() => { setShowSettings(true); setShowControls(false); }}
-            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl group"
-          >
-             <Type size={20} className="sm:w-5 sm:h-5 mb-1 group-hover:-translate-y-0.5 transition-transform duration-300" />
-             <span className="text-[10px] font-medium tracking-wide">Cài đặt</span>
           </button>
           
           <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
