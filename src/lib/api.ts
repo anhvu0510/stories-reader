@@ -183,6 +183,9 @@ const fetchWithRetry = async (path: string, options: RequestInit = {}, retries =
   }
 };
 
+const settingsCache: { [key: string]: { data: any; timestamp: number } } = {};
+const pendingSettingsRequests: { [key: string]: Promise<any> } = {};
+
 export const api = {
   getBooks: async (page = 1, search = '', state?: string, limit = 20): Promise<{ data: Book[], pagination: any }> => {
     try {
@@ -344,23 +347,54 @@ export const api = {
   },
 
   getSettings: async (key: string): Promise<any> => {
-    try {
-      const res = await fetchWithRetry(`/api/stories/setting/${key}`);
-      const data = await res.json();
-      try { localStorage.setItem(`setting_${key}`, JSON.stringify(data)); } catch(e){}
-      return data;
-    } catch (e) {
-      console.warn(`Failed to fetch settings for key ${key}`, e);
-      try {
-        const cached = localStorage.getItem(`setting_${key}`);
-        if (cached) return JSON.parse(cached);
-      } catch (err) {}
-      return null;
+    const now = Date.now();
+    const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes cache
+    
+    // 1. Check in-memory cache
+    if (settingsCache[key] && now - settingsCache[key].timestamp < CACHE_TTL_MS) {
+      return settingsCache[key].data;
     }
+
+    // 2. Avoid duplicate concurrent requests
+    if (pendingSettingsRequests[key]) {
+      return pendingSettingsRequests[key];
+    }
+
+    // 3. Fetch from API
+    const request = (async () => {
+      try {
+        const res = await fetchWithRetry(`/api/stories/setting/${key}`);
+        const data = await res.json();
+        settingsCache[key] = { data, timestamp: Date.now() };
+        try { localStorage.setItem(`setting_${key}`, JSON.stringify(data)); } catch(e){}
+        return data;
+      } catch (e) {
+        console.warn(`Failed to fetch settings for key ${key}`, e);
+        // Fallback to local storage if API fails
+        try {
+          const cached = localStorage.getItem(`setting_${key}`);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            settingsCache[key] = { data: parsed, timestamp: 0 }; // Mark as stale
+            return parsed;
+          }
+        } catch (err) {}
+        return null;
+      } finally {
+        delete pendingSettingsRequests[key];
+      }
+    })();
+
+    pendingSettingsRequests[key] = request;
+    return request;
   },
 
   updateSettings: async (key: string, value: any): Promise<any> => {
     try {
+      // Update local storage and memory cache immediately for instant sync
+      try { localStorage.setItem(`setting_${key}`, JSON.stringify({ value })); } catch(e){}
+      settingsCache[key] = { data: { value }, timestamp: Date.now() };
+
       const res = await fetchWithRetry(`/api/stories/setting`, {
         method: 'POST',
         body: JSON.stringify({ key, value })

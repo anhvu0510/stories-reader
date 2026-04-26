@@ -38,7 +38,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [options, setOptions] = useState<TranslationOptions>(defaultOptions);
   const [isOptionsLoaded, setIsOptionsLoaded] = useState(false);
-  const [showConfig, setShowConfig] = useState(false);
+  const [showConfig, setShowConfig] = useState(true);
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
@@ -51,16 +51,6 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   useEffect(() => {
     let active = true;
     
-    // 1. Try local cache first for instant feedback (tránh spam API/wait)
-    const cached = localStorage.getItem('setting_stories.ui.translate');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        setOptions(prev => ({ ...prev, ...parsed }));
-      } catch (e) {}
-    }
-
-    // 2. Always fetch from API to ensure fresh data (ưu tiên lấy từ API)
     api.getSettings('stories.ui.translate').then(res => {
       if (!active) return;
       if (res && res.value) {
@@ -68,8 +58,9 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           const parsed = typeof res.value === 'string' ? JSON.parse(res.value) : res.value;
           setOptions(prev => {
             const newOptions = { ...prev, ...parsed };
-            localStorage.setItem('setting_stories.ui.translate', JSON.stringify(parsed));
-            return newOptions;
+            // Optional: Cleanup options locally if needed
+            const { _id, key, value, type, updatedAt, ...cleanOptions } = newOptions as any;
+            return cleanOptions;
           });
         } catch (e) {
           console.error("Failed to parse translate settings", e);
@@ -82,10 +73,23 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   }, []);
 
   // Save configs to API
+  const initialMount = React.useRef(true);
   useEffect(() => {
     if (isOptionsLoaded) {
+      if (initialMount.current) {
+        initialMount.current = false;
+        return;
+      }
       const t = setTimeout(() => {
-        api.updateSettings('stories.ui.translate', JSON.stringify(options));
+        const payload = {
+          model: options.model,
+          minWords: options.minWords,
+          maxWords: options.maxWords,
+          temperature: options.temperature,
+          forceRetranslate: options.forceRetranslate,
+          availableModels: options.availableModels
+        };
+        api.updateSettings('stories.ui.translate', JSON.stringify(payload));
       }, 500);
       return () => clearTimeout(t);
     }
@@ -110,6 +114,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
         }
         
         showToast("Đang dịch chương...", "info");
+        onClose();
         const response = await api.translate({
           mode: 'current',
           model: options.model,
@@ -126,7 +131,6 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           showToast(`Dịch thành công! Mất ${chapResult.totalTokens} tokens`, 'success');
           setTimeout(() => {
             if (onSuccess) onSuccess();
-            onClose();
           }, 1500);
         } else {
            throw new Error("Lỗi khi dịch chương này");
@@ -249,7 +253,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           </div>
           
           {showConfig && (
-            <div className="px-4 pb-4 flex flex-col gap-3 max-h-[40vh] overflow-y-auto hide-scrollbar">
+            <div className="px-4 p-4 flex flex-col gap-3 max-h-[40vh] overflow-y-auto hide-scrollbar">
               {/* Model selection as chips for mobile */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
@@ -286,13 +290,13 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
               </div>
                 <div className="flex flex-col gap-1">
                 <label className="text-[9px] font-bold text-on-surface-variant/70 uppercase px-0.5">MODEL</label>
-                <div className="flex flex-wrap justify-between gap-1.2">
+                <div className="flex flex-wrap gap-1.5">
                   {(options.availableModels || defaultOptions.availableModels || []).map(m => (
                     <button
                       key={m}
                       onClick={() => setOptions({...options, model: m})}
                       className={cn(
-                        "px-3 py-1.5 rounded-full text-[10px] sm:text-[11px] font-bold border transition-all text-left break-words whitespace-normal leading-tight",
+                        "px-3 py-1.5 rounded-full text-[10px] sm:text-[11px] font-bold border transition-all break-words leading-tight flex-grow sm:flex-grow-0 min-w-0 text-center",
                         options.model === m 
                           ? "bg-primary/10 border-primary/30 text-primary" 
                           : "bg-surface-container-highest border-transparent text-on-surface-variant"

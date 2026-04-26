@@ -131,7 +131,7 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
           </div>
         )}
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5 sm:gap-3">
           {chapters.map((chapter) => {
             const isPending = chapter.state === 'PENDING';
             const isFailed = chapter.state === 'FAILED';
@@ -144,51 +144,65 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
                   e.preventDefault();
                   if (isSucceeded || isPending) onNavigate({ type: 'reader', bookId, chapterId: chapter.chapterId });
                 }}
-                className={`block rounded-2xl p-4 transition-all group border
-                  ${isSucceeded ? 'bg-surface-container border-outline-variant/30 hover:border-primary/50 hover:shadow-sm cursor-pointer' : 
-                    isPending ? 'bg-surface-container border-outline-variant/30 hover:border-outline-variant/60 hover:bg-surface-container-high cursor-pointer' : 
-                    'bg-surface-container-low border-transparent opacity-60 cursor-not-allowed'}
+                className={`relative overflow-hidden block rounded-xl p-3.5 sm:p-4 transition-all duration-300 group
+                  ${isSucceeded ? 'bg-surface-container border border-outline-variant/60 shadow-sm hover:border-primary/50 hover:shadow-md cursor-pointer active:scale-[0.98]' : 
+                    isPending ? 'bg-surface border border-outline-variant/30 hover:border-outline-variant/60 hover:shadow-sm cursor-pointer active:scale-[0.98]' : 
+                    'bg-surface-container-low border border-transparent opacity-60 cursor-not-allowed'}
                 `}
               >
-                <div className="flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 flex-wrap flex-1 min-w-0">
-                      <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md flex-shrink-0 ${
-                        isSucceeded ? 'bg-primary/15 text-primary' : 
-                        isPending ? 'bg-amber-500/15 text-amber-500' : 
-                        'bg-red-500/15 text-red-500'
+                {/* Subtle background color tint & side bar effect */}
+                {isSucceeded && (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/30 group-hover:bg-primary transition-colors" />
+                  </>
+                )}
+                {isPending && (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none" />
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500/30 group-hover:bg-amber-500 transition-colors" />
+                  </>
+                )}
+                
+                <div className="flex flex-col gap-2 relative z-10 pl-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0 pt-0.5">
+                      <span className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md flex-shrink-0 border ${
+                        isSucceeded ? 'bg-primary/5 text-primary border-primary/20' : 
+                        isPending ? 'bg-amber-500/5 text-amber-500 border-amber-500/20' : 
+                        'bg-red-500/5 text-red-500 border-red-500/20'
                       }`}>
                         Chương {chapter.chapterNumber}
                       </span>
                       
-                      <div className="flex items-center text-[11px] text-on-surface-variant font-medium opacity-80 whitespace-nowrap">
-                        <Clock size={12} className="mr-1.5" />
+                      <div className="flex items-center text-[10px] text-on-surface-variant/70 font-medium whitespace-nowrap">
+                        <Clock size={10} className="mr-1" />
                         <span>{formatDate(chapter.updatedAt)}</span>
                       </div>
                     
-                      {isFailed && <span className="text-[10px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded uppercase tracking-wide ml-auto">Lỗi dịch</span>}
+                      {isFailed && <span className="text-[9px] font-bold text-red-500 bg-red-500/10 px-1 py-0.5 rounded tracking-wide ml-auto">LỖI</span>}
                     </div>
                     
-                    <div className="flex-shrink-0 self-center">
+                    <div className="flex-shrink-0 self-start mt-0.5">
                       {isSucceeded && (
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-primary/60 group-hover:text-primary group-hover:bg-primary/10 transition-all duration-300">
-                          <CheckCircle2 size={18} />
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-primary/40 group-hover:text-primary group-hover:scale-110 group-active:scale-95 transition-all duration-300">
+                          <CheckCircle2 size={16} />
                         </div>
                       )}
                       {isPending && (
-                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-amber-500/80">
-                          <Lock size={16} />
+                         <div className="w-5 h-5 rounded-full flex items-center justify-center text-amber-500/60">
+                          <Lock size={14} />
                         </div>
                       )}
                       {isFailed && (
-                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-red-500/80">
-                          <AlertCircle size={18} />
+                         <div className="w-5 h-5 rounded-full flex items-center justify-center text-red-500/60">
+                          <AlertCircle size={14} />
                         </div>
                       )}
                     </div>
                   </div>
                   
-                  <h3 className={`text-[15px] sm:text-base font-semibold leading-snug transition-colors ${
+                  <h3 className={`text-[13px] sm:text-[14px] font-semibold leading-[1.4] transition-colors pr-6 ${
                     isSucceeded ? 'text-on-surface group-hover:text-primary' : 'text-on-surface-variant'
                   }`}>
                     {chapter.title}

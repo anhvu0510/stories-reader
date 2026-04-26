@@ -144,7 +144,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
         aria-hidden="true"
         className={cn(
           "fixed top-0 left-0 w-full z-40 backdrop-blur-[16px] border-b transition-transform duration-300 translate-y-0 text-inherit",
-          "bg-background/90 border-outline-variant/50"
+          "bg-background-90 border-outline-variant-50"
         )}
       >
         <div className="max-w-reading-max-width mx-auto w-full px-4 sm:px-8 py-2 sm:py-4 flex justify-between items-center h-16">
@@ -260,7 +260,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
           
           <ContentRenderer paragraphs={content.chapter.content} />
           
-          <div className="w-16 h-[2px] bg-outline-variant/30 mt-8 mx-auto rounded-full"></div>
+          <div className="w-16 h-[2px] bg-outline-variant-30 mt-8 mx-auto rounded-full"></div>
         </article>
       </main>
 
@@ -276,7 +276,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
         className={cn(
           "fixed bottom-0 left-0 w-full z-50 transition-transform duration-300 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.1)] border-t pb-safe-bottom text-inherit",
           showControls ? "translate-y-0" : "translate-y-full",
-          "bg-background/95 border-outline-variant/50"
+          "bg-background-85 border-outline-variant-50"
         )}
       >
         <div className="flex justify-between sm:justify-center gap-1 sm:gap-6 px-4 py-1.5 sm:py-2 items-center opacity-90 max-w-reading-max-width mx-auto">
@@ -291,18 +291,7 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
 
           <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
 
-          <button 
-            onClick={() => { setShowTranslation(true); setShowControls(false); }}
-            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl relative group"
-          >
-             <div className="relative mb-1 group-hover:-translate-y-0.5 transition-transform duration-300">
-               <Languages size={20} className="sm:w-5 sm:h-5" />
-             </div>
-             <span className="text-[10px] font-medium tracking-wide">Dịch</span>
-          </button>
-
-          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
-
+          
           <button 
             onClick={() => { setShowEditWord(true); setShowControls(false); }}
             className={cn(
@@ -323,6 +312,21 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
           </button>
           
           <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
+
+
+            <button 
+            onClick={() => { setShowTranslation(true); setShowControls(false); }}
+            className="flex flex-col items-center justify-center hover:opacity-100 opacity-70 active:scale-90 transition-all duration-300 p-1.5 flex-1 sm:flex-none rounded-xl relative group"
+          >
+             <div className="relative mb-1 group-hover:-translate-y-0.5 transition-transform duration-300">
+               <Languages size={20} className="sm:w-5 sm:h-5" />
+             </div>
+             <span className="text-[10px] font-medium tracking-wide">Dịch</span>
+          </button>
+
+          <div className="w-[1px] h-5 opacity-20 bg-current hidden sm:block mx-1"></div>
+
+
 
           <button 
              onClick={() => { setShowSettings(true); setShowControls(false); }}
