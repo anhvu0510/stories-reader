@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home } from 'lucide-react';
 import { AppView } from '../App';
 import { api, ChapterContent, Chapter } from '../lib/api';
@@ -8,6 +8,16 @@ import { EditWordSheet } from '../components/EditWordSheet';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { useReaderSettings } from '../contexts/ReaderContext';
 import { cn } from '../lib/utils';
+
+const ContentRenderer = memo(({ paragraphs }: { paragraphs: string[] }) => {
+  return (
+    <>
+      {paragraphs.map((paragraph, index) => (
+        <div key={index} className="mb-4" dangerouslySetInnerHTML={{ __html: paragraph }} />
+      ))}
+    </>
+  );
+});
 
 export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string, chapterId: string, onNavigate: (v: AppView) => void }) {
   const [content, setContent] = useState<ChapterContent | null>(null);
@@ -96,11 +106,23 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
   };
 
   // Calculate dynamic styles based on settings
-  const containerStyle = {
+  const containerStyle = useMemo(() => ({
     fontFamily: font === 'palatino' ? '"Palatino Linotype", "Book Antiqua", Palatino, serif' : 
                 font === 'bookerly' ? 'Bookerly, serif' : 
                 font === 'minhphung' ? '"Minh Phung", sans-serif' : 'var(--font-sans)',
-  };
+  }), [font]);
+
+  const articleStyle = useMemo(() => ({
+    fontSize: `${fontSize}px`,
+    lineHeight: lineHeight,
+    textAlign: 'justify' as const,
+    color: 'inherit'
+  }), [fontSize, lineHeight]);
+
+  const titleStyle = useMemo(() => ({ 
+    fontSize: `${Math.round(fontSize * 1.2)}px`, 
+    lineHeight: 1.35 
+  }), [fontSize]);
 
   useEffect(() => {
     // Colors are now handled globally via CSS variables and data-theme
@@ -226,20 +248,13 @@ export function ReaderScreen({ bookId, chapterId, onNavigate }: { bookId: string
       >
         <article 
           className="max-w-none will-change-contents"
-          style={{
-            fontSize: `${fontSize}px`,
-            lineHeight: lineHeight,
-            textAlign: 'justify',
-            color: 'inherit'
-          }}
+          style={articleStyle}
         >
-          <h4 className="font-headline-md text-primary mt-2 mb-4 text-center font-bold" style={{ fontSize: `${Math.round(fontSize * 1.2)}px`, lineHeight: 1.35 }}>
+          <h4 className="font-headline-md text-primary mt-2 mb-4 text-center font-bold" style={titleStyle}>
             Chương {content.chapter.chapterNumber}: {content.chapter.title}
           </h4>
           
-          {content.chapter.content.map((paragraph, index) => (
-            <div key={index} className="mb-4" dangerouslySetInnerHTML={{ __html: paragraph }} />
-          ))}
+          <ContentRenderer paragraphs={content.chapter.content} />
           
           <div className="w-16 h-[2px] bg-outline-variant/30 mt-8 mx-auto rounded-full"></div>
         </article>
