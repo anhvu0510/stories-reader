@@ -188,18 +188,29 @@ export function useReadAloud(paragraphs: string[]) {
 
     const loadVoices = () => {
       const allVoices = synth.getVoices();
-      const viVoices = allVoices.filter(v => v.lang.includes('vi') || v.lang.includes('vi-VN'));
+      let viVoices = allVoices.filter(v => v.lang.includes('vi') || v.lang.includes('vi-VN'));
+      if (viVoices.length === 0 && allVoices.length > 0) {
+        viVoices = allVoices; // fallback to all if no vi found
+      }
       setVoices(viVoices);
     };
 
     loadVoices();
-    synth.onvoiceschanged = loadVoices;
+    if (synth.addEventListener) {
+      synth.addEventListener('voiceschanged', loadVoices);
+    } else {
+      synth.onvoiceschanged = loadVoices;
+    }
 
     return () => {
       isPlayingRef.current = false;
       isPausedRef.current = false;
       synth.cancel();
-      synth.onvoiceschanged = null;
+      if (synth.removeEventListener) {
+        synth.removeEventListener('voiceschanged', loadVoices);
+      } else {
+        synth.onvoiceschanged = null;
+      }
     };
   }, [synth]);
 
