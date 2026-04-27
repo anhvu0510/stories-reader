@@ -81,6 +81,9 @@ export function useReadAloud(paragraphs: string[]) {
   const isPlayingRef = useRef(false);
   const isPausedRef = useRef(false);
   const currentUtteranceIdRef = useRef<number | null>(null);
+  
+  const hasReceivedWordBoundaryRef = useRef(false);
+  const fallbackIntervalRef = useRef<number | NodeJS.Timeout | null>(null);
 
   const chunks = useMemo(() => {
     const res: Chunk[] = [];
@@ -296,10 +299,62 @@ export function useReadAloud(paragraphs: string[]) {
 
     const utteranceId = Date.now() + Math.random();
     currentUtteranceIdRef.current = utteranceId;
+    
+    if (fallbackIntervalRef.current) {
+      clearInterval(fallbackIntervalRef.current as any);
+      fallbackIntervalRef.current = null;
+    }
+    hasReceivedWordBoundaryRef.current = false;
+
+    utterance.onstart = () => {
+      if (currentUtteranceIdRef.current !== utteranceId) return;
+      
+      const startTime = Date.now();
+      const charsPerSecond = 14 * speechRate;
+      const wordRegex = /[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/g;
+      const allWords = Array.from(chunk.text.matchAll(wordRegex));
+      
+      fallbackIntervalRef.current = setInterval(() => {
+        if (!isPlayingRef.current || isPausedRef.current || currentUtteranceIdRef.current !== utteranceId) {
+           if (fallbackIntervalRef.current) {
+             clearInterval(fallbackIntervalRef.current as any);
+             fallbackIntervalRef.current = null;
+           }
+           return;
+        }
+        
+        if (hasReceivedWordBoundaryRef.current) {
+           if (fallbackIntervalRef.current) {
+             clearInterval(fallbackIntervalRef.current as any);
+             fallbackIntervalRef.current = null;
+           }
+           return;
+        }
+
+        const elapsedSec = (Date.now() - startTime) / 1000;
+        const estimatedCharCount = (elapsedSec * charsPerSecond) + startOffset;
+        
+        if (allWords.length > 0) {
+          let activeWord = allWords[allWords.length - 1]; // default to last
+          for (let i = 0; i < allWords.length; i++) {
+             if (allWords[i].index! > estimatedCharCount) {
+                 activeWord = allWords[Math.max(0, i - 1)];
+                 break;
+             }
+          }
+          
+          if (activeWord) {
+              setCharIndex(activeWord.index!);
+              setCharLength(activeWord[0].length);
+          }
+        }
+      }, 250);
+    };
 
     utterance.onboundary = (e) => {
       if (currentUtteranceIdRef.current !== utteranceId) return;
       if (e.name === 'word') {
+        hasReceivedWordBoundaryRef.current = true;
         const absoluteIndex = startOffset + e.charIndex;
         setCharIndex(absoluteIndex);
         setCharLength(e.charLength);
@@ -377,6 +432,10 @@ export function useReadAloud(paragraphs: string[]) {
   };
 
   const pauseReading = () => {
+    if (fallbackIntervalRef.current) {
+      clearInterval(fallbackIntervalRef.current as any);
+      fallbackIntervalRef.current = null;
+    }
     setIsPlaying(false);
     setIsPaused(true);
     isPlayingRef.current = false;
@@ -391,7 +450,10 @@ export function useReadAloud(paragraphs: string[]) {
   };
 
   const stopReading = () => {
-
+    if (fallbackIntervalRef.current) {
+      clearInterval(fallbackIntervalRef.current as any);
+      fallbackIntervalRef.current = null;
+    }
     setIsPlaying(false);
     setIsPaused(false);
     isPlayingRef.current = false;
