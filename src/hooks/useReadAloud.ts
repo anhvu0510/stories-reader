@@ -342,6 +342,7 @@ export function useReadAloud(paragraphs: string[]) {
   };
 
   const stopReading = () => {
+
     setIsPlaying(false);
     setIsPaused(false);
     isPlayingRef.current = false;

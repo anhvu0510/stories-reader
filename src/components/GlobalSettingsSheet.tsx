@@ -512,18 +512,18 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
                     <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">
                       Tốc độ đọc
                     </label>
-                    <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">{speechRate.toFixed(1)}x</span>
+                    <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">{Number(speechRate.toFixed(2))}x</span>
                   </div>
                   <div className="flex items-center gap-4 bg-surface-container-highest rounded-xl p-3">
-                    <button onClick={() => setSpeechRate(Math.max(0.5, speechRate - 0.1))} className="w-8 h-8 rounded-full flex items-center justify-center bg-surface-container-lowest text-on-surface hover:bg-surface-bright active:scale-95 transition-all text-sm font-bold flex-shrink-0">
+                    <button onClick={() => setSpeechRate(Math.max(0.2, Number((speechRate - 0.05).toFixed(2))))} className="w-8 h-8 rounded-full flex items-center justify-center bg-surface-container-lowest text-on-surface hover:bg-surface-bright active:scale-95 transition-all text-sm font-bold flex-shrink-0">
                       -
                     </button>
                     <input 
-                      type="range" min="0.5" max="2.0" step="0.1" 
+                      type="range" min="0.2" max="3.0" step="0.05" 
                       value={speechRate} onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
                       className="flex-1 accent-primary h-1.5 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full cursor-pointer bg-surface-container-lowest"
                     />
-                    <button onClick={() => setSpeechRate(Math.min(2.0, speechRate + 0.1))} className="w-8 h-8 rounded-full flex items-center justify-center bg-surface-container-lowest text-on-surface hover:bg-surface-bright active:scale-95 transition-all text-sm font-bold flex-shrink-0">
+                    <button onClick={() => setSpeechRate(Math.min(3.0, Number((speechRate + 0.05).toFixed(2))))} className="w-8 h-8 rounded-full flex items-center justify-center bg-surface-container-lowest text-on-surface hover:bg-surface-bright active:scale-95 transition-all text-sm font-bold flex-shrink-0">
                       +
                     </button>
                   </div>
