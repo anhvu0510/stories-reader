@@ -77,29 +77,12 @@ export function useReadAloud(paragraphs: string[]) {
       tmp.innerHTML = html;
       const text = tmp.textContent || tmp.innerText || '';
       
-      const matches = text.match(/[^.!?\n]+[.!?\n]+(?:\s|$)|[^.!?\n]+$/g);
-      
-      let currentOffset = 0;
-      if (matches) {
-        matches.forEach(m => {
-          const sTrimmed = m.trim();
-          if (sTrimmed) {
-            const actualStart = text.indexOf(sTrimmed, currentOffset);
-            res.push({
-              pIdx,
-              text: sTrimmed,
-              startOffset: actualStart,
-              length: sTrimmed.length
-            });
-          }
-          currentOffset += m.length; 
-        });
-      } else if (text.trim()) {
+      if (text.trim()) {
         res.push({
           pIdx,
-          text: text.trim(),
-          startOffset: text.indexOf(text.trim()),
-          length: text.trim().length
+          text: text,
+          startOffset: 0,
+          length: text.length
         });
       }
     });
@@ -156,10 +139,12 @@ export function useReadAloud(paragraphs: string[]) {
           let offset = charIndex;
           let length = charLength;
           // Match the first alphanumeric part to skip leading/trailing punctuation/spaces
-          const match = wordText.match(/[^\s.,!?:;'"(){}\[\]]+/);
+          const match = wordText.match(/[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
           if (match && match.index !== undefined) {
              offset = charIndex + match.index;
              length = match[0].length;
+          } else {
+             length = 0;
           }
 
           highlightText(
@@ -221,6 +206,8 @@ export function useReadAloud(paragraphs: string[]) {
   const prevSettingsRef = useRef({ voiceUri, speechRate });
   const isSettingsChangingRef = useRef(false);
 
+  const utteranceOffsetRef = useRef(0);
+
   useEffect(() => {
     if (prevSettingsRef.current.voiceUri !== voiceUri || prevSettingsRef.current.speechRate !== speechRate) {
       prevSettingsRef.current = { voiceUri, speechRate };
@@ -232,13 +219,13 @@ export function useReadAloud(paragraphs: string[]) {
         // Resume playing after a short delay to allow cancel to finish
         setTimeout(() => {
           isSettingsChangingRef.current = false;
-          playChunk(currentChunkIdxRef.current);
+          playChunk(currentChunkIdxRef.current, utteranceOffsetRef.current);
         }, 100);
       }
     }
   }, [voiceUri, speechRate, synth]);
 
-  const playChunk = (index: number) => {
+  const playChunk = (index: number, startOffset: number = 0) => {
     if (!synth || !isPlayingRef.current) return;
     if (index >= chunks.length) {
       setIsPlaying(false);
@@ -251,18 +238,20 @@ export function useReadAloud(paragraphs: string[]) {
     }
 
     currentChunkIdxRef.current = index;
+    utteranceOffsetRef.current = startOffset;
     setCurrentChunkIndex(index);
-    setCharIndex(-1);
+    setCharIndex(startOffset);
     setCharLength(0);
     
     const chunk = chunks[index];
+    const textToSpeak = startOffset > 0 ? chunk.text.substring(startOffset) : chunk.text;
     
-    if (!chunk.text.trim()) {
-      playChunk(index + 1);
+    if (!textToSpeak.trim()) {
+      playChunk(index + 1, 0);
       return;
     }
 
-    const utterance = new SpeechSynthesisUtterance(chunk.text);
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.rate = speechRate;
     
     const selectedVoice = voices.find(v => v.voiceURI === voiceUri) || voices[0];
@@ -276,15 +265,17 @@ export function useReadAloud(paragraphs: string[]) {
     utterance.onboundary = (e) => {
       if (currentUtteranceIdRef.current !== utteranceId) return;
       if (e.name === 'word') {
-        setCharIndex(e.charIndex);
+        const absoluteIndex = startOffset + e.charIndex;
+        setCharIndex(absoluteIndex);
         setCharLength(e.charLength);
+        utteranceOffsetRef.current = absoluteIndex;
       }
     };
 
     utterance.onend = () => {
       if (currentUtteranceIdRef.current !== utteranceId) return;
       if (isPlayingRef.current && !isPausedRef.current && !isSettingsChangingRef.current) {
-        playChunk(index + 1);
+        playChunk(index + 1, 0);
       }
     };
 
@@ -379,7 +370,7 @@ export function useReadAloud(paragraphs: string[]) {
       currentChunkIdxRef.current = targetIndex;
       setTimeout(() => {
         if (isPlayingRef.current && !isPausedRef.current) {
-          playChunk(targetIndex);
+          playChunk(targetIndex, textOffset);
         }
       }, 50);
     }
