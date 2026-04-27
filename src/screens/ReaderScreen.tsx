@@ -317,83 +317,117 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
       <nav 
         aria-hidden="true"
         className={cn(
-          "fixed bottom-0 left-0 w-full z-50 transition-transform duration-500 will-change-transform ease-out",
-          showControls ? "translate-y-0" : "translate-y-[calc(100%+48px)]",
-          "text-on-surface"
+          "fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)] pointer-events-none drop-shadow-[0_-4px_16px_rgba(0,0,0,0.05)] transition-transform duration-500 will-change-transform ease-out",
+          showControls ? "translate-y-0" : "translate-y-[calc(100%+48px)]"
         )}
       >
-        {/* Apple Glass Background */}
-        <div className="absolute inset-0 bg-surface/70 backdrop-blur-xl saturate-[180%] border-t border-white/20 dark:border-white/10 shadow-[0_-8px_32px_rgba(0,0,0,0.12)]"></div>
-        
-        {/* Content */}
-        <div className="relative z-10 w-full pb-[env(safe-area-inset-bottom)]">
-          <div className="flex justify-between items-center px-2 sm:px-6 py-2 max-w-sm sm:max-w-md mx-auto">
-            {/* 1. Trước */}
-            <button 
-              disabled={!content.navigation?.prev?.chapterId}
-              onClick={() => content.navigation?.prev?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.prev.chapterId, rootTab })}
-              className="flex flex-col items-center justify-center w-[60px] h-[60px] rounded-2xl disabled:opacity-30 transition-all active:scale-95 hover:bg-on-surface/5 text-on-surface-variant hover:text-on-surface"
-            >
-               <ChevronLeft size={24} className="mb-1" strokeWidth={2.5} />
-               <span className="text-[10px] font-medium tracking-wide">Trước</span>
-            </button>
-
-            {/* 2. Menu */}
-            <button 
-              onClick={() => { 
-                setShowChapterDrawer(true); 
-                setShowControls(false); 
-                if (bookChapters.length === 0) {
-                  loadMoreChapters(1);
-                }
-              }}
-              className="flex flex-col items-center justify-center w-[60px] h-[60px] rounded-2xl transition-all active:scale-95 hover:bg-on-surface/5 text-on-surface-variant hover:text-on-surface"
-            >
-               <List size={22} className="mb-1.5" strokeWidth={2.5} />
-               <span className="text-[10px] font-medium tracking-wide">Menu</span>
-            </button>
-
-            {/* 3. Dịch AI */}
-            <div className="relative w-[60px] h-[60px] flex flex-col justify-end items-center">
-              <div className="absolute -top-7 rounded-full bg-surface/70 backdrop-blur-xl p-[6px] shadow-[0_-8px_24px_rgba(0,0,0,0.12)] border border-white/20 dark:border-white/10">
-                <button 
-                  onClick={() => { setShowTranslation(true); setShowControls(false); }}
-                  className="relative flex items-center justify-center w-[52px] h-[52px] rounded-full bg-primary text-on-primary shadow-[0_8px_16px_rgba(0,0,0,0.3)] transition-all duration-300 active:scale-90 active:rotate-[15deg] overflow-hidden"
-                >
-                   <span className="absolute inset-0 rounded-full animate-ping bg-white/20 opacity-0 active:opacity-100 duration-500"></span>
-                   <span className="absolute inset-0 rounded-full animate-[pulse_2s_ease-in-out_infinite] bg-white/10"></span>
-                   <Sparkles size={26} strokeWidth={2.5} className="relative z-10 drop-shadow-md" />
-                </button>
-              </div>
-              <span className="text-[10px] font-bold tracking-wide text-primary">Dịch AI</span>
-            </div>
+        <div className="flex justify-center w-full mt-4">
+          <div className="relative flex items-center justify-between px-2 h-[55px] mx-auto w-full pointer-events-auto">
             
-            {/* 4. Cài đặt */}
-            <button 
-              onClick={() => { setShowGlobalSettings(true); setShowControls(false); }}
-              className={cn(
-                "flex flex-col items-center justify-center w-[60px] h-[60px] rounded-2xl transition-all active:scale-95",
-                selectedText ? "text-primary hover:bg-primary/10" : "text-on-surface-variant hover:text-on-surface hover:bg-on-surface/5"
-              )}
-            >
-               <div className="relative mb-1.5">
-                 <Settings size={22} strokeWidth={2.5} />
-                 {selectedText && (
-                   <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-surface"></span>
-                 )}
-               </div>
-               <span className="text-[10px] font-medium tracking-wide">Cài đặt</span>
-            </button>
+            {/* Advanced Curved Background (SVG) */}
+            <div className="absolute inset-x-0 bottom-0 w-full h-[55px] -z-10">
+              <svg width="100%" height="100%" viewBox="0 0 375 64" preserveAspectRatio="none" className="absolute inset-0 w-full h-full text-surface fill-current drop-shadow-sm">
+                {/* Solid backdrop */}
+                <path 
+                  d="M0 24 C0 10.745 10.745 0 24 0 H130 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0 H351 C364.255 0 375 10.745 375 24 V64 H0 V24 Z" 
+                />
+                {/* Full top border spanning the curve and rounded edges */}
+                <path 
+                  d="M0 24 C0 10.745 10.745 0 24 0 H130 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0 H351 C364.255 0 375 10.745 375 24" 
+                  fill="none"
+                  className="stroke-outline-variant/30"
+                  strokeWidth="1.5"
+                />
+                {/* Center highlight over the curve */}
+                <path 
+                  d="M130 0 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0" 
+                  fill="none"
+                  className="stroke-primary/40"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
 
-            {/* 5. Sau */}
-            <button 
-              disabled={!content.navigation?.next?.chapterId}
-              onClick={() => content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId, rootTab })}
-              className="flex flex-col items-center justify-center w-[60px] h-[60px] rounded-2xl disabled:opacity-30 transition-all active:scale-95 hover:bg-on-surface/5 text-on-surface-variant hover:text-on-surface"
-            >
-               <ChevronRight size={24} className="mb-1" strokeWidth={2.5} />
-               <span className="text-[10px] font-medium tracking-wide">Sau</span>
-            </button>
+            {/* Left Items */}
+            <div className="flex items-center w-[120px] justify-between pl-3 sm:pl-4">
+              {/* 1. Trước */}
+              <button 
+                disabled={!content.navigation?.prev?.chapterId}
+                onClick={() => content.navigation?.prev?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.prev.chapterId, rootTab })}
+                className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
+              >
+                 <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
+                   <ChevronLeft size={28} strokeWidth={2.5} />
+                 </div>
+              </button>
+
+              {/* 2. Menu */}
+              <button 
+                onClick={() => { 
+                  setShowChapterDrawer(true); 
+                  setShowControls(false); 
+                  if (bookChapters.length === 0) {
+                    loadMoreChapters(1);
+                  }
+                }}
+                className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
+              >
+                 <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
+                   <List size={26} strokeWidth={2.5} />
+                 </div>
+              </button>
+            </div>
+
+            {/* Center Floating: 3. Dịch AI */}
+            <div className="relative flex flex-col items-center -mt-8 mb-[8px] shrink-0 group">
+              {/* Outer pulsing ring */}
+             
+              <div className="absolute inset-0 rounded-full bg-primary/40 blur-md animate-pulse" style={{ animationDuration: '2s' }}></div>
+              
+              <button 
+                onClick={() => { setShowTranslation(true); setShowControls(false); }}
+                className="relative flex items-center justify-center w-[48px] h-[48px] rounded-full bg-primary text-on-primary shadow-[0_10px_24px_-4px_rgba(0,0,0,0.4),inset_0_4px_8px_rgba(255,255,255,0.4),inset_0_-6px_12px_rgba(0,0,0,0.3)] transition-all duration-300 active:scale-90 hover:scale-105 overflow-hidden"
+              >
+                 {/* Animated Conic gradient spin for a rotating light effect */}
+                 <div className="absolute inset-[-100%] bg-[conic-gradient(from_0deg,transparent_0_280deg,white_360deg)] animate-[spin_2s_linear_infinite] opacity-40"></div>
+                 
+                 {/* Inner background block so the spin only shows on the border */}
+                 <div className="absolute inset-[2px] rounded-full bg-primary shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.2)]"></div>
+
+                 {/* Glassy top highlight */}
+                 <div className="absolute top-[2px] inset-x-[6px] h-1/2 bg-gradient-to-b from-white/40 to-transparent rounded-t-full opacity-90 pointer-events-none"></div>
+                 
+                 <Sparkles size={26} strokeWidth={2.5} className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] animate-[pulse_2s_ease-in-out_infinite]" />
+              </button>
+            </div>
+
+            {/* Right Items */}
+            <div className="flex items-center w-[120px] justify-between pr-3 sm:pr-4">
+              {/* 4. Cài đặt */}
+              <button 
+                onClick={() => { setShowGlobalSettings(true); setShowControls(false); }}
+                className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
+              >
+                 <div className={cn("relative transition-all duration-300 group-hover:scale-110 active:scale-95", selectedText ? "text-primary drop-shadow-md" : "text-on-surface-variant group-hover:text-on-surface")}>
+                   <Settings size={26} strokeWidth={2.5} />
+                   {selectedText && (
+                     <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-surface"></span>
+                   )}
+                 </div>
+              </button>
+
+              {/* 5. Sau */}
+              <button 
+                disabled={!content.navigation?.next?.chapterId}
+                onClick={() => content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId, rootTab })}
+                className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
+              >
+                 <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
+                   <ChevronRight size={28} strokeWidth={2.5} />
+                 </div>
+              </button>
+            </div>
           </div>
         </div>
       </nav>

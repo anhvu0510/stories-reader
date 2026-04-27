@@ -304,7 +304,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
           {activeTab === 'names' && (
             <>
               {/* Add/Edit Form Fixed at Top of Scrollable area */}
-              <div className="p-3 sm:p-4 border-b border-outline-variant/10 sticky top-0 z-10 flex flex-col gap-3 bg-surface-container/95 backdrop-blur-md shadow-sm">
+              <div className="p-3 sm:p-4 border-b border-outline-variant/10 sticky top-0 z-100 flex flex-col gap-3 bg-surface-container/95 backdrop-blur-md shadow-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                      <Edit3 size={14} className="text-primary" />
@@ -427,27 +427,54 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
                   ) : filteredReplacements.map(r => (
                     <div 
                       key={r.id}
-                      onClick={() => handleEdit(r)}
-                      className={`flex flex-col gap-1.5 sm:gap-2 p-3 sm:p-4 rounded-xl sm:rounded-2xl border cursor-pointer transition-all ${editingId === r.id ? 'border-primary/50 bg-primary/5' : 'border-outline-variant/10 bg-surface-container-highest/10 hover:bg-surface-container-highest/20'}`}
+                      className={`group flex items-center justify-between gap-1.5 sm:gap-3 p-2 sm:p-3 rounded-2xl border transition-all duration-300 hover:shadow-md ${editingId === r.id ? 'border-primary shadow-sm bg-primary/5 ring-1 ring-primary/20 scale-[1.01]' : 'border-outline-variant/20 bg-surface-container-lowest hover:border-outline-variant/40 hover:bg-surface'}`}
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap text-sm sm:text-base">
-                          <span className="font-medium text-on-surface-variant line-through decoration-on-surface-variant/50">{r.match}</span>
-                          <ArrowRight size={14} className="text-on-surface-variant opacity-50 sm:hidden" />
-                          <ArrowRight size={16} className="text-on-surface-variant opacity-50 hidden sm:block" />
-                          <span className="font-bold text-primary">{r.replacement}</span>
-                        </div>
+                      <div className="flex flex-1 items-center min-w-0">
+                         {/* Match string [a] */}
+                         <div className="relative flex-1 min-w-0 bg-surface-container-highest/20 border border-outline-variant/30 rounded-xl sm:rounded-2xl px-2.5 py-2 sm:px-3 sm:py-2.5 flex items-center shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)] pl-8 sm:pl-9">
+                             {/* Badge */}
+                             <div 
+                              className={`absolute left-1.5 sm:left-2 top-1/2 -translate-y-1/2 w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 flex items-center justify-center rounded-[6px] sm:rounded-lg text-[10px] sm:text-[11px] font-black shadow-sm ${
+                                r.scope === 'chapter' ? 'bg-primary text-on-primary' : 
+                                r.scope === 'book' ? 'bg-[#b47a18] text-black' : 
+                                'bg-surface-variant text-on-surface-variant border border-outline-variant/30'
+                              }`}
+                              title={r.scope === 'chapter' ? 'Chương' : r.scope === 'book' ? 'Truyện' : 'Toàn cục'}
+                             >
+                              {r.scope === 'chapter' ? 'C' : r.scope === 'book' ? 'B' : 'G'}
+                             </div>
+                             <span className="text-[12px] sm:text-[14px] text-on-surface-variant font-medium truncate line-through decoration-on-surface-variant/40" title={r.match}>{r.match}</span>
+                         </div>
+                         
+                         {/* Arrow */}
+                         <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-surface-container border border-outline-variant/20 text-on-surface-variant shadow-sm z-10 -mx-3 sm:-mx-3.5 group-hover:text-primary transition-colors duration-300">
+                           <ArrowRight size={14} className="sm:hidden" strokeWidth={3} />
+                           <ArrowRight size={16} className="hidden sm:block" strokeWidth={3} />
+                         </div>
+
+                         {/* Replacement string [b] */}
+                         <div className="flex-1 min-w-0 bg-primary/5 border border-primary/20 rounded-xl sm:rounded-2xl px-2.5 py-2 sm:px-3 sm:py-2.5 flex items-center shadow-[inset_0_1px_2px_max(rgba(0,0,0,0.02),var(--color-primary-shadow,transparent))] pl-4 sm:pl-5">
+                            <span className="text-[12px] sm:text-[14px] font-extrabold text-primary truncate" title={r.replacement}>{r.replacement}</span>
+                         </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-center gap-1 flex-shrink-0">
+                        <button 
+                          onClick={() => handleEdit(r)}
+                          className={`w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center rounded-full transition-all duration-200 ${editingId === r.id ? 'bg-primary text-on-primary shadow-md scale-105' : 'text-on-surface-variant hover:bg-surface-variant hover:text-primary active:scale-95'}`}
+                          title="Sửa"
+                        >
+                          <Edit3 size={14} className="sm:hidden" strokeWidth={2.5} />
+                          <Edit3 size={16} className="hidden sm:block" strokeWidth={2.5} />
+                        </button>
                         <button 
                           onClick={(e) => handleDelete(r.id, e)}
-                          className="p-1.5 sm:p-2 text-on-surface-variant opacity-70 hover:opacity-100 hover:text-error hover:bg-error/10 rounded-full transition-colors -mt-1 -mr-1"
+                          className="w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-error/10 hover:text-error transition-all duration-200 active:scale-95"
+                          title="Xóa"
                         >
-                          <Trash2 size={16} className="sm:w-[18px] sm:h-[18px]" />
+                          <Trash2 size={14} className="sm:hidden" strokeWidth={2.5} />
+                          <Trash2 size={16} className="hidden sm:block" strokeWidth={2.5} />
                         </button>
-                      </div>
-                      <div className="flex justify-start">
-                        <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${getScopeColor(r.scope)} ${r.scope === 'chapter' ? 'bg-primary/10 px-1.5 sm:px-2 py-[1px] sm:py-0.5 rounded' : 'bg-surface-container-highest/30 px-1.5 sm:px-2 py-[1px] sm:py-0.5 rounded text-on-surface-variant'}`}>
-                          {getScopeLabel(r.scope)}
-                        </span>
                       </div>
                     </div>
                   ))}

@@ -5,6 +5,7 @@ import { AppView } from '../App';
 import { TranslationSheet } from '../components/TranslationSheet';
 import { GlobalSettingsSheet } from '../components/GlobalSettingsSheet';
 import { LoadingOverlay } from '../components/LoadingOverlay';
+import { BottomDock } from '../components/BottomDock';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -274,6 +275,11 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
       {showGlobalSettings && (
         <GlobalSettingsSheet onClose={() => setShowGlobalSettings(false)} currentBookId={bookId} />
       )}
+      
+      <BottomDock 
+        activeTab={rootTab as 'books' | 'history' | 'ai'} 
+        onTabSelect={(t) => onNavigate({ type: 'library', tab: t })} 
+      />
       
       <LoadingOverlay isLoading={isLoading} message="Đang tải danh sách chương..." />
     </>
