@@ -326,10 +326,11 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
             
             {/* Advanced Curved Background (SVG) */}
             <div className="absolute inset-x-0 bottom-0 w-full h-[55px] -z-10">
-              <svg width="100%" height="100%" viewBox="0 0 375 64" preserveAspectRatio="none" className="absolute inset-0 w-full h-full drop-shadow-sm" style={{ color: 'var(--surface)', fill: 'var(--surface)' }}>
+              <svg width="100%" height="100%" viewBox="0 0 375 64" preserveAspectRatio="none" className="absolute inset-0 w-full h-full drop-shadow-sm">
                 {/* Solid backdrop */}
                 <path 
                   d="M0 24 C0 10.745 10.745 0 24 0 H130 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0 H351 C364.255 0 375 10.745 375 24 V64 H0 V24 Z" 
+                  style={{ fill: 'var(--surface)' }}
                 />
                 {/* Full top border spanning the curve and rounded edges */}
                 <path 
