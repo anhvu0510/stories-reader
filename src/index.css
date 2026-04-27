@@ -2,6 +2,7 @@
 @import "tailwindcss";
 
 :root, [data-theme="default"] {
+  color-scheme: dark;
   --bg: #1e1e1e;
   --on-bg: #d4d4d4;
   --surface: #1e1e1e;
@@ -37,6 +38,7 @@
 }
 
 [data-theme="amoled"] {
+  color-scheme: dark;
   --bg: #000000;
   --on-bg: #8a8a8e;
   --surface: #000000;
@@ -72,6 +74,7 @@
 }
 
 [data-theme="midnight"] {
+  color-scheme: dark;
   --bg: #0f172a;
   --on-bg: #cbd5e1;
   --surface: #0f172a;
@@ -107,6 +110,7 @@
 }
 
 [data-theme="obsidian"] {
+  color-scheme: dark;
   --bg: #0d0d12;
   --on-bg: #a1a1aa;
   --surface: #0d0d12;
@@ -142,6 +146,7 @@
 }
 
 [data-theme="coffee"] {
+  color-scheme: dark;
   --bg: #1c1814;
   --on-bg: #d7c4b4;
   --surface: #1c1814;
@@ -177,6 +182,7 @@
 }
 
 [data-theme="modern-vn"] {
+  color-scheme: dark;
   --bg: #0b1326;
   --on-bg: #dae2fd;
   --surface: #0b1326;
