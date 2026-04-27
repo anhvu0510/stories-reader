@@ -41,7 +41,7 @@ function highlightText(rootElement: HTMLElement, startOffset: number, length: nu
     const fragment = document.createDocumentFragment();
     if (beforeText) fragment.appendChild(document.createTextNode(beforeText));
     
-    const mark = document.createElement('msreadoutspan');
+    const mark = document.createElement('span');
     mark.className = className;
     mark.textContent = highlightTxt;
     fragment.appendChild(mark);
@@ -313,11 +313,19 @@ export function useReadAloud(paragraphs: string[]) {
     if (!synth) return;
 
     if (isPaused) {
-      synth.resume();
+      if (synth.paused) {
+        synth.resume(); // Safari requires this before cancel to truly clear paused state
+      }
       setIsPaused(false);
       setIsPlaying(true);
       isPausedRef.current = false;
       isPlayingRef.current = true;
+      synth.cancel();
+      setTimeout(() => {
+        if (isPlayingRef.current && !isPausedRef.current) {
+          playChunk(currentChunkIdxRef.current, utteranceOffsetRef.current);
+        }
+      }, 50);
       return;
     }
     
@@ -334,11 +342,17 @@ export function useReadAloud(paragraphs: string[]) {
   };
 
   const pauseReading = () => {
-    if (synth) synth.pause();
     setIsPlaying(false);
     setIsPaused(true);
     isPlayingRef.current = false;
     isPausedRef.current = true;
+    currentUtteranceIdRef.current = null; // Unbind events so onend/onerror don't skip chunks
+    if (synth) {
+      synth.pause(); // Standard pause (for desktop)
+      setTimeout(() => {
+        synth.cancel(); // Convert to cancel to avoid broken resume on mobile
+      }, 10);
+    }
   };
 
   const stopReading = () => {
