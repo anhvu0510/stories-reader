@@ -8,6 +8,19 @@ interface Chunk {
   length: number;
 }
 
+function unwrapHighlights(rootElement: HTMLElement) {
+  const highlights = rootElement.querySelectorAll('.msreadout-word-highlight, .msreadout-line-highlight');
+  highlights.forEach(el => {
+    const parent = el.parentNode;
+    if (!parent) return;
+    while (el.firstChild) {
+      parent.insertBefore(el.firstChild, el);
+    }
+    parent.removeChild(el);
+  });
+  rootElement.normalize();
+}
+
 function highlightText(rootElement: HTMLElement, startOffset: number, length: number, className: string) {
   if (length <= 0) return;
   
@@ -118,41 +131,57 @@ export function useReadAloud(paragraphs: string[]) {
     const pNodes = Array.from(article.querySelectorAll(':scope > div.mb-4'));
     if (pNodes.length === 0) return;
 
-    // Reset innerHTML for active reading changes to clear previous highlights
-    pNodes.forEach((node, idx) => {
-      // Restore original innerHTML to clean up injected msreadoutspans
-      // Only check if there's a difference to avoid unnecessary reflows
-      const origHtml = paragraphs[idx] || '';
-      if (origHtml && node.innerHTML !== origHtml) {
-        node.innerHTML = origHtml;
-      }
-    });
+    // Clean up previous highlights quickly without destroying HTML parsing
+    unwrapHighlights(article);
 
     if (currentChunkIndex !== -1 && chunks[currentChunkIndex]) {
       const chunk = chunks[currentChunkIndex];
       const pNode = pNodes[chunk.pIdx] as HTMLElement;
 
       if (pNode) {
-        // Just highlight the active word
-        if (charIndex >= 0 && charLength > 0) {
-          const wordText = chunk.text.substring(charIndex, charIndex + charLength);
+        // Always give the line/chunk a soft highlight so we know where we are, even if word-level fails.
+        highlightText(
+          pNode,
+          chunk.startOffset,
+          chunk.length,
+          'msreadout-line-highlight bg-primary/10 text-on-surface box-decoration-clone rounded-sm px-0.5 mx-[-2px]'
+        );
+
+        // Highlight the active word
+        if (charIndex >= 0) {
           let offset = charIndex;
           let length = charLength;
-          // Match the first alphanumeric part to skip leading/trailing punctuation/spaces
-          const match = wordText.match(/[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
-          if (match && match.index !== undefined) {
-             offset = charIndex + match.index;
-             length = match[0].length;
+
+          // If charLength is zero or undefined (happens natively on Android Chrome/Samsung Internet)
+          if (!length || length <= 0) {
+            const textRemainder = chunk.text.substring(charIndex);
+            const match = textRemainder.match(/^[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
+            if (match) {
+              length = match[0].length;
+            } else {
+              const spaceMatch = textRemainder.match(/\s/);
+              length = spaceMatch && spaceMatch.index ? spaceMatch.index : textRemainder.length;
+            }
           } else {
-             length = 0;
+            // we have a charLength, refine it
+            const wordText = chunk.text.substring(charIndex, charIndex + charLength);
+            const match = wordText.match(/[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
+            if (match && match.index !== undefined) {
+               offset = charIndex + match.index;
+               length = match[0].length;
+            } else {
+               length = 0;
+            }
           }
 
-          highlightText(
-            pNode, 
-            chunk.startOffset + offset, 
-            length, 
-            'msreadout-word-highlight bg-yellow-400 text-black box-decoration-clone rounded-sm px-0.5 mx-[-2px]'
-          );
+          if (length > 0) {
+            highlightText(
+              pNode, 
+              chunk.startOffset + offset, 
+              length, 
+              'msreadout-word-highlight bg-yellow-400 text-black box-decoration-clone rounded-sm px-0.5 mx-[-2px]'
+            );
+          }
         }
         
         // Scroll into view logic - smoothly glide along the reader's document
@@ -171,14 +200,9 @@ export function useReadAloud(paragraphs: string[]) {
   useEffect(() => {
     return () => {
       const article = document.querySelector('article');
-      if (!article) return;
-      const pNodes = Array.from(article.querySelectorAll(':scope > div.mb-4'));
-      pNodes.forEach((node, idx) => {
-        const origHtml = paragraphs[idx] || '';
-        if (origHtml && node.innerHTML !== origHtml) {
-          node.innerHTML = origHtml;
-        }
-      });
+      if (article) {
+        unwrapHighlights(article);
+      }
       stopReading();
     };
   }, [paragraphs]);
