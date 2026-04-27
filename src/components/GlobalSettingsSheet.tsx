@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Check, Layers, MonitorSmartphone, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Check, Layers, MonitorSmartphone, ChevronDown, ChevronUp, Volume2 } from 'lucide-react';
 import { api, Replacement } from '../lib/api';
 import { useReaderSettings } from '../contexts/ReaderContext';
 
@@ -15,9 +15,10 @@ interface GlobalSettingsSheetProps {
 export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId, currentChapterId }: GlobalSettingsSheetProps) {
   const { 
     isEnabledReplace, setIsEnabledReplace,
-    theme, setTheme, font, setFont, fontSize, setFontSize, lineHeight, setLineHeight, groupLines, setGroupLines
+    theme, setTheme, font, setFont, fontSize, setFontSize, lineHeight, setLineHeight, groupLines, setGroupLines,
+    speechRate, setSpeechRate
   } = useReaderSettings();
-  const [activeTab, setActiveTab] = useState<'api' | 'names'>(initialMatch ? 'names' : 'api');
+  const [activeTab, setActiveTab] = useState<'api' | 'names' | 'voice'>(initialMatch ? 'names' : 'api');
 
   
   // Names State
@@ -155,6 +156,14 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
               >
                 <Edit3 size={16} />
                 <span className={activeTab === 'names' ? 'block' : 'hidden sm:block'}>Từ điển</span>
+              </button>
+
+              <button 
+                onClick={() => setActiveTab('voice')}
+                className={`flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none ${activeTab === 'voice' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+              >
+                <Volume2 size={16} />
+                <span className={activeTab === 'voice' ? 'block' : 'hidden sm:block'}>Giọng đọc</span>
               </button>
             </div>
 
@@ -483,8 +492,92 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
             </>
           )}
 
+          {activeTab === 'voice' && (
+            <div className="p-5 flex flex-col gap-6">
+              <h3 className="font-bold text-on-surface flex items-center gap-2 border-b border-outline-variant/20 pb-2">
+                <span className="w-1.5 h-4 bg-primary rounded-full"></span>
+                Giọng đọc (Text-to-Speech)
+              </h3>
+              
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-3">
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">
+                    Chọn giọng đọc
+                  </label>
+                  <VoiceSelect />
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">
+                      Tốc độ đọc
+                    </label>
+                    <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">{speechRate.toFixed(1)}x</span>
+                  </div>
+                  <div className="flex items-center gap-4 bg-surface-container-highest rounded-xl p-3">
+                    <button onClick={() => setSpeechRate(Math.max(0.5, speechRate - 0.1))} className="w-8 h-8 rounded-full flex items-center justify-center bg-surface-container-lowest text-on-surface hover:bg-surface-bright active:scale-95 transition-all text-sm font-bold flex-shrink-0">
+                      -
+                    </button>
+                    <input 
+                      type="range" min="0.5" max="2.0" step="0.1" 
+                      value={speechRate} onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                      className="flex-1 accent-primary h-1.5 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full cursor-pointer bg-surface-container-lowest"
+                    />
+                    <button onClick={() => setSpeechRate(Math.min(2.0, speechRate + 0.1))} className="w-8 h-8 rounded-full flex items-center justify-center bg-surface-container-lowest text-on-surface hover:bg-surface-bright active:scale-95 transition-all text-sm font-bold flex-shrink-0">
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
+    </div>
+  );
+}
+
+function VoiceSelect() {
+  const { voiceUri, setVoiceUri } = useReaderSettings();
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
+    if (!synth) return;
+
+    const loadVoices = () => {
+      const allVoices = synth.getVoices();
+      const viVoices = allVoices.filter(v => v.lang.includes('vi') || v.lang.includes('vi-VN'));
+      setVoices(viVoices);
+      if (viVoices.length > 0 && !voiceUri) {
+        setVoiceUri(viVoices[0].voiceURI);
+      }
+    };
+
+    loadVoices();
+    synth.onvoiceschanged = loadVoices;
+
+    return () => {
+      synth.onvoiceschanged = null;
+    };
+  }, [voiceUri, setVoiceUri]);
+
+  return (
+    <div className="relative">
+      <select 
+        value={voiceUri} 
+        onChange={(e) => setVoiceUri(e.target.value)}
+        className="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl p-3 text-[13px] sm:text-sm focus:outline-none focus:border-primary/50 text-on-surface appearance-none"
+      >
+        {voices.length === 0 && <option value="">Đang tải giọng đọc...</option>}
+        {voices.map(v => (
+          <option key={v.voiceURI} value={v.voiceURI}>
+            {v.name}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" size={16} />
     </div>
   );
 }

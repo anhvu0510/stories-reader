@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
-import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle, Settings, Sparkles, BookOpen, PlayCircle, Search } from 'lucide-react';
+import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle, Settings, Sparkles, BookOpen, PlayCircle, PauseCircle, Search } from 'lucide-react';
 import { AppView } from '../App';
 import { api, ChapterContent, Chapter } from '../lib/api';
 import { TranslationSheet } from '../components/TranslationSheet';
 import { GlobalSettingsSheet } from '../components/GlobalSettingsSheet';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { useReaderSettings } from '../contexts/ReaderContext';
+import { useReadAloud } from '../hooks/useReadAloud';
 import { cn } from '../lib/utils';
 
 const ContentRenderer = memo(({ paragraphs }: { paragraphs: string[] }) => {
@@ -32,6 +33,16 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [drawerSearch, setDrawerSearch] = useState('');
   const { theme, font, fontSize, lineHeight, groupLines, isEnabledReplace } = useReaderSettings();
+
+  const { isPlaying, isPaused, startReading, pauseReading, stopReading, jumpToContent } = useReadAloud(content?.chapter?.content || []);
+
+  const jumpToContentRef = useRef(jumpToContent);
+  const isReadAloudActiveRef = useRef(isPlaying || isPaused);
+
+  useEffect(() => {
+    jumpToContentRef.current = jumpToContent;
+    isReadAloudActiveRef.current = isPlaying || isPaused;
+  }, [jumpToContent, isPlaying, isPaused]);
 
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -104,6 +115,33 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
         if (selection && selection.toString().trim()) {
           setSelectedText(selection.toString().trim());
           setShowControls(true); // Auto show controls when text is selected
+          
+          if (isReadAloudActiveRef.current) {
+            const range = selection.getRangeAt(0);
+            const container = range.startContainer;
+            const mb4Div = container.nodeType === Node.TEXT_NODE ? container.parentElement?.closest('div.mb-4') : (container as HTMLElement).closest('div.mb-4');
+            
+            if (mb4Div) {
+              const article = mb4Div.closest('article');
+              if (article) {
+                const pNodes = Array.from(article.querySelectorAll(':scope > div.mb-4'));
+                const pIdx = pNodes.indexOf(mb4Div);
+                if (pIdx !== -1) {
+                  let offset = 0;
+                  const walker = document.createTreeWalker(mb4Div, NodeFilter.SHOW_TEXT, null);
+                  let node;
+                  while ((node = walker.nextNode())) {
+                    if (node === container) {
+                      offset += range.startOffset;
+                      break;
+                    }
+                    offset += node.nodeValue?.length || 0;
+                  }
+                  jumpToContentRef.current(pIdx, offset);
+                }
+              }
+            }
+          }
         } else {
           setSelectedText('');
         }
@@ -170,14 +208,14 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
         <div className="relative z-10 max-w-reading-max-width mx-auto w-full px-3 py-2 flex justify-between items-center h-14 sm:h-16 pt-[max(env(safe-area-inset-top),8px)]">
           <div className="flex items-center shrink-0 gap-2 w-[88px]">
             <button 
-              onClick={() => onNavigate({ type: 'book', bookId, rootTab })} 
+              onClick={() => { stopReading(); onNavigate({ type: 'book', bookId, rootTab }); }} 
               className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
               title="Về chi tiết truyện"
             >
               <ArrowLeft size={20} />
             </button>
             <button 
-              onClick={() => onNavigate({ type: 'library' })} 
+              onClick={() => { stopReading(); onNavigate({ type: 'library' }); }} 
               className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
               title="Về trang chủ"
             >
@@ -280,6 +318,7 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
                         }`}
                         onClick={() => {
                           if (isSucceeded || isPending) {
+                            stopReading();
                             setShowChapterDrawer(false);
                             onNavigate({ type: 'reader', bookId, chapterId: chap.chapterId, rootTab });
                           }
@@ -332,7 +371,7 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
           </div>
           <div className="p-4 border-t border-surface-variant bg-surface pb-safe-bottom">
             <button
-               onClick={() => { setShowChapterDrawer(false); onNavigate({ type: 'book', bookId , rootTab}); }}
+               onClick={() => { stopReading(); setShowChapterDrawer(false); onNavigate({ type: 'book', bookId , rootTab}); }}
                className="w-full py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-variant transition-colors text-sm font-semibold"
             >
               Xem chi tiết truyện
@@ -409,7 +448,10 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
               {/* 1. Trước */}
               <button 
                 disabled={!content.navigation?.prev?.chapterId}
-                onClick={() => content.navigation?.prev?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.prev.chapterId, rootTab })}
+                onClick={() => {
+                  stopReading();
+                  content.navigation?.prev?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.prev.chapterId, rootTab })
+                }}
                 className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
               >
                  <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
@@ -420,12 +462,23 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
               {/* 2. Audio/Read */}
               <button 
                 onClick={() => { 
-                  // TODO: Play audio
+                  if (isPlaying) {
+                    pauseReading();
+                  } else if (isPaused) {
+                    startReading();
+                  } else {
+                    startReading();
+                    setShowControls(false);
+                  }
                 }}
                 className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
               >
-                 <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
-                   <PlayCircle size={26} strokeWidth={2.5} />
+                 <div className={cn("transition-all duration-300 group-hover:scale-110 active:scale-95", isPlaying || isPaused ? "text-primary" : "text-on-surface-variant group-hover:text-on-surface")}>
+                   {isPlaying ? (
+                     <PauseCircle fill="currentColor" size={24} strokeWidth={2.5} />
+                   ) : (
+                     <PlayCircle size={26} strokeWidth={2.5} />
+                   )}
                  </div>
               </button>
             </div>
@@ -471,7 +524,10 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
               {/* 5. Sau */}
               <button 
                 disabled={!content.navigation?.next?.chapterId}
-                onClick={() => content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId, rootTab })}
+                onClick={() => {
+                  stopReading();
+                  content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId, rootTab })
+                }}
                 className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
               >
                  <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">

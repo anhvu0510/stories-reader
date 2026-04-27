@@ -17,6 +17,10 @@ interface ReaderContextType {
   setGroupLines: (g: number) => void;
   isEnabledReplace: boolean;
   setIsEnabledReplace: (e: boolean) => void;
+  voiceUri: string;
+  setVoiceUri: (v: string) => void;
+  speechRate: number;
+  setSpeechRate: (r: number) => void;
 }
 
 const ReaderContext = createContext<ReaderContextType | undefined>(undefined);
@@ -28,6 +32,8 @@ interface ReaderConfig {
   lineHeight: number;
   groupLines: number;
   isEnabledReplace: boolean;
+  voiceUri: string;
+  speechRate: number;
 }
 
 const SETTINGS_KEY = 'stories.ui.config';
@@ -38,7 +44,9 @@ const defaultSettings: ReaderConfig = {
   fontSize: 20,
   lineHeight: 1.4,
   groupLines: 1,
-  isEnabledReplace: true
+  isEnabledReplace: true,
+  voiceUri: '',
+  speechRate: 1.0,
 };
 
 function getInitialSettings(): ReaderConfig {
@@ -72,15 +80,20 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
         
         // Check if apiValue is an object with valid settings keys
         if (apiValue && typeof apiValue === 'object' && Object.keys(apiValue).length > 0 && !apiValue.error) {
-          const nextSettings = { ...defaultSettings, ...apiValue };
-          setSettings(nextSettings);
-          localStorage.setItem(SETTINGS_KEY, JSON.stringify(nextSettings));
+          setSettings(prev => {
+            const nextSettings = { ...defaultSettings, ...apiValue, voiceUri: prev.voiceUri, speechRate: prev.speechRate };
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(nextSettings));
+            return nextSettings;
+          });
         } else {
           // Config doesn't exist on server, sync our local initial settings
-          api.updateSettings(SETTINGS_KEY, settings);
+          // We can sync without voice fields
+          const { voiceUri, speechRate, ...apiSync } = settings;
+          api.updateSettings(SETTINGS_KEY, apiSync);
         }
       } else {
-        api.updateSettings(SETTINGS_KEY, settings);
+        const { voiceUri, speechRate, ...apiSync } = settings;
+        api.updateSettings(SETTINGS_KEY, apiSync);
       }
     });
   }, []);
@@ -89,15 +102,18 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute('data-theme', settings.theme);
   }, [settings.theme]);
 
-  const updateSetting = (key: keyof ReaderConfig, value: any) => {
+  const updateSetting = (key: keyof ReaderConfig, value: any, syncWithApi: boolean = true) => {
     setSettings(prev => {
       const next = { ...prev, [key]: value };
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
       
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        api.updateSettings(SETTINGS_KEY, next);
-      }, 1000);
+      if (syncWithApi) {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+          const { voiceUri, speechRate, ...apiSync } = next;
+          api.updateSettings(SETTINGS_KEY, apiSync);
+        }, 1000);
+      }
       
       return next;
     });
@@ -109,6 +125,8 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
   const setLineHeight = (l: number) => updateSetting('lineHeight', l);
   const setGroupLines = (g: number) => updateSetting('groupLines', g);
   const setIsEnabledReplace = (e: boolean) => updateSetting('isEnabledReplace', e);
+  const setVoiceUri = (v: string) => updateSetting('voiceUri', v, false);
+  const setSpeechRate = (r: number) => updateSetting('speechRate', r, false);
 
   return (
     <ReaderContext.Provider
@@ -118,7 +136,9 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
         fontSize: settings.fontSize, setFontSize,
         lineHeight: settings.lineHeight, setLineHeight,
         groupLines: settings.groupLines, setGroupLines,
-        isEnabledReplace: settings.isEnabledReplace, setIsEnabledReplace
+        isEnabledReplace: settings.isEnabledReplace, setIsEnabledReplace,
+        voiceUri: settings.voiceUri, setVoiceUri,
+        speechRate: settings.speechRate, setSpeechRate,
       }}
     >
       {children}
