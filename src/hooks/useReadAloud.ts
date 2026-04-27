@@ -368,6 +368,26 @@ export function useReadAloud(paragraphs: string[]) {
     setCharLength(0);
   };
 
+  const nextSection = () => {
+    if (!synth) return;
+    
+    // Force scroll logic to run
+    lastInteractionTime.current = 0;
+
+    if (currentChunkIdxRef.current < chunks.length - 1) {
+      const nextIdx = currentChunkIdxRef.current + 1;
+      currentUtteranceIdRef.current = null;
+      synth.cancel();
+      setIsPlaying(true);
+      setIsPaused(false);
+      isPlayingRef.current = true;
+      isPausedRef.current = false;
+      playChunk(nextIdx);
+    } else {
+      stopReading();
+    }
+  };
+
   const jumpToContent = (pIdx: number, textOffset: number) => {
     if (!synth) return;
     let targetIndex = chunks.findIndex(c => c.pIdx === pIdx && textOffset >= c.startOffset && textOffset < c.startOffset + c.length);
@@ -397,6 +417,7 @@ export function useReadAloud(paragraphs: string[]) {
     startReading,
     pauseReading,
     stopReading,
+    nextSection,
     jumpToContent
   };
 }

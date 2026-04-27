@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
-import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle, Settings, Sparkles, BookOpen, PlayCircle, PauseCircle, Search } from 'lucide-react';
+import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle, Settings, Sparkles, BookOpen, PlayCircle, PauseCircle, Search, StopCircle, SkipForward, Play, Pause } from 'lucide-react';
 import { AppView } from '../App';
 import { api, ChapterContent, Chapter } from '../lib/api';
 import { TranslationSheet } from '../components/TranslationSheet';
@@ -34,7 +34,8 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
   const [drawerSearch, setDrawerSearch] = useState('');
   const { theme, font, fontSize, lineHeight, groupLines, isEnabledReplace } = useReaderSettings();
 
-  const { isPlaying, isPaused, startReading, pauseReading, stopReading, jumpToContent } = useReadAloud(content?.chapter?.content || []);
+  const { isPlaying, isPaused, startReading, pauseReading, stopReading, jumpToContent, nextSection } = useReadAloud(content?.chapter?.content || []);
+  const [showAudioBar, setShowAudioBar] = useState(false);
 
   const jumpToContentRef = useRef(jumpToContent);
   const isReadAloudActiveRef = useRef(isPlaying || isPaused);
@@ -42,6 +43,9 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
   useEffect(() => {
     jumpToContentRef.current = jumpToContent;
     isReadAloudActiveRef.current = isPlaying || isPaused;
+    if (!isPlaying && !isPaused) {
+      setShowAudioBar(false);
+    }
   }, [jumpToContent, isPlaying, isPaused]);
 
   const contentRef = useRef<HTMLDivElement>(null);
@@ -416,125 +420,186 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
       >
         <div className="flex justify-center w-full mt-4">
           <div className="relative flex items-center justify-between px-2 h-[55px] mx-auto w-full pointer-events-auto">
-            
-            {/* Advanced Curved Background (SVG) */}
+            {/* Shared Advanced Curved Background (SVG) */}
             <div className="absolute inset-x-0 bottom-0 w-full h-[55px] -z-10">
               <svg width="100%" height="100%" viewBox="0 0 375 64" preserveAspectRatio="none" className="absolute inset-0 w-full h-full drop-shadow-sm style-nav-bg">
                 {/* Solid backdrop */}
-                <path 
-                  d="M0 24 C0 10.745 10.745 0 24 0 H130 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0 H351 C364.255 0 375 10.745 375 24 V64 H0 V24 Z" 
-                  className="nav-bg-fill"
-                />
+                <path d="M0 24 C0 10.745 10.745 0 24 0 H130 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0 H351 C364.255 0 375 10.745 375 24 V64 H0 V24 Z" className="nav-bg-fill" />
                 {/* Full top border spanning the curve and rounded edges */}
-                <path 
-                  d="M0 24 C0 10.745 10.745 0 24 0 H130 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0 H351 C364.255 0 375 10.745 375 24" 
-                  fill="none"
-                  className="stroke-outline-variant/30"
-                  strokeWidth="1.5"
-                />
+                <path d="M0 24 C0 10.745 10.745 0 24 0 H130 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0 H351 C364.255 0 375 10.745 375 24" fill="none" className="stroke-outline-variant/30" strokeWidth="1.5" />
                 {/* Center highlight over the curve */}
-                <path 
-                  d="M130 0 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0" 
-                  fill="none"
-                  className="stroke-primary/40"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
+                <path d="M130 0 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0" fill="none" className="stroke-primary/40" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </div>
 
-            {/* Left Items */}
-            <div className="flex items-center w-[120px] justify-between pl-3 sm:pl-4">
-              {/* 1. Trước */}
-              <button 
-                disabled={!content.navigation?.prev?.chapterId}
-                onClick={() => {
-                  stopReading();
-                  content.navigation?.prev?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.prev.chapterId, rootTab })
-                }}
-                className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
-              >
-                 <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
-                   <ChevronLeft size={28} strokeWidth={2.5} />
-                 </div>
-              </button>
+            {showAudioBar ? (
+              <>
+                {/* Audio Left Items */}
+                <div className="flex items-center w-[120px] justify-between pl-3 sm:pl-4">
+                  {/* 1. Next Chương */}
+                  <button 
+                    disabled={!content.navigation?.next?.chapterId}
+                    onClick={() => {
+                      stopReading();
+                      content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId, rootTab })
+                    }}
+                    className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
+                  >
+                     <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
+                       <ChevronRight size={28} strokeWidth={2.5} />
+                     </div>
+                  </button>
 
-              {/* 2. Audio/Read */}
-              <button 
-                onClick={() => { 
-                  if (isPlaying) {
-                    pauseReading();
-                  } else if (isPaused) {
-                    startReading();
-                  } else {
-                    startReading();
-                    setShowControls(false);
-                  }
-                }}
-                className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
-              >
-                 <div className={cn("transition-all duration-300 group-hover:scale-110 active:scale-95", isPlaying || isPaused ? "text-primary" : "text-on-surface-variant group-hover:text-on-surface")}>
-                   {isPlaying ? (
-                     <PauseCircle fill="currentColor" size={24} strokeWidth={2.5} />
-                   ) : (
-                     <PlayCircle size={26} strokeWidth={2.5} />
-                   )}
-                 </div>
-              </button>
-            </div>
+                  {/* 2. Next Đoạn */}
+                  <button 
+                    onClick={() => nextSection()}
+                    className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
+                  >
+                     <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
+                       <SkipForward size={26} strokeWidth={2.5} />
+                     </div>
+                  </button>
 
-            {/* Center Floating: 3. Dịch AI */}
-            <div className="relative flex flex-col items-center -mt-8 mb-[8px] shrink-0 group">
-              {/* Outer pulsing ring */}
-             
-              <div className="absolute inset-0 rounded-full bg-primary/40 blur-md animate-pulse" style={{ animationDuration: '2s' }}></div>
               
-              <button 
-                onClick={() => { setShowTranslation(true); setShowControls(false); }}
-                className="relative flex items-center justify-center w-[48px] h-[48px] rounded-full bg-primary text-on-primary shadow-[0_10px_24px_-4px_rgba(0,0,0,0.4),inset_0_4px_8px_rgba(255,255,255,0.4),inset_0_-6px_12px_rgba(0,0,0,0.3)] transition-all duration-300 active:scale-90 hover:scale-105 overflow-hidden"
-              >
-                 {/* Animated Conic gradient spin for a rotating light effect */}
-                 <div className="absolute inset-[-100%] bg-[conic-gradient(from_0deg,transparent_0_280deg,white_360deg)] animate-[spin_2s_linear_infinite] opacity-40"></div>
-                 
-                 {/* Inner background block so the spin only shows on the border */}
-                 <div className="absolute inset-[2px] rounded-full bg-primary shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.2)]"></div>
+                </div>
 
-                 {/* Glassy top highlight */}
-                 <div className="absolute top-[2px] inset-x-[6px] h-1/2 bg-gradient-to-b from-white/40 to-transparent rounded-t-full opacity-90 pointer-events-none"></div>
-                 
-                 <Sparkles size={26} strokeWidth={2.5} className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] animate-[pulse_2s_ease-in-out_infinite]" />
-              </button>
-            </div>
+                {/* Audio Center Floating */}
+                <div className="relative flex flex-col items-center -mt-8 mb-[8px] shrink-0 group z-10">
+                  <div className="absolute inset-0 rounded-full bg-primary/40 blur-md animate-pulse" style={{ animationDuration: '2s' }}></div>
+                  <button 
+                    onClick={() => isPlaying ? pauseReading() : startReading()}
+                     className="relative flex items-center justify-center w-[48px] h-[48px] rounded-full bg-primary text-on-primary shadow-[0_10px_24px_-4px_rgba(0,0,0,0.4),inset_0_4px_8px_rgba(255,255,255,0.4),inset_0_-6px_12px_rgba(0,0,0,0.3)] transition-all duration-300 active:scale-90 hover:scale-105 overflow-hidden"
+                  >
+                     <div className="absolute inset-[2px] rounded-full bg-primary shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.2)]"></div>
+                     <div className="absolute top-[2px] inset-x-[6px] h-1/2 bg-gradient-to-b from-white/40 to-transparent rounded-t-full opacity-90 pointer-events-none"></div>
+                     
+                     <div className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">
+                        {isPlaying ? <Pause fill="currentColor" size={24} strokeWidth={2.5} /> : <Play fill="currentColor" size={24} strokeWidth={2.5} className="ml-1" />}
+                     </div>
+                  </button>
+                </div>
 
-            {/* Right Items */}
-            <div className="flex items-center w-[120px] justify-between pr-3 sm:pr-4">
-              {/* 4. Cài đặt */}
-              <button 
-                onClick={() => { setShowGlobalSettings(true); setShowControls(false); }}
-                className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
-              >
-                 <div className={cn("relative transition-all duration-300 group-hover:scale-110 active:scale-95", selectedText ? "text-primary drop-shadow-md" : "text-on-surface-variant group-hover:text-on-surface")}>
-                   <Settings size={26} strokeWidth={2.5} />
-                   {selectedText && (
-                     <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-surface"></span>
-                   )}
-                 </div>
-              </button>
+                {/* Audio Right Items */}
+                <div className="flex items-center w-[120px] justify-between pr-3 sm:pr-4">
+                      {/* 4. Stop */}
+                  <button 
+                    onClick={() => { stopReading(); setShowAudioBar(false); }}
+                    className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
+                  >
+                     <div className="transition-all duration-300 text-error hover:text-error/80 group-hover:scale-110 active:scale-95">
+                       <StopCircle size={26} strokeWidth={2.5} />
+                     </div>
+                  </button>
 
-              {/* 5. Sau */}
-              <button 
-                disabled={!content.navigation?.next?.chapterId}
-                onClick={() => {
-                  stopReading();
-                  content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId, rootTab })
-                }}
-                className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
-              >
-                 <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
-                   <ChevronRight size={28} strokeWidth={2.5} />
-                 </div>
-              </button>
-            </div>
+                  {/* 5. Menu Cũ */}
+                  <button 
+                    onClick={() => setShowAudioBar(false)}
+                    className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
+                  >
+                     <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
+                       <List size={26} strokeWidth={2.5} />
+                     </div>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Left Items */}
+                <div className="flex items-center w-[120px] justify-between pl-3 sm:pl-4">
+                  {/* 1. Trước */}
+                  <button 
+                    disabled={!content.navigation?.prev?.chapterId}
+                    onClick={() => {
+                      stopReading();
+                      content.navigation?.prev?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.prev.chapterId, rootTab })
+                    }}
+                    className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
+                  >
+                     <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
+                       <ChevronLeft size={28} strokeWidth={2.5} />
+                     </div>
+                  </button>
+
+                  {/* 2. Dịch AI */}
+                  <div className="relative">
+                    <button 
+                      onClick={() => { setShowTranslation(true); setShowControls(false); }}
+                      className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
+                    >
+                       <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
+                         <Sparkles size={26} strokeWidth={2.5} />
+                       </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Center Floating: 3. Audio/Read */}
+                <div className="relative flex flex-col items-center -mt-8 mb-[8px] shrink-0 group z-10">
+                  {isPlaying && (
+                    <>
+                      <div className="absolute inset-[-4px] rounded-full bg-primary/20 animate-ping" style={{ animationDuration: '3s' }}></div>
+                      <div className="absolute inset-0 rounded-full bg-primary/40 blur-md animate-pulse" style={{ animationDuration: '2s' }}></div>
+                    </>
+                  )}
+                  {!isPlaying && (
+                     <div className="absolute inset-0 rounded-full bg-primary/30 blur-md"></div>
+                  )}
+                  
+                  <button 
+                      onClick={() => { 
+                        if (isPlaying || isPaused) {
+                          setShowAudioBar(true);
+                        } else {
+                          startReading();
+                          setShowAudioBar(true);
+                        }
+                      }}
+                     className="relative flex items-center justify-center w-[48px] h-[48px] rounded-full bg-primary text-on-primary shadow-[0_10px_24px_-4px_rgba(0,0,0,0.4),inset_0_4px_8px_rgba(255,255,255,0.4),inset_0_-6px_12px_rgba(0,0,0,0.3)] transition-all duration-300 active:scale-90 hover:scale-105 overflow-hidden"
+                  >
+                     {isPlaying && (
+                       <div className="absolute inset-[-100%] bg-[conic-gradient(from_0deg,transparent_0_280deg,white_360deg)] animate-[spin_2s_linear_infinite] opacity-40"></div>
+                     )}
+
+                     <div className="absolute inset-[2px] rounded-full bg-primary shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.2)]"></div>
+                     <div className="absolute top-[2px] inset-x-[6px] h-1/2 bg-gradient-to-b from-white/40 to-transparent rounded-t-full opacity-90 pointer-events-none"></div>
+                     
+                     <div className={cn("relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]", isPlaying && "animate-[pulse_2s_ease-in-out_infinite]")}>
+                        {isPlaying ? <Pause fill="currentColor" size={24} strokeWidth={2.5} /> : <Play fill="currentColor" size={24} strokeWidth={2.5} className="ml-1" />}
+                     </div>
+                  </button>
+                </div>
+
+                {/* Right Items */}
+                <div className="flex items-center w-[120px] justify-between pr-3 sm:pr-4">
+                  {/* 4. Cài đặt */}
+                  <button 
+                    onClick={() => { setShowGlobalSettings(true); setShowControls(false); }}
+                    className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
+                  >
+                     <div className={cn("relative transition-all duration-300 group-hover:scale-110 active:scale-95", selectedText ? "text-primary drop-shadow-md" : "text-on-surface-variant group-hover:text-on-surface")}>
+                       <Settings size={26} strokeWidth={2.5} />
+                       {selectedText && (
+                         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-surface"></span>
+                       )}
+                     </div>
+                  </button>
+
+                  {/* 5. Sau */}
+                  <button 
+                    disabled={!content.navigation?.next?.chapterId}
+                    onClick={() => {
+                      stopReading();
+                      content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId, rootTab })
+                    }}
+                    className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
+                  >
+                     <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
+                       <ChevronRight size={28} strokeWidth={2.5} />
+                     </div>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </nav>
