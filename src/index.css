@@ -283,3 +283,8 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
+
+.nav-bg-fill {
+  fill: var(--surface);
+  transition: fill 0.3s ease;
+}

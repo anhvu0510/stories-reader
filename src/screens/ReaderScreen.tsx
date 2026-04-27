@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
-import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle, Settings, Sparkles, BookOpen } from 'lucide-react';
+import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle, Settings, Sparkles, BookOpen, PlayCircle, Search } from 'lucide-react';
 import { AppView } from '../App';
 import { api, ChapterContent, Chapter } from '../lib/api';
 import { TranslationSheet } from '../components/TranslationSheet';
@@ -30,6 +30,7 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
   const [showControls, setShowControls] = useState(true);
   const [selectedText, setSelectedText] = useState('');
   const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const [drawerSearch, setDrawerSearch] = useState('');
   const { theme, font, fontSize, lineHeight, groupLines, isEnabledReplace } = useReaderSettings();
 
   const contentRef = useRef<HTMLDivElement>(null);
@@ -56,17 +57,23 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
     fetchChapter();
   }, [chapterId, groupLines, isEnabledReplace]);
 
-  const loadMoreChapters = async (pageToLoad: number) => {
-    if (isLoadingChapters || !hasMoreChapters) return;
+  const loadMoreChapters = async (pageToLoad: number, overrideSearch?: string) => {
+    const currentSearch = typeof overrideSearch !== 'undefined' ? overrideSearch : drawerSearch;
+    if (isLoadingChapters) return;
+    if (pageToLoad > 1 && !hasMoreChapters) return;
+    
     setIsLoadingChapters(true);
     try {
-      const res = await api.getChapters(bookId, pageToLoad, 50, 'chapterNumber', 'ASC');
+      const res = await api.getChapters(bookId, pageToLoad, 50, 'chapterNumber', 'ASC', undefined, currentSearch || undefined);
       setBookChapters(prev => {
+        if (pageToLoad === 1) return res.chapters;
         const newChapters = res.chapters.filter(c => !prev.some(p => p.chapterId === c.chapterId));
         return [...prev, ...newChapters];
       });
       if (res.chapters.length < 50 || pageToLoad >= res.pagination.totalPages) {
         setHasMoreChapters(false);
+      } else {
+        setHasMoreChapters(true);
       }
       setDrawerPage(pageToLoad + 1);
     } catch (e) {
@@ -75,6 +82,19 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
       setIsLoadingChapters(false);
     }
   };
+
+  const prevSearchRef = useRef(drawerSearch);
+  
+  useEffect(() => {
+    if (!showChapterDrawer) return;
+    const timer = setTimeout(() => {
+      if (prevSearchRef.current !== drawerSearch) {
+        prevSearchRef.current = drawerSearch;
+        loadMoreChapters(1, drawerSearch);
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [drawerSearch, showChapterDrawer]);
 
   useEffect(() => {
     const handleSelection = () => {
@@ -148,7 +168,7 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
       >
         <div className="absolute inset-0 bg-surface/80 backdrop-blur-[32px] saturate-150 border-b border-outline-variant/20 shadow-[0_4px_32px_max(rgba(0,0,0,0.1),var(--color-shadow,transparent))]"></div>
         <div className="relative z-10 max-w-reading-max-width mx-auto w-full px-3 py-2 flex justify-between items-center h-14 sm:h-16 pt-[max(env(safe-area-inset-top),8px)]">
-          <div className="flex items-center shrink-0">
+          <div className="flex items-center shrink-0 gap-2 w-[88px]">
             <button 
               onClick={() => onNavigate({ type: 'book', bookId, rootTab })} 
               className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
@@ -156,10 +176,17 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
             >
               <ArrowLeft size={20} />
             </button>
+            <button 
+              onClick={() => onNavigate({ type: 'library' })} 
+              className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
+              title="Về trang chủ"
+            >
+              <Home size={20} />
+            </button>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-3">
-            <h1 className="font-sans font-extrabold truncate text-[13px] sm:text-base max-w-[200px] sm:max-w-md w-full text-center leading-tight text-on-surface tracking-tight">
+          <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-2">
+            <h1 className="font-sans font-extrabold truncate text-[13px] sm:text-base max-w-[150px] sm:max-w-md w-full text-center leading-tight text-on-surface tracking-tight">
               {content.chapter.bookName}
             </h1>
             <div className="flex items-center mt-1">
@@ -169,13 +196,19 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
             </div>
           </div>
           
-          <div className="flex items-center justify-end shrink-0 w-10">
+          <div className="flex items-center justify-end shrink-0 w-[88px]">
             <button 
-              onClick={() => onNavigate({ type: 'library' })} 
+              onClick={() => { 
+                setShowChapterDrawer(true); 
+                setShowControls(false); 
+                if (bookChapters.length === 0) {
+                  loadMoreChapters(1);
+                }
+              }}
               className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
-              title="Về trang chủ"
+              title="Mục lục"
             >
-              <Home size={20} />
+              <List size={20} />
             </button>
           </div>
         </div>
@@ -193,11 +226,32 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
           "w-[85%] max-w-sm bg-surface-container h-full relative flex flex-col shadow-2xl transition-transform duration-300",
           showChapterDrawer ? "translate-x-0" : "translate-x-full"
         )}>
-          <div className="p-4 border-b border-surface-variant flex items-center justify-between">
-            <h2 className="font-serif text-lg font-bold">Mục lục</h2>
-            <button onClick={() => setShowChapterDrawer(false)} className="p-2 text-on-surface-variant hover:text-on-surface rounded-full">
-              <X size={20} />
-            </button>
+          <div className="p-4 border-b border-surface-variant flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-serif text-lg font-bold">Mục lục</h2>
+              <button onClick={() => setShowChapterDrawer(false)} className="p-2 text-on-surface-variant hover:text-on-surface rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-on-surface-variant">
+                <Search size={16} />
+              </div>
+              <input
+                type="text"
+                placeholder="Nhập phần chữ số ở tên chương..."
+                value={drawerSearch}
+                onChange={(e) => setDrawerSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    // Hide soft keyboard on mobile after search
+                    e.currentTarget.blur();
+                  }
+                }}
+                className="w-full bg-surface-container-lowest/50 text-on-surface border border-outline-variant/30 rounded-xl py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-on-surface-variant/50"
+              />
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto hide-scrollbar p-2">
             {bookChapters.length === 0 && isLoadingChapters ? (
@@ -326,11 +380,11 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
             
             {/* Advanced Curved Background (SVG) */}
             <div className="absolute inset-x-0 bottom-0 w-full h-[55px] -z-10">
-              <svg width="100%" height="100%" viewBox="0 0 375 64" preserveAspectRatio="none" className="absolute inset-0 w-full h-full drop-shadow-sm">
+              <svg width="100%" height="100%" viewBox="0 0 375 64" preserveAspectRatio="none" className="absolute inset-0 w-full h-full drop-shadow-sm style-nav-bg">
                 {/* Solid backdrop */}
                 <path 
                   d="M0 24 C0 10.745 10.745 0 24 0 H130 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0 H351 C364.255 0 375 10.745 375 24 V64 H0 V24 Z" 
-                  style={{ fill: 'var(--surface)' }}
+                  className="nav-bg-fill"
                 />
                 {/* Full top border spanning the curve and rounded edges */}
                 <path 
@@ -363,19 +417,15 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
                  </div>
               </button>
 
-              {/* 2. Menu */}
+              {/* 2. Audio/Read */}
               <button 
                 onClick={() => { 
-                  setShowChapterDrawer(true); 
-                  setShowControls(false); 
-                  if (bookChapters.length === 0) {
-                    loadMoreChapters(1);
-                  }
+                  // TODO: Play audio
                 }}
                 className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
               >
                  <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
-                   <List size={26} strokeWidth={2.5} />
+                   <PlayCircle size={26} strokeWidth={2.5} />
                  </div>
               </button>
             </div>
