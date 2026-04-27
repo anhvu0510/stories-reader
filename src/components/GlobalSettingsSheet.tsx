@@ -548,10 +548,7 @@ function VoiceSelect() {
 
     const loadVoices = () => {
       const allVoices = synth.getVoices();
-      let viVoices = allVoices.filter(v => v.lang.includes('vi') || v.lang.includes('vi-VN'));
-      if (viVoices.length === 0 && allVoices.length > 0) {
-        viVoices = allVoices;
-      }
+      const viVoices = allVoices.filter(v => v.lang.includes('vi') || v.lang.includes('vi-VN'));
       setVoices(viVoices);
       if (viVoices.length > 0 && !voiceUri) {
         setVoiceUri(viVoices[0].voiceURI);
@@ -559,18 +556,10 @@ function VoiceSelect() {
     };
 
     loadVoices();
-    if (synth.addEventListener) {
-      synth.addEventListener('voiceschanged', loadVoices);
-    } else {
-      synth.onvoiceschanged = loadVoices;
-    }
+    synth.onvoiceschanged = loadVoices;
 
     return () => {
-      if (synth.removeEventListener) {
-        synth.removeEventListener('voiceschanged', loadVoices);
-      } else {
-        synth.onvoiceschanged = null;
-      }
+      synth.onvoiceschanged = null;
     };
   }, [voiceUri, setVoiceUri]);
 

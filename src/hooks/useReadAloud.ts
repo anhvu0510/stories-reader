@@ -8,19 +8,6 @@ interface Chunk {
   length: number;
 }
 
-function unwrapHighlights(rootElement: HTMLElement) {
-  const highlights = rootElement.querySelectorAll('.msreadout-word-highlight, .msreadout-line-highlight');
-  highlights.forEach(el => {
-    const parent = el.parentNode;
-    if (!parent) return;
-    while (el.firstChild) {
-      parent.insertBefore(el.firstChild, el);
-    }
-    parent.removeChild(el);
-  });
-  rootElement.normalize();
-}
-
 function highlightText(rootElement: HTMLElement, startOffset: number, length: number, className: string) {
   if (length <= 0) return;
   
@@ -54,7 +41,7 @@ function highlightText(rootElement: HTMLElement, startOffset: number, length: nu
     const fragment = document.createDocumentFragment();
     if (beforeText) fragment.appendChild(document.createTextNode(beforeText));
     
-    const mark = document.createElement('span');
+    const mark = document.createElement('msreadoutspan');
     mark.className = className;
     mark.textContent = highlightTxt;
     fragment.appendChild(mark);
@@ -81,9 +68,6 @@ export function useReadAloud(paragraphs: string[]) {
   const isPlayingRef = useRef(false);
   const isPausedRef = useRef(false);
   const currentUtteranceIdRef = useRef<number | null>(null);
-  
-  const hasReceivedWordBoundaryRef = useRef(false);
-  const fallbackIntervalRef = useRef<number | NodeJS.Timeout | null>(null);
 
   const chunks = useMemo(() => {
     const res: Chunk[] = [];
@@ -134,57 +118,41 @@ export function useReadAloud(paragraphs: string[]) {
     const pNodes = Array.from(article.querySelectorAll(':scope > div.mb-4'));
     if (pNodes.length === 0) return;
 
-    // Clean up previous highlights quickly without destroying HTML parsing
-    unwrapHighlights(article);
+    // Reset innerHTML for active reading changes to clear previous highlights
+    pNodes.forEach((node, idx) => {
+      // Restore original innerHTML to clean up injected msreadoutspans
+      // Only check if there's a difference to avoid unnecessary reflows
+      const origHtml = paragraphs[idx] || '';
+      if (origHtml && node.innerHTML !== origHtml) {
+        node.innerHTML = origHtml;
+      }
+    });
 
     if (currentChunkIndex !== -1 && chunks[currentChunkIndex]) {
       const chunk = chunks[currentChunkIndex];
       const pNode = pNodes[chunk.pIdx] as HTMLElement;
 
       if (pNode) {
-        // Always give the line/chunk a soft highlight so we know where we are, even if word-level fails.
-        highlightText(
-          pNode,
-          chunk.startOffset,
-          chunk.length,
-          'msreadout-line-highlight bg-primary/10 text-on-surface box-decoration-clone rounded-sm px-0.5 mx-[-2px]'
-        );
-
-        // Highlight the active word
-        if (charIndex >= 0) {
+        // Just highlight the active word
+        if (charIndex >= 0 && charLength > 0) {
+          const wordText = chunk.text.substring(charIndex, charIndex + charLength);
           let offset = charIndex;
           let length = charLength;
-
-          // If charLength is zero or undefined (happens natively on Android Chrome/Samsung Internet)
-          if (!length || length <= 0) {
-            const textRemainder = chunk.text.substring(charIndex);
-            const match = textRemainder.match(/^[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
-            if (match) {
-              length = match[0].length;
-            } else {
-              const spaceMatch = textRemainder.match(/\s/);
-              length = spaceMatch && spaceMatch.index ? spaceMatch.index : textRemainder.length;
-            }
+          // Match the first alphanumeric part to skip leading/trailing punctuation/spaces
+          const match = wordText.match(/[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
+          if (match && match.index !== undefined) {
+             offset = charIndex + match.index;
+             length = match[0].length;
           } else {
-            // we have a charLength, refine it
-            const wordText = chunk.text.substring(charIndex, charIndex + charLength);
-            const match = wordText.match(/[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
-            if (match && match.index !== undefined) {
-               offset = charIndex + match.index;
-               length = match[0].length;
-            } else {
-               length = 0;
-            }
+             length = 0;
           }
 
-          if (length > 0) {
-            highlightText(
-              pNode, 
-              chunk.startOffset + offset, 
-              length, 
-              'msreadout-word-highlight bg-yellow-400 text-black box-decoration-clone rounded-sm px-0.5 mx-[-2px]'
-            );
-          }
+          highlightText(
+            pNode, 
+            chunk.startOffset + offset, 
+            length, 
+            'msreadout-word-highlight bg-yellow-400 text-black box-decoration-clone rounded-sm px-0.5 mx-[-2px]'
+          );
         }
         
         // Scroll into view logic - smoothly glide along the reader's document
@@ -203,9 +171,14 @@ export function useReadAloud(paragraphs: string[]) {
   useEffect(() => {
     return () => {
       const article = document.querySelector('article');
-      if (article) {
-        unwrapHighlights(article);
-      }
+      if (!article) return;
+      const pNodes = Array.from(article.querySelectorAll(':scope > div.mb-4'));
+      pNodes.forEach((node, idx) => {
+        const origHtml = paragraphs[idx] || '';
+        if (origHtml && node.innerHTML !== origHtml) {
+          node.innerHTML = origHtml;
+        }
+      });
       stopReading();
     };
   }, [paragraphs]);
@@ -215,29 +188,18 @@ export function useReadAloud(paragraphs: string[]) {
 
     const loadVoices = () => {
       const allVoices = synth.getVoices();
-      let viVoices = allVoices.filter(v => v.lang.includes('vi') || v.lang.includes('vi-VN'));
-      if (viVoices.length === 0 && allVoices.length > 0) {
-        viVoices = allVoices; // fallback to all if no vi found
-      }
+      const viVoices = allVoices.filter(v => v.lang.includes('vi') || v.lang.includes('vi-VN'));
       setVoices(viVoices);
     };
 
     loadVoices();
-    if (synth.addEventListener) {
-      synth.addEventListener('voiceschanged', loadVoices);
-    } else {
-      synth.onvoiceschanged = loadVoices;
-    }
+    synth.onvoiceschanged = loadVoices;
 
     return () => {
       isPlayingRef.current = false;
       isPausedRef.current = false;
       synth.cancel();
-      if (synth.removeEventListener) {
-        synth.removeEventListener('voiceschanged', loadVoices);
-      } else {
-        synth.onvoiceschanged = null;
-      }
+      synth.onvoiceschanged = null;
     };
   }, [synth]);
 
@@ -299,62 +261,10 @@ export function useReadAloud(paragraphs: string[]) {
 
     const utteranceId = Date.now() + Math.random();
     currentUtteranceIdRef.current = utteranceId;
-    
-    if (fallbackIntervalRef.current) {
-      clearInterval(fallbackIntervalRef.current as any);
-      fallbackIntervalRef.current = null;
-    }
-    hasReceivedWordBoundaryRef.current = false;
-
-    utterance.onstart = () => {
-      if (currentUtteranceIdRef.current !== utteranceId) return;
-      
-      const startTime = Date.now();
-      const charsPerSecond = 14 * speechRate;
-      const wordRegex = /[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/g;
-      const allWords = Array.from(chunk.text.matchAll(wordRegex));
-      
-      fallbackIntervalRef.current = setInterval(() => {
-        if (!isPlayingRef.current || isPausedRef.current || currentUtteranceIdRef.current !== utteranceId) {
-           if (fallbackIntervalRef.current) {
-             clearInterval(fallbackIntervalRef.current as any);
-             fallbackIntervalRef.current = null;
-           }
-           return;
-        }
-        
-        if (hasReceivedWordBoundaryRef.current) {
-           if (fallbackIntervalRef.current) {
-             clearInterval(fallbackIntervalRef.current as any);
-             fallbackIntervalRef.current = null;
-           }
-           return;
-        }
-
-        const elapsedSec = (Date.now() - startTime) / 1000;
-        const estimatedCharCount = (elapsedSec * charsPerSecond) + startOffset;
-        
-        if (allWords.length > 0) {
-          let activeWord = allWords[allWords.length - 1]; // default to last
-          for (let i = 0; i < allWords.length; i++) {
-             if (allWords[i].index! > estimatedCharCount) {
-                 activeWord = allWords[Math.max(0, i - 1)];
-                 break;
-             }
-          }
-          
-          if (activeWord) {
-              setCharIndex(activeWord.index!);
-              setCharLength(activeWord[0].length);
-          }
-        }
-      }, 250);
-    };
 
     utterance.onboundary = (e) => {
       if (currentUtteranceIdRef.current !== utteranceId) return;
       if (e.name === 'word') {
-        hasReceivedWordBoundaryRef.current = true;
         const absoluteIndex = startOffset + e.charIndex;
         setCharIndex(absoluteIndex);
         setCharLength(e.charLength);
@@ -432,10 +342,6 @@ export function useReadAloud(paragraphs: string[]) {
   };
 
   const pauseReading = () => {
-    if (fallbackIntervalRef.current) {
-      clearInterval(fallbackIntervalRef.current as any);
-      fallbackIntervalRef.current = null;
-    }
     setIsPlaying(false);
     setIsPaused(true);
     isPlayingRef.current = false;
@@ -450,10 +356,7 @@ export function useReadAloud(paragraphs: string[]) {
   };
 
   const stopReading = () => {
-    if (fallbackIntervalRef.current) {
-      clearInterval(fallbackIntervalRef.current as any);
-      fallbackIntervalRef.current = null;
-    }
+
     setIsPlaying(false);
     setIsPaused(false);
     isPlayingRef.current = false;
