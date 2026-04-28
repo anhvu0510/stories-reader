@@ -118,7 +118,6 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
         }
         
         showToast("Đang dịch chương...", "info");
-        onClose();
         const response = await api.translate({
           mode: 'current',
           model: options.model,
@@ -134,6 +133,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
         if (chapResult?.state === 'SUCCEEDED') {
           showToast(`Dịch thành công! Mất ${chapResult.totalTokens} tokens`, 'success');
           setTimeout(() => {
+            onClose();
             if (onSuccess) onSuccess();
           }, 1500);
         } else {
