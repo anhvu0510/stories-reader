@@ -5,6 +5,7 @@ import { showToast } from './Toast';
 
 export function QuotaSettingsSheet({ onClose, quotas: initialQuotas, onQuotasUpdated }: { onClose: () => void, quotas: AIQuota[], onQuotasUpdated: () => void }) {
   const [quotas, setQuotas] = useState<AIQuota[]>(initialQuotas);
+  const [activeTab, setActiveTab] = useState<'VERTEX_API' | 'AI_STUDIO'>('VERTEX_API');
   const [isLoading, setIsLoading] = useState(false);
   
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -77,21 +78,33 @@ export function QuotaSettingsSheet({ onClose, quotas: initialQuotas, onQuotasUpd
       <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={onClose} />
       
       {/* Container */}
-      <div className="relative bg-surface border border-outline-variant/30 text-on-surface w-full max-w-[600px] h-[90vh] sm:h-auto sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl flex flex-col shadow-2xl z-10 overflow-hidden">
+      <div className="relative bg-surface border border-outline-variant/30 text-on-surface w-full max-w-[600px] h-[85vh] sm:h-[80vh] rounded-t-3xl sm:rounded-3xl flex flex-col shadow-2xl z-10 overflow-hidden">
         
         {/* Header */}
-        <div className="flex-shrink-0 p-3 sm:p-5 border-b border-outline-variant/10 flex items-center justify-between bg-surface-container-low">
-          <h2 className="text-base sm:text-lg font-bold font-serif text-primary">Quản lý AI Models</h2>
-          <div className="flex items-center gap-1 sm:gap-2">
-            <button onClick={startCreate} disabled={editingId === 'new'} className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors disabled:opacity-50">
-              <Plus size={16} />
-            </button>
-            <button onClick={fetchQuotas} className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
-              <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-            </button>
-            <button onClick={onClose} className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
-              <X size={16} />
-            </button>
+        <div className="flex-shrink-0 p-3 sm:p-5 border-b border-outline-variant/10 flex flex-col gap-3 bg-surface-container-low">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base sm:text-lg font-bold font-serif text-primary">Quản lý AI Models</h2>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <button title="Thêm Model Mới" onClick={startCreate} disabled={editingId === 'new'} className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors disabled:opacity-50">
+                <Plus size={16} />
+              </button>
+              <button title="Làm Mới" onClick={fetchQuotas} className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
+                <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+              </button>
+              <button title="Đóng" onClick={onClose} className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+          <div className="flex bg-surface-container-highest p-1 rounded-lg">
+            <button 
+              onClick={() => setActiveTab('VERTEX_API')}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${activeTab === 'VERTEX_API' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+            >VERTEX API</button>
+            <button 
+              onClick={() => setActiveTab('AI_STUDIO')}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${activeTab === 'AI_STUDIO' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+            >AI STUDIO</button>
           </div>
         </div>
 
@@ -103,41 +116,38 @@ export function QuotaSettingsSheet({ onClose, quotas: initialQuotas, onQuotasUpd
               <QuotaEditor formData={formData} setFormData={setFormData} onSave={handleSave} onCancel={() => setEditingId(null)} />
             )}
 
-            {quotas.map(q => (
+            {quotas.filter(q => q.platform === activeTab).map(q => (
               <div key={q._id}>
                 {editingId === q._id ? (
                   <QuotaEditor formData={formData} setFormData={setFormData} onSave={handleSave} onCancel={() => setEditingId(null)} />
                 ) : (
-                  <div className={`p-3 rounded-xl border transition-all ${q.isActive ? 'border-outline-variant/30 bg-surface-container-lowest hover:border-primary/30' : 'border-outline-variant/10 bg-surface-container-lowest/50 opacity-60'}`}>
-                    <div className="flex items-center justify-between gap-2">
+                  <div className={`p-3.5 rounded-2xl border transition-all ${q.isActive ? 'border-outline-variant/30 bg-surface-container-lowest hover:border-primary/30' : 'border-outline-variant/10 bg-surface-container-lowest/50 opacity-60'}`}>
+                    <div className="flex items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h3 className="font-bold text-sm text-primary leading-tight break-all truncate">{q.model}</h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-sm text-on-surface leading-tight truncate pt-0.5">
+                            {q.model.replace(/^gemini-/, '').replace(/-/g, ' ').toUpperCase() || q.model}
+                          </h3>
                           {!q.isActive && <span className="text-[9px] bg-outline-variant/20 px-1.5 py-0.5 rounded text-on-surface-variant font-medium shrink-0">Tắt</span>}
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[9px] bg-surface-container-high text-on-surface-variant px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">{q.platform.replace('_', ' ')}</span>
+                        <div className="text-[10px] text-on-surface-variant/80 mt-1.5 font-medium flex gap-2">
+                          <span>RPD còn lại: {q.rpdLimit > 0 ? (q.rpdLimit - (q.requestsThisDay || 0)).toLocaleString() : '∞'} / {q.rpdLimit > 0 ? q.rpdLimit.toLocaleString() : '∞'}</span>
+                          {q.rpmLimit > 0 && <span>• RPM: {q.rpmLimit.toLocaleString()}</span>}
                         </div>
                       </div>
-                      <div className="flex gap-1 shrink-0">
-                        <button onClick={() => handleEdit(q)} className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors"><Edit2 size={14} /></button>
-                        <button onClick={() => handleDelete(q._id)} className="p-1.5 rounded-lg text-error hover:bg-error/10 transition-colors"><Trash2 size={14} /></button>
+                      <div className="flex gap-1 shrink-0 bg-surface-container-high rounded-xl p-0.5">
+                        <button onClick={() => handleEdit(q)} className="p-2 rounded-lg text-primary hover:bg-surface-container-highest transition-colors"><Edit2 size={14} /></button>
+                        <button onClick={() => handleDelete(q._id)} className="p-2 rounded-lg text-error hover:bg-surface-container-highest transition-colors"><Trash2 size={14} /></button>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 text-[10px] text-on-surface-variant font-medium mt-2 pt-2 border-t border-outline-variant/10">
-                      <span>RPD: {q.rpdLimit > 0 ? q.rpdLimit.toLocaleString() : '∞'}</span>
-                      <span>RPM: {q.rpmLimit > 0 ? q.rpmLimit.toLocaleString() : '∞'}</span>
-                      <span>TPM: {q.tpmLimit > 0 ? q.tpmLimit.toLocaleString() : '∞'}</span>
                     </div>
                   </div>
                 )}
               </div>
             ))}
             
-            {quotas.length === 0 && editingId !== 'new' && (
+            {quotas.filter(q => q.platform === activeTab).length === 0 && editingId !== 'new' && (
               <div className="text-center py-12 text-on-surface-variant">
-                <p className="text-sm border border-dashed border-outline-variant/30 p-4 rounded-xl">Chưa có model AI nào được cấu hình</p>
+                <p className="text-sm border border-dashed border-outline-variant/30 p-4 rounded-xl">Chưa có model AI nào được cấu hình cho tab này</p>
               </div>
             )}
           </div>
