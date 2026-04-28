@@ -46,6 +46,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   const [selectedBooks, setSelectedBooks] = useState<Set<string>>(new Set());
   const [searchBook, setSearchBook] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = React.useRef(false);
 
   // Load configs from API
   useEffect(() => {
@@ -104,12 +105,15 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   }, [activeTab, currentBookId]);
 
   const handleSubmit = async () => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       if (activeTab === 'current') {
         if (!initialSelectedChapters[0]) {
           showToast("Không xác định được chương hiện tại", "error");
           setIsSubmitting(false);
+          isSubmittingRef.current = false;
           return;
         }
         
@@ -139,6 +143,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
         if (selectedChapters.size === 0) {
           showToast("Vui lòng chọn ít nhất 1 chương", "error");
           setIsSubmitting(false);
+          isSubmittingRef.current = false;
           return;
         }
         
@@ -160,6 +165,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
         if (selectedBooks.size === 0) {
           showToast("Vui lòng chọn ít nhất 1 truyện", "error");
           setIsSubmitting(false);
+          isSubmittingRef.current = false;
           return;
         }
         
@@ -181,6 +187,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
       showToast(e.message || "Có lỗi xảy ra, vui lòng thử lại", 'error');
     } finally {
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
   };
 

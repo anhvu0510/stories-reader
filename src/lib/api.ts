@@ -344,7 +344,7 @@ export const api = {
     const res = await fetchWithRetry(`/stories/gemini-ai/translate`, {
       method: 'POST',
       body: JSON.stringify(data)
-    });
+    }, 0); // DO NOT retry POST translations
     if (data.mode === 'current') {
       return await res.json();
     }
