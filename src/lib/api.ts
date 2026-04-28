@@ -53,6 +53,33 @@ export interface Replacement {
   chapterId?: string;
 }
 
+export interface AIQuota {
+  _id: string;
+  model: string;
+  platform: 'AI_STUDIO' | 'VERTEX_API';
+  rpmLimit: number;
+  tpmLimit: number;
+  rpdLimit: number;
+  isActive: boolean;
+  requestsThisMinute?: number;
+  tokensThisMinute?: number;
+  requestsThisDay?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface QuotaResponse {
+  currentConfig: {
+    model: string;
+    platform?: string;
+    minWords: number;
+    maxWords: number;
+    temperature: number;
+    forceRetranslate: boolean;
+  };
+  availableModels: AIQuota[];
+}
+
 // Fallback Mock Data
 const MOCK_REPLACEMENTS: Replacement[] = [
   { id: '1', match: 'tiểu tử', replacement: 'nhóc con', scope: 'global' },
@@ -330,9 +357,69 @@ export const api = {
     }
   },
 
+  getQuota: async (): Promise<QuotaResponse | null> => {
+    try {
+      const res = await fetchWithRetry('/api/quota');
+      return await res.json();
+    } catch(e: any) {
+      if (e.message === 'API_DOMAIN_NOT_SET') {
+        return {
+          currentConfig: {
+            model: 'gemini-flash-lite-latest',
+            platform: 'VERTEX_API',
+            minWords: 200,
+            maxWords: 800,
+            temperature: 0.4,
+            forceRetranslate: true
+          },
+          availableModels: []
+        };
+      }
+      console.warn("Failed to fetch quota, using mock data", e);
+      return {
+          currentConfig: {
+            model: 'gemini-flash-lite-latest',
+            platform: 'VERTEX_API',
+            minWords: 200,
+            maxWords: 800,
+            temperature: 0.4,
+            forceRetranslate: true
+          },
+          availableModels: [
+            {
+              _id: 'mock1',
+              model: "gemini-flash-lite-latest",
+              platform: "VERTEX_API",
+              rpmLimit: 100,
+              tpmLimit: 4000000,
+              rpdLimit: 10000,
+              isActive: true,
+              requestsThisMinute: 15,
+              requestsThisDay: 500
+            }
+          ]
+      };
+    }
+  },
+
+  createQuota: async (data: Partial<AIQuota>): Promise<AIQuota> => {
+     const res = await fetchWithRetry('/api/quota', { method: 'POST', body: JSON.stringify(data) });
+     return await res.json();
+  },
+
+  updateQuota: async (id: string, data: Partial<AIQuota>): Promise<AIQuota> => {
+     const res = await fetchWithRetry(`/api/quota/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+     return await res.json();
+  },
+
+  deleteQuota: async (id: string): Promise<void> => {
+     await fetchWithRetry(`/api/quota/${id}`, { method: 'DELETE' });
+  },
+
   translate: async (data: {
     mode: 'current' | 'batch_chapter' | 'story',
     model: string,
+    platform?: string,
     minWords?: number,
     maxWords?: number,
     temperature?: number,

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Languages, Settings2, Sparkles, CheckSquare, Square, Search, ChevronDown, ChevronUp, Loader } from 'lucide-react';
+import { X, Languages, Settings2, Sparkles, CheckSquare, Square, Search, ChevronDown, ChevronUp, Loader, Check } from 'lucide-react';
 import { Book, Chapter, api } from '../lib/api';
 import { cn } from '../lib/utils';
 import { showToast } from './Toast';
+
+import { QuotaSettingsSheet } from './QuotaSettingsSheet';
 
 type Tab = 'current' | 'batch_chapter' | 'story';
 
@@ -36,9 +38,11 @@ interface TranslationSheetProps {
 
 export function TranslationSheet({ onClose, currentBookName, currentChapterName, currentBookId, initialTab = 'current', initialSelectedChapters = [], onSuccess }: TranslationSheetProps) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [activeModelTab, setActiveModelTab] = useState<'VERTEX_API' | 'AI_STUDIO'>('VERTEX_API');
   const [options, setOptions] = useState<TranslationOptions>(defaultOptions);
   const [isOptionsLoaded, setIsOptionsLoaded] = useState(false);
   const [showConfig, setShowConfig] = useState(true);
+  const [showQuotaSettings, setShowQuotaSettings] = useState(false);
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
@@ -48,23 +52,42 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = React.useRef(false);
 
+  const [rangeStart, setRangeStart] = useState('');
+  const [rangeEnd, setRangeEnd] = useState('');
+  const chapterListRef = React.useRef<HTMLDivElement>(null);
+
   // Load configs from API
+  const [quotas, setQuotas] = useState<any[]>([]);
+
   useEffect(() => {
     let active = true;
     
-    api.getSettings('stories.ui.translate').then(res => {
+    api.getQuota().then(res => {
       if (!active) return;
-      if (res && res.value) {
-        try {
-          const parsed = typeof res.value === 'string' ? JSON.parse(res.value) : res.value;
+      if (res) {
+        setQuotas(res.availableModels || []);
+        if (res.currentConfig) {
+          let loadedModel = res.currentConfig.model;
+          let loadedPlatform = res.currentConfig.platform;
           setOptions(prev => {
-            const newOptions = { ...prev, ...parsed };
-            // Optional: Cleanup options locally if needed
-            const { _id, key, value, type, updatedAt, ...cleanOptions } = newOptions as any;
-            return cleanOptions;
+            const newOptions = { ...prev, ...res.currentConfig };
+            // Update available options
+            newOptions.availableModels = (res.availableModels || []).map((m: any) => m.model);
+            if (!newOptions.availableModels.includes(newOptions.model) && newOptions.availableModels.length > 0) {
+              newOptions.model = newOptions.availableModels[0];
+            }
+            loadedModel = newOptions.model;
+            return newOptions;
           });
-        } catch (e) {
-          console.error("Failed to parse translate settings", e);
+          
+          if (loadedPlatform) {
+             setActiveModelTab(loadedPlatform);
+          } else {
+            const modelObj = (res.availableModels || []).find((m: any) => m.model === loadedModel);
+            if (modelObj) {
+              setActiveModelTab(modelObj.platform);
+            }
+          }
         }
       }
       setIsOptionsLoaded(true);
@@ -84,6 +107,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
       const t = setTimeout(() => {
         const payload = {
           model: options.model,
+          platform: quotas.find(q => q.model === options.model)?.platform || 'VERTEX_API',
           minWords: options.minWords,
           maxWords: options.maxWords,
           temperature: options.temperature,
@@ -94,7 +118,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
       }, 500);
       return () => clearTimeout(t);
     }
-  }, [options, isOptionsLoaded]);
+  }, [options, isOptionsLoaded, quotas]);
 
   useEffect(() => {
     if (activeTab === 'batch_chapter' && currentBookId) {
@@ -108,6 +132,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
+    const platform = quotas.find(q => q.model === options.model)?.platform || 'VERTEX_API';
     try {
       if (activeTab === 'current') {
         if (!initialSelectedChapters[0]) {
@@ -121,6 +146,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
         const response = await api.translate({
           mode: 'current',
           model: options.model,
+          platform: platform,
           minWords: options.minWords,
           maxWords: options.maxWords,
           temperature: options.temperature,
@@ -150,6 +176,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
         await api.translate({
           mode: 'batch_chapter',
           model: options.model,
+          platform: platform,
           minWords: options.minWords,
           maxWords: options.maxWords,
           temperature: options.temperature,
@@ -172,6 +199,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
         await api.translate({
           mode: 'story',
           model: options.model,
+          platform: platform,
           minWords: options.minWords,
           maxWords: options.maxWords,
           temperature: options.temperature,
@@ -196,6 +224,38 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setSelectedChapters(next);
+  };
+
+  const handleSelectRange = () => {
+    const start = parseInt(rangeStart);
+    const end = parseInt(rangeEnd);
+    if (isNaN(start) || isNaN(end) || start > end) {
+      showToast("Phạm vi không hợp lệ", "error");
+      return;
+    }
+    
+    // Sort chapters just in case
+    const sortedChapters = [...chapters].sort((a,b) => a.chapterNumber - b.chapterNumber);
+    
+    const chaptersInRange = sortedChapters.filter(c => c.chapterNumber >= start && c.chapterNumber <= end);
+    if (chaptersInRange.length === 0) {
+      showToast("Không tìm thấy chương nào trong phạm vi này", "error");
+      return;
+    }
+
+    const newSet = new Set(selectedChapters);
+    chaptersInRange.forEach(c => newSet.add(c.chapterId));
+    setSelectedChapters(newSet);
+    
+    // Scroll to the first chapter in range
+    setTimeout(() => {
+      if (chapterListRef.current) {
+        const firstEl = chapterListRef.current.querySelector(`#chapter-item-${start}`);
+        if (firstEl) {
+          firstEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    }, 100);
   };
 
   const toggleBook = (id: string) => {
@@ -243,6 +303,18 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
+                  setShowQuotaSettings(true);
+                }}
+                className={cn(
+                  "p-1.5 rounded-lg transition-all active:scale-95 bg-surface-container-highest text-on-surface-variant/50 hover:text-primary hover:bg-primary/10"
+                )}
+                title="Quản lý Model Quota"
+              >
+                <Settings2 size={12} />
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
                   setOptions({...options, forceRetranslate: !options.forceRetranslate});
                 }}
                 className={cn(
@@ -260,12 +332,12 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           </div>
           
           {showConfig && (
-            <div className="px-4 p-4 flex flex-col gap-3 max-h-[40vh] overflow-y-auto hide-scrollbar">
+            <div className="px-3 p-3 flex flex-col gap-2.5 max-h-[35vh] overflow-y-auto hide-scrollbar">
               {/* Model selection as chips for mobile */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <div className="flex flex-col gap-1">
                   <label className="text-[9px] font-bold text-on-surface-variant/70 uppercase px-0.5">GIỚI HẠN TỪ</label>
-                  <div className="flex items-center bg-surface-container-highest rounded-lg p-1">
+                  <div className="flex items-center bg-surface-container-highest rounded-lg p-0.5">
                     <input 
                       type="number" value={options.minWords}
                       onChange={(e) => setOptions({...options, minWords: Number(e.target.value)})}
@@ -295,23 +367,68 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                    </div>
                 </div>
               </div>
-                <div className="flex flex-col gap-1">
-                <label className="text-[9px] font-bold text-on-surface-variant/70 uppercase px-0.5">MODEL</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {(options.availableModels || defaultOptions.availableModels || []).map(m => (
-                    <button
-                      key={m}
-                      onClick={() => setOptions({...options, model: m})}
-                      className={cn(
-                        "px-3 py-1.5 rounded-full text-[10px] sm:text-[11px] font-bold border transition-all break-words leading-tight flex-grow sm:flex-grow-0 min-w-0 text-center",
-                        options.model === m 
-                          ? "bg-primary/10 border-primary/30 text-primary" 
-                          : "bg-surface-container-highest border-transparent text-on-surface-variant"
-                      )}
-                    >
-                      {m.replace(/^gemini-/, '').replace(/-/g, ' ').toUpperCase() || m}
-                    </button>
-                  ))}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between px-0.5">
+                  <label className="text-[9px] font-bold text-on-surface-variant/70 uppercase">MODEL</label>
+                  <div className="flex bg-surface-container-high p-0.5 rounded-lg">
+                    <button 
+                      onClick={() => setActiveModelTab('VERTEX_API')}
+                      className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", activeModelTab === 'VERTEX_API' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface')}
+                    >VERTEX API</button>
+                    <button 
+                      onClick={() => setActiveModelTab('AI_STUDIO')}
+                      className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", activeModelTab === 'AI_STUDIO' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface')}
+                    >AI STUDIO</button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(options.availableModels || defaultOptions.availableModels || [])
+                    .filter(m => {
+                      const q = quotas.find(q => q.model === m);
+                      const isPlatformMatch = (q?.platform || 'VERTEX_API') === activeModelTab;
+                      const isActive = q ? q.isActive !== false : true;
+                      return isPlatformMatch && isActive;
+                    })
+                    .map(m => {
+                    const q = quotas.find(quota => quota.model === m);
+                    const isSelected = options.model === m;
+                    const rpdLimit = q?.rpdLimit || 0;
+                    const requestsThisDay = q?.requestsThisDay || 0;
+                    const remainingRPD = rpdLimit > 0 ? rpdLimit - requestsThisDay : '∞';
+                    
+                    return (
+                      <button
+                        key={m}
+                        onClick={() => setOptions({...options, model: m})}
+                        className={cn(
+                          "px-3 py-2 rounded-lg text-left border transition-all flex items-center justify-between",
+                          isSelected 
+                            ? "bg-primary/10 border-primary/30 text-primary" 
+                            : "bg-surface-container-highest border-transparent text-on-surface-variant hover:bg-surface-container-high"
+                        )}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <div className="font-bold text-xs truncate">
+                            {m.replace(/^gemini-/, '').replace(/-/g, ' ').toUpperCase() || m}
+                          </div>
+                          <div className={cn("text-[9px] mt-0.5 font-medium truncate", isSelected ? "text-primary/80" : "text-on-surface-variant/70")}>
+                            RPD còn lại: {remainingRPD} / {rpdLimit > 0 ? rpdLimit : '∞'}
+                          </div>
+                        </div>
+                        {isSelected && <Check size={14} className="text-primary flex-shrink-0" />}
+                      </button>
+                    );
+                  })}
+                  {(options.availableModels || defaultOptions.availableModels || []).filter(m => {
+                      const q = quotas.find(q => q.model === m);
+                      const isPlatformMatch = (q?.platform || 'VERTEX_API') === activeModelTab;
+                      const isActive = q ? q.isActive !== false : true;
+                      return isPlatformMatch && isActive;
+                    }).length === 0 && (
+                    <div className="text-[11px] text-on-surface-variant/70 text-center py-3 bg-surface-container-lowest rounded-lg border border-dashed border-outline-variant/30 col-span-full">
+                      Chưa có model nào cho {activeModelTab === 'VERTEX_API' ? 'Vertex API' : 'AI Studio'}.
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -331,24 +448,28 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
 
           {activeTab === 'batch_chapter' && (
             <div className="flex-1 flex flex-col min-h-0">
-              <div className="flex justify-between items-center mb-3">
-                <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-wider">Chọn chương ({selectedChapters.size}/{chapters.length})</p>
-                <button 
-                  onClick={() => setSelectedChapters(new Set(chapters.filter(c => c.state === 'FAILED').map(c => c.chapterId)))}
-                  className="text-xs text-primary font-bold hover:opacity-80 transition-opacity"
-                >
-                  Chọn chưa dịch
-                </button>
+              <div className="flex flex-col gap-2 mb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-wider">Chọn chương ({selectedChapters.size}/{chapters.length})</p>
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => setSelectedChapters(new Set(chapters.map(c => c.chapterId)))} className="px-2 py-1 bg-surface-container-high rounded text-[11px] font-bold text-primary hover:bg-surface-container-highest transition-colors">Tất cả</button>
+                    <button onClick={() => setSelectedChapters(new Set(chapters.filter(c => c.state === 'PENDING' || c.state === 'FAILED').map(c => c.chapterId)))} className="px-2 py-1 bg-surface-container-high rounded text-[11px] font-bold text-primary hover:bg-surface-container-highest transition-colors">Chưa dịch</button>
+                    <button onClick={() => setSelectedChapters(new Set())} className="px-2 py-1 bg-surface-container-high rounded text-[11px] font-bold text-error hover:bg-surface-container-highest transition-colors">Bỏ chọn</button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 bg-surface-container-low p-2 rounded-lg border border-outline-variant/10">
+                  <span className="text-[11px] text-on-surface-variant font-medium whitespace-nowrap">Từ chương:</span>
+                  <input type="number" placeholder="..." value={rangeStart} onChange={e => setRangeStart(e.target.value)} className="w-12 bg-surface px-1.5 py-1 rounded text-xs outline-none border border-transparent focus:border-primary/50 text-center text-on-surface" />
+                  <span className="text-xs text-on-surface-variant">-</span>
+                  <input type="number" placeholder="..." value={rangeEnd} onChange={e => setRangeEnd(e.target.value)} className="w-12 bg-surface px-1.5 py-1 rounded text-xs outline-none border border-transparent focus:border-primary/50 text-center text-on-surface" />
+                  <button onClick={handleSelectRange} className="text-[11px] ml-auto bg-primary text-on-primary px-3 py-1 rounded font-bold hover:bg-primary-fixed transition-colors">Chọn</button>
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-1.5 p-1 bg-surface-container-lowest rounded-xl min-h-[30vh]">
-                {[...chapters].sort((a, b) => {
-                  const aH = selectedChapters.has(a.chapterId) ? 1 : 0;
-                  const bH = selectedChapters.has(b.chapterId) ? 1 : 0;
-                  if (aH !== bH) return bH - aH;
-                  return a.chapterNumber - b.chapterNumber;
-                }).map(chap => (
+              <div ref={chapterListRef} className="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-1.5 p-1 bg-surface-container-lowest rounded-xl min-h-[30vh] scroll-smooth">
+                {[...chapters].sort((a, b) => a.chapterNumber - b.chapterNumber).map(chap => (
                   <div 
                     key={chap.chapterId} 
+                    id={`chapter-item-${chap.chapterNumber}`}
                     onClick={() => toggleChapter(chap.chapterId)}
                     className={`flex items-center gap-3 rounded-lg p-2 cursor-pointer transition-all active:scale-[0.98] ${selectedChapters.has(chap.chapterId) ? 'bg-primary/10 border border-primary/20' : 'bg-surface hover:bg-surface-container border border-transparent'}`}
                   >
@@ -356,7 +477,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                       {selectedChapters.has(chap.chapterId) ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} />}
                     </button>
                     <span className="text-sm flex-1 truncate font-medium">Chương {chap.chapterNumber}: {chap.title}</span>
-                    {chap.state === 'FAILED' && <span className="text-[9px] bg-warning/20 text-warning px-2 py-1 rounded-md font-bold tracking-wider">CHỜ DỊCH</span>}
+                    {(chap.state === 'FAILED' || chap.state === 'PENDING') && <span className="text-[9px] bg-warning/20 text-warning px-2 py-1 rounded-md font-bold tracking-wider">CHƯA DỊCH</span>}
                   </div>
                 ))}
               </div>
@@ -414,6 +535,28 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
         </div>
 
       </div>
+      {showQuotaSettings && (
+        <QuotaSettingsSheet 
+          quotas={quotas} 
+          onClose={() => setShowQuotaSettings(false)} 
+          onQuotasUpdated={() => {
+            // refresh quota list
+            api.getQuota().then(res => {
+              if (res) {
+                setQuotas(res.availableModels || []);
+                setOptions(prev => {
+                  const newOptions = { ...prev };
+                  newOptions.availableModels = (res.availableModels || []).map(m => m.model);
+                  if (!newOptions.availableModels.includes(newOptions.model) && newOptions.availableModels.length > 0) {
+                    newOptions.model = newOptions.availableModels[0];
+                  }
+                  return newOptions;
+                });
+              }
+            });
+          }} 
+        />
+      )}
     </div>
   );
 }
