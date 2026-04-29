@@ -3,6 +3,9 @@ import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Ch
 import { api, Replacement } from '../lib/api';
 import { useReaderSettings } from '../contexts/ReaderContext';
 
+import { QuotaSettingsSheet } from './QuotaSettingsSheet';
+import { TokenManagerSheet } from './TokenManagerSheet';
+
 type RealScope = 'chapter' | 'book' | 'global';
 
 interface GlobalSettingsSheetProps {
@@ -35,6 +38,8 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
   // API State
   const [apiDomainInput, setApiDomainInput] = useState('');
   const [isApiCollapsed, setIsApiCollapsed] = useState(true);
+  const [showQuotaSheet, setShowQuotaSheet] = useState(false);
+  const [showTokenSheet, setShowTokenSheet] = useState(false);
 
   useEffect(() => {
     setApiDomainInput(localStorage.getItem('API_DOMAIN_CONFIG') || '');
@@ -183,7 +188,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={() => setIsApiCollapsed(!isApiCollapsed)}
-                  className="flex items-center justify-between font-bold text-on-surface border-b border-outline-variant/20 pb-2 w-full text-left"
+                  className="flex items-center justify-between font-bold text-on-surface border-b border-outline-variant/20 pb-2 w-full text-left outline-none"
                 >
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-4 bg-[#b47a18] rounded-full"></span>
@@ -214,13 +219,54 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
                     <div className="pt-1">
                       <button
                         onClick={handleSaveDomain}
-                        className="px-5 py-2.5 rounded-xl font-bold bg-[#b47a18] text-black hover:bg-[#c98a1b] active:scale-95 transition-all w-full sm:w-auto flex items-center justify-center gap-2 shadow-sm text-xs sm:text-[13px]"
+                        className="px-5 py-2.5 rounded-xl font-bold bg-[#b47a18] text-black hover:bg-[#c98a1b] active:scale-95 transition-all w-full sm:w-auto flex items-center justify-center gap-2 shadow-sm text-xs sm:text-[13px] outline-none"
                       >
                         <Save size={16} />
                         Lưu & Khởi động lại
                       </button>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Quản lý AI Section */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between font-bold text-on-surface border-b border-outline-variant/20 pb-2 w-full text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-4 bg-primary rounded-full"></span>
+                    Quản lý Hệ Thống AI
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                  <button 
+                    onClick={() => setShowTokenSheet(true)}
+                    className="flex flex-col bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/20 hover:border-primary/50 hover:bg-surface transition-all group outline-none"
+                  >
+                     <div className="flex items-center gap-3 mb-2">
+                       <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Settings size={16} />
+                       </div>
+                       <span className="font-bold text-sm text-on-surface">Quản lý API Token</span>
+                     </div>
+                     <p className="text-left text-[11px] text-on-surface-variant/70 leading-relaxed">
+                       Thêm, sửa, xóa các Token API, set mức ưu tiên, bật/tắt token round-robin.
+                     </p>
+                  </button>
+                  <button 
+                    onClick={() => setShowQuotaSheet(true)}
+                    className="flex flex-col bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/20 hover:border-primary/50 hover:bg-surface transition-all group outline-none"
+                  >
+                     <div className="flex items-center gap-3 mb-2">
+                       <div className="w-8 h-8 rounded-full bg-[#10b981]/10 text-[#10b981] flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Globe size={16} />
+                       </div>
+                       <span className="font-bold text-sm text-on-surface">Quản lý Models & Quota</span>
+                     </div>
+                     <p className="text-left text-[11px] text-on-surface-variant/70 leading-relaxed">
+                       Cấu hình AI Models của từng nền tảng, thiết lập các giới hạn RPD, RPM, TPM.
+                     </p>
+                  </button>
                 </div>
               </div>
 
@@ -534,6 +580,9 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
 
         </div>
       </div>
+      
+      {showQuotaSheet && <QuotaSettingsSheet onClose={() => setShowQuotaSheet(false)} />}
+      {showTokenSheet && <TokenManagerSheet onClose={() => setShowTokenSheet(false)} />}
     </div>
   );
 }

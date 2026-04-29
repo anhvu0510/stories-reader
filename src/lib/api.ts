@@ -68,6 +68,37 @@ export interface AIQuota {
   updatedAt?: string;
 }
 
+export interface AIToken {
+  _id: string;
+  name: string;
+  email: string;
+  platform: 'AI_STUDIO' | 'VERTEX_API';
+  model: string;
+  status: 'active' | 'paused' | 'banned';
+  priority: number;
+  lastUsedAt?: string;
+  totalRequests?: number;
+  totalErrors?: number;
+  createdAt: string;
+  configAI?: any; // Used when creating/updating
+  modelList: {
+    model: string;
+    rpmLimit: number;
+    tpmLimit: number;
+    rpdLimit: number;
+    usageToday?: {
+      rpd: number | null;
+      rpm: number;
+      tpm: number;
+      rpdPercent: number;
+    };
+  }[];
+  workerStatus?: {
+    initialized: boolean;
+    busy: number;
+  };
+}
+
 export interface QuotaResponse {
   currentConfig: {
     model: string;
@@ -414,6 +445,33 @@ export const api = {
 
   deleteQuota: async (id: string): Promise<void> => {
      await fetchWithRetry(`/api/quota/${id}`, { method: 'DELETE' });
+  },
+
+  getTokens: async (platform?: string, status?: string): Promise<{ total: number, tokens: AIToken[] }> => {
+    let url = '/api/ai-token';
+    const params = new URLSearchParams();
+    if (platform) params.append('platform', platform);
+    if (status) params.append('status', status);
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+    const res = await fetchWithRetry(url);
+    if (!res) return { total: 0, tokens: [] };
+    return await res.json();
+  },
+
+  createToken: async (data: Partial<AIToken>): Promise<AIToken> => {
+     const res = await fetchWithRetry('/api/ai-token', { method: 'POST', body: JSON.stringify(data) });
+     return await res.json();
+  },
+
+  updateToken: async (id: string, data: Partial<AIToken>): Promise<AIToken> => {
+     const res = await fetchWithRetry(`/api/ai-token/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+     return await res.json();
+  },
+
+  deleteToken: async (id: string): Promise<void> => {
+     await fetchWithRetry(`/api/ai-token/${id}`, { method: 'DELETE' });
   },
 
   translate: async (data: {

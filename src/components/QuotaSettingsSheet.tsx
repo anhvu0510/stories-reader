@@ -3,7 +3,7 @@ import { X, Plus, Edit2, Trash2, Check, ExternalLink, RefreshCw } from 'lucide-r
 import { api, AIQuota } from '../lib/api';
 import { showToast } from './Toast';
 
-export function QuotaSettingsSheet({ onClose, quotas: initialQuotas, onQuotasUpdated }: { onClose: () => void, quotas: AIQuota[], onQuotasUpdated: () => void }) {
+export function QuotaSettingsSheet({ onClose, quotas: initialQuotas = [], onQuotasUpdated = () => {} }: { onClose: () => void, quotas?: AIQuota[], onQuotasUpdated?: () => void }) {
   const [quotas, setQuotas] = useState<AIQuota[]>(initialQuotas);
   const [activeTab, setActiveTab] = useState<'VERTEX_API' | 'AI_STUDIO'>('VERTEX_API');
   const [isLoading, setIsLoading] = useState(false);
@@ -23,6 +23,12 @@ export function QuotaSettingsSheet({ onClose, quotas: initialQuotas, onQuotasUpd
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (initialQuotas.length === 0) {
+      fetchQuotas();
+    }
+  }, []);
 
   const handleEdit = (q: AIQuota) => {
     setEditingId(q._id);
@@ -130,9 +136,16 @@ export function QuotaSettingsSheet({ onClose, quotas: initialQuotas, onQuotasUpd
                           </h3>
                           {!q.isActive && <span className="text-[9px] bg-outline-variant/20 px-1.5 py-0.5 rounded text-on-surface-variant font-medium shrink-0">Tắt</span>}
                         </div>
-                        <div className="text-[10px] text-on-surface-variant/80 mt-1.5 font-medium flex gap-2">
-                          <span>RPD còn lại: {q.rpdLimit > 0 ? (q.rpdLimit - (q.requestsThisDay || 0)).toLocaleString() : '∞'} / {q.rpdLimit > 0 ? q.rpdLimit.toLocaleString() : '∞'}</span>
-                          {q.rpmLimit > 0 && <span>• RPM: {q.rpmLimit.toLocaleString()}</span>}
+                        <div className="flex items-center gap-2 flex-wrap mt-2.5">
+                          <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20">
+                            RPD: {q.rpdLimit > 0 ? q.rpdLimit.toLocaleString() : '∞'}
+                          </span>
+                          <span className="text-[10px] font-bold bg-surface-container-highest text-on-surface px-2 py-1 rounded-md border border-outline-variant/20">
+                            RPM: {q.rpmLimit > 0 ? q.rpmLimit.toLocaleString() : '∞'}
+                          </span>
+                          <span className="text-[10px] font-bold bg-surface-container-highest text-on-surface px-2 py-1 rounded-md border border-outline-variant/20">
+                            TPM: {q.tpmLimit > 0 ? q.tpmLimit.toLocaleString() : '∞'}
+                          </span>
                         </div>
                       </div>
                       <div className="flex gap-1 shrink-0 bg-surface-container-high rounded-xl p-0.5">

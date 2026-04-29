@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Languages, Settings2, Sparkles, CheckSquare, Square, Search, ChevronDown, ChevronUp, Loader, Check } from 'lucide-react';
+import { X, Languages, Settings2, Sparkles, CheckSquare, Square, Search, ChevronDown, ChevronUp, Loader, Check, KeyRound } from 'lucide-react';
 import { Book, Chapter, api } from '../lib/api';
 import { cn } from '../lib/utils';
 import { showToast } from './Toast';
-
-import { QuotaSettingsSheet } from './QuotaSettingsSheet';
 
 type Tab = 'current' | 'batch_chapter' | 'story';
 
@@ -42,7 +40,6 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   const [options, setOptions] = useState<TranslationOptions>(defaultOptions);
   const [isOptionsLoaded, setIsOptionsLoaded] = useState(false);
   const [showConfig, setShowConfig] = useState(true);
-  const [showQuotaSettings, setShowQuotaSettings] = useState(false);
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
@@ -303,18 +300,6 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowQuotaSettings(true);
-                }}
-                className={cn(
-                  "p-1.5 rounded-lg transition-all active:scale-95 bg-surface-container-highest text-on-surface-variant/50 hover:text-primary hover:bg-primary/10"
-                )}
-                title="Quản lý Model Quota"
-              >
-                <Settings2 size={12} />
-              </button>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
                   setOptions({...options, forceRetranslate: !options.forceRetranslate});
                 }}
                 className={cn(
@@ -390,11 +375,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                       return isPlatformMatch && isActive;
                     })
                     .map(m => {
-                    const q = quotas.find(quota => quota.model === m);
                     const isSelected = options.model === m;
-                    const rpdLimit = q?.rpdLimit || 0;
-                    const requestsThisDay = q?.requestsThisDay || 0;
-                    const remainingRPD = rpdLimit > 0 ? rpdLimit - requestsThisDay : '∞';
                     
                     return (
                       <button
@@ -410,9 +391,6 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                         <div className="min-w-0 pr-2">
                           <div className="font-bold text-xs truncate">
                             {m.replace(/^gemini-/, '').replace(/-/g, ' ').toUpperCase() || m}
-                          </div>
-                          <div className={cn("text-[9px] mt-0.5 font-medium truncate", isSelected ? "text-primary/80" : "text-on-surface-variant/70")}>
-                            RPD còn lại: {remainingRPD} / {rpdLimit > 0 ? rpdLimit : '∞'}
                           </div>
                         </div>
                         {isSelected && <Check size={14} className="text-primary flex-shrink-0" />}
@@ -535,28 +513,6 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
         </div>
 
       </div>
-      {showQuotaSettings && (
-        <QuotaSettingsSheet 
-          quotas={quotas} 
-          onClose={() => setShowQuotaSettings(false)} 
-          onQuotasUpdated={() => {
-            // refresh quota list
-            api.getQuota().then(res => {
-              if (res) {
-                setQuotas(res.availableModels || []);
-                setOptions(prev => {
-                  const newOptions = { ...prev };
-                  newOptions.availableModels = (res.availableModels || []).map(m => m.model);
-                  if (!newOptions.availableModels.includes(newOptions.model) && newOptions.availableModels.length > 0) {
-                    newOptions.model = newOptions.availableModels[0];
-                  }
-                  return newOptions;
-                });
-              }
-            });
-          }} 
-        />
-      )}
     </div>
   );
 }
