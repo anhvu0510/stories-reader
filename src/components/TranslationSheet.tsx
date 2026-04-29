@@ -8,6 +8,7 @@ type Tab = 'current' | 'batch_chapter' | 'story';
 
 interface TranslationOptions {
   model: string;
+  platform?: string;
   minWords: number;
   maxWords: number;
   temperature: number;
@@ -17,6 +18,7 @@ interface TranslationOptions {
 
 const defaultOptions: TranslationOptions = {
   model: 'gemini-2.5-flash-lite',
+  platform: 'VERTEX_API',
   minWords: 100,
   maxWords: 500,
   temperature: 0.7,
@@ -61,7 +63,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   useEffect(() => {
     let active = true;
     if (options.model && isOptionsLoaded) {
-      const platform = quotas.find(q => q.model === options.model)?.platform || 'VERTEX_API';
+      const platform = options.platform || 'VERTEX_API';
       api.getPoolStatus(options.model, platform).then(res => {
         if (active && res) {
           setPoolStatus(res);
@@ -69,7 +71,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
       });
     }
     return () => { active = false; };
-  }, [options.model, activeModelTab, activeTab, isOptionsLoaded, quotas]);
+  }, [options.model, options.platform, activeTab, isOptionsLoaded, quotas]);
 
   useEffect(() => {
     let active = true;
@@ -119,7 +121,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
       const t = setTimeout(() => {
         const payload = {
           model: options.model,
-          platform: quotas.find(q => q.model === options.model)?.platform || 'VERTEX_API',
+          platform: options.platform || 'VERTEX_API',
           minWords: options.minWords,
           maxWords: options.maxWords,
           temperature: options.temperature,
@@ -144,7 +146,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
-    const platform = quotas.find(q => q.model === options.model)?.platform || 'VERTEX_API';
+    const platform = options.platform || 'VERTEX_API';
     try {
       if (activeTab === 'current') {
         if (!initialSelectedChapters[0]) {
@@ -378,30 +380,52 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                   <label className="text-[9px] font-bold text-on-surface-variant/70 uppercase">MODEL</label>
                   <div className="flex bg-surface-container-high p-0.5 rounded-lg">
                     <button 
-                      onClick={() => setActiveModelTab('VERTEX_API')}
+                      onClick={() => {
+                         setActiveModelTab('VERTEX_API');
+                         setPoolStatus(null);
+                         // auto select first if needed, otherwise just change platform
+                         const modelsInTab = quotas.filter(q => q.platform === 'VERTEX_API' && q.isActive !== false).map(q => q.model);
+                         setOptions(prev => ({
+                             ...prev, 
+                             platform: 'VERTEX_API',
+                             model: modelsInTab.includes(prev.model) ? prev.model : (modelsInTab[0] || prev.model)
+                         }));
+                      }}
                       className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", activeModelTab === 'VERTEX_API' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface')}
                     >VERTEX API</button>
                     <button 
-                      onClick={() => setActiveModelTab('AI_STUDIO')}
+                      onClick={() => {
+                         setActiveModelTab('AI_STUDIO');
+                         setPoolStatus(null);
+                         const modelsInTab = quotas.filter(q => q.platform === 'AI_STUDIO' && q.isActive !== false).map(q => q.model);
+                         setOptions(prev => ({
+                             ...prev, 
+                             platform: 'AI_STUDIO',
+                             model: modelsInTab.includes(prev.model) ? prev.model : (modelsInTab[0] || prev.model)
+                         }));
+                      }}
                       className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", activeModelTab === 'AI_STUDIO' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface')}
                     >AI STUDIO</button>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {(options.availableModels || defaultOptions.availableModels || [])
-                    .filter(m => {
-                      const q = quotas.find(q => q.model === m);
-                      const isPlatformMatch = (q?.platform || 'VERTEX_API') === activeModelTab;
-                      const isActive = q ? q.isActive !== false : true;
+                  {quotas
+                    .filter(q => {
+                      const isPlatformMatch = (q.platform || 'VERTEX_API') === activeModelTab;
+                      const isActive = q.isActive !== false;
                       return isPlatformMatch && isActive;
                     })
-                    .map(m => {
-                    const isSelected = options.model === m;
+                    .map(q => {
+                    const m = q.model;
+                    const isSelected = options.model === m && (options.platform || 'VERTEX_API') === activeModelTab;
                     
                     return (
                       <button
-                        key={m}
-                        onClick={() => setOptions({...options, model: m})}
+                        key={`${activeModelTab}-${m}`}
+                        onClick={() => {
+                           setOptions({...options, model: m, platform: activeModelTab});
+                           setPoolStatus(null);
+                        }}
                         className={cn(
                           "px-3 py-2 rounded-lg text-left border transition-all flex items-center justify-between",
                           isSelected 
@@ -418,10 +442,9 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                       </button>
                     );
                   })}
-                  {(options.availableModels || defaultOptions.availableModels || []).filter(m => {
-                      const q = quotas.find(q => q.model === m);
-                      const isPlatformMatch = (q?.platform || 'VERTEX_API') === activeModelTab;
-                      const isActive = q ? q.isActive !== false : true;
+                  {quotas.filter(q => {
+                      const isPlatformMatch = (q.platform || 'VERTEX_API') === activeModelTab;
+                      const isActive = q.isActive !== false;
                       return isPlatformMatch && isActive;
                     }).length === 0 && (
                     <div className="text-[11px] text-on-surface-variant/70 text-center py-3 bg-surface-container-lowest rounded-lg border border-dashed border-outline-variant/30 col-span-full">
