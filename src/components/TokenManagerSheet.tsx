@@ -3,7 +3,7 @@ import { X, Plus, Edit2, Trash2, Check, ExternalLink, RefreshCw, KeyRound, PlayC
 import { api, AIToken } from '../lib/api';
 import { showToast } from './Toast';
 
-export function TokenManagerSheet({ onClose }: { onClose: () => void }) {
+export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: () => void, isEmbedded?: boolean }) {
   const [tokens, setTokens] = useState<AIToken[]>([]);
   const [activeTab, setActiveTab] = useState<'VERTEX_API' | 'AI_STUDIO'>('VERTEX_API');
   const [isLoading, setIsLoading] = useState(false);
@@ -103,13 +103,8 @@ export function TokenManagerSheet({ onClose }: { onClose: () => void }) {
     });
   };
 
-  return (
-    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={onClose} />
-      
-      {/* Container */}
-      <div className="relative bg-surface border border-outline-variant/30 text-on-surface w-full max-w-[600px] h-[85vh] sm:h-[80vh] rounded-t-3xl sm:rounded-3xl flex flex-col shadow-2xl z-10 overflow-hidden">
+  const content = (
+      <div className={`relative bg-surface text-on-surface w-full max-w-[600px] flex flex-col flex-1 overflow-hidden ${!isEmbedded && 'border border-outline-variant/30 h-[85vh] sm:h-[80vh] rounded-t-3xl sm:rounded-3xl shadow-2xl z-10'}`}>
         
         {/* Header */}
         <div className="flex-shrink-0 p-3 sm:p-5 border-b border-outline-variant/10 flex flex-col gap-3 bg-surface-container-low">
@@ -122,9 +117,11 @@ export function TokenManagerSheet({ onClose }: { onClose: () => void }) {
               <button title="Làm Mới" onClick={fetchTokens} className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
                 <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
               </button>
-              <button title="Đóng" onClick={onClose} className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
-                <X size={16} />
-              </button>
+              {!isEmbedded && onClose && (
+               <button title="Đóng" onClick={onClose} className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
+                  <X size={16} />
+                </button>
+              )}
             </div>
           </div>
           <div className="flex bg-surface-container-highest p-1 rounded-lg">
@@ -141,7 +138,7 @@ export function TokenManagerSheet({ onClose }: { onClose: () => void }) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto hide-scrollbar w-full bg-surface">
-          <div className="p-3 sm:p-5 flex flex-col gap-2.5">
+          <div className="p-3 sm:p-5 flex flex-col gap-2.5 max-w-[600px] mx-auto w-full">
             
             {editingId === 'new' && (
               <TokenEditor formData={formData} setFormData={setFormData} onSave={handleSave} onCancel={() => setEditingId(null)} isNew={true} />
@@ -180,7 +177,6 @@ export function TokenManagerSheet({ onClose }: { onClose: () => void }) {
                       </div>
                     </div>
                     
-                    {/* Worker status removed */}
 
                     {/* Usage list */}
                     {t.modelList && t.modelList.length > 0 && (
@@ -211,6 +207,17 @@ export function TokenManagerSheet({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       </div>
+  );
+
+  if (isEmbedded) {
+    return <div className="flex-1 overflow-hidden flex flex-col w-full h-full">{content}</div>;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={onClose} />
+      {content}
     </div>
   );
 }

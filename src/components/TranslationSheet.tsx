@@ -40,6 +40,8 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   const [options, setOptions] = useState<TranslationOptions>(defaultOptions);
   const [isOptionsLoaded, setIsOptionsLoaded] = useState(false);
   const [showConfig, setShowConfig] = useState(true);
+  const [poolStatus, setPoolStatus] = useState<any>(null);
+  const [showOnlyPending, setShowOnlyPending] = useState(false);
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
@@ -55,6 +57,19 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
 
   // Load configs from API
   const [quotas, setQuotas] = useState<any[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    if (options.model && isOptionsLoaded) {
+      const platform = quotas.find(q => q.model === options.model)?.platform || 'VERTEX_API';
+      api.getPoolStatus(options.model, platform).then(res => {
+        if (active && res) {
+          setPoolStatus(res);
+        }
+      });
+    }
+    return () => { active = false; };
+  }, [options.model, activeModelTab, activeTab, isOptionsLoaded, quotas]);
 
   useEffect(() => {
     let active = true;
@@ -295,6 +310,12 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
             <div className="flex items-center gap-2">
               <Settings2 size={12} />
               <span>Cấu hình AI</span>
+              {poolStatus && poolStatus.model === options.model && (
+                <span className="ml-2 text-[9px] font-bold text-on-surface-variant bg-surface-container-highest px-1.5 py-0.5 rounded border border-outline-variant/20 flex items-center gap-1">
+                   <div className={`w-1 h-1 rounded-full ${poolStatus.remain > 0 ? 'bg-primary animate-pulse' : 'bg-error'}`}></div>
+                   RPD: <span className={poolStatus.remain > 0 ? 'text-primary' : 'text-error'}>{poolStatus.remain.toLocaleString()}</span>/{poolStatus.total > 0 ? poolStatus.total.toLocaleString() : '∞'}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <button 
@@ -409,7 +430,6 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                   )}
                 </div>
               </div>
-
             </div>
           )}
         </div>
@@ -428,7 +448,18 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
             <div className="flex-1 flex flex-col min-h-0">
               <div className="flex flex-col gap-2 mb-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-wider">Chọn chương ({selectedChapters.size}/{chapters.length})</p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-wider">Chọn chương ({selectedChapters.size}/{chapters.length})</p>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={showOnlyPending}
+                        onChange={(e) => setShowOnlyPending(e.target.checked)}
+                        className="accent-primary w-3.5 h-3.5 rounded"
+                      />
+                      <span className="text-[11px] text-on-surface-variant font-medium select-none">Ẩn đã dịch</span>
+                    </label>
+                  </div>
                   <div className="flex items-center gap-1.5">
                     <button onClick={() => setSelectedChapters(new Set(chapters.map(c => c.chapterId)))} className="px-2 py-1 bg-surface-container-high rounded text-[11px] font-bold text-primary hover:bg-surface-container-highest transition-colors">Tất cả</button>
                     <button onClick={() => setSelectedChapters(new Set(chapters.filter(c => c.state === 'PENDING' || c.state === 'FAILED').map(c => c.chapterId)))} className="px-2 py-1 bg-surface-container-high rounded text-[11px] font-bold text-primary hover:bg-surface-container-highest transition-colors">Chưa dịch</button>
@@ -444,7 +475,10 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                 </div>
               </div>
               <div ref={chapterListRef} className="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-1.5 p-1 bg-surface-container-lowest rounded-xl min-h-[30vh] scroll-smooth">
-                {[...chapters].sort((a, b) => a.chapterNumber - b.chapterNumber).map(chap => (
+                {[...chapters]
+                  .sort((a, b) => a.chapterNumber - b.chapterNumber)
+                  .filter(chap => !showOnlyPending || chap.state === 'PENDING' || chap.state === 'FAILED')
+                  .map(chap => (
                   <div 
                     key={chap.chapterId} 
                     id={`chapter-item-${chap.chapterNumber}`}

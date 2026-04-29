@@ -433,6 +433,19 @@ export const api = {
     }
   },
 
+  getPoolStatus: async (model: string, platform: string): Promise<any | null> => {
+    try {
+      const res = await fetchWithRetry(`/api/ai-token/pool-status?model=${encodeURIComponent(model)}&platform=${encodeURIComponent(platform)}`);
+      return await res.json();
+    } catch (e: any) {
+      if (e.message === 'API_DOMAIN_NOT_SET') {
+        return { remain: 0, total: 0 };
+      }
+      console.warn('Failed to get pool status', e);
+      return { remain: 0, total: 0 };
+    }
+  },
+
   createQuota: async (data: Partial<AIQuota>): Promise<AIQuota> => {
      const res = await fetchWithRetry('/api/quota', { method: 'POST', body: JSON.stringify(data) });
      return await res.json();

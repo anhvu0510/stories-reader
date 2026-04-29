@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Check, Layers, MonitorSmartphone, ChevronDown, ChevronUp, Volume2 } from 'lucide-react';
+import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Check, Layers, MonitorSmartphone, ChevronDown, ChevronUp, Volume2, KeyRound } from 'lucide-react';
 import { api, Replacement } from '../lib/api';
 import { useReaderSettings } from '../contexts/ReaderContext';
 
@@ -21,7 +21,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
     theme, setTheme, font, setFont, fontSize, setFontSize, lineHeight, setLineHeight, groupLines, setGroupLines,
     speechRate, setSpeechRate
   } = useReaderSettings();
-  const [activeTab, setActiveTab] = useState<'api' | 'names' | 'voice'>(initialMatch ? 'names' : 'api');
+  const [activeTab, setActiveTab] = useState<'api' | 'names' | 'voice' | 'quotas' | 'tokens'>(initialMatch ? 'names' : 'api');
 
   
   // Names State
@@ -38,8 +38,6 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
   // API State
   const [apiDomainInput, setApiDomainInput] = useState('');
   const [isApiCollapsed, setIsApiCollapsed] = useState(true);
-  const [showQuotaSheet, setShowQuotaSheet] = useState(false);
-  const [showTokenSheet, setShowTokenSheet] = useState(false);
 
   useEffect(() => {
     setApiDomainInput(localStorage.getItem('API_DOMAIN_CONFIG') || '');
@@ -146,10 +144,10 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
         <div className="flex-shrink-0 pt-2 px-3 sm:pt-4 sm:px-5 border-b border-outline-variant/10 bg-surface-container">
           <div className="w-10 h-1 bg-outline-variant/30 rounded-full mx-auto mb-3 sm:hidden"></div>
           <div className="flex justify-between items-center pb-2 sm:pb-3">
-            <div className="flex items-center bg-surface-container-highest/40 p-1 rounded-2xl sm:rounded-full border border-outline-variant/10 gap-1 overflow-hidden">
+            <div className="flex items-center bg-surface-container-highest/40 p-1 rounded-2xl sm:rounded-full border border-outline-variant/10 gap-1 overflow-x-auto hide-scrollbar">
               <button 
                 onClick={() => setActiveTab('api')}
-                className={`flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none ${activeTab === 'api' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'api' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
               >
                 <MonitorSmartphone size={16} className={activeTab === 'api' ? 'animate-pulse' : ''} />
                 <span className={activeTab === 'api' ? 'block' : 'hidden sm:block'}>Cơ bản</span>
@@ -157,7 +155,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
               
               <button 
                 onClick={() => setActiveTab('names')}
-                className={`flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none ${activeTab === 'names' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'names' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
               >
                 <Edit3 size={16} />
                 <span className={activeTab === 'names' ? 'block' : 'hidden sm:block'}>Từ điển</span>
@@ -165,14 +163,30 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
 
               <button 
                 onClick={() => setActiveTab('voice')}
-                className={`flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none ${activeTab === 'voice' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'voice' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
               >
                 <Volume2 size={16} />
                 <span className={activeTab === 'voice' ? 'block' : 'hidden sm:block'}>Giọng đọc</span>
               </button>
+
+              <button 
+                onClick={() => setActiveTab('tokens')}
+                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'tokens' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+              >
+                <KeyRound size={16} />
+                <span className={activeTab === 'tokens' ? 'block' : 'hidden sm:block'}>Tokens</span>
+              </button>
+
+              <button 
+                onClick={() => setActiveTab('quotas')}
+                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'quotas' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+              >
+                <Globe size={16} />
+                <span className={activeTab === 'quotas' ? 'block' : 'hidden sm:block'}>Models</span>
+              </button>
             </div>
 
-            <button onClick={onClose} className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-surface-container-highest/30 hover:bg-surface-bright rounded-full text-on-surface-variant hover:text-on-surface hover:rotate-90 transition-all duration-300 active:scale-95">
+            <button onClick={onClose} className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 ml-2 flex items-center justify-center bg-surface-container-highest/30 hover:bg-surface-bright rounded-full text-on-surface-variant hover:text-on-surface hover:rotate-90 transition-all duration-300 active:scale-95">
               <X size={20} />
             </button>
           </div>
@@ -226,47 +240,6 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
                       </button>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Quản lý AI Section */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between font-bold text-on-surface border-b border-outline-variant/20 pb-2 w-full text-left">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-4 bg-primary rounded-full"></span>
-                    Quản lý Hệ Thống AI
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                  <button 
-                    onClick={() => setShowTokenSheet(true)}
-                    className="flex flex-col bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/20 hover:border-primary/50 hover:bg-surface transition-all group outline-none"
-                  >
-                     <div className="flex items-center gap-3 mb-2">
-                       <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Settings size={16} />
-                       </div>
-                       <span className="font-bold text-sm text-on-surface">Quản lý API Token</span>
-                     </div>
-                     <p className="text-left text-[11px] text-on-surface-variant/70 leading-relaxed">
-                       Thêm, sửa, xóa các Token API, set mức ưu tiên, bật/tắt token round-robin.
-                     </p>
-                  </button>
-                  <button 
-                    onClick={() => setShowQuotaSheet(true)}
-                    className="flex flex-col bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/20 hover:border-primary/50 hover:bg-surface transition-all group outline-none"
-                  >
-                     <div className="flex items-center gap-3 mb-2">
-                       <div className="w-8 h-8 rounded-full bg-[#10b981]/10 text-[#10b981] flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Globe size={16} />
-                       </div>
-                       <span className="font-bold text-sm text-on-surface">Quản lý Models & Quota</span>
-                     </div>
-                     <p className="text-left text-[11px] text-on-surface-variant/70 leading-relaxed">
-                       Cấu hình AI Models của từng nền tảng, thiết lập các giới hạn RPD, RPM, TPM.
-                     </p>
-                  </button>
                 </div>
               </div>
 
@@ -578,11 +551,16 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
             </div>
           )}
 
+          {activeTab === 'tokens' && (
+            <TokenManagerSheet isEmbedded={true} />
+          )}
+
+          {activeTab === 'quotas' && (
+            <QuotaSettingsSheet isEmbedded={true} />
+          )}
+
         </div>
       </div>
-      
-      {showQuotaSheet && <QuotaSettingsSheet onClose={() => setShowQuotaSheet(false)} />}
-      {showTokenSheet && <TokenManagerSheet onClose={() => setShowTokenSheet(false)} />}
     </div>
   );
 }

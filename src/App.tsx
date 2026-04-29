@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ReaderProvider } from './contexts/ReaderContext';
 import { LibraryScreen } from './screens/LibraryScreen';
