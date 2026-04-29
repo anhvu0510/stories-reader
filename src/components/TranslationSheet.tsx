@@ -383,13 +383,6 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                       onClick={() => {
                          setActiveModelTab('VERTEX_API');
                          setPoolStatus(null);
-                         // auto select first if needed, otherwise just change platform
-                         const modelsInTab = quotas.filter(q => q.platform === 'VERTEX_API' && q.isActive !== false).map(q => q.model);
-                         setOptions(prev => ({
-                             ...prev, 
-                             platform: 'VERTEX_API',
-                             model: modelsInTab.includes(prev.model) ? prev.model : (modelsInTab[0] || prev.model)
-                         }));
                       }}
                       className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", activeModelTab === 'VERTEX_API' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface')}
                     >VERTEX API</button>
@@ -397,12 +390,6 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                       onClick={() => {
                          setActiveModelTab('AI_STUDIO');
                          setPoolStatus(null);
-                         const modelsInTab = quotas.filter(q => q.platform === 'AI_STUDIO' && q.isActive !== false).map(q => q.model);
-                         setOptions(prev => ({
-                             ...prev, 
-                             platform: 'AI_STUDIO',
-                             model: modelsInTab.includes(prev.model) ? prev.model : (modelsInTab[0] || prev.model)
-                         }));
                       }}
                       className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", activeModelTab === 'AI_STUDIO' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface')}
                     >AI STUDIO</button>
