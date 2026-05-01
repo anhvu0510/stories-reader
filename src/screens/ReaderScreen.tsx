@@ -139,7 +139,16 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
                     }
                     offset += node.nodeValue?.length || 0;
                   }
+
+                  const textContent = mb4Div.textContent || '';
+                  while (offset > 0 && !/[\s.,;!?"'()[\]{}—\-“”‘’]/.test(textContent[offset - 1])) {
+                    offset--;
+                  }
+                  
                   jumpToContentRef.current(pIdx, offset);
+                  
+                  // Clear selection so the browser selection goes away
+                  window.getSelection()?.removeAllRanges();
                 }
               }
             }
@@ -166,46 +175,6 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
   const handleContentClick = (e: React.MouseEvent) => {
     if (window.getSelection()?.toString().trim()) {
       return; // Do not hide controls if text is selected
-    }
-    
-    if (isReadAloudActiveRef.current) {
-      // Attempt to jump on single tap
-      let range;
-      if ((document as any).caretRangeFromPoint) {
-        range = (document as any).caretRangeFromPoint(e.clientX, e.clientY);
-      } else if ((document as any).caretPositionFromPoint) {
-        const pos = (document as any).caretPositionFromPoint(e.clientX, e.clientY);
-        if (pos) {
-          range = document.createRange();
-          range.setStart(pos.offsetNode, pos.offset);
-        }
-      }
-
-      if (range) {
-        const container = range.startContainer;
-        const mb4Div = container.nodeType === Node.TEXT_NODE ? container.parentElement?.closest('div.mb-4') : (container as HTMLElement).closest('div.mb-4');
-        if (mb4Div) {
-          const article = mb4Div.closest('article');
-          if (article) {
-             const pNodes = Array.from(article.querySelectorAll(':scope > div.mb-4'));
-             const pIdx = pNodes.indexOf(mb4Div);
-             if (pIdx !== -1) {
-               let offset = 0;
-               const walker = document.createTreeWalker(mb4Div, NodeFilter.SHOW_TEXT, null);
-               let node;
-               while ((node = walker.nextNode())) {
-                 if (node === container) {
-                   offset += range.startOffset;
-                   break;
-                 }
-                 offset += node.nodeValue?.length || 0;
-               }
-               jumpToContentRef.current(pIdx, offset);
-               return; // Don't toggle controls on successful jump
-             }
-          }
-        }
-      }
     }
 
     setShowControls(!showControls);

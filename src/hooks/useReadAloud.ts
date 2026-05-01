@@ -353,6 +353,7 @@ export function useReadAloud(paragraphs: string[]) {
   }, [isPlaying, isPaused]);
 
   const startReading = () => {
+    requestWakeLock();
     if (!synth) return;
 
     if (isPaused) {
@@ -432,6 +433,7 @@ export function useReadAloud(paragraphs: string[]) {
   };
 
   const jumpToContent = (pIdx: number, textOffset: number) => {
+    requestWakeLock();
     if (!synth) return;
     let targetIndex = chunks.findIndex(c => c.pIdx === pIdx && textOffset >= c.startOffset && textOffset < c.startOffset + c.length);
     if (targetIndex === -1) {
