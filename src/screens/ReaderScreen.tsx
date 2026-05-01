@@ -112,9 +112,10 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
   }, [drawerSearch, showChapterDrawer]);
 
   useEffect(() => {
-    const handleSelection = () => {
-      // Delay slightly to ensure selection is registered
-      setTimeout(() => {
+    let selectionTimeout: NodeJS.Timeout;
+    const handleSelectionChange = () => {
+      clearTimeout(selectionTimeout);
+      selectionTimeout = setTimeout(() => {
         const selection = window.getSelection();
         if (selection && selection.toString().trim()) {
           if (isReadAloudActiveRef.current) {
@@ -159,15 +160,14 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
         } else {
           setSelectedText('');
         }
-      }, 50);
+      }, 150); // 150ms debounce
     };
 
-    document.addEventListener('mouseup', handleSelection);
-    document.addEventListener('touchend', handleSelection);
+    document.addEventListener('selectionchange', handleSelectionChange);
     
     return () => {
-      document.removeEventListener('mouseup', handleSelection);
-      document.removeEventListener('touchend', handleSelection);
+      clearTimeout(selectionTimeout);
+      document.removeEventListener('selectionchange', handleSelectionChange);
     };
   }, []);
 
