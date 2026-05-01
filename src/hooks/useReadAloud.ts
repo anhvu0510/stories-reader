@@ -309,6 +309,49 @@ export function useReadAloud(paragraphs: string[]) {
     synth.speak(utterance);
   };
 
+  const wakeLockRef = useRef<any>(null);
+
+  const requestWakeLock = async () => {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+        wakeLockRef.current.addEventListener('release', () => {
+          console.log('Screen Wake Lock was released');
+        });
+      }
+    } catch (err: any) {
+      console.warn(`WakeLock Error: ${err.name}, ${err.message}`);
+    }
+  };
+
+  const releaseWakeLock = () => {
+    if (wakeLockRef.current !== null) {
+      wakeLockRef.current.release();
+      wakeLockRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    if (isPlaying && !isPaused) {
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+    return () => {
+      releaseWakeLock();
+    };
+  }, [isPlaying, isPaused]);
+
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (wakeLockRef.current !== null && document.visibilityState === 'visible' && isPlaying && !isPaused) {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isPlaying, isPaused]);
+
   const startReading = () => {
     if (!synth) return;
 
