@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Languages, Settings2, Sparkles, CheckSquare, Square, Search, ChevronDown, ChevronUp, Loader, Check, KeyRound } from 'lucide-react';
+import { X, Languages, Settings2, Sparkles, CheckSquare, Square, Search, ChevronDown, ChevronUp, Loader, Check, KeyRound, Group } from 'lucide-react';
 import { Book, Chapter, api } from '../lib/api';
 import { cn } from '../lib/utils';
 import { showToast } from './Toast';
@@ -13,6 +13,7 @@ interface TranslationOptions {
   maxWords: number;
   temperature: number;
   forceRetranslate: boolean;
+  batchingGroup?: boolean;
   availableModels?: string[];
 }
 
@@ -23,6 +24,7 @@ const defaultOptions: TranslationOptions = {
   maxWords: 500,
   temperature: 0.7,
   forceRetranslate: false,
+  batchingGroup: false,
   availableModels: ['gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-pro']
 };
 
@@ -126,6 +128,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           maxWords: options.maxWords,
           temperature: options.temperature,
           forceRetranslate: options.forceRetranslate,
+          batchingGroup: options.batchingGroup,
           availableModels: options.availableModels
         };
         api.updateSettings('stories.ui.translate', JSON.stringify(payload));
@@ -135,12 +138,16 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   }, [options, isOptionsLoaded, quotas]);
 
   useEffect(() => {
+    let t: NodeJS.Timeout;
     if (activeTab === 'batch_chapter' && currentBookId) {
       api.getChapters(currentBookId, 1, 9999, 'chapterNumber', 'ASC').then(res => setChapters(res.chapters));
     } else if (activeTab === 'story') {
-      api.getBooks().then(res => setBooks(res.data));
+      t = setTimeout(() => {
+        api.getBooks(1, searchBook, undefined, 9999).then(res => setBooks(res.data));
+      }, 500);
     }
-  }, [activeTab, currentBookId]);
+    return () => clearTimeout(t);
+  }, [activeTab, currentBookId, searchBook]);
 
   const handleSubmit = async () => {
     if (isSubmittingRef.current) return;
@@ -195,6 +202,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           maxWords: options.maxWords,
           temperature: options.temperature,
           retryTranslate: options.forceRetranslate,
+          batchingGroup: options.batchingGroup,
           bookId: currentBookId,
           chapterId: Array.from(selectedChapters),
           currentChapterId: initialSelectedChapters[0]
@@ -218,6 +226,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           maxWords: options.maxWords,
           temperature: options.temperature,
           retryTranslate: options.forceRetranslate,
+          batchingGroup: options.batchingGroup,
           bookId: Array.from(selectedBooks),
           currentChapterId: initialSelectedChapters[0]
         });
@@ -320,6 +329,23 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
               )}
             </div>
             <div className="flex items-center gap-2">
+              {(activeTab === 'batch_chapter' || activeTab === 'story') && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOptions({...options, batchingGroup: !options.batchingGroup});
+                  }}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-all active:scale-95",
+                    options.batchingGroup 
+                      ? "bg-primary text-on-primary shadow-sm shadow-primary/20" 
+                      : "bg-surface-container-highest text-on-surface-variant/50"
+                  )}
+                  title="Gộp chung văn cảnh"
+                >
+                  <Group size={12} />
+                </button>
+              )}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -484,7 +510,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                   <button onClick={handleSelectRange} className="text-[11px] ml-auto bg-primary text-on-primary px-3 py-1 rounded font-bold hover:bg-primary-fixed transition-colors">Chọn</button>
                 </div>
               </div>
-              <div ref={chapterListRef} className="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-1.5 p-1 bg-surface-container-lowest rounded-xl min-h-[30vh] scroll-smooth">
+              <div ref={chapterListRef} className="flex-1 overflow-y-auto hide-scrollbar flex flex-col p-0 border border-outline-variant/20 bg-surface rounded-xl min-h-[30vh] scroll-smooth shadow-sm overflow-hidden">
                 {[...chapters]
                   .sort((a, b) => a.chapterNumber - b.chapterNumber)
                   .filter(chap => !showOnlyPending || chap.state === 'PENDING' || chap.state === 'FAILED')
@@ -493,13 +519,21 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                     key={chap.chapterId} 
                     id={`chapter-item-${chap.chapterNumber}`}
                     onClick={() => toggleChapter(chap.chapterId)}
-                    className={`flex items-center gap-3 rounded-lg p-2 cursor-pointer transition-all active:scale-[0.98] ${selectedChapters.has(chap.chapterId) ? 'bg-primary/10 border border-primary/20' : 'bg-surface hover:bg-surface-container border border-transparent'}`}
+                    className={cn("group flex justify-between items-center px-3 py-2 cursor-pointer transition-colors border-b border-outline-variant/10 last:border-b-0 relative", selectedChapters.has(chap.chapterId) ? "bg-primary/5" : "bg-surface hover:bg-surface-container-lowest")}
                   >
-                    <button className="text-on-surface-variant flex-shrink-0">
-                      {selectedChapters.has(chap.chapterId) ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} />}
-                    </button>
-                    <span className="text-sm flex-1 truncate font-medium">Chương {chap.chapterNumber}: {chap.title}</span>
-                    {(chap.state === 'FAILED' || chap.state === 'PENDING') && <span className="text-[9px] bg-warning/20 text-warning px-2 py-1 rounded-md font-bold tracking-wider">CHƯA DỊCH</span>}
+                    {selectedChapters.has(chap.chapterId) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>}
+                    <div className="flex items-center gap-3 overflow-hidden flex-1 pl-1">
+                      <div className={cn("shrink-0 w-8 h-8 rounded-lg flex flex-col items-center justify-center font-bold tracking-tight border transition-colors", chap.state === 'SUCCEEDED' ? 'bg-primary/10 text-primary border-primary/20' : chap.state === 'PENDING' ? 'bg-warning/10 text-warning border-warning/20' : 'bg-surface-container-high text-on-surface-variant border-outline-variant/20')}>
+                        <span className="text-[7px] leading-none opacity-80 mt-[1px]">CH</span>
+                        <span className="text-[11px] leading-none mt-[1px]">{chap.chapterNumber}</span>
+                      </div>
+                      
+                      <div className="flex flex-col flex-1 truncate pr-2">
+                        <span className={cn("text-[12px] sm:text-[13px] truncate font-medium transition-colors", selectedChapters.has(chap.chapterId) ? "text-primary font-bold" : "text-on-surface")}>{chap.title || `Chương ${chap.chapterNumber}`}</span>
+                        {(chap.state === 'FAILED' || chap.state === 'PENDING') && <span className="text-[9px] text-warning/70 font-semibold mt-0.5">Chưa được dịch</span>}
+                      </div>
+                    </div>
+                    {selectedChapters.has(chap.chapterId) ? <Check size={16} className="text-primary flex-shrink-0 drop-shadow-sm mr-1" /> : <Square size={16} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />}
                   </div>
                 ))}
               </div>
@@ -518,18 +552,22 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                   className="w-full bg-surface-container-highest border border-transparent rounded-xl py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-xs sm:text-sm focus:outline-none focus:border-primary/50 focus:bg-surface transition-all placeholder:text-on-surface-variant/70"
                 />
               </div>
-              <div className="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-1.5 p-1 bg-surface-container-lowest rounded-xl min-h-[30vh]">
+              <div className="flex-1 overflow-y-auto hide-scrollbar flex flex-col p-0 border border-outline-variant/20 bg-surface rounded-xl min-h-[30vh] shadow-sm overflow-hidden">
                 {books.filter(b => b.bookName.toLowerCase().includes(searchBook.toLowerCase())).map(book => (
                   <div 
                     key={book.bookId} 
                     onClick={() => toggleBook(book.bookId)}
-                    className={`flex items-center gap-3 rounded-lg p-2.5 cursor-pointer transition-all active:scale-[0.98] ${selectedBooks.has(book.bookId) ? 'bg-primary/10 border border-primary/20' : 'bg-surface hover:bg-surface-container border border-transparent'}`}
+                    className={cn("group flex justify-between items-center px-3 py-2.5 cursor-pointer transition-colors border-b border-outline-variant/10 last:border-b-0 relative", selectedBooks.has(book.bookId) ? "bg-primary/5" : "bg-surface hover:bg-surface-container-lowest")}
                   >
-                    <button className="text-on-surface-variant flex-shrink-0">
-                      {selectedBooks.has(book.bookId) ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} />}
-                    </button>
-                    <span className="text-sm flex-1 truncate font-medium">{book.bookName}</span>
-                  </div>
+                    {selectedBooks.has(book.bookId) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>}
+                    <div className="flex items-center gap-3 overflow-hidden pl-1">
+                      <div className={cn("flex flex-col items-center justify-center w-8 h-8 rounded-lg shrink-0 border transition-colors", selectedBooks.has(book.bookId) ? "bg-primary/10 border-primary/20 text-primary" : "bg-surface-container-highest border-transparent text-on-surface-variant")}>
+                        <Languages size={14} />
+                      </div>
+                      <span className={cn("text-[12px] sm:text-[13px] truncate font-medium transition-colors", selectedBooks.has(book.bookId) ? "text-primary font-bold" : "text-on-surface")}>{book.bookName}</span>
+                    </div>
+                    {selectedBooks.has(book.bookId) ? <Check size={16} className="text-primary flex-shrink-0 drop-shadow-sm mr-1" /> : <Square size={16} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />}
+                   </div>
                 ))}
               </div>
             </div>

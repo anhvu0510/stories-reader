@@ -495,6 +495,7 @@ export const api = {
     maxWords?: number,
     temperature?: number,
     retryTranslate?: boolean,
+    batchingGroup?: boolean,
     bookId?: string | string[],
     chapterId?: string[],
     currentChapterId?: string,
