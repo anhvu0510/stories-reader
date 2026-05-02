@@ -179,7 +179,7 @@ export const getActiveDomain = (): ApiDomain | null => {
   return domains[0] || null;
 };
 
-const fetchWithRetry = async (path: string, options: RequestInit = {}, retries = 2): Promise<Response> => {
+const fetchWithRetry = async (path: string, options: RequestInit = {}, retries = 2, timeout = 2000): Promise<Response> => {
   const domain = getActiveDomain();
   if (!domain) {
     throw new Error('API_DOMAIN_NOT_SET');
@@ -197,7 +197,7 @@ const fetchWithRetry = async (path: string, options: RequestInit = {}, retries =
   while (attempts <= retries) {
     try {
       const controller = new AbortController();
-      const timeoutMillis = 15000; // 15s timeout
+      const timeoutMillis = timeout; // 15s timeout
       const timeoutId = setTimeout(() => controller.abort(), timeoutMillis);
 
       const res = await fetch(`${domain.url}${path}`, { 
@@ -245,7 +245,7 @@ export const api = {
       if (current) {
         url += `&tab=${current}`;
       }
-      const res = await fetchWithRetry(url);
+      const res = await fetchWithRetry(url, {}, 2, 2000);
       return await res.json();
     } catch (e: any) {
       if (e.message === 'API_DOMAIN_NOT_SET') {
@@ -412,7 +412,7 @@ export const api = {
     // 3. Fetch from API
     const request = (async () => {
       try {
-        const res = await fetchWithRetry(`/api/stories/setting/${key}`);
+        const res = await fetchWithRetry(`/api/stories/setting/${key}`, {}, 2, 2000);
         const data = await res.json();
         settingsCache[key] = { data, timestamp: Date.now() };
         try { localStorage.setItem(`setting_${key}`, JSON.stringify(data)); } catch(e){}
