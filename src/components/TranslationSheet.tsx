@@ -523,7 +523,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                   >
                     {selectedChapters.has(chap.chapterId) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>}
                     <div className="flex items-center gap-3 overflow-hidden flex-1 pl-1">
-                      <div className={cn("shrink-0 w-8 h-8 rounded-lg flex flex-col items-center justify-center font-bold tracking-tight border transition-colors", chap.state === 'SUCCEEDED' ? 'bg-primary/10 text-primary border-primary/20' : chap.state === 'PENDING' ? 'bg-warning/10 text-warning border-warning/20' : 'bg-surface-container-high text-on-surface-variant border-outline-variant/20')}>
+                      <div className={cn("shrink-0 w-8 h-8 rounded-full flex flex-col items-center justify-center font-bold tracking-tight border transition-colors", chap.state === 'SUCCEEDED' ? 'bg-primary/10 text-primary border-primary/20' : chap.state === 'PENDING' ? 'bg-warning/10 text-warning border-warning/20' : 'bg-surface-container-high text-on-surface-variant border-outline-variant/20')}>
                         <span className="text-[7px] leading-none opacity-80 mt-[1px]">CH</span>
                         <span className="text-[11px] leading-none mt-[1px]">{chap.chapterNumber}</span>
                       </div>

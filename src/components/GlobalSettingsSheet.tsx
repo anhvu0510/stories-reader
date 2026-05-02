@@ -1,29 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Check, Layers, MonitorSmartphone, ChevronDown, ChevronUp, Volume2, KeyRound } from 'lucide-react';
-import { api, Replacement } from '../lib/api';
+import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Check, Layers, MonitorSmartphone, ChevronDown, ChevronUp, Volume2, KeyRound, Server, Plus, RefreshCw } from 'lucide-react';
+import { api, Replacement, ApiDomain, getApiDomains } from '../lib/api';
 import { useReaderSettings } from '../contexts/ReaderContext';
 
 import { QuotaSettingsSheet } from './QuotaSettingsSheet';
 import { TokenManagerSheet } from './TokenManagerSheet';
+import { cn } from '../lib/utils';
+import { showToast } from './Toast';
 
 type RealScope = 'chapter' | 'book' | 'global';
 
 interface GlobalSettingsSheetProps {
   onClose: () => void;
   initialMatch?: string;
+  initialTab?: 'api' | 'names' | 'voice' | 'quotas' | 'tokens' | 'servers';
   currentBookId?: string;
   currentChapterId?: string;
 }
 
-export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId, currentChapterId }: GlobalSettingsSheetProps) {
+export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, currentBookId, currentChapterId }: GlobalSettingsSheetProps) {
   const { 
     isEnabledReplace, setIsEnabledReplace,
     theme, setTheme, font, setFont, fontSize, setFontSize, lineHeight, setLineHeight, groupLines, setGroupLines,
     speechRate, setSpeechRate
   } = useReaderSettings();
-  const [activeTab, setActiveTab] = useState<'api' | 'names' | 'voice' | 'quotas' | 'tokens'>(initialMatch ? 'names' : 'api');
+  const [activeTab, setActiveTab] = useState<'api' | 'names' | 'voice' | 'quotas' | 'tokens' | 'servers'>(initialTab || (initialMatch ? 'names' : 'api'));
 
-  
   // Names State
   const [replacements, setReplacements] = useState<Replacement[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,12 +38,86 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
   const [scope, setScope] = useState<RealScope>('chapter');
 
   // API State
-  const [apiDomainInput, setApiDomainInput] = useState('');
-  const [isApiCollapsed, setIsApiCollapsed] = useState(true);
+  const [apiDomains, setApiDomains] = useState<ApiDomain[]>([]);
+  const [activeDomainId, setActiveDomainId] = useState<string | null>(null);
+  const [showDomainForm, setShowDomainForm] = useState(false);
+  const [editingDomainId, setEditingDomainId] = useState<string | null>(null);
+  const [domainName, setDomainName] = useState('');
+  const [domainUrl, setDomainUrl] = useState('');
 
   useEffect(() => {
-    setApiDomainInput(localStorage.getItem('API_DOMAIN_CONFIG') || '');
+    let sortedDomains = getApiDomains();
+    setApiDomains(sortedDomains);
+    setActiveDomainId(localStorage.getItem('ACTIVE_API_DOMAIN_ID'));
   }, []);
+
+  const [testingDomainId, setTestingDomainId] = useState<string | null>(null);
+  const [isFetchingDomains, setIsFetchingDomains] = useState(false);
+
+  const handleFetchDomainsFromAPI = async () => {
+    setIsFetchingDomains(true);
+    try {
+      const dataAPI = await api.getSettings('stories.ui.domain', true);
+      const data = dataAPI?.value ?? [];
+
+      if (Array.isArray(data)) {
+        const fetchedDomains: ApiDomain[] = data.map((item: any) => ({
+          id: String(item.id),
+          name: item.name || '',
+          url: item.url || ''
+        }));
+
+        let newDomains: ApiDomain[] = [];
+        if (apiDomains.length > 0) {
+          newDomains.push(apiDomains[0]);
+        }
+
+        for (const fd of fetchedDomains) {
+          if (fd.id && fd.url && fd.id !== newDomains[0]?.id) {
+            newDomains.push(fd);
+          }
+        }
+
+        setApiDomains(newDomains);
+        localStorage.setItem('API_DOMAINS_CONFIG', JSON.stringify(newDomains));
+        showToast('Đã tải và cập nhật danh sách máy chủ', 'success');
+      } else {
+        showToast('Dữ liệu máy chủ không hợp lệ', 'error');
+      }
+    } catch (error) {
+      showToast('Lỗi khi tải danh sách máy chủ', 'error');
+    } finally {
+      setIsFetchingDomains(false);
+    }
+  };
+
+  const handleSelectActiveDomain = async (id: string | null) => {
+    if (!id) {
+      setActiveDomainId(null);
+      localStorage.removeItem('ACTIVE_API_DOMAIN_ID');
+      return;
+    }
+
+    const domain = apiDomains.find(d => d.id === id);
+    if (!domain) return;
+
+    setTestingDomainId(id);
+    try {
+      const isOk = await api.testConnection(domain.url);
+      if (isOk) {
+        setActiveDomainId(id);
+        localStorage.setItem('ACTIVE_API_DOMAIN_ID', id);
+        showToast(`Đã kết nối với máy chủ`, 'success');
+        window.location.reload();
+      } else {
+        showToast(`Không thể kết nối đến máy chủ`, 'error');
+      }
+    } catch {
+      showToast(`Không thể kết nối đến máy chủ`, 'error');
+    } finally {
+      setTestingDomainId(null);
+    }
+  };
 
   useEffect(() => {
     if (initialMatch) {
@@ -113,8 +189,40 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
   };
 
   const handleSaveDomain = () => {
-    localStorage.setItem('API_DOMAIN_CONFIG', apiDomainInput.trim());
-    window.location.reload();
+    if (!domainName.trim() || !domainUrl.trim()) return;
+    
+    let newDomains = [...apiDomains];
+    if (editingDomainId) {
+      newDomains = newDomains.map(d => d.id === editingDomainId ? { ...d, name: domainName, url: domainUrl } : d);
+    } else {
+      newDomains.push({
+        id: Date.now().toString(),
+        name: domainName,
+        url: domainUrl
+      });
+    }
+    
+    setApiDomains(newDomains);
+    localStorage.setItem('API_DOMAINS_CONFIG', JSON.stringify(newDomains));
+    
+    setShowDomainForm(false);
+    setEditingDomainId(null);
+    setDomainName('');
+    setDomainUrl('');
+  };
+  
+  const handleEditDomain = (domain: ApiDomain) => {
+    setEditingDomainId(domain.id);
+    setDomainName(domain.name);
+    setDomainUrl(domain.url);
+    setShowDomainForm(true);
+  };
+  
+  const handleDeleteDomain = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newDomains = apiDomains.filter(d => d.id !== id);
+    setApiDomains(newDomains);
+    localStorage.setItem('API_DOMAINS_CONFIG', JSON.stringify(newDomains));
   };
 
   const filteredReplacements = replacements.filter(r => {
@@ -184,6 +292,14 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
                 <Globe size={16} />
                 <span className={activeTab === 'quotas' ? 'block' : 'hidden sm:block'}>Models</span>
               </button>
+
+              <button 
+                onClick={() => setActiveTab('servers')}
+                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'servers' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+              >
+                <Server size={16} />
+                <span className={activeTab === 'servers' ? 'block' : 'hidden sm:block'}>Máy chủ API</span>
+              </button>
             </div>
 
             <button onClick={onClose} className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 ml-2 flex items-center justify-center bg-surface-container-highest/30 hover:bg-surface-bright rounded-full text-on-surface-variant hover:text-on-surface hover:rotate-90 transition-all duration-300 active:scale-95">
@@ -198,51 +314,6 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
           {activeTab === 'api' && (
             <div className="p-5 flex flex-col gap-8">
               
-              {/* API Domain Section */}
-              <div className="flex flex-col gap-3">
-                <button 
-                  onClick={() => setIsApiCollapsed(!isApiCollapsed)}
-                  className="flex items-center justify-between font-bold text-on-surface border-b border-outline-variant/20 pb-2 w-full text-left outline-none"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-4 bg-[#b47a18] rounded-full"></span>
-                    Nguồn dữ liệu API
-                  </div>
-                  {isApiCollapsed ? <ChevronDown size={20} className="text-on-surface-variant" /> : <ChevronUp size={20} className="text-on-surface-variant" />}
-                </button>
-                
-                <div className={`overflow-hidden transition-all duration-300 ${isApiCollapsed ? 'max-h-0 opacity-0 mb-0' : 'max-h-[300px] opacity-100 mb-2'}`}>
-                  <div className="bg-surface-container-lowest p-4 sm:p-5 rounded-2xl border border-outline-variant/20 flex flex-col gap-4 mt-2">
-                    <div>
-                      <label className="block text-[11px] sm:text-xs font-bold tracking-wide text-on-surface-variant mb-2">
-                        URL API CỦA HỆ THỐNG
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="url"
-                          value={apiDomainInput}
-                          onChange={(e) => setApiDomainInput(e.target.value)}
-                          placeholder="vd: https://api.my-domain.com"
-                          className="w-full bg-surface-container-highest/20 border border-outline-variant/30 rounded-xl px-4 py-3 text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary/50 text-sm"
-                        />
-                      </div>
-                      <p className="text-[10px] sm:text-xs text-on-surface-variant/70 mt-2 leading-relaxed">
-                        Để trống nếu hệ thống đang chạy độc lập ở local.
-                      </p>
-                    </div>
-                    <div className="pt-1">
-                      <button
-                        onClick={handleSaveDomain}
-                        className="px-5 py-2.5 rounded-xl font-bold bg-[#b47a18] text-black hover:bg-[#c98a1b] active:scale-95 transition-all w-full sm:w-auto flex items-center justify-center gap-2 shadow-sm text-xs sm:text-[13px] outline-none"
-                      >
-                        <Save size={16} />
-                        Lưu & Khởi động lại
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Display Settings Section */}
               <div className="flex flex-col gap-6">
                 <h3 className="font-bold text-on-surface flex items-center gap-2 border-b border-outline-variant/20 pb-2">
@@ -557,6 +628,175 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', currentBookId,
 
           {activeTab === 'quotas' && (
             <QuotaSettingsSheet isEmbedded={true} />
+          )}
+
+          {activeTab === 'servers' && (
+            <div className="p-5 flex flex-col gap-6">
+              <h3 className="font-bold text-on-surface flex items-center justify-between border-b border-outline-variant/20 pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-4 bg-[#b47a18] rounded-full"></span>
+                  Máy chủ API
+                </div>
+                {!showDomainForm && (
+                  <button 
+                    onClick={() => {
+                      setEditingDomainId(null);
+                      setDomainName('');
+                      setDomainUrl('');
+                      setShowDomainForm(true);
+                    }}
+                    className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <Plus size={14} /> Thêm mới
+                  </button>
+                )}
+              </h3>
+              
+              {showDomainForm && (
+                <div className="bg-surface-container-lowest p-3 sm:p-4 rounded-xl border border-outline-variant/30 flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                      <label className="block text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Tên máy chủ</label>
+                      <input 
+                        type="text" 
+                        value={domainName}
+                        onChange={e => setDomainName(e.target.value)}
+                        placeholder="VD: Server Chính"
+                        className="w-full bg-surface-container-highest/20 border border-outline-variant/30 rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary/50"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">URL</label>
+                    <input 
+                      type="url" 
+                      value={domainUrl}
+                      onChange={e => setDomainUrl(e.target.value)}
+                      placeholder="VD: https://api.example.com"
+                      className="w-full bg-surface-container-highest/20 border border-outline-variant/30 rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary/50"
+                    />
+                  </div>
+                  <div className="flex gap-2 justify-end mt-1">
+                    <button 
+                      onClick={() => setShowDomainForm(false)}
+                      className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-on-surface-variant hover:bg-surface-container-highest transition-colors"
+                    >
+                      Hủy
+                    </button>
+                    <button 
+                      onClick={handleSaveDomain}
+                      disabled={!domainName.trim() || !domainUrl.trim()}
+                      className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#b47a18] text-black hover:bg-[#c98a1b] disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                    >
+                      <Save size={12} /> Lưu lại
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-4">
+                {apiDomains.length === 0 ? (
+                  <div className="text-center py-6 text-on-surface-variant text-xs">Chưa có máy chủ nào được cấu hình.</div>
+                ) : (
+                  <>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Máy chủ đang hoạt động</span>
+                      </div>
+                      
+                      {apiDomains.filter(d => d.id === (activeDomainId || apiDomains[0]?.id)).map(domain => (
+                        <div 
+                          key={domain.id} 
+                          className="group flex items-center justify-between p-2.5 px-3 border rounded-xl gap-3 transition-colors cursor-pointer bg-primary/5 border-primary/40 ring-1 ring-primary/20"
+                        >
+                          <div className="flex items-center justify-center w-5 h-5 rounded-full border shrink-0 bg-surface transition-colors border-primary">
+                            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                          </div>
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-[12px] sm:text-[13px] truncate font-bold text-primary">{domain.name}</span>
+                              {apiDomains[0]?.id === domain.id && (
+                                <span className="px-1.5 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-[9px] font-black shrink-0 leading-none">Mặc định</span>
+                              )}
+                            </div>
+                            <span className="text-[10px] sm:text-[11px] truncate opacity-80 text-primary/80 font-medium">{domain.url}</span>
+                          </div>
+                          <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+                            <button 
+                              onClick={() => handleEditDomain(domain)}
+                              className="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-colors"
+                            >
+                              <Edit3 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Danh sách máy chủ ({apiDomains.filter(d => d.id !== (activeDomainId || apiDomains[0]?.id)).length})</span>
+                        <button 
+                          onClick={handleFetchDomainsFromAPI}
+                          disabled={isFetchingDomains}
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-colors disabled:opacity-50"
+                          title="Tải từ máy chủ"
+                        >
+                          <RefreshCw size={12} className={isFetchingDomains ? "animate-spin" : ""} />
+                        </button>
+                      </div>
+                      
+                      <div className="flex flex-col gap-2">
+                        {apiDomains.filter(d => d.id !== (activeDomainId || apiDomains[0]?.id)).map(domain => (
+                          <div 
+                            key={domain.id} 
+                            onClick={() => {
+                              if (testingDomainId === domain.id) return;
+                              handleSelectActiveDomain(domain.id);
+                            }}
+                            className={cn(
+                              "group flex items-center justify-between p-2.5 px-3 border rounded-xl gap-3 transition-colors cursor-pointer bg-surface-container-lowest border-outline-variant/20 hover:border-outline-variant/40 hover:bg-surface-container-lowest/80",
+                              testingDomainId === domain.id ? "opacity-50 cursor-not-allowed pointer-events-none" : ""
+                            )}
+                          >
+                            <div className="flex items-center justify-center w-5 h-5 rounded-full border shrink-0 bg-surface transition-colors border-outline-variant/40">
+                              {testingDomainId === domain.id ? (
+                                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                              ) : null}
+                            </div>
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="text-[12px] sm:text-[13px] truncate font-bold text-on-surface">{domain.name}</span>
+                                {apiDomains[0]?.id === domain.id && (
+                                  <span className="px-1.5 py-0.5 rounded-md bg-surface-container border border-outline-variant/30 text-on-surface-variant text-[9px] font-black shrink-0 leading-none">Mặc định</span>
+                                )}
+                              </div>
+                              <span className="text-[10px] sm:text-[11px] truncate opacity-80 text-on-surface-variant">{domain.url}</span>
+                            </div>
+                            <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+                              <button 
+                                onClick={() => handleEditDomain(domain)}
+                                className="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-highest transition-colors"
+                              >
+                                <Edit3 size={12} />
+                              </button>
+                              {apiDomains[0]?.id !== domain.id && (
+                                <button 
+                                  onClick={(e) => handleDeleteDomain(domain.id, e)}
+                                  className="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           )}
 
         </div>

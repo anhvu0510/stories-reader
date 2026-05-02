@@ -1,3 +1,5 @@
+import { showToast } from '../components/Toast';
+
 // API Types
 export interface Book {
   bookId: string;
@@ -137,12 +139,48 @@ const MOCK_CHAPTERS: Record<string, Chapter[]> = {
 
 
 // API Implementation
-export const getApiDomain = () => {
-  return localStorage.getItem('API_DOMAIN_CONFIG') || '';
+export interface ApiDomain {
+  id: string;
+  name: string;
+  url: string;
+}
+
+export const getApiDomains = (): ApiDomain[] => {
+  try {
+    const data = localStorage.getItem('API_DOMAINS_CONFIG');
+    if (data) {
+      const parsed = JSON.parse(data) as ApiDomain[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+    // Fallback to old config
+    const oldConfig = localStorage.getItem('API_DOMAIN_CONFIG');
+    if (oldConfig) {
+      return [{ id: 'legacy', name: 'Server Mặc định', url: oldConfig }];
+    }
+  } catch (e) {
+    console.warn("Failed to parse api domains");
+  }
+  return [];
+};
+
+export const getActiveDomain = (): ApiDomain | null => {
+  const domains = getApiDomains();
+  if (domains.length === 0) return null;
+  
+  const activeId = localStorage.getItem('ACTIVE_API_DOMAIN_ID');
+  if (activeId) {
+    const activeDomain = domains.find(d => d.id === activeId);
+    if (activeDomain) return activeDomain;
+  }
+  
+  // Backwards compatibility: fallback to first domain
+  return domains[0] || null;
 };
 
 const fetchWithRetry = async (path: string, options: RequestInit = {}, retries = 3): Promise<Response> => {
-  const domain = getApiDomain();
+  const domain = getActiveDomain();
   if (!domain) {
     throw new Error('API_DOMAIN_NOT_SET');
   }
@@ -153,25 +191,41 @@ const fetchWithRetry = async (path: string, options: RequestInit = {}, retries =
     ...options.headers,
   };
 
-  try {
-    const res = await fetch(`${domain}${path}`, { ...options, headers });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    return res;
-  } catch (err: any) {
-    if (err.message === 'API_DOMAIN_NOT_SET') throw err;
-    if (retries > 0) {
-      console.warn(`Request failed, retrying (${retries} retries left)...`, err);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return fetchWithRetry(path, options, retries - 1);
+  let attempts = retries;
+  while (attempts >= 0) {
+    try {
+      const res = await fetch(`${domain.url}${path}`, { ...options, headers });
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      return res;
+    } catch (err: any) {
+      if (attempts > 0) {
+        console.warn(`Request failed for domain ${domain.url}, retrying (${attempts} retries left)...`, err);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        attempts--;
+      } else {
+        showToast(`Không thể kết nối đến máy chủ. Vui lòng thử và chọn lại máy chủ khác.`, 'error');
+        window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
+        throw err;
+      }
     }
-    throw err;
   }
+
+  throw new Error('All requests failed');
 };
 
 const settingsCache: { [key: string]: { data: any; timestamp: number } } = {};
 const pendingSettingsRequests: { [key: string]: Promise<any> } = {};
 
 export const api = {
+  testConnection: async (domainUrl: string): Promise<boolean> => {
+    try {
+      // Just check any lightweight endpoint, or the health endpoint if it exists
+      const res = await fetch(`${domainUrl}/api/quota`);
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
   getBooks: async (page = 1, search = '', current?: string, limit = 20): Promise<{ data: Book[], pagination: any }> => {
     try {
       let url = `/api/books?page=${page}&limit=${limit}&search=${search}`;
@@ -328,17 +382,17 @@ export const api = {
     }
   },
 
-  getSettings: async (key: string): Promise<any> => {
+  getSettings: async (key: string, skipCache: boolean = false): Promise<any> => {
     const now = Date.now();
     const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes cache
     
     // 1. Check in-memory cache
-    if (settingsCache[key] && now - settingsCache[key].timestamp < CACHE_TTL_MS) {
+    if (!skipCache && settingsCache[key] && now - settingsCache[key].timestamp < CACHE_TTL_MS) {
       return settingsCache[key].data;
     }
 
     // 2. Avoid duplicate concurrent requests
-    if (pendingSettingsRequests[key]) {
+    if (!skipCache && pendingSettingsRequests[key]) {
       return pendingSettingsRequests[key];
     }
 
