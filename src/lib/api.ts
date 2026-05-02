@@ -179,8 +179,6 @@ export const getActiveDomain = (): ApiDomain | null => {
   return domains[0] || null;
 };
 
-let consecutiveDomainFailures = 0;
-
 const fetchWithRetry = async (path: string, options: RequestInit = {}, retries = 3): Promise<Response> => {
   let domain = getActiveDomain();
   if (!domain) {
@@ -194,46 +192,49 @@ const fetchWithRetry = async (path: string, options: RequestInit = {}, retries =
   };
 
   let attempts = retries;
+  let lastErr: any;
+  
   while (attempts >= 0) {
     try {
       const res = await fetch(`${domain.url}${path}`, { ...options, headers });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      consecutiveDomainFailures = 0; // reset on success
       return res;
     } catch (err: any) {
+      lastErr = err;
       if (attempts > 0) {
         console.warn(`Request failed for domain ${domain.url}, retrying (${attempts} retries left)...`, err);
         await new Promise(resolve => setTimeout(resolve, 500));
         attempts--;
       } else {
-        consecutiveDomainFailures++;
-        if (consecutiveDomainFailures >= 3) {
-          showToast(`Máy chủ hiện tại không phản hồi. Đang tự động chuyển về máy chủ mặc định...`, 'error');
-          localStorage.removeItem('ACTIVE_API_DOMAIN_ID');
-          consecutiveDomainFailures = 0;
-          
-          const defaultDomain = getActiveDomain();
-          if (defaultDomain && defaultDomain.url !== domain.url) {
-            domain = defaultDomain;
-            try {
-              const fallbackRes = await fetch(`${domain.url}${path}`, { ...options, headers });
-              if (!fallbackRes.ok) throw new Error(`HTTP error! status: ${fallbackRes.status}`);
-              return fallbackRes;
-            } catch (fallbackErr) {
-              window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
-              throw fallbackErr;
-            }
-          }
-        }
-        
-        showToast(`Không thể kết nối đến máy chủ. Vui lòng thử và chọn lại máy chủ khác.`, 'error');
-        window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
-        throw err;
+        break; // exhausted retries on active domain
       }
     }
   }
 
-  throw new Error('All requests failed');
+  // Active domain failed 'retries' times.
+  // Fallback to default domain
+  const domains = getApiDomains();
+  const defaultDomain = domains[0];
+  
+  if (defaultDomain && defaultDomain.url !== domain.url) {
+     console.warn(`Mất kết nối với ${domain.url}, thử lại máy chủ mặc định...`);
+     showToast(`Đang chuyển về máy chủ mặc định...`, 'error');
+     localStorage.removeItem('ACTIVE_API_DOMAIN_ID');
+     
+     try {
+       const fallbackRes = await fetch(`${defaultDomain.url}${path}`, { ...options, headers });
+       if (!fallbackRes.ok) throw new Error(`HTTP error! status: ${fallbackRes.status}`);
+       return fallbackRes;
+     } catch (fallbackErr) {
+       showToast(`Không thể kết nối đến máy chủ mặc định!`, 'error');
+       window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
+       throw fallbackErr;
+     }
+  }
+
+  showToast(`Không thể kết nối đến máy chủ. Vui lòng thử và chọn lại máy chủ khác.`, 'error');
+  window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
+  throw lastErr;
 };
 
 const settingsCache: { [key: string]: { data: any; timestamp: number } } = {};
