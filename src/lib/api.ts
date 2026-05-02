@@ -179,8 +179,10 @@ export const getActiveDomain = (): ApiDomain | null => {
   return domains[0] || null;
 };
 
+let consecutiveDomainFailures = 0;
+
 const fetchWithRetry = async (path: string, options: RequestInit = {}, retries = 3): Promise<Response> => {
-  const domain = getActiveDomain();
+  let domain = getActiveDomain();
   if (!domain) {
     throw new Error('API_DOMAIN_NOT_SET');
   }
@@ -196,6 +198,7 @@ const fetchWithRetry = async (path: string, options: RequestInit = {}, retries =
     try {
       const res = await fetch(`${domain.url}${path}`, { ...options, headers });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      consecutiveDomainFailures = 0; // reset on success
       return res;
     } catch (err: any) {
       if (attempts > 0) {
@@ -203,6 +206,26 @@ const fetchWithRetry = async (path: string, options: RequestInit = {}, retries =
         await new Promise(resolve => setTimeout(resolve, 500));
         attempts--;
       } else {
+        consecutiveDomainFailures++;
+        if (consecutiveDomainFailures >= 3) {
+          showToast(`Máy chủ hiện tại không phản hồi. Đang tự động chuyển về máy chủ mặc định...`, 'error');
+          localStorage.removeItem('ACTIVE_API_DOMAIN_ID');
+          consecutiveDomainFailures = 0;
+          
+          const defaultDomain = getActiveDomain();
+          if (defaultDomain && defaultDomain.url !== domain.url) {
+            domain = defaultDomain;
+            try {
+              const fallbackRes = await fetch(`${domain.url}${path}`, { ...options, headers });
+              if (!fallbackRes.ok) throw new Error(`HTTP error! status: ${fallbackRes.status}`);
+              return fallbackRes;
+            } catch (fallbackErr) {
+              window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
+              throw fallbackErr;
+            }
+          }
+        }
+        
         showToast(`Không thể kết nối đến máy chủ. Vui lòng thử và chọn lại máy chủ khác.`, 'error');
         window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
         throw err;
