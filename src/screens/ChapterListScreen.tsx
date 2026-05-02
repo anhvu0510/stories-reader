@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Search, SortDesc, CheckCircle2, Lock, ArrowLeft, Loader2, ArrowRight, AlertCircle, Clock, Settings } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Search, SortDesc, CheckCircle2, Lock, ArrowLeft, Loader2, ArrowRight, AlertCircle, Clock, Settings, RefreshCw } from 'lucide-react';
 import { api, Chapter, Book } from '../lib/api';
 import { AppView } from '../App';
 import { TranslationSheet } from '../components/TranslationSheet';
@@ -36,8 +36,23 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
   const [showTranslation, setShowTranslation] = useState(false);
   const [showGlobalSettings, setShowGlobalSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
 
-  const limit = 9999;
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  
+  const lastElementRef = useCallback((node: HTMLDivElement | null) => {
+    if (isLoading || isFetchingMore) return;
+    if (observerRef.current) observerRef.current.disconnect();
+    
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && pagination.currentPage < pagination.totalPages) {
+        setPage(p => p + 1);
+      }
+    });
+
+    if (node) observerRef.current.observe(node);
+  }, [isLoading, isFetchingMore, pagination.currentPage, pagination.totalPages]);
+  const limit = 50;
 
   useEffect(() => {
     // In a real app we'd fetch this specific book's details. For now filter from list.
@@ -49,23 +64,46 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(1); // Reset page on new search
+      if (debouncedSearch !== search) {
+        setDebouncedSearch(search);
+        setPage(1); // Reset page on new search
+      }
     }, 500);
     return () => clearTimeout(handler);
-  }, [search]);
+  }, [search, debouncedSearch]);
+
+  const handleFilterChange = (state: 'all' | 'PENDING') => {
+    setFilterState(state);
+    setPage(1);
+  };
+
+  const handleSortChange = () => {
+    setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC');
+    setPage(1);
+  };
 
   useEffect(() => {
     let active = true;
-    setIsLoading(true);
+    if (page === 1) {
+      setIsLoading(true);
+    } else {
+      setIsFetchingMore(true);
+    }
+    
     api.getChapters(bookId, page, limit, sortBy, sortOrder, filterState, debouncedSearch).then(res => {
       if (!active) return;
-      setChapters(res.chapters || []);
+      if (page === 1) {
+        setChapters(res.chapters || []);
+      } else {
+        setChapters(prev => [...prev, ...(res.chapters || [])]);
+      }
       setPagination(res.pagination || { currentPage: 1, totalPages: 1, total: 0 });
       setIsLoading(false);
+      setIsFetchingMore(false);
     }).catch(() => {
       if (!active) return;
       setIsLoading(false);
+      setIsFetchingMore(false);
     });
     
     return () => { active = false; };
@@ -125,13 +163,13 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
       <main className="max-w-reading-max-width mx-auto px-4 py-4 w-full pb-32">
         <div className="flex bg-surface-container-low p-1 rounded-full border border-outline-variant/30 w-full mb-4">
           <button 
-            onClick={() => { setFilterState('all'); setPage(1); }}
+            onClick={() => handleFilterChange('all')}
             className={`flex-1 px-4 py-2.5 text-[13px] font-medium rounded-full transition-all ${filterState === 'all' ? 'bg-surface-bright text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
           >
             Tất cả
           </button>
           <button 
-            onClick={() => { setFilterState('PENDING'); setPage(1); }}
+            onClick={() => handleFilterChange('PENDING')}
             className={`flex-1 px-4 py-2.5 text-[13px] font-medium rounded-full transition-all ${filterState === 'PENDING' ? 'bg-surface-bright text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
           >
             Chưa dịch
@@ -150,7 +188,7 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
             />
           </div>
           <button 
-            onClick={() => setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC')}
+            onClick={handleSortChange}
             className="flex items-center justify-center bg-transparent border border-outline-variant/50 rounded-full w-9 h-9 text-on-surface hover:bg-surface-variant transition-colors flex-shrink-0"
           >
             <SortDesc size={16} className={`transition-transform duration-300 ${sortOrder === 'ASC' ? 'rotate-180' : ''}`} />
@@ -253,7 +291,20 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
             );
           })}
 
-          {chapters.length === 0 && (
+          {chapters.length > 0 && pagination.currentPage < pagination.totalPages && (
+            <div ref={lastElementRef} className="py-6 flex justify-center items-center">
+              {isFetchingMore ? (
+                <div className="flex flex-col items-center text-on-surface-variant">
+                   <Loader2 className="animate-spin mb-2" size={24} />
+                   <span className="text-xs">Đang tải thêm...</span>
+                </div>
+              ) : (
+                <div className="h-[40px]"></div>
+              )}
+            </div>
+          )}
+
+          {chapters.length === 0 && !isLoading && (
             <div className="py-12 flex flex-col items-center justify-center text-center">
               <p className="text-sm text-on-surface-variant mt-4">Không tìm thấy chương nào.</p>
             </div>
