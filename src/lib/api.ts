@@ -179,8 +179,10 @@ export const getActiveDomain = (): ApiDomain | null => {
   return domains[0] || null;
 };
 
-const fetchWithRetry = async (path: string, options: RequestInit = {}, retries = 3): Promise<Response> => {
-  let domain = getActiveDomain();
+let globalConsecutiveFailures = 0;
+
+const fetchWithRetry = async (path: string, options: RequestInit = {}): Promise<Response> => {
+  const domain = getActiveDomain();
   if (!domain) {
     throw new Error('API_DOMAIN_NOT_SET');
   }
@@ -191,50 +193,23 @@ const fetchWithRetry = async (path: string, options: RequestInit = {}, retries =
     ...options.headers,
   };
 
-  let attempts = retries;
-  let lastErr: any;
-  
-  while (attempts >= 0) {
-    try {
-      const res = await fetch(`${domain.url}${path}`, { ...options, headers });
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      return res;
-    } catch (err: any) {
-      lastErr = err;
-      if (attempts > 0) {
-        console.warn(`Request failed for domain ${domain.url}, retrying (${attempts} retries left)...`, err);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        attempts--;
-      } else {
-        break; // exhausted retries on active domain
-      }
+  try {
+    const res = await fetch(`${domain.url}${path}`, { ...options, headers });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    
+    globalConsecutiveFailures = 0;
+    return res;
+  } catch (err: any) {
+    globalConsecutiveFailures++;
+    
+    if (globalConsecutiveFailures >= 3) {
+      globalConsecutiveFailures = 0; // Reset after triggering
+      showToast(`Máy chủ không phản hồi sau nhiều lần thử. Vui lòng kiểm tra lại cấu hình.`, 'error');
+      window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
     }
+    
+    throw err;
   }
-
-  // Active domain failed 'retries' times.
-  // Fallback to default domain
-  const domains = getApiDomains();
-  const defaultDomain = domains[0];
-  
-  if (defaultDomain && defaultDomain.url !== domain.url) {
-     console.warn(`Mất kết nối với ${domain.url}, thử lại máy chủ mặc định...`);
-     showToast(`Đang chuyển về máy chủ mặc định...`, 'error');
-     localStorage.removeItem('ACTIVE_API_DOMAIN_ID');
-     
-     try {
-       const fallbackRes = await fetch(`${defaultDomain.url}${path}`, { ...options, headers });
-       if (!fallbackRes.ok) throw new Error(`HTTP error! status: ${fallbackRes.status}`);
-       return fallbackRes;
-     } catch (fallbackErr) {
-       showToast(`Không thể kết nối đến máy chủ mặc định!`, 'error');
-       window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
-       throw fallbackErr;
-     }
-  }
-
-  showToast(`Không thể kết nối đến máy chủ. Vui lòng thử và chọn lại máy chủ khác.`, 'error');
-  window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
-  throw lastErr;
 };
 
 const settingsCache: { [key: string]: { data: any; timestamp: number } } = {};
@@ -581,7 +556,7 @@ export const api = {
     const res = await fetchWithRetry(`/stories/gemini-ai/translate`, {
       method: 'POST',
       body: JSON.stringify(data)
-    }, 0); // DO NOT retry POST translations
+    }); // DO NOT retry POST translations
     if (data.mode === 'current') {
       return await res.json();
     }

@@ -22,7 +22,24 @@ export function ToastContainer() {
 
   useEffect(() => {
     toastListener = setToast;
-    return () => { toastListener = null; };
+    
+    const handleAppToast = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        setToast({
+          id: Date.now().toString(),
+          message: customEvent.detail.message,
+          type: customEvent.detail.type || 'info'
+        });
+      }
+    };
+    
+    window.addEventListener('app-toast', handleAppToast);
+    
+    return () => { 
+      toastListener = null; 
+      window.removeEventListener('app-toast', handleAppToast);
+    };
   }, []);
 
   useEffect(() => {
