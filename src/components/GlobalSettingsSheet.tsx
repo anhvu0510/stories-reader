@@ -197,13 +197,19 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
     try {
       const res = await fetch(`${domainUrl.trim()}/api/stories/setting/stories.ui.domain`);
       if (res.ok) {
-        const info = await res.json();
-        if (info && info.name && !domainName.trim()) {
-          finalDomainName = info.name;
+        const data = await res.json();
+        const serverName = typeof data === 'string' ? data : (data?.name || data?.value || data?.title);
+        if (serverName && typeof serverName === 'string' && !domainName.trim()) {
+          finalDomainName = serverName;
         }
+      } else {
+        // If domain setting API isn't active, fail the submission!
+        showToast('Máy chủ không phản hồi hoặc URL không hợp lệ.', 'error');
+        return;
       }
     } catch (e) {
-      // Ignore network error on save, just use default/input
+      showToast('Máy chủ không phản hồi hoặc URL không hợp lệ.', 'error');
+      return;
     }
 
     let newDomains = [...apiDomains];

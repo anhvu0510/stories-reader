@@ -96,16 +96,17 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
         
         if (res.ok) {
           try {
-            const info = await res.json();
-            if (info && info.name) {
+            const data = await res.json();
+            const serverName = typeof data === 'string' ? data : (data?.name || data?.value || data?.title);
+            if (serverName && typeof serverName === 'string') {
               const domainsData = localStorage.getItem('API_DOMAINS_CONFIG');
               if (domainsData) {
                 let currentDomains = JSON.parse(domainsData);
                 if (Array.isArray(currentDomains)) {
                   let updated = false;
-                  currentDomains = currentDomains.map(d => {
+                  currentDomains = currentDomains.map((d: any) => {
                     if (d.url === activeDomainUrl && (d.name === 'Server Mặc định' || !d.name)) {
-                      d.name = info.name;
+                      d.name = serverName;
                       updated = true;
                     }
                     return d;
@@ -117,14 +118,24 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
           } catch(e) {}
           setShowSettings(false);
         } else {
-          setShowSettings(true);
+          // If they fail to connect to activeDomainUrl but it exists, open the server switch setting.
+          setShowSettings(false);
+          window.dispatchEvent(new CustomEvent('app-toast', { 
+            detail: { message: 'Máy chủ mặc định không phản hồi. Vui lòng chọn máy chủ khác.', type: 'error' }
+          }));
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
+          }, 500);
         }
       } catch (err) {
-        // Network error or timeout -> force showing settings
-        setShowSettings(true);
+        // Network error or timeout -> force showing setting switch options
+        setShowSettings(false);
         window.dispatchEvent(new CustomEvent('app-toast', { 
-          detail: { message: 'Không thể kết nối với máy chủ mặc định.', type: 'error' }
+          detail: { message: 'Không thể kết nối với máy chủ.', type: 'error' }
         }));
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
+        }, 500);
       } finally {
         setIsInitializing(false);
       }
@@ -155,13 +166,16 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
         const res = await fetch(`${newDomain.url}/api/stories/setting/stories.ui.domain`).catch(() => null);
         if (!res || !res.ok) {
           window.dispatchEvent(new CustomEvent('app-toast', { 
-            detail: { message: 'Máy chủ không phản hồi mong đợi. Vẫn tiếp tục lưu!', type: 'error' }
+            detail: { message: 'Máy chủ không phản hồi hoặc URL không hợp lệ.', type: 'error' }
           }));
+          setIsTesting(false);
+          return; // Failed to validate -> abort saving!
         } else {
           try {
-            const info = await res.json();
-            if (info && info.name && (!nameInput.trim() || nameInput.trim() === 'Server Mặc định')) {
-              newDomain.name = info.name;
+            const data = await res.json();
+            const serverName = typeof data === 'string' ? data : (data?.name || data?.value || data?.title);
+            if (serverName && typeof serverName === 'string' && (!nameInput.trim() || nameInput.trim() === 'Server Mặc định')) {
+              newDomain.name = serverName;
             }
           } catch(e) {}
         }
