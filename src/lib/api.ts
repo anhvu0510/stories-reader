@@ -179,7 +179,7 @@ export const getActiveDomain = (): ApiDomain | null => {
   return domains[0] || null;
 };
 
-const fetchWithRetry = async (path: string, options: RequestInit = {}, retries = 2, timeout = 2000): Promise<Response> => {
+const fetchWithRetry = async (path: string, options: RequestInit = {}, retries = 0, timeout = 2000): Promise<Response> => {
   const domain = getActiveDomain();
   if (!domain) {
     throw new Error('API_DOMAIN_NOT_SET');
