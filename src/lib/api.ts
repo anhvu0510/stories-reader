@@ -179,9 +179,7 @@ export const getActiveDomain = (): ApiDomain | null => {
   return domains[0] || null;
 };
 
-let globalConsecutiveFailures = 0;
-
-const fetchWithRetry = async (path: string, options: RequestInit = {}): Promise<Response> => {
+const fetchWithRetry = async (path: string, options: RequestInit = {}, retries = 2): Promise<Response> => {
   const domain = getActiveDomain();
   if (!domain) {
     throw new Error('API_DOMAIN_NOT_SET');
@@ -193,23 +191,39 @@ const fetchWithRetry = async (path: string, options: RequestInit = {}): Promise<
     ...options.headers,
   };
 
-  try {
-    const res = await fetch(`${domain.url}${path}`, { ...options, headers });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    
-    globalConsecutiveFailures = 0;
-    return res;
-  } catch (err: any) {
-    globalConsecutiveFailures++;
-    
-    if (globalConsecutiveFailures >= 3) {
-      globalConsecutiveFailures = 0; // Reset after triggering
-      showToast(`Máy chủ không phản hồi sau nhiều lần thử. Vui lòng kiểm tra lại cấu hình.`, 'error');
-      window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
+  let attempts = 0;
+  let lastError: any;
+
+  while (attempts <= retries) {
+    try {
+      const controller = new AbortController();
+      const timeoutMillis = 15000; // 15s timeout
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMillis);
+
+      const res = await fetch(`${domain.url}${path}`, { 
+        ...options, 
+        headers,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      
+      return res; // Success
+    } catch (err: any) {
+      lastError = err;
+      attempts++;
+      if (attempts <= retries) {
+        console.warn(`Request failed (${attempts}/${retries + 1}), retrying...`, err);
+        await new Promise(resolve => setTimeout(resolve, 800)); // 800ms delay between retries
+      }
     }
-    
-    throw err;
   }
+
+  // If we reach here, all retries failed
+  showToast(`Máy chủ không phản hồi sau 3 lần thử. Vui lòng kiểm tra lại.`, 'error');
+  window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
+  throw lastError;
 };
 
 const settingsCache: { [key: string]: { data: any; timestamp: number } } = {};
@@ -556,7 +570,7 @@ export const api = {
     const res = await fetchWithRetry(`/stories/gemini-ai/translate`, {
       method: 'POST',
       body: JSON.stringify(data)
-    }); // DO NOT retry POST translations
+    }, 0); // DO NOT retry POST translations
     if (data.mode === 'current') {
       return await res.json();
     }
