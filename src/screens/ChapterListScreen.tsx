@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, SortDesc, CheckCircle2, Lock, ArrowLeft, Loader2, ArrowRight, AlertCircle, Clock, Settings, RefreshCw } from 'lucide-react';
+import { Search, SortDesc, CheckCircle2, Lock, ArrowLeft, Loader2, ArrowRight, AlertCircle, Clock, Settings } from 'lucide-react';
 import { api, Chapter, Book } from '../lib/api';
 import { AppView } from '../App';
 import { TranslationSheet } from '../components/TranslationSheet';
@@ -36,23 +36,20 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
   const [showTranslation, setShowTranslation] = useState(false);
   const [showGlobalSettings, setShowGlobalSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+  const limit = 50;
 
   const observerRef = useRef<IntersectionObserver | null>(null);
-  
-  const lastElementRef = useCallback((node: HTMLDivElement | null) => {
-    if (isLoading || isFetchingMore) return;
+  const lastChapterElementRef = useCallback((node: HTMLAnchorElement | null) => {
+    if (isLoading) return;
     if (observerRef.current) observerRef.current.disconnect();
-    
     observerRef.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && pagination.currentPage < pagination.totalPages) {
-        setPage(p => p + 1);
+      if (entries[0].isIntersecting && page < pagination.totalPages) {
+        setPage(prevPage => prevPage + 1);
       }
     });
-
     if (node) observerRef.current.observe(node);
-  }, [isLoading, isFetchingMore, pagination.currentPage, pagination.totalPages]);
-  const limit = 50;
+  }, [isLoading, page, pagination.totalPages]);
 
   useEffect(() => {
     // In a real app we'd fetch this specific book's details. For now filter from list.
@@ -64,46 +61,23 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (debouncedSearch !== search) {
-        setDebouncedSearch(search);
-        setPage(1); // Reset page on new search
-      }
+      setDebouncedSearch(search);
+      setPage(1); // Reset page on new search
     }, 500);
     return () => clearTimeout(handler);
-  }, [search, debouncedSearch]);
-
-  const handleFilterChange = (state: 'all' | 'PENDING') => {
-    setFilterState(state);
-    setPage(1);
-  };
-
-  const handleSortChange = () => {
-    setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC');
-    setPage(1);
-  };
+  }, [search]);
 
   useEffect(() => {
     let active = true;
-    if (page === 1) {
-      setIsLoading(true);
-    } else {
-      setIsFetchingMore(true);
-    }
-    
+    setIsLoading(true);
     api.getChapters(bookId, page, limit, sortBy, sortOrder, filterState, debouncedSearch).then(res => {
       if (!active) return;
-      if (page === 1) {
-        setChapters(res.chapters || []);
-      } else {
-        setChapters(prev => [...prev, ...(res.chapters || [])]);
-      }
+      setChapters(prev => page === 1 ? (res.chapters || []) : [...prev, ...(res.chapters || [])]);
       setPagination(res.pagination || { currentPage: 1, totalPages: 1, total: 0 });
       setIsLoading(false);
-      setIsFetchingMore(false);
     }).catch(() => {
       if (!active) return;
       setIsLoading(false);
-      setIsFetchingMore(false);
     });
     
     return () => { active = false; };
@@ -163,13 +137,13 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
       <main className="max-w-reading-max-width mx-auto px-4 py-4 w-full pb-32">
         <div className="flex bg-surface-container-low p-1 rounded-full border border-outline-variant/30 w-full mb-4">
           <button 
-            onClick={() => handleFilterChange('all')}
+            onClick={() => { setFilterState('all'); setPage(1); }}
             className={`flex-1 px-4 py-2.5 text-[13px] font-medium rounded-full transition-all ${filterState === 'all' ? 'bg-surface-bright text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
           >
             Tất cả
           </button>
           <button 
-            onClick={() => handleFilterChange('PENDING')}
+            onClick={() => { setFilterState('PENDING'); setPage(1); }}
             className={`flex-1 px-4 py-2.5 text-[13px] font-medium rounded-full transition-all ${filterState === 'PENDING' ? 'bg-surface-bright text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
           >
             Chưa dịch
@@ -188,7 +162,7 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
             />
           </div>
           <button 
-            onClick={handleSortChange}
+            onClick={() => { setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC'); setPage(1); }}
             className="flex items-center justify-center bg-transparent border border-outline-variant/50 rounded-full w-9 h-9 text-on-surface hover:bg-surface-variant transition-colors flex-shrink-0"
           >
             <SortDesc size={16} className={`transition-transform duration-300 ${sortOrder === 'ASC' ? 'rotate-180' : ''}`} />
@@ -210,13 +184,15 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
         )}
 
         <div className="flex flex-col gap-2.5 sm:gap-3">
-          {chapters.map((chapter) => {
+          {chapters.map((chapter, index) => {
             const isPending = chapter.state === 'PENDING';
             const isFailed = chapter.state === 'FAILED';
             const isSucceeded = chapter.state === 'SUCCEEDED';
+            const isLast = index === chapters.length - 1;
             
             return (
               <a 
+                ref={isLast ? lastChapterElementRef : null}
                 key={chapter.chapterId}
                 onClick={(e) => {
                   e.preventDefault();
@@ -291,22 +267,15 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
             );
           })}
 
-          {chapters.length > 0 && pagination.currentPage < pagination.totalPages && (
-            <div ref={lastElementRef} className="py-6 flex justify-center items-center">
-              {isFetchingMore ? (
-                <div className="flex flex-col items-center text-on-surface-variant">
-                   <Loader2 className="animate-spin mb-2" size={24} />
-                   <span className="text-xs">Đang tải thêm...</span>
-                </div>
-              ) : (
-                <div className="h-[40px]"></div>
-              )}
-            </div>
-          )}
-
           {chapters.length === 0 && !isLoading && (
             <div className="py-12 flex flex-col items-center justify-center text-center">
               <p className="text-sm text-on-surface-variant mt-4">Không tìm thấy chương nào.</p>
+            </div>
+          )}
+          
+          {isLoading && (
+            <div className="py-6 flex justify-center w-full">
+              <Loader2 className="animate-spin text-primary" size={24} />
             </div>
           )}
         </div>
@@ -332,7 +301,7 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
         onTabSelect={(t) => onNavigate({ type: 'library', tab: t })} 
       />
       
-      <LoadingOverlay isLoading={isLoading} message="Đang tải danh sách chương..." />
+      <LoadingOverlay isLoading={isLoading && page === 1} message="Đang tải danh sách chương..." />
     </>
   );
 }

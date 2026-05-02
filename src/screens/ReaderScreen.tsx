@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
-import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle, Settings, Sparkles, BookOpen, PlayCircle, PauseCircle, Search, StopCircle, SkipForward, Play, Pause } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
+import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle, Settings, Sparkles, BookOpen, PlayCircle, PauseCircle, Search, StopCircle, SkipForward, Play, Pause, Loader2 } from 'lucide-react';
 import { AppView } from '../App';
 import { api, ChapterContent, Chapter } from '../lib/api';
 import { TranslationSheet } from '../components/TranslationSheet';
@@ -71,6 +71,18 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
   useEffect(() => {
     fetchChapter();
   }, [chapterId, groupLines, isEnabledReplace]);
+
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const lastChapterElementRef = useCallback((node: HTMLButtonElement | null) => {
+    if (isLoadingChapters) return;
+    if (observerRef.current) observerRef.current.disconnect();
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMoreChapters) {
+        loadMoreChapters(drawerPage);
+      }
+    });
+    if (node) observerRef.current.observe(node);
+  }, [isLoadingChapters, hasMoreChapters, drawerPage]);
 
   const loadMoreChapters = async (pageToLoad: number, overrideSearch?: string) => {
     const currentSearch = typeof overrideSearch !== 'undefined' ? overrideSearch : drawerSearch;
@@ -312,14 +324,16 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
             ) : (
               <>
                 <div className="flex flex-col gap-1.5 pb-4">
-                  {bookChapters.map((chap) => {
+                  {bookChapters.map((chap, index) => {
                     const isActive = chap.chapterId === chapterId;
                     const isPending = chap.state === 'PENDING';
                     const isFailed = chap.state === 'FAILED';
                     const isSucceeded = chap.state === 'SUCCEEDED';
+                    const isLast = index === bookChapters.length - 1;
 
                     return (
                       <button
+                        ref={isLast ? lastChapterElementRef : null}
                         key={chap.chapterId}
                         disabled={!isSucceeded && !isPending}
                         className={`w-full text-left flex items-start gap-3 p-3 rounded-xl transition-all border ${
@@ -372,14 +386,10 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
                     );
                   })}
                 </div>
-                {hasMoreChapters && (
-                   <button 
-                     onClick={() => loadMoreChapters(drawerPage)}
-                     disabled={isLoadingChapters}
-                     className="w-full text-center py-3 text-sm text-primary hover:bg-surface-container-high rounded-xl mt-2"
-                   >
-                     {isLoadingChapters ? 'Đang tải...' : 'Tải thêm'}
-                   </button>
+                {isLoadingChapters && bookChapters.length > 0 && (
+                  <div className="py-6 flex justify-center w-full">
+                    <Loader2 className="animate-spin text-primary" size={24} />
+                  </div>
                 )}
               </>
             )}

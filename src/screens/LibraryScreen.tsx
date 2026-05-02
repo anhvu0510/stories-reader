@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { User, Search, MoreVertical, BookOpen, Settings, History, Sparkles, Library, X, Clock, Loader2, Save, ArrowRight, Lock } from 'lucide-react';
 import { api, Book } from '../lib/api';
@@ -38,12 +38,24 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
     return () => clearTimeout(timer);
   }, [search]);
 
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const lastBookElementRef = useCallback((node: HTMLElement | null) => {
+    if (isLoading) return;
+    if (observerRef.current) observerRef.current.disconnect();
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setPage(prevPage => prevPage + 1);
+      }
+    });
+    if (node) observerRef.current.observe(node);
+  }, [isLoading, hasMore]);
+
   const loadBooks = async (pageNum: number, searchKeyword: string, currentTab: string) => {
     setIsLoading(true);
     try {
       if (currentTab === 'ai') {
         const res = await api.getBooks(pageNum, searchKeyword, currentTab.toUpperCase(), 20);
-        setAiBooks(res.data);
+        setAiBooks(prev => pageNum === 1 ? res.data : [...prev, ...res.data]);
         if (res.pagination) {
           const totalPages = Number(res.pagination.totalPages) || 1;
           setAiPagination({ currentPage: pageNum, totalPages });
@@ -51,7 +63,7 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
         }
       } else {
         const res = await api.getBooks(pageNum, searchKeyword, currentTab.toUpperCase(), 20);
-        setBooks(res.data);
+        setBooks(prev => pageNum === 1 ? res.data : [...prev, ...res.data]);
         if (res.pagination) {
           const totalPages = Number(res.pagination.totalPages) || 1;
           setBooksPagination({ currentPage: pageNum, totalPages });
@@ -70,6 +82,13 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
     loadBooks(1, debouncedSearch, activeTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, debouncedSearch]);
+
+  useEffect(() => {
+    if (page > 1) {
+      loadBooks(page, debouncedSearch, activeTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const currentPagination = activeTab === 'ai' ? aiPagination : booksPagination;
 
@@ -153,31 +172,22 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
                  search ? 'Không tìm thấy truyện phù hợp.' : 'Thư viện trống.'}
               </p>
               
-              {currentPagination.totalPages > 1 && (
+              {isLoading && currentPagination.currentPage === 1 && (
                 <div className="flex items-center gap-2 mt-6">
-                  <button 
-                    onClick={() => handlePageChange(currentPagination.currentPage - 1)}
-                    disabled={isLoading || currentPagination.currentPage === 1}
-                    className="flex-1 flex justify-center items-center gap-2 px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                  >
-                    Trang trước
-                  </button>
-                  <button 
-                    onClick={() => handlePageChange(currentPagination.currentPage + 1)}
-                    disabled={isLoading || currentPagination.currentPage >= currentPagination.totalPages}
-                    className="flex-1 flex justify-center items-center gap-2 px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-primary rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                  >
-                    {isLoading ? <Loader2 size={16} className="animate-spin" /> : 'Trang sau'}
-                  </button>
+                  <div className="flex-1 flex justify-center items-center gap-2 px-4 py-2.5 bg-surface-container-high rounded-xl font-medium opacity-50 text-sm">
+                    Đang tải...
+                  </div>
                 </div>
               )}
             </div>
-          ) : displayedBooks.map((book) => {
+          ) : displayedBooks.map((book, index) => {
             const isRead = book.totalTranslated > 0;
             const progress = book.chapterCount > 0 ? (book.totalTranslated / book.chapterCount) * 100 : 0;
+            const isLast = index === displayedBooks.length - 1;
             
             return (
             <article 
+              ref={isLast ? lastBookElementRef : null}
               key={book.bookId}
               onClick={() => book?.lastReadChapter && activeTab === 'history' ? onNavigate({ type: 'reader', bookId: book.bookId, chapterId: book.lastReadChapter.chapterId, rootTab: activeTab }) : onNavigate({ type: 'book', bookId: book.bookId, filterState: activeTab === 'ai' ? 'PENDING' : 'all', rootTab: activeTab })}
               className={`relative overflow-hidden block rounded-2xl p-3.5 sm:p-4 transition-all duration-300 group cursor-pointer ${
@@ -248,29 +258,9 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
             </article>
           )})}
           
-          {displayedBooks.length > 0 && activeTab !== 'history' && currentPagination.totalPages > 1 && (
-            <div className="flex items-center justify-between pt-6 pb-8 border-t border-outline-variant/20 mt-4">
-              <button 
-                onClick={() => handlePageChange(currentPagination.currentPage - 1)}
-                disabled={isLoading || currentPagination.currentPage <= 1}
-                className="flex items-center gap-1.5 px-4 py-2 border border-outline-variant/50 hover:bg-surface-container-high text-on-surface rounded-lg font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed text-sm bg-surface-container-low"
-              >
-                Trang trước
-              </button>
-              
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-on-surface">
-                  Trang {currentPagination.currentPage} / {currentPagination.totalPages}
-                </span>
-              </div>
-              
-              <button 
-                onClick={() => handlePageChange(currentPagination.currentPage + 1)}
-                disabled={isLoading || currentPagination.currentPage >= currentPagination.totalPages}
-                className="flex items-center gap-1.5 px-4 py-2 border border-outline-variant/50 hover:bg-surface-container-high text-on-surface rounded-lg font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed text-sm bg-surface-container-low"
-              >
-                Trang sau
-              </button>
+          {displayedBooks.length > 0 && isLoading && page > 1 && (
+            <div className="py-6 flex justify-center w-full">
+              <Loader2 className="animate-spin text-primary" size={24} />
             </div>
           )}
         </section>
@@ -282,7 +272,7 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
 
       <BottomDock activeTab={activeTab} onTabSelect={setActiveTab} />
 
-      <LoadingOverlay isLoading={isLoading} message="Đang tải danh sách truyện..." />
+      <LoadingOverlay isLoading={isLoading && page === 1} message="Đang tải danh sách truyện..." />
     </>
   );
 }
