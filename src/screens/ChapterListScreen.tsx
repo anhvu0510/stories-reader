@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, SortDesc, CheckCircle2, Lock, ArrowLeft, Loader2, ArrowRight, AlertCircle, Clock, Settings } from 'lucide-react';
+import { Search, SortDesc, ArrowLeft, Loader2, AlertCircle, Clock, Settings } from 'lucide-react';
 import { api, Chapter, Book } from '../lib/api';
 import { AppView } from '../App';
 import { TranslationSheet } from '../components/TranslationSheet';
 import { GlobalSettingsSheet } from '../components/GlobalSettingsSheet';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { BottomDock } from '../components/BottomDock';
+import { ChapterList } from '../components/ChapterList';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -184,88 +185,14 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
         )}
 
         <div className="flex flex-col gap-2.5 sm:gap-3">
-          {chapters.map((chapter, index) => {
-            const isPending = chapter.state === 'PENDING';
-            const isFailed = chapter.state === 'FAILED';
-            const isSucceeded = chapter.state === 'SUCCEEDED';
-            const isLast = index === chapters.length - 1;
-            
-            return (
-              <a 
-                ref={isLast ? lastChapterElementRef : null}
-                key={chapter.chapterId}
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (isSucceeded || isPending) onNavigate({ type: 'reader', bookId, chapterId: chapter.chapterId , rootTab });
-                }}
-                className={`relative overflow-hidden block rounded-2xl p-3.5 sm:p-4 transition-all duration-300 group
-                  ${isSucceeded ? 'bg-surface-container-low border border-outline-variant/30 shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:bg-surface-container hover:border-primary/40 focus:border-primary/40 cursor-pointer active:scale-[0.98]' : 
-                    isPending ? 'bg-surface border border-outline-variant/20 hover:border-outline-variant/40 cursor-pointer active:scale-[0.98]' : 
-                    'bg-surface-container-lowest border border-transparent opacity-60 cursor-not-allowed'}
-                `}
-              >
-                {/* Subtle side indicator */}
-                <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${
-                  isSucceeded ? 'bg-primary/20 group-hover:bg-primary/60' :
-                  isPending ? 'bg-warning/20 group-hover:bg-warning/50' :
-                  'bg-error/20'
-                }`} />
-
-                <div className="flex items-center gap-3.5 sm:gap-4 pl-1">
-                  {/* Left Number Badge */}
-                  <div className={`shrink-0 w-[42px] h-[42px] sm:w-[48px] sm:h-[48px] rounded-full flex flex-col items-center justify-center border font-bold transition-colors ${
-                    isSucceeded ? 'bg-primary/10 text-primary border-primary/20 group-hover:bg-primary group-hover:text-on-primary' :
-                    isPending ? 'bg-warning/10 text-warning border-warning/20' :
-                    'bg-error/10 text-error border-error/20'
-                  }`}>
-                    <span className="text-[9px] sm:text-[10px] leading-none opacity-80 mt-0.5">CH</span>
-                    <span className="text-[14px] sm:text-[16px] leading-none mt-0.5">{chapter.chapterNumber}</span>
-                  </div>
-
-                  {/* Middle Content */}
-                  <div className="flex-1 min-w-0 py-0.5 flex flex-col justify-center">
-                    <h3 className={`text-[14px] sm:text-[15px] font-semibold leading-[1.3] truncate mb-1 ${
-                      isSucceeded ? 'text-on-surface group-hover:text-primary transition-colors' :
-                      isPending ? 'text-on-surface-variant' :
-                      'text-on-surface-variant/70'
-                    }`}>
-                      {chapter.title || `Chương ${chapter.chapterNumber}`}
-                    </h3>
-
-                    <div className="flex items-center flex-wrap gap-2.5">
-                      <div className="flex items-center text-[10px] sm:text-[11px] text-on-surface-variant/70 font-medium">
-                        <Clock size={10} className="mr-1 opacity-70 shrink-0" />
-                        <span className="truncate">{formatDate(chapter.updatedAt)}</span>
-                      </div>
-                      
-                      {isPending && (
-                        <div className="flex items-center text-[9px] sm:text-[10px] font-bold text-warning uppercase tracking-wide bg-warning/10 px-1.5 py-0.5 rounded shrink-0">
-                          <Lock size={10} className="mr-1" /> Chờ dịch
-                        </div>
-                      )}
-                      
-                      {isFailed && (
-                        <div className="flex items-center text-[9px] sm:text-[10px] font-bold text-error uppercase tracking-wide bg-error/10 px-1.5 py-0.5 rounded shrink-0">
-                          <AlertCircle size={10} className="mr-1" /> Lỗi dịch
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right Arrow (Optionally display status icon if not succeeded) */}
-                  <div className="shrink-0 pr-1">
-                    {isSucceeded ? (
-                      <ArrowRight size={18} className="text-on-surface-variant/30 group-hover:text-primary transition-colors transform group-hover:translate-x-0.5" />
-                    ) : isPending ? (
-                       <Lock size={16} className="text-warning/40" />
-                    ) : (
-                       <AlertCircle size={16} className="text-error/50" />
-                    )}
-                  </div>
-                </div>
-              </a>
-            );
-          })}
+          <ChapterList 
+            chapters={chapters} 
+            variant="detailed"
+            onChapterClick={(chapter) => {
+              onNavigate({ type: 'reader', bookId, chapterId: chapter.chapterId, rootTab });
+            }}
+            lastChapterElementRef={lastChapterElementRef}
+          />
 
           {chapters.length === 0 && !isLoading && (
             <div className="py-12 flex flex-col items-center justify-center text-center">

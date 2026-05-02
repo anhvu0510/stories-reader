@@ -8,6 +8,7 @@ import { LoadingOverlay } from '../components/LoadingOverlay';
 import { useReaderSettings } from '../contexts/ReaderContext';
 import { useReadAloud } from '../hooks/useReadAloud';
 import { cn } from '../lib/utils';
+import { ChapterList } from '../components/ChapterList';
 
 const ContentRenderer = memo(({ paragraphs }: { paragraphs: string[] }) => {
   return (
@@ -323,69 +324,17 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
               <div className="flex justify-center items-center h-20 text-on-surface-variant text-sm">Đang tải mục lục...</div>
             ) : (
               <>
-                <div className="flex flex-col gap-1.5 pb-4">
-                  {bookChapters.map((chap, index) => {
-                    const isActive = chap.chapterId === chapterId;
-                    const isPending = chap.state === 'PENDING';
-                    const isFailed = chap.state === 'FAILED';
-                    const isSucceeded = chap.state === 'SUCCEEDED';
-                    const isLast = index === bookChapters.length - 1;
-
-                    return (
-                      <button
-                        ref={isLast ? lastChapterElementRef : null}
-                        key={chap.chapterId}
-                        disabled={!isSucceeded && !isPending}
-                        className={`w-full text-left flex items-start gap-3 p-3 rounded-xl transition-all border ${
-                          isActive 
-                            ? 'bg-primary/10 border-primary/30 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-primary/20' 
-                            : isSucceeded 
-                              ? 'bg-surface border-transparent hover:bg-surface-container-high active:scale-[0.98]' 
-                              : isPending
-                                ? 'bg-surface border-transparent opacity-80 hover:bg-surface-container-high active:scale-[0.98]'
-                                : 'bg-surface-container-lowest border-transparent opacity-50 cursor-not-allowed'
-                        }`}
-                        onClick={() => {
-                          if (isSucceeded || isPending) {
-                            stopReading();
-                            setShowChapterDrawer(false);
-                            onNavigate({ type: 'reader', bookId, chapterId: chap.chapterId, rootTab });
-                          }
-                        }}
-                      >
-                        <div className={`mt-0.5 shrink-0 flex items-center justify-center w-6 h-6 rounded-full border ${
-                          isActive ? 'bg-primary text-on-primary border-primary' :
-                          isSucceeded ? 'bg-surface-container-high text-on-surface-variant border-outline-variant/30' :
-                          isPending ? 'bg-warning/10 text-warning border-warning/20' :
-                          'bg-error/10 text-error border-error/20'
-                        }`}>
-                          {isActive ? <div className="w-1.5 h-1.5 rounded-full bg-current" /> :
-                           isSucceeded ? <span className="text-[10px] font-bold">{chap.chapterNumber}</span> :
-                           isPending ? <Lock size={12} /> :
-                           <AlertCircle size={12} />}
-                        </div>
-                        <div className="flex flex-col flex-1 min-w-0">
-                          <span className={`text-[13px] sm:text-[14px] leading-tight line-clamp-2 ${
-                            isActive ? 'text-primary font-bold' : 
-                            isSucceeded ? 'text-on-surface font-medium' :
-                            'text-on-surface-variant'
-                          }`}>
-                            {isActive && <span className="mr-1">Chương {chap.chapterNumber}:</span>}
-                            {!isActive && isSucceeded && <span className="mr-1 opacity-70">Chương {chap.chapterNumber}:</span>}
-                            {chap.title || 'Chương không có tựa đề'}
-                          </span>
-                          {!isSucceeded && (
-                            <span className={`text-[10px] font-semibold mt-1 tracking-wide uppercase ${
-                              isPending ? 'text-warning' : 'text-error'
-                            }`}>
-                              {isPending ? 'Chờ dịch' : 'Lỗi'}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                <ChapterList
+                  chapters={bookChapters}
+                  variant="compact"
+                  activeChapterId={chapterId}
+                  onChapterClick={(chap) => {
+                    stopReading();
+                    setShowChapterDrawer(false);
+                    onNavigate({ type: 'reader', bookId, chapterId: chap.chapterId, rootTab });
+                  }}
+                  lastChapterElementRef={lastChapterElementRef}
+                />
                 {isLoadingChapters && bookChapters.length > 0 && (
                   <div className="py-6 flex justify-center w-full">
                     <Loader2 className="animate-spin text-primary" size={24} />
