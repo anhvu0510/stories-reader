@@ -53,29 +53,84 @@ function AppContent() {
 
 function ApplicationGate({ children }: { children: React.ReactNode }) {
   const [showSettings, setShowSettings] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [nameInput, setNameInput] = useState('');
   const [domainInput, setDomainInput] = useState('');
   const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
-    let hasDomains = false;
-    
-    try {
-      const domainsData = localStorage.getItem('API_DOMAINS_CONFIG');
-      if (domainsData) {
-        const parsed = JSON.parse(domainsData);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          hasDomains = true;
+    const checkConnection = async () => {
+      let activeDomainUrl = '';
+      
+      try {
+        const domainsData = localStorage.getItem('API_DOMAINS_CONFIG');
+        const activeDomainId = localStorage.getItem('ACTIVE_API_DOMAIN_ID');
+        if (domainsData) {
+          const parsed = JSON.parse(domainsData);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const activeDomain = parsed.find(d => d.id === activeDomainId) || parsed[0];
+            activeDomainUrl = activeDomain.url;
+          }
+        }
+      } catch {}
+
+      if (!activeDomainUrl) {
+        const legacyDomain = localStorage.getItem('API_DOMAIN_CONFIG');
+        if (legacyDomain) {
+          activeDomainUrl = legacyDomain;
         }
       }
-    } catch {}
+      
+      if (!activeDomainUrl) {
+        setShowSettings(true);
+        setIsInitializing(false);
+        return;
+      }
 
-    const legacyDomain = localStorage.getItem('API_DOMAIN_CONFIG');
-    if (legacyDomain) hasDomains = true;
-    
-    if (!hasDomains) {
-      setShowSettings(true);
-    }
+      // Check connection
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(`${activeDomainUrl}/api/stories/setting/stories.ui.domain`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (res.ok) {
+          try {
+            const info = await res.json();
+            if (info && info.name) {
+              const domainsData = localStorage.getItem('API_DOMAINS_CONFIG');
+              if (domainsData) {
+                let currentDomains = JSON.parse(domainsData);
+                if (Array.isArray(currentDomains)) {
+                  let updated = false;
+                  currentDomains = currentDomains.map(d => {
+                    if (d.url === activeDomainUrl && (d.name === 'Server Mặc định' || !d.name)) {
+                      d.name = info.name;
+                      updated = true;
+                    }
+                    return d;
+                  });
+                  if (updated) localStorage.setItem('API_DOMAINS_CONFIG', JSON.stringify(currentDomains));
+                }
+              }
+            }
+          } catch(e) {}
+          setShowSettings(false);
+        } else {
+          setShowSettings(true);
+        }
+      } catch (err) {
+        // Network error or timeout -> force showing settings
+        setShowSettings(true);
+        window.dispatchEvent(new CustomEvent('app-toast', { 
+          detail: { message: 'Không thể kết nối với máy chủ mặc định.', type: 'error' }
+        }));
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    checkConnection();
   }, []);
 
   const handleSave = async () => {
@@ -88,25 +143,55 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
       };
       
       try {
-        const res = await fetch(`${newDomain.url}/api/quota`).catch(() => null);
+        let currentDomains = [];
+        try {
+          const domainsData = localStorage.getItem('API_DOMAINS_CONFIG');
+          if (domainsData) {
+            currentDomains = JSON.parse(domainsData);
+            if (!Array.isArray(currentDomains)) currentDomains = [];
+          }
+        } catch {}
+
+        const res = await fetch(`${newDomain.url}/api/stories/setting/stories.ui.domain`).catch(() => null);
         if (!res || !res.ok) {
           window.dispatchEvent(new CustomEvent('app-toast', { 
             detail: { message: 'Máy chủ không phản hồi mong đợi. Vẫn tiếp tục lưu!', type: 'error' }
           }));
+        } else {
+          try {
+            const info = await res.json();
+            if (info && info.name && (!nameInput.trim() || nameInput.trim() === 'Server Mặc định')) {
+              newDomain.name = info.name;
+            }
+          } catch(e) {}
         }
-      } catch {
-        window.dispatchEvent(new CustomEvent('app-toast', { 
-          detail: { message: 'Máy chủ không phản hồi mong đợi. Vẫn tiếp tục lưu!', type: 'error' }
-        }));
-      } finally {
-        setIsTesting(false);
-        localStorage.setItem('API_DOMAINS_CONFIG', JSON.stringify([newDomain]));
+
+        currentDomains.push(newDomain);
+        localStorage.setItem('API_DOMAINS_CONFIG', JSON.stringify(currentDomains));
         localStorage.setItem('ACTIVE_API_DOMAIN_ID', newDomain.id);
         setShowSettings(false);
         window.location.reload();
+      } catch {
+        window.dispatchEvent(new CustomEvent('app-toast', { 
+          detail: { message: 'Có lỗi xảy ra khi lưu máy chủ.', type: 'error' }
+        }));
+      } finally {
+        setIsTesting(false);
       }
     }
   };
+
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center font-sans">
+        <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center mb-6 shadow-sm ring-1 ring-primary/20 relative">
+          <BookOpen size={28} className="animate-pulse" />
+          <div className="absolute inset-0 border-2 border-primary/30 rounded-3xl animate-ping opacity-50" />
+        </div>
+        <div className="text-on-surface-variant font-medium text-[15px] animate-pulse">Đang kết nối máy chủ...</div>
+      </div>
+    );
+  }
 
   return (
     <>

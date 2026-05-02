@@ -188,16 +188,31 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
     }
   };
 
-  const handleSaveDomain = () => {
-    if (!domainName.trim() || !domainUrl.trim()) return;
+  const handleSaveDomain = async () => {
+    if (!domainUrl.trim()) return;
     
+    let finalDomainName = domainName.trim() || 'Server Mặc định';
+    
+    // Check server info
+    try {
+      const res = await fetch(`${domainUrl.trim()}/api/stories/setting/stories.ui.domain`);
+      if (res.ok) {
+        const info = await res.json();
+        if (info && info.name && !domainName.trim()) {
+          finalDomainName = info.name;
+        }
+      }
+    } catch (e) {
+      // Ignore network error on save, just use default/input
+    }
+
     let newDomains = [...apiDomains];
     if (editingDomainId) {
-      newDomains = newDomains.map(d => d.id === editingDomainId ? { ...d, name: domainName, url: domainUrl } : d);
+      newDomains = newDomains.map(d => d.id === editingDomainId ? { ...d, name: finalDomainName, url: domainUrl } : d);
     } else {
       newDomains.push({
         id: Date.now().toString(),
-        name: domainName,
+        name: finalDomainName,
         url: domainUrl
       });
     }
@@ -685,7 +700,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                     </button>
                     <button 
                       onClick={handleSaveDomain}
-                      disabled={!domainName.trim() || !domainUrl.trim()}
+                      disabled={!domainUrl.trim()}
                       className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#b47a18] text-black hover:bg-[#c98a1b] disabled:opacity-50 transition-colors flex items-center gap-1.5"
                     >
                       <Save size={12} /> Lưu lại

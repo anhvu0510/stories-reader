@@ -179,7 +179,7 @@ export const getActiveDomain = (): ApiDomain | null => {
   return domains[0] || null;
 };
 
-const fetchWithRetry = async (path: string, options: RequestInit = {}, retries = 0, timeout = 2000): Promise<Response> => {
+const fetchWithRetry = async (path: string, options: RequestInit = {}, retries = 1, timeout = 1000): Promise<Response> => {
   const domain = getActiveDomain();
   if (!domain) {
     throw new Error('API_DOMAIN_NOT_SET');
@@ -221,7 +221,7 @@ const fetchWithRetry = async (path: string, options: RequestInit = {}, retries =
   }
 
   // If we reach here, all retries failed
-  showToast(`Máy chủ không phản hồi sau 3 lần thử. Vui lòng kiểm tra lại.`, 'error');
+  showToast(`Máy chủ không phản hồi. Vui lòng kiểm tra lại.`, 'error');
   window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
   throw lastError;
 };
@@ -233,7 +233,7 @@ export const api = {
   testConnection: async (domainUrl: string): Promise<boolean> => {
     try {
       // Just check any lightweight endpoint, or the health endpoint if it exists
-      const res = await fetch(`${domainUrl}/api/quota`);
+      const res = await fetch(`${domainUrl}/api/stories/setting/stories.ui.domain`);
       return res.ok;
     } catch {
       return false;
@@ -245,7 +245,7 @@ export const api = {
       if (current) {
         url += `&tab=${current}`;
       }
-      const res = await fetchWithRetry(url, {}, 2, 2000);
+      const res = await fetchWithRetry(url, {}, 1, 1000);
       return await res.json();
     } catch (e: any) {
       if (e.message === 'API_DOMAIN_NOT_SET') {
@@ -412,7 +412,7 @@ export const api = {
     // 3. Fetch from API
     const request = (async () => {
       try {
-        const res = await fetchWithRetry(`/api/stories/setting/${key}`, {}, 2, 2000);
+        const res = await fetchWithRetry(`/api/stories/setting/${key}`, {}, 1, 1000);
         const data = await res.json();
         settingsCache[key] = { data, timestamp: Date.now() };
         try { localStorage.setItem(`setting_${key}`, JSON.stringify(data)); } catch(e){}
