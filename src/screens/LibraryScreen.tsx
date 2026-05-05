@@ -208,8 +208,11 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
               if (book?.lastReadChapter && activeTab === 'history') {
                 return `#/${rTab}/${book.bookId}/${book.lastReadChapter.chapterId}`;
               } else {
-                const filterState = activeTab === 'ai' ? '?filterState=PENDING' : '';
-                return `#/${rTab}/${book.bookId}${filterState}`;
+                const qs = new URLSearchParams();
+                if (activeTab === 'ai') qs.set('filterState', 'PENDING');
+                qs.set('bookName', book.bookName);
+                const filterStateStr = qs.toString() ? `?${qs.toString()}` : '';
+                return `#/${rTab}/${book.bookId}${filterStateStr}`;
               }
             };
             
@@ -225,7 +228,7 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
                   if (book?.lastReadChapter && activeTab === 'history') {
                     onNavigate({ type: 'reader', bookId: book.bookId, chapterId: book.lastReadChapter.chapterId, rootTab: activeTab });
                   } else {
-                    onNavigate({ type: 'book', bookId: book.bookId, filterState: activeTab === 'ai' ? 'PENDING' : 'all', rootTab: activeTab });
+                    onNavigate({ type: 'book', bookId: book.bookId, filterState: activeTab === 'ai' ? 'PENDING' : 'all', rootTab: activeTab, bookName: book.bookName });
                   }
                 }
               }}

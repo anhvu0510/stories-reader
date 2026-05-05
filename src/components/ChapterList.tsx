@@ -25,6 +25,7 @@ interface ChapterListProps {
   activeChapterId?: string;
   onChapterClick: (chapter: Chapter) => void;
   lastChapterElementRef?: (node: HTMLElement | null) => void;
+  firstChapterElementRef?: (node: HTMLElement | null) => void;
 }
 
 export function ChapterList({ 
@@ -33,6 +34,7 @@ export function ChapterList({
   activeChapterId,
   onChapterClick,
   lastChapterElementRef,
+  firstChapterElementRef
 }: ChapterListProps) {
   if (variant === 'compact') {
     return (
@@ -43,10 +45,15 @@ export function ChapterList({
           const isFailed = chap.state === 'FAILED';
           const isSucceeded = chap.state === 'SUCCEEDED';
           const isLast = index === chapters.length - 1;
+          const isFirst = index === 0;
 
           return (
             <button
-              ref={isLast ? (lastChapterElementRef as any) : null}
+              id={`chapter-${chap.chapterId}`}
+              ref={(node) => {
+                if (isLast && lastChapterElementRef) (lastChapterElementRef as any)(node);
+                if (isFirst && firstChapterElementRef) (firstChapterElementRef as any)(node);
+              }}
               key={chap.chapterId}
               disabled={!isSucceeded && !isPending}
               className={`w-full text-left flex items-start gap-3 p-3 rounded-xl transition-all border ${
@@ -107,11 +114,17 @@ export function ChapterList({
         const isPending = chapter.state === 'PENDING';
         const isFailed = chapter.state === 'FAILED';
         const isSucceeded = chapter.state === 'SUCCEEDED';
+        const isActive = chapter.chapterId === activeChapterId;
         const isLast = index === chapters.length - 1;
+        const isFirst = index === 0;
         
         return (
           <button 
-            ref={isLast ? (lastChapterElementRef as any) : null}
+            id={`chapter-${chapter.chapterId}`}
+            ref={(node) => {
+              if (isLast && lastChapterElementRef) (lastChapterElementRef as any)(node);
+              if (isFirst && firstChapterElementRef) (firstChapterElementRef as any)(node);
+            }}
             key={chapter.chapterId}
             disabled={!isSucceeded && !isPending}
             onClick={(e) => {
@@ -120,6 +133,7 @@ export function ChapterList({
               }
             }}
             className={`cursor-pointer w-full text-left relative overflow-hidden block rounded-2xl p-3.5 sm:p-4 transition-all duration-300 group ${
+              isActive ? 'bg-primary/5 border border-primary/40 shadow-[0_2px_12px_rgba(var(--color-primary-rgb),0.15)] ring-1 ring-primary/20' :
               isSucceeded ? 'bg-surface-container-low border border-outline-variant/30 shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:bg-surface-container hover:border-primary/40 focus:border-primary/40 active:scale-[0.98]' : 
               isPending ? 'bg-surface border border-outline-variant/20 hover:border-outline-variant/40 active:scale-[0.98]' : 
               'bg-surface-container-lowest border border-transparent opacity-60 cursor-not-allowed'
@@ -127,6 +141,7 @@ export function ChapterList({
           >
             {/* Subtle side indicator */}
             <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${
+              isActive ? 'bg-primary' :
               isSucceeded ? 'bg-primary/20 group-hover:bg-primary/60' :
               isPending ? 'bg-warning/20 group-hover:bg-warning/50' :
               'bg-error/20'
@@ -135,6 +150,7 @@ export function ChapterList({
             <div className="flex items-center gap-3.5 sm:gap-4 pl-1">
               {/* Left Number Badge */}
               <div className={`shrink-0 w-[42px] h-[42px] sm:w-[48px] sm:h-[48px] rounded-full flex flex-col items-center justify-center border font-bold transition-colors ${
+                isActive ? 'bg-primary text-on-primary border-primary' :
                 isSucceeded ? 'bg-primary/10 text-primary border-primary/20 group-hover:bg-primary group-hover:text-on-primary' :
                 isPending ? 'bg-warning/10 text-warning border-warning/20' :
                 'bg-error/10 text-error border-error/20'

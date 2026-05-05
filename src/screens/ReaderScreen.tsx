@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
-import { ArrowLeft, Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle, Settings, Sparkles, BookOpen, PlayCircle, PauseCircle, Search, StopCircle, SkipForward, Play, Pause, Loader2 } from 'lucide-react';
+import { Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle, Settings, Sparkles, BookOpen, PlayCircle, PauseCircle, Search, StopCircle, SkipForward, Play, Pause, Loader2, Clock } from 'lucide-react';
 import { AppView } from '../App';
-import { api, ChapterContent, Chapter } from '../lib/api';
+import { api, ChapterContent, Chapter, Book } from '../lib/api';
 import { TranslationSheet } from '../components/TranslationSheet';
 import { GlobalSettingsSheet } from '../components/GlobalSettingsSheet';
 import { LoadingOverlay } from '../components/LoadingOverlay';
@@ -23,13 +23,30 @@ const ContentRenderer = memo(({ paragraphs }: { paragraphs: string[] }) => {
 export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { bookId: string, chapterId: string, rootTab: string,  onNavigate: (v: AppView) => void }) {
   const [content, setContent] = useState<ChapterContent | null>(null);
   const [bookChapters, setBookChapters] = useState<Chapter[]>([]);
-  const [drawerPage, setDrawerPage] = useState(1);
-  const [hasMoreChapters, setHasMoreChapters] = useState(true);
+  const [minDrawerPage, setMinDrawerPage] = useState(1);
+  const [maxDrawerPage, setMaxDrawerPage] = useState(1);
+  const [hasMoreNextChapters, setHasMoreNextChapters] = useState(true);
+  const [hasMorePrevChapters, setHasMorePrevChapters] = useState(false);
   const [isLoadingChapters, setIsLoadingChapters] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
   const [showGlobalSettings, setShowGlobalSettings] = useState(false);
   const [showChapterDrawer, setShowChapterDrawer] = useState(false);
+  const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
+  const [historyBooks, setHistoryBooks] = useState<Book[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showControls, setShowControls] = useState(true);
+
+  const loadHistoryBooks = async () => {
+    setIsLoadingHistory(true);
+    try {
+      const res = await api.getBooks(1, '', 'HISTORY', 50);
+      setHistoryBooks(res.data.filter(b => b.totalTranslated > 0 || b.lastReadChapter));
+    } catch(e) {
+      console.error(e);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
   const [selectedText, setSelectedText] = useState('');
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [drawerSearch, setDrawerSearch] = useState('');
@@ -81,49 +98,95 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
 
   const loadingRequestRef = useRef(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const prevObserverRef = useRef<IntersectionObserver | null>(null);
+
   const lastChapterElementRef = useCallback((node: HTMLButtonElement | null) => {
     if (observerRef.current) observerRef.current.disconnect();
     if (isLoadingChapters) return;
-    
-    if (!hasMoreChapters) return;
+    if (!hasMoreNextChapters) return;
 
     observerRef.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMoreChapters && !isLoadingChapters) {
-        loadMoreChapters(drawerPage);
+      if (entries[0].isIntersecting && hasMoreNextChapters && !isLoadingChapters) {
+        loadChapters(maxDrawerPage + 1, 'append');
       }
     });
     if (node) observerRef.current.observe(node);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoadingChapters, hasMoreChapters, drawerPage]);
+  }, [isLoadingChapters, hasMoreNextChapters, maxDrawerPage]);
+
+  const firstChapterElementRef = useCallback((node: HTMLButtonElement | null) => {
+    if (prevObserverRef.current) prevObserverRef.current.disconnect();
+    if (isLoadingChapters) return;
+    if (!hasMorePrevChapters) return;
+
+    prevObserverRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMorePrevChapters && !isLoadingChapters) {
+        loadChapters(minDrawerPage - 1, 'prepend');
+      }
+    });
+    if (node) prevObserverRef.current.observe(node);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoadingChapters, hasMorePrevChapters, minDrawerPage]);
 
   const debouncedSearchRef = useRef(drawerSearch);
 
-  const loadMoreChapters = async (pageToLoad: number, overrideSearch?: string) => {
+  const loadChapters = async (pageToLoad: number, action: 'append' | 'prepend' | 'reset', overrideSearch?: string) => {
     const currentSearch = typeof overrideSearch !== 'undefined' ? overrideSearch : debouncedSearchRef.current;
-    if (pageToLoad > 1 && !hasMoreChapters) return;
+    
+    if (action === 'append' && !hasMoreNextChapters) return;
+    if (action === 'prepend' && !hasMorePrevChapters) return;
     
     const requestId = ++loadingRequestRef.current;
-    
-    if (pageToLoad === 1) {
-      setBookChapters([]);
-    }
     
     setIsLoadingChapters(true);
     try {
       const res = await api.getChapters(bookId, pageToLoad, 50, 'chapterNumber', 'ASC', undefined, currentSearch || undefined);
       if (loadingRequestRef.current !== requestId) return;
 
+      const newChaptersList = res.chapters || [];
+
       setBookChapters(prev => {
-        if (pageToLoad === 1) return res.chapters || [];
-        const newChapters = (res.chapters || []).filter(c => !prev.some(p => p.chapterId === c.chapterId));
-        return [...prev, ...newChapters];
+        if (action === 'reset') return newChaptersList;
+        
+        let merged = [...prev];
+        if (action === 'append') {
+          const toAdd = newChaptersList.filter(c => !merged.some(p => p.chapterId === c.chapterId));
+          merged = [...merged, ...toAdd];
+        } else if (action === 'prepend') {
+          const toAdd = newChaptersList.filter(c => !merged.some(p => p.chapterId === c.chapterId));
+          merged = [...toAdd, ...merged];
+        }
+        
+        return merged.sort((a, b) => a.chapterNumber - b.chapterNumber);
       });
-      if ((res.chapters || []).length === 0 || (res.chapters || []).length < 50 || pageToLoad >= (res.pagination?.totalPages || 1)) {
-        setHasMoreChapters(false);
-      } else {
-        setHasMoreChapters(true);
+
+      const totalPages = res.pagination?.totalPages || 1;
+
+      if (action === 'reset') {
+        setMinDrawerPage(pageToLoad);
+        setMaxDrawerPage(pageToLoad);
+        setHasMoreNextChapters(pageToLoad < totalPages);
+        setHasMorePrevChapters(pageToLoad > 1);
+      } else if (action === 'append') {
+        setMaxDrawerPage(pageToLoad);
+        if (newChaptersList.length === 0 || pageToLoad >= totalPages) {
+          setHasMoreNextChapters(false);
+        } else {
+          setHasMoreNextChapters(true);
+        }
+      } else if (action === 'prepend') {
+        setMinDrawerPage(pageToLoad);
+        if (pageToLoad <= 1) {
+          setHasMorePrevChapters(false);
+        } else {
+          setHasMorePrevChapters(true);
+        }
       }
-      setDrawerPage(pageToLoad + 1);
+
+      // If doing search, chapters might be small, reset previous
+      if (currentSearch) {
+        setHasMorePrevChapters(false);
+      }
     } catch (e) {
       if (loadingRequestRef.current !== requestId) return;
       console.error(e);
@@ -139,10 +202,11 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
   useEffect(() => {
     if (!showChapterDrawer) return;
     const timer = setTimeout(() => {
+      // If we are searching, we reset list
       if (prevSearchRef.current !== drawerSearch) {
         prevSearchRef.current = drawerSearch;
         debouncedSearchRef.current = drawerSearch;
-        loadMoreChapters(1, drawerSearch);
+        loadChapters(1, 'reset', drawerSearch);
       }
     }, 600);
     return () => clearTimeout(timer);
@@ -240,6 +304,18 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
     // Colors are now handled globally via CSS variables and data-theme
   }, []);
 
+  // Scroll to active chapter when drawer opens
+  useEffect(() => {
+    if (showChapterDrawer && bookChapters.length > 0) {
+      setTimeout(() => {
+        const el = document.getElementById(`chapter-${chapterId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+    }
+  }, [showChapterDrawer, bookChapters.length, chapterId]);
+
   if (!content) {
     return <div className="min-h-screen flex items-center justify-center bg-background text-on-surface">Đang tải nội dung...</div>;
   }
@@ -260,13 +336,6 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
         <div className="relative z-10 max-w-reading-max-width mx-auto w-full px-3 py-2 flex justify-between items-center h-14 sm:h-16 pt-[max(env(safe-area-inset-top),8px)]">
           <div className="flex items-center shrink-0 gap-2 w-[88px]">
             <button 
-              onClick={() => { stopReading(); onNavigate({ type: 'book', bookId, rootTab }); }} 
-              className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
-              title="Về chi tiết truyện"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <button 
               onClick={() => { stopReading(); onNavigate({ type: 'library' }); }} 
               className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
               title="Về trang chủ"
@@ -275,7 +344,11 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
             </button>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-2">
+          <button 
+            onClick={() => { stopReading(); onNavigate({ type: 'book', bookId, rootTab, focusChapterId: chapterId, focusChapterNumber: content.chapter.chapterNumber, bookName: content.chapter.bookName }); }}
+            className="flex-1 flex flex-col items-center justify-center min-w-0 px-2 cursor-pointer transition-opacity hover:opacity-80 active:opacity-70 bg-transparent border-none appearance-none"
+            title="Xem danh sách chương"
+          >
             <h1 className="font-sans font-extrabold truncate text-[13px] sm:text-base max-w-[150px] sm:max-w-md w-full text-center leading-tight text-on-surface tracking-tight">
               {content.chapter.bookName}
             </h1>
@@ -284,15 +357,29 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
                 Chương {content.chapter.chapterNumber}
               </span>
             </div>
-          </div>
+          </button>
           
-          <div className="flex items-center justify-end shrink-0 w-[88px]">
+          <div className="flex items-center justify-end shrink-0 gap-2 w-[88px]">
+            <button 
+              onClick={() => { 
+                setShowHistoryDrawer(true); 
+                setShowControls(false); 
+                if (historyBooks.length === 0) {
+                  loadHistoryBooks();
+                }
+              }}
+              className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
+              title="Lịch sử đọc"
+            >
+              <Clock size={20} />
+            </button>
             <button 
               onClick={() => { 
                 setShowChapterDrawer(true); 
                 setShowControls(false); 
                 if (bookChapters.length === 0) {
-                  loadMoreChapters(1);
+                  const startPage = content?.chapter?.chapterNumber ? Math.max(1, Math.ceil(content.chapter.chapterNumber / 50)) : 1;
+                  loadChapters(startPage, 'reset');
                 }
               }}
               className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
@@ -348,6 +435,11 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
               <div className="flex justify-center items-center h-20 text-on-surface-variant text-sm">Đang tải mục lục...</div>
             ) : (
               <>
+                {hasMorePrevChapters && (
+                  <div ref={firstChapterElementRef} className="h-4 w-full flex justify-center py-2 min-h-[40px]">
+                    {isLoadingChapters && <Loader2 className="animate-spin text-primary" size={20} />}
+                  </div>
+                )}
                 <ChapterList
                   chapters={bookChapters}
                   variant="compact"
@@ -358,10 +450,10 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
                     onNavigate({ type: 'reader', bookId, chapterId: chap.chapterId, rootTab });
                   }}
                 />
-                {hasMoreChapters && (
+                {hasMoreNextChapters && (
                   <div ref={lastChapterElementRef} className="h-4 w-full" aria-hidden="true" />
                 )}
-                {bookChapters.length > 0 && hasMoreChapters && (
+                {bookChapters.length > 0 && hasMoreNextChapters && (
                   <div className="py-6 flex justify-center w-full min-h-[72px]">
                     {isLoadingChapters && <Loader2 className="animate-spin text-primary" size={24} />}
                   </div>
@@ -376,6 +468,74 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
             >
               Xem chi tiết truyện
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* History Drawer */}
+      <div aria-hidden="true" className={cn(
+        "fixed inset-0 z-[100] flex justify-end transition-opacity duration-300",
+        showHistoryDrawer ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+      )}>
+        <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={() => setShowHistoryDrawer(false)} />
+        <div className={cn(
+          "w-[85%] max-w-sm bg-surface-container h-full relative flex flex-col shadow-2xl transition-transform duration-300",
+          showHistoryDrawer ? "translate-x-0" : "translate-x-full"
+        )}>
+          <div className="p-4 border-b border-surface-variant flex items-center justify-between">
+            <h2 className="font-serif text-lg font-bold">Lịch sử đọc</h2>
+            <button onClick={() => setShowHistoryDrawer(false)} className="p-2 text-on-surface-variant hover:text-on-surface rounded-full">
+              <X size={20} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto hide-scrollbar p-2">
+            {isLoadingHistory && historyBooks.length === 0 ? (
+              <div className="flex justify-center items-center h-20 text-on-surface-variant text-sm">Đang tải lịch sử...</div>
+            ) : historyBooks.length === 0 ? (
+              <div className="flex justify-center items-center h-20 text-on-surface-variant text-sm">Chưa có lịch sử.</div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {historyBooks.map(book => {
+                  const progress = book.chapterCount > 0 ? (book.totalTranslated / book.chapterCount) * 100 : 0;
+                  return (
+                    <button
+                      key={book.bookId}
+                      onClick={() => {
+                        stopReading();
+                        setShowHistoryDrawer(false);
+                        if (book.lastReadChapter) {
+                          onNavigate({ type: 'reader', bookId: book.bookId, chapterId: book.lastReadChapter.chapterId, rootTab });
+                        } else {
+                          onNavigate({ type: 'book', bookId: book.bookId, rootTab, filterState: 'all' });
+                        }
+                      }}
+                      className="w-full text-left flex items-start gap-3 p-3 rounded-xl transition-all border bg-surface-container-low border-outline-variant/30 hover:bg-surface-container hover:border-primary/40 focus:border-primary/40 active:scale-[0.98] cursor-pointer"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start gap-2 mb-1.5">
+                          <h4 className="font-semibold text-[13px] leading-snug line-clamp-2 text-on-surface group-hover:text-primary transition-colors">
+                            {book.bookName}
+                          </h4>
+                        </div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide bg-primary/10 text-primary border border-primary/20 shrink-0">
+                            C.{book.lastReadChapter?.chapterNumber || 1}
+                          </span>
+                          <span className="text-[11px] text-on-surface-variant truncate">
+                            {book.lastReadChapter?.title || 'Chưa đọc'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-on-surface-variant/70 font-medium bg-surface-variant/30 px-1.5 py-0.5 rounded">
+                            Tiến độ: {Math.round(progress)}%
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>

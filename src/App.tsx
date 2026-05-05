@@ -10,7 +10,7 @@ import { BookOpen } from 'lucide-react';
 
 export type AppView = 
   | { type: 'library', tab?: 'books' | 'history' | 'ai' }
-  | { type: 'book', bookId: string, filterState?: 'all' | 'PENDING', rootTab: string }
+  | { type: 'book', bookId: string, filterState?: 'all' | 'PENDING', rootTab: string, focusChapterId?: string, focusChapterNumber?: number, bookName?: string }
   | { type: 'reader', bookId: string, chapterId: string, rootTab: string };
 
 function BookProxy({ onNavigate }: { onNavigate: (v: AppView) => void }) {
@@ -18,7 +18,11 @@ function BookProxy({ onNavigate }: { onNavigate: (v: AppView) => void }) {
   const [searchParams] = useSearchParams();
   if (!bookId) return null;
   const filterState = searchParams.get('filterState') === 'PENDING' ? 'PENDING' : 'all';
-  return <ChapterListScreen bookId={bookId} filterState={filterState} rootTab={rootTab} onNavigate={onNavigate} />;
+  const focusChapterId = searchParams.get('focus') || undefined;
+  const focusChapterNumberStr = searchParams.get('focusNumber') || undefined;
+  const focusChapterNumber = focusChapterNumberStr ? parseInt(focusChapterNumberStr, 10) : undefined;
+  const bookNameParam = searchParams.get('bookName') || undefined;
+  return <ChapterListScreen bookId={bookId} filterState={filterState} rootTab={rootTab} focusChapterId={focusChapterId} focusChapterNumber={focusChapterNumber} initialBookName={bookNameParam} onNavigate={onNavigate} />;
 }
 
 function ReaderProxy({ onNavigate }: { onNavigate: (v: AppView) => void }) {
@@ -34,7 +38,13 @@ function AppContent() {
     if (view.type === 'library') {
       navigate(`/${view.tab ? `?tab=${view.tab}` : ''}`);
     } else if (view.type === 'book') {
-      navigate(`/${view.rootTab ?? 'NONE'}/${view.bookId}${view.filterState === 'PENDING' ? '?filterState=PENDING' : ''}`);
+      const qs = new URLSearchParams();
+      if (view.filterState === 'PENDING') qs.set('filterState', 'PENDING');
+      if (view.focusChapterId) qs.set('focus', view.focusChapterId);
+      if (view.focusChapterNumber) qs.set('focusNumber', view.focusChapterNumber.toString());
+      if (view.bookName) qs.set('bookName', view.bookName);
+      const qsStr = qs.toString();
+      navigate(`/${view.rootTab ?? 'NONE'}/${view.bookId}${qsStr ? `?${qsStr}` : ''}`);
     } else if (view.type === 'reader') {
       navigate(`/${view.rootTab ?? 'NONE'}/${view.bookId}/${view.chapterId}`);
     }

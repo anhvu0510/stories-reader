@@ -23,102 +23,173 @@ const formatDate = (dateStr: string) => {
   }
 };
 
-export function ChapterListScreen({ bookId, filterState: initialFilterState = 'all', rootTab, onNavigate }: { bookId: string, rootTab: string, filterState?: 'all' | 'PENDING', onNavigate: (v: AppView) => void }) {
+export function ChapterListScreen({ bookId, filterState: initialFilterState = 'all', rootTab, focusChapterId, focusChapterNumber, initialBookName, onNavigate }: { bookId: string, rootTab: string, filterState?: 'all' | 'PENDING', focusChapterId?: string, focusChapterNumber?: number, initialBookName?: string, onNavigate: (v: AppView) => void }) {
   const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [book, setBook] = useState<Book | null>(null);
+  const [book, setBook] = useState<Book | null>(initialBookName ? { bookId, bookName: initialBookName, chapterCount: 0, totalTranslated: 0, totalPending: 0, createdAt: '', updatedAt: '', lastReadChapter: null as any } : null);
   
-  const [page, setPage] = useState(1);
+  const limit = 50;
+  // Calculate initial page assuming ordered by chapterNumber ascending
+  const initialPage = focusChapterNumber ? Math.max(1, Math.ceil(focusChapterNumber / limit)) : 1;
+  const [minPage, setMinPage] = useState(initialPage);
+  const [maxPage, setMaxPage] = useState(initialPage);
+  const [hasMoreNext, setHasMoreNext] = useState(true);
+  const [hasMorePrev, setHasMorePrev] = useState(initialPage > 1);
+
   const [sortBy] = useState('chapterNumber');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('ASC');
   const [filterState, setFilterState] = useState<'all' | 'PENDING'>(initialFilterState);
+  
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, total: 0 });
+
+  // Track if we've successfully scrolled to the focused chapter to avoid repeated scrolling
+  const [hasScrolled, setHasScrolled] = useState(false);
+
+  useEffect(() => {
+    if (focusChapterId && !hasScrolled && chapters.length > 0) {
+      const el = document.getElementById(`chapter-${focusChapterId}`);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setHasScrolled(true);
+          // Highlight the flash briefly
+          el.classList.add('bg-primary/10');
+          setTimeout(() => el.classList.remove('bg-primary/10'), 1500);
+        }, 300);
+      }
+    }
+  }, [focusChapterId, chapters, hasScrolled]);
+
   const [showTranslation, setShowTranslation] = useState(false);
   const [showGlobalSettings, setShowGlobalSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-
-  const limit = 50;
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const lastChapterElementRef = useCallback((node: HTMLAnchorElement | null) => {
     if (observerRef.current) observerRef.current.disconnect();
-    if (isLoading || !hasMore) return;
+    if (isLoading || !hasMoreNext) return;
     
     // Safety check in case pagination data is stale
-    if (page >= pagination.totalPages && pagination.totalPages > 0) return;
+    if (maxPage >= pagination.totalPages && pagination.totalPages > 0) return;
 
     observerRef.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore && !isLoading) {
-        setPage(prevPage => prevPage + 1);
+      if (entries[0].isIntersecting && hasMoreNext && !isLoading) {
+        loadChapters(maxPage + 1, 'append');
       }
     });
     if (node) observerRef.current.observe(node);
-  }, [isLoading, page, pagination.totalPages, hasMore]);
+  }, [isLoading, maxPage, pagination.totalPages, hasMoreNext]);
+
+  const prevObserverRef = useRef<IntersectionObserver | null>(null);
+  const firstChapterElementRef = useCallback((node: HTMLAnchorElement | null) => {
+    if (prevObserverRef.current) prevObserverRef.current.disconnect();
+    if (isLoading || !hasMorePrev) return;
+
+    prevObserverRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMorePrev && !isLoading) {
+        loadChapters(minPage - 1, 'prepend');
+      }
+    });
+    if (node) prevObserverRef.current.observe(node);
+  }, [isLoading, minPage, hasMorePrev]);
 
   useEffect(() => {
-    // In a real app we'd fetch this specific book's details. For now filter from list.
-    api.getBooks().then(res => {
-      const b = res.data.find(x => x.bookId === bookId);
-      if (b) setBook(b);
+    // In a real app we'd fetch this specific book's details. For now filter from list or search by name
+    api.getBooks(1, initialBookName || '').then(res => {
+      const b = res.data.find(x => x.bookId === bookId) || res.data[0];
+      if (b && b.bookId === bookId) setBook(b);
     });
-  }, [bookId]);
+  }, [bookId, initialBookName]);
+
+  const prevSearchRef = useRef(debouncedSearch);
 
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1); // Reset page on new search
     }, 500);
     return () => clearTimeout(handler);
   }, [search]);
 
   const loadingRequestRef = useRef(0);
 
-  useEffect(() => {
-    // Reset pagination state immediately when dependencies change to prevent stale observer triggers
-    if (page === 1) {
-      setPagination({ currentPage: 1, totalPages: 1, total: 0 });
-      // Clearing chapters early prevents UI jumping and old data acting as stale state.
-      setChapters([]);
-      setHasMore(true);
-    }
+  const loadChapters = async (pageToLoad: number, action: 'append' | 'prepend' | 'reset', overrideSearch?: string) => {
+    const currentSearch = typeof overrideSearch !== 'undefined' ? overrideSearch : debouncedSearch;
     
-    let active = true;
-    const reqId = ++loadingRequestRef.current;
-    
-    const fetchChaptersData = async () => {
-      setIsLoading(true);
-      try {
-        const res = await api.getChapters(bookId, page, limit, sortBy, sortOrder, filterState, debouncedSearch);
-        if (!active || loadingRequestRef.current !== reqId) return;
-        
-        const newChapters = res.chapters || [];
-        setChapters(prev => page === 1 ? newChapters : [...prev, ...newChapters]);
-        setPagination(res.pagination || { currentPage: 1, totalPages: 1, total: 0 });
-        
-        const maxPages = res.pagination ? Math.max(1, Number(res.pagination.totalPages) || 1) : 1;
-        if (newChapters.length === 0 || newChapters.length < limit || page >= maxPages) {
-          setHasMore(false);
-        } else {
-          setHasMore(true);
-        }
-      } catch (e) {
-        console.error("Failed to fetch chapters:", e);
-        if (active && loadingRequestRef.current === reqId) {
-          setHasMore(false);
-        }
-      } finally {
-        if (loadingRequestRef.current === reqId) {
-          setIsLoading(false);
-        }
-      }
-    };
+    if (action === 'append' && !hasMoreNext) return;
+    if (action === 'prepend' && !hasMorePrev) return;
 
-    fetchChaptersData();
-    
-    return () => { active = false; };
-  }, [bookId, page, limit, sortBy, sortOrder, filterState, debouncedSearch]);
+    const reqId = ++loadingRequestRef.current;
+    setIsLoading(true);
+
+    try {
+      const res = await api.getChapters(bookId, pageToLoad, limit, sortBy, sortOrder, filterState, currentSearch);
+      if (loadingRequestRef.current !== reqId) return;
+
+      const newChapters = res.chapters || [];
+      
+      setChapters(prev => {
+        if (action === 'reset') return newChapters;
+        let merged = [...prev];
+        if (action === 'append') {
+          const toAdd = newChapters.filter((c: Chapter) => !merged.some(p => p.chapterId === c.chapterId));
+          merged = [...merged, ...toAdd];
+        } else if (action === 'prepend') {
+          const toAdd = newChapters.filter((c: Chapter) => !merged.some(p => p.chapterId === c.chapterId));
+          merged = [...toAdd, ...merged];
+        }
+        return merged.sort((a, b) => sortOrder === 'ASC' ? a.chapterNumber - b.chapterNumber : b.chapterNumber - a.chapterNumber);
+      });
+
+      setPagination(res.pagination || { currentPage: 1, totalPages: 1, total: 0 });
+      const maxPages = res.pagination ? Math.max(1, Number(res.pagination.totalPages) || 1) : 1;
+
+      if (action === 'reset') {
+        setMinPage(pageToLoad);
+        setMaxPage(pageToLoad);
+        setHasMoreNext(pageToLoad < maxPages);
+        setHasMorePrev(pageToLoad > 1);
+      } else if (action === 'append') {
+        setMaxPage(pageToLoad);
+        setHasMoreNext(pageToLoad < maxPages && newChapters.length > 0);
+      } else if (action === 'prepend') {
+        setMinPage(pageToLoad);
+        setHasMorePrev(pageToLoad > 1);
+      }
+
+    } catch (e) {
+      console.error("Failed to fetch chapters:", e);
+      if (loadingRequestRef.current === reqId) {
+        if (action === 'append') setHasMoreNext(false);
+        if (action === 'prepend') setHasMorePrev(false);
+      }
+    } finally {
+      if (loadingRequestRef.current === reqId) {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const prevFilterStateRef = useRef(filterState);
+  const prevSortOrderRef = useRef(sortOrder);
+  const prevSortByRef = useRef(sortBy);
+
+  useEffect(() => {
+    // Determine the proper initial page based on state and inputs
+    let targetPage = minPage;
+    if (prevSearchRef.current !== debouncedSearch ||
+        prevFilterStateRef.current !== filterState ||
+        prevSortOrderRef.current !== sortOrder ||
+        prevSortByRef.current !== sortBy) {
+        
+        prevSearchRef.current = debouncedSearch;
+        prevFilterStateRef.current = filterState;
+        prevSortOrderRef.current = sortOrder;
+        prevSortByRef.current = sortBy;
+        targetPage = 1;
+    }
+    loadChapters(targetPage, 'reset', debouncedSearch);
+  }, [bookId, filterState, debouncedSearch, sortOrder, sortBy]);
 
   return (
     <>
@@ -174,13 +245,13 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
       <main className="max-w-reading-max-width mx-auto px-4 py-4 w-full pb-32">
         <div className="flex bg-surface-container-low p-1 rounded-full border border-outline-variant/30 w-full mb-4">
           <button 
-            onClick={() => { setFilterState('all'); setPage(1); }}
+            onClick={() => { setFilterState('all'); }}
             className={`flex-1 px-4 py-2.5 text-[13px] font-medium rounded-full transition-all ${filterState === 'all' ? 'bg-surface-bright text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
           >
             Tất cả
           </button>
           <button 
-            onClick={() => { setFilterState('PENDING'); setPage(1); }}
+            onClick={() => { setFilterState('PENDING'); }}
             className={`flex-1 px-4 py-2.5 text-[13px] font-medium rounded-full transition-all ${filterState === 'PENDING' ? 'bg-surface-bright text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
           >
             Chưa dịch
@@ -199,7 +270,7 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
             />
           </div>
           <button 
-            onClick={() => { setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC'); setPage(1); }}
+            onClick={() => { setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC'); }}
             className="flex items-center justify-center bg-transparent border border-outline-variant/50 rounded-full w-9 h-9 text-on-surface hover:bg-surface-variant transition-colors flex-shrink-0"
           >
             <SortDesc size={16} className={`transition-transform duration-300 ${sortOrder === 'ASC' ? 'rotate-180' : ''}`} />
@@ -221,15 +292,19 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
         )}
 
         <div className="flex flex-col gap-2.5 sm:gap-3">
+          {hasMorePrev && (
+            <div ref={firstChapterElementRef} className="h-4 w-full" aria-hidden="true" />
+          )}
           <ChapterList 
             chapters={chapters} 
+            activeChapterId={focusChapterId}
             variant="detailed"
             onChapterClick={(chapter) => {
               onNavigate({ type: 'reader', bookId, chapterId: chapter.chapterId, rootTab });
             }}
           />
 
-          {hasMore && (
+          {hasMoreNext && (
             <div ref={lastChapterElementRef} className="h-4 w-full" aria-hidden="true" />
           )}
 
@@ -239,9 +314,9 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
             </div>
           )}
           
-          {chapters.length > 0 && hasMore && (
+          {chapters.length > 0 && hasMoreNext && (
             <div className="py-6 flex justify-center w-full min-h-[72px]">
-              {isLoading && page > 1 && <Loader2 className="animate-spin text-primary" size={24} />}
+              {isLoading && maxPage > 1 && <Loader2 className="animate-spin text-primary" size={24} />}
             </div>
           )}
         </div>
@@ -267,7 +342,7 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
         onTabSelect={(t) => onNavigate({ type: 'library', tab: t })} 
       />
       
-      <LoadingOverlay isLoading={isLoading && page === 1} message="Đang tải danh sách chương..." />
+      <LoadingOverlay isLoading={isLoading && chapters.length === 0} message="Đang tải danh sách chương..." />
     </>
   );
 }
