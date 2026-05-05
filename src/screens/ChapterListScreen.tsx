@@ -37,20 +37,25 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
   const [showTranslation, setShowTranslation] = useState(false);
   const [showGlobalSettings, setShowGlobalSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   const limit = 50;
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const lastChapterElementRef = useCallback((node: HTMLAnchorElement | null) => {
-    if (isLoading) return;
     if (observerRef.current) observerRef.current.disconnect();
+    if (isLoading || !hasMore) return;
+    
+    // Safety check in case pagination data is stale
+    if (page >= pagination.totalPages && pagination.totalPages > 0) return;
+
     observerRef.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && page < pagination.totalPages) {
+      if (entries[0].isIntersecting && hasMore && !isLoading) {
         setPage(prevPage => prevPage + 1);
       }
     });
     if (node) observerRef.current.observe(node);
-  }, [isLoading, page, pagination.totalPages]);
+  }, [isLoading, page, pagination.totalPages, hasMore]);
 
   useEffect(() => {
     // In a real app we'd fetch this specific book's details. For now filter from list.
@@ -68,18 +73,44 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
     return () => clearTimeout(handler);
   }, [search]);
 
+  const loadingRequestRef = useRef(0);
+
   useEffect(() => {
+    // Reset pagination state immediately when dependencies change to prevent stale observer triggers
+    if (page === 1) {
+      setPagination({ currentPage: 1, totalPages: 1, total: 0 });
+      // Clearing chapters early prevents UI jumping and old data acting as stale state.
+      setChapters([]);
+      setHasMore(true);
+    }
+    
     let active = true;
+    const reqId = ++loadingRequestRef.current;
     setIsLoading(true);
-    api.getChapters(bookId, page, limit, sortBy, sortOrder, filterState, debouncedSearch).then(res => {
-      if (!active) return;
-      setChapters(prev => page === 1 ? (res.chapters || []) : [...prev, ...(res.chapters || [])]);
-      setPagination(res.pagination || { currentPage: 1, totalPages: 1, total: 0 });
-      setIsLoading(false);
-    }).catch(() => {
-      if (!active) return;
-      setIsLoading(false);
-    });
+    
+    api.getChapters(bookId, page, limit, sortBy, sortOrder, filterState, debouncedSearch)
+      .then(res => {
+        if (!active) return;
+        const newChapters = res.chapters || [];
+        setChapters(prev => page === 1 ? newChapters : [...prev, ...newChapters]);
+        setPagination(res.pagination || { currentPage: 1, totalPages: 1, total: 0 });
+        
+        const maxPages = res.pagination ? Math.max(1, Number(res.pagination.totalPages) || 1) : 1;
+        if (newChapters.length < limit || page >= maxPages) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+        }
+      })
+      .catch((e) => {
+        console.error("Failed to fetch chapters:", e);
+        if (active) setHasMore(false);
+      })
+      .finally(() => {
+        if (loadingRequestRef.current === reqId) {
+          setIsLoading(false);
+        }
+      });
     
     return () => { active = false; };
   }, [bookId, page, limit, sortBy, sortOrder, filterState, debouncedSearch]);
@@ -200,7 +231,7 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
             </div>
           )}
           
-          {isLoading && (
+          {chapters.length > 0 && isLoading && page > 1 && (
             <div className="py-6 flex justify-center w-full">
               <Loader2 className="animate-spin text-primary" size={24} />
             </div>

@@ -40,65 +40,81 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const lastBookElementRef = useCallback((node: HTMLElement | null) => {
-    if (isLoading) return;
     if (observerRef.current) observerRef.current.disconnect();
+    if (isLoading) return;
+    
+    if (!hasMore) return;
+
     observerRef.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
+      if (entries[0].isIntersecting && hasMore && !isLoading) {
         setPage(prevPage => prevPage + 1);
       }
     });
     if (node) observerRef.current.observe(node);
   }, [isLoading, hasMore]);
 
-  const loadBooks = async (pageNum: number, searchKeyword: string, currentTab: string) => {
+  const loadingRequestRef = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    const reqId = ++loadingRequestRef.current;
     setIsLoading(true);
-    try {
-      if (currentTab === 'ai') {
-        const res = await api.getBooks(pageNum, searchKeyword, currentTab.toUpperCase(), 20);
-        setAiBooks(prev => pageNum === 1 ? res.data : [...prev, ...res.data]);
-        if (res.pagination) {
-          const totalPages = Number(res.pagination.totalPages) || 1;
-          setAiPagination({ currentPage: pageNum, totalPages });
-          setHasMore(pageNum < totalPages);
-        }
+
+    if (page === 1) {
+      setHasMore(true);
+      if (activeTab === 'ai') {
+        setAiBooks([]);
       } else {
-        const res = await api.getBooks(pageNum, searchKeyword, currentTab.toUpperCase(), 20);
-        setBooks(prev => pageNum === 1 ? res.data : [...prev, ...res.data]);
-        if (res.pagination) {
-          const totalPages = Number(res.pagination.totalPages) || 1;
-          setBooksPagination({ currentPage: pageNum, totalPages });
-          setHasMore(pageNum < totalPages);
+        setBooks([]);
+      }
+    }
+
+    const fetchData = async () => {
+      try {
+        if (activeTab === 'ai') {
+          const res = await api.getBooks(page, debouncedSearch, activeTab.toUpperCase(), 20);
+          if (!active) return;
+          setAiBooks(prev => page === 1 ? res.data : [...prev, ...res.data]);
+          if (res.pagination) {
+            const totalPages = Number(res.pagination.totalPages) || 1;
+            setAiPagination({ currentPage: page, totalPages });
+            setHasMore(page < totalPages && res.data.length > 0);
+          } else {
+            setHasMore(res.data.length === 20);
+          }
+        } else {
+          const res = await api.getBooks(page, debouncedSearch, activeTab.toUpperCase(), 20);
+          if (!active) return;
+          setBooks(prev => page === 1 ? res.data : [...prev, ...res.data]);
+          if (res.pagination) {
+            const totalPages = Number(res.pagination.totalPages) || 1;
+            setBooksPagination({ currentPage: page, totalPages });
+            setHasMore(page < totalPages && res.data.length > 0);
+          } else {
+            setHasMore(res.data.length === 20);
+          }
+        }
+      } catch (e) {
+        if (!active) return;
+        console.error(e);
+      } finally {
+        if (loadingRequestRef.current === reqId) {
+          setIsLoading(false);
         }
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+
+    fetchData();
+
+    return () => { active = false; };
+  }, [page, debouncedSearch, activeTab]);
 
   useEffect(() => {
     setPage(1);
-    loadBooks(1, debouncedSearch, activeTab);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setHasMore(false);
   }, [activeTab, debouncedSearch]);
 
-  useEffect(() => {
-    if (page > 1) {
-      loadBooks(page, debouncedSearch, activeTab);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
-
   const currentPagination = activeTab === 'ai' ? aiPagination : booksPagination;
-
-  const handlePageChange = (newPage: number) => {
-    console.log({newPage})
-    if (isLoading || newPage < 1 || newPage > currentPagination.totalPages) return;
-    setPage(newPage);
-    loadBooks(newPage, debouncedSearch, activeTab);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
 
   const displayedBooks = activeTab === 'books' 
     ? books 

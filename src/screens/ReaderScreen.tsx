@@ -54,9 +54,13 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
   // Keep track of the last loaded chapter to avoid scrolling to top on toggle
   const [lastChapterId, setLastChapterId] = useState<string | null>(null);
 
+  const loadingContentRequestRef = useRef(0);
+
   const fetchChapter = () => {
+    const reqId = ++loadingContentRequestRef.current;
     setIsLoadingContent(true);
     api.getChapterContent(chapterId, groupLines, isEnabledReplace, rootTab).then(res => {
+      if (loadingContentRequestRef.current !== reqId) return;
       setContent(res);
       setIsLoadingContent(false);
       
@@ -65,7 +69,9 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
         setLastChapterId(chapterId);
       }
     }).catch(() => {
-      setIsLoadingContent(false);
+      if (loadingContentRequestRef.current === reqId) {
+        setIsLoadingContent(false);
+      }
     });
   };
 
@@ -73,41 +79,58 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
     fetchChapter();
   }, [chapterId, groupLines, isEnabledReplace]);
 
+  const loadingRequestRef = useRef(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const lastChapterElementRef = useCallback((node: HTMLButtonElement | null) => {
-    if (isLoadingChapters) return;
     if (observerRef.current) observerRef.current.disconnect();
+    if (isLoadingChapters) return;
+    
+    if (!hasMoreChapters) return;
+
     observerRef.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMoreChapters) {
+      if (entries[0].isIntersecting && hasMoreChapters && !isLoadingChapters) {
         loadMoreChapters(drawerPage);
       }
     });
     if (node) observerRef.current.observe(node);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoadingChapters, hasMoreChapters, drawerPage]);
 
+  const debouncedSearchRef = useRef(drawerSearch);
+
   const loadMoreChapters = async (pageToLoad: number, overrideSearch?: string) => {
-    const currentSearch = typeof overrideSearch !== 'undefined' ? overrideSearch : drawerSearch;
-    if (isLoadingChapters) return;
+    const currentSearch = typeof overrideSearch !== 'undefined' ? overrideSearch : debouncedSearchRef.current;
     if (pageToLoad > 1 && !hasMoreChapters) return;
+    
+    const requestId = ++loadingRequestRef.current;
+    
+    if (pageToLoad === 1) {
+      setBookChapters([]);
+    }
     
     setIsLoadingChapters(true);
     try {
       const res = await api.getChapters(bookId, pageToLoad, 50, 'chapterNumber', 'ASC', undefined, currentSearch || undefined);
+      if (loadingRequestRef.current !== requestId) return;
+
       setBookChapters(prev => {
-        if (pageToLoad === 1) return res.chapters;
-        const newChapters = res.chapters.filter(c => !prev.some(p => p.chapterId === c.chapterId));
+        if (pageToLoad === 1) return res.chapters || [];
+        const newChapters = (res.chapters || []).filter(c => !prev.some(p => p.chapterId === c.chapterId));
         return [...prev, ...newChapters];
       });
-      if (res.chapters.length < 50 || pageToLoad >= res.pagination.totalPages) {
+      if ((res.chapters || []).length < 50 || pageToLoad >= (res.pagination?.totalPages || 1)) {
         setHasMoreChapters(false);
       } else {
         setHasMoreChapters(true);
       }
       setDrawerPage(pageToLoad + 1);
     } catch (e) {
+      if (loadingRequestRef.current !== requestId) return;
       console.error(e);
     } finally {
-      setIsLoadingChapters(false);
+      if (loadingRequestRef.current === requestId) {
+        setIsLoadingChapters(false);
+      }
     }
   };
 
@@ -118,6 +141,7 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
     const timer = setTimeout(() => {
       if (prevSearchRef.current !== drawerSearch) {
         prevSearchRef.current = drawerSearch;
+        debouncedSearchRef.current = drawerSearch;
         loadMoreChapters(1, drawerSearch);
       }
     }, 600);
