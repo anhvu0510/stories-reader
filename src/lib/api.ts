@@ -567,10 +567,12 @@ export const api = {
     chapterId?: string[],
     currentChapterId?: string,
   }): Promise<any> => {
+    let timeout = 15000;
+    if(data.mode === 'current') timeout = 10 * 60 * 1000;
     const res = await fetchWithRetry(`/stories/gemini-ai/translate`, {
       method: 'POST',
       body: JSON.stringify(data)
-    }, 0); // DO NOT retry POST translations
+    }, 0, timeout); // DO NOT retry POST translations
     if (data.mode === 'current') {
       return await res.json();
     }
