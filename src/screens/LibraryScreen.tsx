@@ -201,11 +201,34 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
             const progress = book.chapterCount > 0 ? (book.totalTranslated / book.chapterCount) * 100 : 0;
             const isLast = index === displayedBooks.length - 1;
             
+            const openInNewTab = activeTab === 'books' || activeTab === 'history';
+            
+            const getBookUrl = (book: Book) => {
+              const rTab = activeTab || 'NONE';
+              if (book?.lastReadChapter && activeTab === 'history') {
+                return `#/${rTab}/${book.bookId}/${book.lastReadChapter.chapterId}`;
+              } else {
+                const filterState = activeTab === 'ai' ? '?filterState=PENDING' : '';
+                return `#/${rTab}/${book.bookId}${filterState}`;
+              }
+            };
+            
             return (
-            <article 
-              ref={isLast ? lastBookElementRef : null}
+            <a 
               key={book.bookId}
-              onClick={() => book?.lastReadChapter && activeTab === 'history' ? onNavigate({ type: 'reader', bookId: book.bookId, chapterId: book.lastReadChapter.chapterId, rootTab: activeTab }) : onNavigate({ type: 'book', bookId: book.bookId, filterState: activeTab === 'ai' ? 'PENDING' : 'all', rootTab: activeTab })}
+              href={getBookUrl(book)}
+              target={openInNewTab ? "_blank" : undefined}
+              rel={openInNewTab ? "noopener noreferrer" : undefined}
+              onClick={(e) => {
+                if (!openInNewTab) {
+                  e.preventDefault();
+                  if (book?.lastReadChapter && activeTab === 'history') {
+                    onNavigate({ type: 'reader', bookId: book.bookId, chapterId: book.lastReadChapter.chapterId, rootTab: activeTab });
+                  } else {
+                    onNavigate({ type: 'book', bookId: book.bookId, filterState: activeTab === 'ai' ? 'PENDING' : 'all', rootTab: activeTab });
+                  }
+                }
+              }}
               className={`relative overflow-hidden block rounded-2xl p-3.5 sm:p-4 transition-all duration-300 group cursor-pointer ${
                 isRead || activeTab !== 'books' 
                   ? 'bg-surface-container-low border border-outline-variant/30 shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:bg-surface-container hover:border-primary/40 active:scale-[0.98]' 
@@ -271,12 +294,16 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
                   <ArrowRight size={18} className="text-on-surface-variant/30 group-hover:text-primary transition-colors transform group-hover:translate-x-0.5" />
                 </div>
               </div>
-            </article>
+            </a>
           )})}
           
-          {displayedBooks.length > 0 && isLoading && page > 1 && (
-            <div className="py-6 flex justify-center w-full">
-              <Loader2 className="animate-spin text-primary" size={24} />
+          {hasMore && (
+            <div ref={lastBookElementRef} className="h-4 w-full" aria-hidden="true" />
+          )}
+
+          {displayedBooks.length > 0 && hasMore && (
+            <div className="py-6 flex justify-center w-full min-h-[72px]">
+              {isLoading && page > 1 && <Loader2 className="animate-spin text-primary" size={24} />}
             </div>
           )}
         </section>

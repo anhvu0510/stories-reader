@@ -118,7 +118,7 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
         const newChapters = (res.chapters || []).filter(c => !prev.some(p => p.chapterId === c.chapterId));
         return [...prev, ...newChapters];
       });
-      if ((res.chapters || []).length < 50 || pageToLoad >= (res.pagination?.totalPages || 1)) {
+      if ((res.chapters || []).length === 0 || (res.chapters || []).length < 50 || pageToLoad >= (res.pagination?.totalPages || 1)) {
         setHasMoreChapters(false);
       } else {
         setHasMoreChapters(true);
@@ -357,11 +357,13 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
                     setShowChapterDrawer(false);
                     onNavigate({ type: 'reader', bookId, chapterId: chap.chapterId, rootTab });
                   }}
-                  lastChapterElementRef={lastChapterElementRef}
                 />
-                {isLoadingChapters && bookChapters.length > 0 && (
-                  <div className="py-6 flex justify-center w-full">
-                    <Loader2 className="animate-spin text-primary" size={24} />
+                {hasMoreChapters && (
+                  <div ref={lastChapterElementRef} className="h-4 w-full" aria-hidden="true" />
+                )}
+                {bookChapters.length > 0 && hasMoreChapters && (
+                  <div className="py-6 flex justify-center w-full min-h-[72px]">
+                    {isLoadingChapters && <Loader2 className="animate-spin text-primary" size={24} />}
                   </div>
                 )}
               </>

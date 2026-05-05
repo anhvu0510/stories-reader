@@ -32,7 +32,7 @@ export function ChapterList({
   variant = 'detailed',
   activeChapterId,
   onChapterClick,
-  lastChapterElementRef
+  lastChapterElementRef,
 }: ChapterListProps) {
   if (variant === 'compact') {
     return (
@@ -110,18 +110,18 @@ export function ChapterList({
         const isLast = index === chapters.length - 1;
         
         return (
-          <a 
+          <button 
             ref={isLast ? (lastChapterElementRef as any) : null}
             key={chapter.chapterId}
+            disabled={!isSucceeded && !isPending}
             onClick={(e) => {
-              e.preventDefault();
               if (isSucceeded || isPending) {
                 onChapterClick(chapter);
               }
             }}
-            className={`relative overflow-hidden block rounded-2xl p-3.5 sm:p-4 transition-all duration-300 group ${
-              isSucceeded ? 'bg-surface-container-low border border-outline-variant/30 shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:bg-surface-container hover:border-primary/40 focus:border-primary/40 cursor-pointer active:scale-[0.98]' : 
-              isPending ? 'bg-surface border border-outline-variant/20 hover:border-outline-variant/40 cursor-pointer active:scale-[0.98]' : 
+            className={`cursor-pointer w-full text-left relative overflow-hidden block rounded-2xl p-3.5 sm:p-4 transition-all duration-300 group ${
+              isSucceeded ? 'bg-surface-container-low border border-outline-variant/30 shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:bg-surface-container hover:border-primary/40 focus:border-primary/40 active:scale-[0.98]' : 
+              isPending ? 'bg-surface border border-outline-variant/20 hover:border-outline-variant/40 active:scale-[0.98]' : 
               'bg-surface-container-lowest border border-transparent opacity-60 cursor-not-allowed'
             }`}
           >
@@ -182,7 +182,7 @@ export function ChapterList({
                 }`} />
               </div>
             </div>
-          </a>
+          </button>
         );
       })}
     </div>
