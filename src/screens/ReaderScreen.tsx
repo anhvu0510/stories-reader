@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Menu, List, ChevronLeft, ChevronRight, Type, Languages, Edit3, X, Home, Lock, AlertCircle, Settings, Sparkles, BookOpen, PlayCircle, PauseCircle, Search, StopCircle, SkipForward, Play, Pause, Loader2, Clock } from 'lucide-react';
-import { AppView } from '../App';
 import { api, ChapterContent, Chapter, Book } from '../lib/api';
 import { TranslationSheet } from '../components/TranslationSheet';
 import { GlobalSettingsSheet } from '../components/GlobalSettingsSheet';
@@ -20,7 +20,11 @@ const ContentRenderer = memo(({ paragraphs }: { paragraphs: string[] }) => {
   );
 });
 
-export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { bookId: string, chapterId: string, rootTab: string,  onNavigate: (v: AppView) => void }) {
+export function ReaderScreen() {
+  const { bookId, chapterId } = useParams<{ bookId: string; chapterId: string }>();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const filterState = searchParams.get('filterState') || 'all';
   const [content, setContent] = useState<ChapterContent | null>(null);
   const [bookChapters, setBookChapters] = useState<Chapter[]>([]);
   const [minDrawerPage, setMinDrawerPage] = useState(1);
@@ -55,6 +59,14 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
   const { isPlaying, isPaused, startReading, pauseReading, stopReading, jumpToContent, nextSection } = useReadAloud(content?.chapter?.content || []);
   const [showAudioBar, setShowAudioBar] = useState(false);
 
+  useEffect(() => {
+    if (content?.chapter?.bookName) {
+      document.title = content.chapter.bookName;
+    } else {
+      document.title = 'Reader Stories App';
+    }
+  }, [content?.chapter?.bookName]);
+
   const jumpToContentRef = useRef(jumpToContent);
   const isReadAloudActiveRef = useRef(isPlaying || isPaused);
 
@@ -76,10 +88,18 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
   const fetchChapter = () => {
     const reqId = ++loadingContentRequestRef.current;
     setIsLoadingContent(true);
-    api.getChapterContent(chapterId, groupLines, isEnabledReplace, rootTab).then(res => {
+    api.getChapterContent(chapterId!, groupLines, isEnabledReplace).then(res => {
       if (loadingContentRequestRef.current !== reqId) return;
       setContent(res);
       setIsLoadingContent(false);
+      
+      try {
+        sessionStorage.setItem(`last_read_${bookId}`, JSON.stringify({
+          chapterId: res.chapter.chapterId,
+          chapterNumber: res.chapter.chapterNumber,
+          filterState: filterState
+        }));
+      } catch (e) {}
       
       if (lastChapterId !== chapterId) {
         window.scrollTo(0, 0);
@@ -336,7 +356,7 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
         <div className="relative z-10 max-w-reading-max-width mx-auto w-full px-3 py-2 flex justify-between items-center h-14 sm:h-16 pt-[max(env(safe-area-inset-top),8px)]">
           <div className="flex items-center shrink-0 gap-2 w-[88px]">
             <button 
-              onClick={() => { stopReading(); onNavigate({ type: 'library' }); }} 
+              onClick={() => { stopReading(); navigate('/'); }} 
               className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
               title="Về trang chủ"
             >
@@ -345,7 +365,7 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
           </div>
 
           <button 
-            onClick={() => { stopReading(); onNavigate({ type: 'book', bookId, rootTab, focusChapterId: chapterId, focusChapterNumber: content.chapter.chapterNumber, bookName: content.chapter.bookName }); }}
+            onClick={() => { stopReading(); navigate(`/book/${bookId}?focus=${chapterId}&focusNumber=${content.chapter.chapterNumber}&filterState=${filterState}&bookName=${encodeURIComponent(content.chapter.bookName)}`); }}
             className="flex-1 flex flex-col items-center justify-center min-w-0 px-2 cursor-pointer transition-opacity hover:opacity-80 active:opacity-70 bg-transparent border-none appearance-none"
             title="Xem danh sách chương"
           >
@@ -447,7 +467,7 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
                   onChapterClick={(chap) => {
                     stopReading();
                     setShowChapterDrawer(false);
-                    onNavigate({ type: 'reader', bookId, chapterId: chap.chapterId, rootTab });
+                    navigate(`/book/${bookId}/chapter/${chap.chapterId}?filterState=${filterState}`);
                   }}
                 />
                 {hasMoreNextChapters && (
@@ -463,7 +483,7 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
           </div>
           <div className="p-4 border-t border-surface-variant bg-surface pb-safe-bottom">
             <button
-               onClick={() => { stopReading(); setShowChapterDrawer(false); onNavigate({ type: 'book', bookId , rootTab}); }}
+               onClick={() => { stopReading(); setShowChapterDrawer(false); navigate(`/book/${bookId}?filterState=${filterState}`); }}
                className="w-full py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-variant transition-colors text-sm font-semibold"
             >
               Xem chi tiết truyện
@@ -504,9 +524,9 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
                         stopReading();
                         setShowHistoryDrawer(false);
                         if (book.lastReadChapter) {
-                          onNavigate({ type: 'reader', bookId: book.bookId, chapterId: book.lastReadChapter.chapterId, rootTab });
+                          navigate(`/book/${book.bookId}/chapter/${book.lastReadChapter.chapterId}`);
                         } else {
-                          onNavigate({ type: 'book', bookId: book.bookId, rootTab, filterState: 'all' });
+                          navigate(`/book/${book.bookId}`);
                         }
                       }}
                       className="w-full text-left flex items-start gap-3 p-3 rounded-xl transition-all border bg-surface-container-low border-outline-variant/30 hover:bg-surface-container hover:border-primary/40 focus:border-primary/40 active:scale-[0.98] cursor-pointer"
@@ -597,7 +617,7 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
                     disabled={!content.navigation?.next?.chapterId}
                     onClick={() => {
                       stopReading();
-                      content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId, rootTab })
+                      content.navigation?.next?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.next.chapterId}?filterState=${filterState}`);
                     }}
                     className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
                   >
@@ -667,7 +687,7 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
                     disabled={!content.navigation?.prev?.chapterId}
                     onClick={() => {
                       stopReading();
-                      content.navigation?.prev?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.prev.chapterId, rootTab })
+                      content.navigation?.prev?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.prev.chapterId}?filterState=${filterState}`);
                     }}
                     className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
                   >
@@ -745,7 +765,7 @@ export function ReaderScreen({ bookId, chapterId, rootTab , onNavigate }: { book
                     disabled={!content.navigation?.next?.chapterId}
                     onClick={() => {
                       stopReading();
-                      content.navigation?.next?.chapterId && onNavigate({ type: 'reader', bookId, chapterId: content.navigation.next.chapterId, rootTab })
+                      content.navigation?.next?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.next.chapterId}?filterState=${filterState}`);
                     }}
                     className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
                   >

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Check, Layers, MonitorSmartphone, ChevronDown, ChevronUp, Volume2, KeyRound, Server, Plus, RefreshCw } from 'lucide-react';
+import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Check, Layers, MonitorSmartphone, ChevronDown, ChevronUp, Volume2, KeyRound, Server, Plus, RefreshCw, BookOpen, List } from 'lucide-react';
 import { api, Replacement, ApiDomain, getApiDomains } from '../lib/api';
 import { useReaderSettings } from '../contexts/ReaderContext';
 
@@ -22,7 +22,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
   const { 
     isEnabledReplace, setIsEnabledReplace,
     theme, setTheme, font, setFont, fontSize, setFontSize, lineHeight, setLineHeight, groupLines, setGroupLines,
-    speechRate, setSpeechRate
+    speechRate, setSpeechRate, bookLimit, setBookLimit, chapterLimit, setChapterLimit
   } = useReaderSettings();
   const [activeTab, setActiveTab] = useState<'api' | 'names' | 'voice' | 'quotas' | 'tokens' | 'servers'>(initialTab || (initialMatch ? 'names' : 'api'));
 
@@ -411,6 +411,42 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                            {groupLines}
                          </div>
                          <button onClick={() => setGroupLines(Math.min(10, groupLines + 1))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
+                          +
+                         </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <hr className="border-outline-variant/10 -mx-5" />
+
+                  <div className="grid grid-cols-2 gap-5">
+                    <div className="flex flex-col gap-3">
+                      <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Số truyện mỗi trang</h2>
+                      <div className="flex bg-surface-container-highest rounded-xl p-1 items-center gap-1">
+                         <button onClick={() => setBookLimit(Math.max(10, (bookLimit || 20) - 10))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
+                          -
+                         </button>
+                         <div className="flex-1 text-center font-bold text-sm text-primary flex items-center justify-center gap-1.5">
+                           <BookOpen size={14} className="opacity-70" />
+                           {bookLimit || 20}
+                         </div>
+                         <button onClick={() => setBookLimit(Math.min(100, (bookLimit || 20) + 10))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
+                          +
+                         </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Số chương mỗi trang</h2>
+                      <div className="flex bg-surface-container-highest rounded-xl p-1 items-center gap-1">
+                         <button onClick={() => setChapterLimit(Math.max(10, (chapterLimit || 50) - 10))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
+                          -
+                         </button>
+                         <div className="flex-1 text-center font-bold text-sm text-primary flex items-center justify-center gap-1.5">
+                           <List size={14} className="opacity-70" />
+                           {chapterLimit || 50}
+                         </div>
+                         <button onClick={() => setChapterLimit(Math.min(200, (chapterLimit || 50) + 10))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
                           +
                          </button>
                       </div>

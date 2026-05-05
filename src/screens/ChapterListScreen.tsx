@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Search, SortDesc, ArrowLeft, Loader2, AlertCircle, Clock, Settings } from 'lucide-react';
 import { api, Chapter, Book } from '../lib/api';
-import { AppView } from '../App';
 import { TranslationSheet } from '../components/TranslationSheet';
 import { GlobalSettingsSheet } from '../components/GlobalSettingsSheet';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { BottomDock } from '../components/BottomDock';
 import { ChapterList } from '../components/ChapterList';
+import { useReaderSettings } from '../contexts/ReaderContext';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -23,13 +24,39 @@ const formatDate = (dateStr: string) => {
   }
 };
 
-export function ChapterListScreen({ bookId, filterState: initialFilterState = 'all', rootTab, focusChapterId, focusChapterNumber, initialBookName, onNavigate }: { bookId: string, rootTab: string, filterState?: 'all' | 'PENDING', focusChapterId?: string, focusChapterNumber?: number, initialBookName?: string, onNavigate: (v: AppView) => void }) {
-  const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [book, setBook] = useState<Book | null>(initialBookName ? { bookId, bookName: initialBookName, chapterCount: 0, totalTranslated: 0, totalPending: 0, createdAt: '', updatedAt: '', lastReadChapter: null as any } : null);
+export function ChapterListScreen() {
+  const { chapterLimit } = useReaderSettings();
+  const { bookId } = useParams<{ bookId: string }>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  let filterStateParam: 'all' | 'PENDING' = searchParams.get('filterState') === 'PENDING' ? 'PENDING' : 'all';
+  let focusChapterId = searchParams.get('focus') || undefined;
+  let focusChapterNumberStr = searchParams.get('focusNumber') || undefined;
   
-  const limit = 50;
+  if (!searchParams.get('focus')) {
+    try {
+      const cached = sessionStorage.getItem(`last_read_${bookId}`);
+      if (cached) {
+        const data = JSON.parse(cached);
+        focusChapterId = data.chapterId;
+        focusChapterNumberStr = String(data.chapterNumber);
+        if (data.filterState === 'PENDING' || data.filterState === 'all') {
+          filterStateParam = data.filterState;
+        }
+      }
+    } catch(e) {}
+  }
+  
+  const focusChapterNumber = focusChapterNumberStr ? parseInt(focusChapterNumberStr, 10) : undefined;
+  const initialBookName = searchParams.get('bookName') || undefined;
+
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [book, setBook] = useState<Book | null>(initialBookName ? { bookId: bookId!, bookName: initialBookName, chapterCount: 0, totalTranslated: 0, totalPending: 0, createdAt: '', updatedAt: '', lastReadChapter: null as any } : null);
+  
+  const limit = chapterLimit || 50;
   // Calculate initial page assuming ordered by chapterNumber ascending
-  const initialPage = focusChapterNumber ? Math.max(1, Math.ceil(focusChapterNumber / limit)) : 1;
+  const initialPage = (focusChapterNumber && filterStateParam !== 'PENDING') ? Math.max(1, Math.ceil(focusChapterNumber / limit)) : 1;
   const [minPage, setMinPage] = useState(initialPage);
   const [maxPage, setMaxPage] = useState(initialPage);
   const [hasMoreNext, setHasMoreNext] = useState(true);
@@ -37,7 +64,7 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
 
   const [sortBy] = useState('chapterNumber');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('ASC');
-  const [filterState, setFilterState] = useState<'all' | 'PENDING'>(initialFilterState);
+  const [filterState, setFilterState] = useState<'all' | 'PENDING'>(filterStateParam);
   
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -47,7 +74,20 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
   const [hasScrolled, setHasScrolled] = useState(false);
 
   useEffect(() => {
+    if (book?.bookName) {
+      document.title = book.bookName;
+    } else {
+      document.title = 'Reader Stories App';
+    }
+  }, [book?.bookName]);
+
+  useEffect(() => {
     if (focusChapterId && !hasScrolled && chapters.length > 0) {
+      if (filterState === 'PENDING') {
+        setHasScrolled(true);
+        return;
+      }
+      
       const el = document.getElementById(`chapter-${focusChapterId}`);
       if (el) {
         setTimeout(() => {
@@ -59,7 +99,7 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
         }, 300);
       }
     }
-  }, [focusChapterId, chapters, hasScrolled]);
+  }, [focusChapterId, chapters, hasScrolled, filterState]);
 
   const [showTranslation, setShowTranslation] = useState(false);
   const [showGlobalSettings, setShowGlobalSettings] = useState(false);
@@ -173,6 +213,7 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
   const prevFilterStateRef = useRef(filterState);
   const prevSortOrderRef = useRef(sortOrder);
   const prevSortByRef = useRef(sortBy);
+  const prevLimitRef = useRef(limit);
 
   useEffect(() => {
     // Determine the proper initial page based on state and inputs
@@ -180,16 +221,18 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
     if (prevSearchRef.current !== debouncedSearch ||
         prevFilterStateRef.current !== filterState ||
         prevSortOrderRef.current !== sortOrder ||
-        prevSortByRef.current !== sortBy) {
+        prevSortByRef.current !== sortBy ||
+        prevLimitRef.current !== limit) {
         
         prevSearchRef.current = debouncedSearch;
         prevFilterStateRef.current = filterState;
         prevSortOrderRef.current = sortOrder;
         prevSortByRef.current = sortBy;
+        prevLimitRef.current = limit;
         targetPage = 1;
     }
     loadChapters(targetPage, 'reset', debouncedSearch);
-  }, [bookId, filterState, debouncedSearch, sortOrder, sortBy]);
+  }, [bookId, filterState, debouncedSearch, sortOrder, sortBy, limit]);
 
   return (
     <>
@@ -198,7 +241,7 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
         <div className="flex flex-col w-full px-3 pt-3 pb-4 max-w-reading-max-width mx-auto gap-2 relative z-10">
           <div className="flex justify-between items-start w-full">
             <button 
-              onClick={() => onNavigate({ type: 'library' })} 
+              onClick={() => navigate('/')} 
               className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
             >
               <ArrowLeft size={20} />
@@ -300,7 +343,14 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
             activeChapterId={focusChapterId}
             variant="detailed"
             onChapterClick={(chapter) => {
-              onNavigate({ type: 'reader', bookId, chapterId: chapter.chapterId, rootTab });
+              try {
+                sessionStorage.setItem(`last_read_${bookId}`, JSON.stringify({
+                  chapterId: chapter.chapterId,
+                  chapterNumber: chapter.chapterNumber,
+                  filterState: filterState
+                }));
+              } catch(e) {}
+              navigate(`/book/${bookId}/chapter/${chapter.chapterId}?filterState=${filterState}`);
             }}
           />
 
@@ -338,8 +388,8 @@ export function ChapterListScreen({ bookId, filterState: initialFilterState = 'a
       )}
       
       <BottomDock 
-        activeTab={rootTab as 'books' | 'history' | 'ai'} 
-        onTabSelect={(t) => onNavigate({ type: 'library', tab: t })} 
+        activeTab="books"
+        onTabSelect={(t) => navigate(`/?tab=${t}`)} 
       />
       
       <LoadingOverlay isLoading={isLoading && chapters.length === 0} message="Đang tải danh sách chương..." />

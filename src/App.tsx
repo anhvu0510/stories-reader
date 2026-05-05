@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ReaderProvider } from './contexts/ReaderContext';
 import { LibraryScreen } from './screens/LibraryScreen';
 import { ChapterListScreen } from './screens/ChapterListScreen';
@@ -8,54 +8,13 @@ import { ToastContainer } from './components/Toast';
 import { GlobalSettingsSheet } from './components/GlobalSettingsSheet';
 import { BookOpen } from 'lucide-react';
 
-export type AppView = 
-  | { type: 'library', tab?: 'books' | 'history' | 'ai' }
-  | { type: 'book', bookId: string, filterState?: 'all' | 'PENDING', rootTab: string, focusChapterId?: string, focusChapterNumber?: number, bookName?: string }
-  | { type: 'reader', bookId: string, chapterId: string, rootTab: string };
-
-function BookProxy({ onNavigate }: { onNavigate: (v: AppView) => void }) {
-  const { bookId , rootTab } = useParams<{ bookId: string, rootTab: string }>();
-  const [searchParams] = useSearchParams();
-  if (!bookId) return null;
-  const filterState = searchParams.get('filterState') === 'PENDING' ? 'PENDING' : 'all';
-  const focusChapterId = searchParams.get('focus') || undefined;
-  const focusChapterNumberStr = searchParams.get('focusNumber') || undefined;
-  const focusChapterNumber = focusChapterNumberStr ? parseInt(focusChapterNumberStr, 10) : undefined;
-  const bookNameParam = searchParams.get('bookName') || undefined;
-  return <ChapterListScreen bookId={bookId} filterState={filterState} rootTab={rootTab} focusChapterId={focusChapterId} focusChapterNumber={focusChapterNumber} initialBookName={bookNameParam} onNavigate={onNavigate} />;
-}
-
-function ReaderProxy({ onNavigate }: { onNavigate: (v: AppView) => void }) {
-  const { bookId, chapterId, rootTab } = useParams<{ bookId: string, chapterId: string, rootTab: string }>();
-  if (!bookId || !chapterId) return null;
-  return <ReaderScreen bookId={bookId} chapterId={chapterId} rootTab={rootTab} onNavigate={onNavigate} />;
-}
-
 function AppContent() {
-  const navigate = useNavigate();
-
-  const handleNavigate = (view: AppView) => {
-    if (view.type === 'library') {
-      navigate(`/${view.tab ? `?tab=${view.tab}` : ''}`);
-    } else if (view.type === 'book') {
-      const qs = new URLSearchParams();
-      if (view.filterState === 'PENDING') qs.set('filterState', 'PENDING');
-      if (view.focusChapterId) qs.set('focus', view.focusChapterId);
-      if (view.focusChapterNumber) qs.set('focusNumber', view.focusChapterNumber.toString());
-      if (view.bookName) qs.set('bookName', view.bookName);
-      const qsStr = qs.toString();
-      navigate(`/${view.rootTab ?? 'NONE'}/${view.bookId}${qsStr ? `?${qsStr}` : ''}`);
-    } else if (view.type === 'reader') {
-      navigate(`/${view.rootTab ?? 'NONE'}/${view.bookId}/${view.chapterId}`);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background text-on-background flex flex-col">
       <Routes>
-        <Route path="/" element={<LibraryScreen onNavigate={handleNavigate} />} />
-        <Route path="/:rootTab/:bookId" element={<BookProxy onNavigate={handleNavigate} />} />
-        <Route path="/:rootTab/:bookId/:chapterId" element={<ReaderProxy onNavigate={handleNavigate} />} />
+        <Route path="/" element={<LibraryScreen />} />
+        <Route path="/book/:bookId" element={<ChapterListScreen />} />
+        <Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
       </Routes>
     </div>
   );
@@ -321,12 +280,12 @@ export default function App() {
   return (
     <ReaderProvider>
       <ApplicationGate>
-        <HashRouter>
+        <Router>
           <GlobalEventWrapper>
             <AppContent />
           </GlobalEventWrapper>
           <ToastContainer />
-        </HashRouter>
+        </Router>
       </ApplicationGate>
     </ReaderProvider>
   );

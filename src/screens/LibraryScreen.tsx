@@ -1,20 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { User, Search, MoreVertical, BookOpen, Settings, History, Sparkles, Library, X, Clock, Loader2, Save, ArrowRight, Lock } from 'lucide-react';
 import { api, Book } from '../lib/api';
-import { AppView } from '../App';
 import { LoadingOverlay } from '../components/LoadingOverlay';
 import { GlobalSettingsSheet } from '../components/GlobalSettingsSheet';
 
 import { BottomDock } from '../components/BottomDock';
+import { useReaderSettings } from '../contexts/ReaderContext';
 
-export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void }) {
+export function LibraryScreen() {
+  const { bookLimit } = useReaderSettings();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [books, setBooks] = useState<Book[]>([]);
   const [aiBooks, setAiBooks] = useState<Book[]>([]);
   
   const initialTab = (searchParams.get('tab') as 'books' | 'history' | 'ai') || 'books';
   const [activeTab, setActiveTab] = useState<'books' | 'history' | 'ai'>(initialTab);
+
+  useEffect(() => {
+    document.title = 'Reader Stories App';
+  }, []);
 
   useEffect(() => {
     if (activeTab !== searchParams.get('tab')) {
@@ -71,8 +77,9 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
 
     const fetchData = async () => {
       try {
+        const fetchLimit = bookLimit || 20;
         if (activeTab === 'ai') {
-          const res = await api.getBooks(page, debouncedSearch, activeTab.toUpperCase(), 20);
+          const res = await api.getBooks(page, debouncedSearch, activeTab.toUpperCase(), fetchLimit);
           if (!active) return;
           setAiBooks(prev => page === 1 ? res.data : [...prev, ...res.data]);
           if (res.pagination) {
@@ -80,10 +87,10 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
             setAiPagination({ currentPage: page, totalPages });
             setHasMore(page < totalPages && res.data.length > 0);
           } else {
-            setHasMore(res.data.length === 20);
+            setHasMore(res.data.length === fetchLimit);
           }
         } else {
-          const res = await api.getBooks(page, debouncedSearch, activeTab.toUpperCase(), 20);
+          const res = await api.getBooks(page, debouncedSearch, activeTab.toUpperCase(), fetchLimit);
           if (!active) return;
           setBooks(prev => page === 1 ? res.data : [...prev, ...res.data]);
           if (res.pagination) {
@@ -91,7 +98,7 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
             setBooksPagination({ currentPage: page, totalPages });
             setHasMore(page < totalPages && res.data.length > 0);
           } else {
-            setHasMore(res.data.length === 20);
+            setHasMore(res.data.length === fetchLimit);
           }
         }
       } catch (e) {
@@ -107,12 +114,12 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
     fetchData();
 
     return () => { active = false; };
-  }, [page, debouncedSearch, activeTab]);
+  }, [page, debouncedSearch, activeTab, bookLimit]);
 
   useEffect(() => {
     setPage(1);
     setHasMore(false);
-  }, [activeTab, debouncedSearch]);
+  }, [activeTab, debouncedSearch, bookLimit]);
 
   const currentPagination = activeTab === 'ai' ? aiPagination : booksPagination;
 
@@ -204,34 +211,23 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
             const openInNewTab = activeTab === 'books' || activeTab === 'history';
             
             const getBookUrl = (book: Book) => {
-              const rTab = activeTab || 'NONE';
               if (book?.lastReadChapter && activeTab === 'history') {
-                return `#/${rTab}/${book.bookId}/${book.lastReadChapter.chapterId}`;
+                return `/book/${book.bookId}/chapter/${book.lastReadChapter.chapterId}`;
               } else {
                 const qs = new URLSearchParams();
                 if (activeTab === 'ai') qs.set('filterState', 'PENDING');
                 qs.set('bookName', book.bookName);
                 const filterStateStr = qs.toString() ? `?${qs.toString()}` : '';
-                return `#/${rTab}/${book.bookId}${filterStateStr}`;
+                return `/book/${book.bookId}${filterStateStr}`;
               }
             };
             
             return (
-            <a 
+            <Link 
               key={book.bookId}
-              href={getBookUrl(book)}
+              to={getBookUrl(book)}
               target={openInNewTab ? "_blank" : undefined}
               rel={openInNewTab ? "noopener noreferrer" : undefined}
-              onClick={(e) => {
-                if (!openInNewTab) {
-                  e.preventDefault();
-                  if (book?.lastReadChapter && activeTab === 'history') {
-                    onNavigate({ type: 'reader', bookId: book.bookId, chapterId: book.lastReadChapter.chapterId, rootTab: activeTab });
-                  } else {
-                    onNavigate({ type: 'book', bookId: book.bookId, filterState: activeTab === 'ai' ? 'PENDING' : 'all', rootTab: activeTab, bookName: book.bookName });
-                  }
-                }
-              }}
               className={`relative overflow-hidden block rounded-2xl p-3.5 sm:p-4 transition-all duration-300 group cursor-pointer ${
                 isRead || activeTab !== 'books' 
                   ? 'bg-surface-container-low border border-outline-variant/30 shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:bg-surface-container hover:border-primary/40 active:scale-[0.98]' 
@@ -297,7 +293,7 @@ export function LibraryScreen({ onNavigate }: { onNavigate: (v: AppView) => void
                   <ArrowRight size={18} className="text-on-surface-variant/30 group-hover:text-primary transition-colors transform group-hover:translate-x-0.5" />
                 </div>
               </div>
-            </a>
+            </Link>
           )})}
           
           {hasMore && (

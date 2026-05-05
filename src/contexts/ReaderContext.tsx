@@ -21,6 +21,10 @@ interface ReaderContextType {
   setVoiceUri: (v: string) => void;
   speechRate: number;
   setSpeechRate: (r: number) => void;
+  bookLimit: number;
+  setBookLimit: (l: number) => void;
+  chapterLimit: number;
+  setChapterLimit: (l: number) => void;
 }
 
 const ReaderContext = createContext<ReaderContextType | undefined>(undefined);
@@ -34,6 +38,8 @@ interface ReaderConfig {
   isEnabledReplace: boolean;
   voiceUri: string;
   speechRate: number;
+  bookLimit: number;
+  chapterLimit: number;
 }
 
 const SETTINGS_KEY = 'stories.ui.config';
@@ -47,6 +53,8 @@ const defaultSettings: ReaderConfig = {
   isEnabledReplace: true,
   voiceUri: '',
   speechRate: 1.0,
+  bookLimit: 20,
+  chapterLimit: 50,
 };
 
 function getInitialSettings(): ReaderConfig {
@@ -127,6 +135,8 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
   const setIsEnabledReplace = (e: boolean) => updateSetting('isEnabledReplace', e);
   const setVoiceUri = (v: string) => updateSetting('voiceUri', v, false);
   const setSpeechRate = (r: number) => updateSetting('speechRate', r, false);
+  const setBookLimit = (l: number) => updateSetting('bookLimit', l);
+  const setChapterLimit = (l: number) => updateSetting('chapterLimit', l);
 
   return (
     <ReaderContext.Provider
@@ -139,6 +149,8 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
         isEnabledReplace: settings.isEnabledReplace, setIsEnabledReplace,
         voiceUri: settings.voiceUri, setVoiceUri,
         speechRate: settings.speechRate, setSpeechRate,
+        bookLimit: settings.bookLimit, setBookLimit,
+        chapterLimit: settings.chapterLimit, setChapterLimit,
       }}
     >
       {children}
