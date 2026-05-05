@@ -25,6 +25,20 @@ export function ReaderScreen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const filterState = searchParams.get('filterState') || 'all';
+  let rootTab = searchParams.get('rootTab') || '';
+  
+  if (!rootTab) {
+    try {
+      const cached = sessionStorage.getItem(`last_read_${bookId}`);
+      if (cached) {
+        const data = JSON.parse(cached);
+        if (data.rootTab) {
+          rootTab = data.rootTab;
+        }
+      }
+    } catch(e) {}
+  }
+
   const [content, setContent] = useState<ChapterContent | null>(null);
   const [bookChapters, setBookChapters] = useState<Chapter[]>([]);
   const [minDrawerPage, setMinDrawerPage] = useState(1);
@@ -88,7 +102,7 @@ export function ReaderScreen() {
   const fetchChapter = () => {
     const reqId = ++loadingContentRequestRef.current;
     setIsLoadingContent(true);
-    api.getChapterContent(chapterId!, groupLines, isEnabledReplace).then(res => {
+    api.getChapterContent(chapterId!, groupLines, isEnabledReplace, rootTab).then(res => {
       if (loadingContentRequestRef.current !== reqId) return;
       setContent(res);
       setIsLoadingContent(false);
@@ -97,7 +111,8 @@ export function ReaderScreen() {
         sessionStorage.setItem(`last_read_${bookId}`, JSON.stringify({
           chapterId: res.chapter.chapterId,
           chapterNumber: res.chapter.chapterNumber,
-          filterState: filterState
+          filterState: filterState,
+          rootTab: rootTab
         }));
       } catch (e) {}
       
@@ -365,7 +380,11 @@ export function ReaderScreen() {
           </div>
 
           <button 
-            onClick={() => { stopReading(); navigate(`/book/${bookId}?focus=${chapterId}&focusNumber=${content.chapter.chapterNumber}&filterState=${filterState}&bookName=${encodeURIComponent(content.chapter.bookName)}`); }}
+            onClick={() => { 
+              stopReading(); 
+              const rootTabStr = rootTab ? `&rootTab=${rootTab}` : '';
+              navigate(`/book/${bookId}?focus=${chapterId}&focusNumber=${content.chapter.chapterNumber}&filterState=${filterState}&bookName=${encodeURIComponent(content.chapter.bookName)}${rootTabStr}`); 
+            }}
             className="flex-1 flex flex-col items-center justify-center min-w-0 px-2 cursor-pointer transition-opacity hover:opacity-80 active:opacity-70 bg-transparent border-none appearance-none"
             title="Xem danh sách chương"
           >
@@ -467,7 +486,8 @@ export function ReaderScreen() {
                   onChapterClick={(chap) => {
                     stopReading();
                     setShowChapterDrawer(false);
-                    navigate(`/book/${bookId}/chapter/${chap.chapterId}?filterState=${filterState}`);
+                    const rootTabStr = rootTab ? `&rootTab=${rootTab}` : '';
+                    navigate(`/book/${bookId}/chapter/${chap.chapterId}?filterState=${filterState}${rootTabStr}`);
                   }}
                 />
                 {hasMoreNextChapters && (
@@ -483,7 +503,12 @@ export function ReaderScreen() {
           </div>
           <div className="p-4 border-t border-surface-variant bg-surface pb-safe-bottom">
             <button
-               onClick={() => { stopReading(); setShowChapterDrawer(false); navigate(`/book/${bookId}?filterState=${filterState}`); }}
+               onClick={() => { 
+                 stopReading(); 
+                 setShowChapterDrawer(false); 
+                 const rootTabStr = rootTab ? `&rootTab=${rootTab}` : '';
+                 navigate(`/book/${bookId}?filterState=${filterState}${rootTabStr}`); 
+               }}
                className="w-full py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-variant transition-colors text-sm font-semibold"
             >
               Xem chi tiết truyện
@@ -524,9 +549,11 @@ export function ReaderScreen() {
                         stopReading();
                         setShowHistoryDrawer(false);
                         if (book.lastReadChapter) {
-                          navigate(`/book/${book.bookId}/chapter/${book.lastReadChapter.chapterId}`);
+                          const rootTabStr = rootTab ? `?rootTab=${rootTab}` : '';
+                          navigate(`/book/${book.bookId}/chapter/${book.lastReadChapter.chapterId}${rootTabStr}`);
                         } else {
-                          navigate(`/book/${book.bookId}`);
+                          const rootTabStr = rootTab ? `?rootTab=${rootTab}` : '';
+                          navigate(`/book/${book.bookId}${rootTabStr}`);
                         }
                       }}
                       className="w-full text-left flex items-start gap-3 p-3 rounded-xl transition-all border bg-surface-container-low border-outline-variant/30 hover:bg-surface-container hover:border-primary/40 focus:border-primary/40 active:scale-[0.98] cursor-pointer"
@@ -617,7 +644,8 @@ export function ReaderScreen() {
                     disabled={!content.navigation?.next?.chapterId}
                     onClick={() => {
                       stopReading();
-                      content.navigation?.next?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.next.chapterId}?filterState=${filterState}`);
+                      const rootTabStr = rootTab ? `&rootTab=${rootTab}` : '';
+                      content.navigation?.next?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.next.chapterId}?filterState=${filterState}${rootTabStr}`);
                     }}
                     className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
                   >
@@ -687,7 +715,8 @@ export function ReaderScreen() {
                     disabled={!content.navigation?.prev?.chapterId}
                     onClick={() => {
                       stopReading();
-                      content.navigation?.prev?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.prev.chapterId}?filterState=${filterState}`);
+                      const rootTabStr = rootTab ? `&rootTab=${rootTab}` : '';
+                      content.navigation?.prev?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.prev.chapterId}?filterState=${filterState}${rootTabStr}`);
                     }}
                     className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
                   >
@@ -765,7 +794,8 @@ export function ReaderScreen() {
                     disabled={!content.navigation?.next?.chapterId}
                     onClick={() => {
                       stopReading();
-                      content.navigation?.next?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.next.chapterId}?filterState=${filterState}`);
+                      const rootTabStr = rootTab ? `&rootTab=${rootTab}` : '';
+                      content.navigation?.next?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.next.chapterId}?filterState=${filterState}${rootTabStr}`);
                     }}
                     className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
                   >

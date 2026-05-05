@@ -30,9 +30,11 @@ export function ChapterListScreen() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  let filterStateParam: 'all' | 'PENDING' = searchParams.get('filterState') === 'PENDING' ? 'PENDING' : 'all';
+  const filterStateParam = searchParams.get('filterState') === 'PENDING' ? 'PENDING' : 'all';
+  let filterStateToUse: 'all' | 'PENDING' = filterStateParam;
   let focusChapterId = searchParams.get('focus') || undefined;
   let focusChapterNumberStr = searchParams.get('focusNumber') || undefined;
+  let rootTab = searchParams.get('rootTab') || '';
   
   if (!searchParams.get('focus')) {
     try {
@@ -42,12 +44,19 @@ export function ChapterListScreen() {
         focusChapterId = data.chapterId;
         focusChapterNumberStr = String(data.chapterNumber);
         if (data.filterState === 'PENDING' || data.filterState === 'all') {
-          filterStateParam = data.filterState;
+          filterStateToUse = data.filterState;
+        }
+        if (data.rootTab) {
+          rootTab = data.rootTab;
         }
       }
     } catch(e) {}
   }
   
+  if (!rootTab && searchParams.get('rootTab')) {
+    rootTab = searchParams.get('rootTab') || '';
+  }
+
   const focusChapterNumber = focusChapterNumberStr ? parseInt(focusChapterNumberStr, 10) : undefined;
   const initialBookName = searchParams.get('bookName') || undefined;
 
@@ -64,7 +73,7 @@ export function ChapterListScreen() {
 
   const [sortBy] = useState('chapterNumber');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('ASC');
-  const [filterState, setFilterState] = useState<'all' | 'PENDING'>(filterStateParam);
+  const [filterState, setFilterState] = useState<'all' | 'PENDING'>(filterStateToUse);
   
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -347,10 +356,12 @@ export function ChapterListScreen() {
                 sessionStorage.setItem(`last_read_${bookId}`, JSON.stringify({
                   chapterId: chapter.chapterId,
                   chapterNumber: chapter.chapterNumber,
-                  filterState: filterState
+                  filterState: filterState,
+                  rootTab: rootTab
                 }));
               } catch(e) {}
-              navigate(`/book/${bookId}/chapter/${chapter.chapterId}?filterState=${filterState}`);
+              const rootTabStr = rootTab ? `&rootTab=${rootTab}` : '';
+              navigate(`/book/${bookId}/chapter/${chapter.chapterId}?filterState=${filterState}${rootTabStr}`);
             }}
           />
 

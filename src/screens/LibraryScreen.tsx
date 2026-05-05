@@ -212,11 +212,12 @@ export function LibraryScreen() {
             
             const getBookUrl = (book: Book) => {
               if (book?.lastReadChapter && activeTab === 'history') {
-                return `/book/${book.bookId}/chapter/${book.lastReadChapter.chapterId}`;
+                return `/book/${book.bookId}/chapter/${book.lastReadChapter.chapterId}?rootTab=${activeTab}`;
               } else {
                 const qs = new URLSearchParams();
                 if (activeTab === 'ai') qs.set('filterState', 'PENDING');
                 qs.set('bookName', book.bookName);
+                qs.set('rootTab', activeTab);
                 const filterStateStr = qs.toString() ? `?${qs.toString()}` : '';
                 return `/book/${book.bookId}${filterStateStr}`;
               }
