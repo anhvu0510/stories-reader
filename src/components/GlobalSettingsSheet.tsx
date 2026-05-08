@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Check, Layers, MonitorSmartphone, ChevronDown, ChevronUp, Volume2, KeyRound, Server, Plus, RefreshCw, BookOpen, List } from 'lucide-react';
+import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Check, Layers, MonitorSmartphone, ChevronDown, ChevronUp, Volume2, KeyRound, Server, Plus, RefreshCw, BookOpen, List, Bot } from 'lucide-react';
 import { api, Replacement, ApiDomain, getApiDomains } from '../lib/api';
 import { useReaderSettings } from '../contexts/ReaderContext';
 
@@ -13,7 +13,7 @@ type RealScope = 'chapter' | 'book' | 'global';
 interface GlobalSettingsSheetProps {
   onClose: () => void;
   initialMatch?: string;
-  initialTab?: 'api' | 'names' | 'voice' | 'quotas' | 'tokens' | 'servers';
+  initialTab?: 'api' | 'names' | 'voice' | 'ai' | 'servers';
   currentBookId?: string;
   currentChapterId?: string;
 }
@@ -24,7 +24,8 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
     theme, setTheme, font, setFont, fontSize, setFontSize, lineHeight, setLineHeight, groupLines, setGroupLines,
     speechRate, setSpeechRate, bookLimit, setBookLimit, chapterLimit, setChapterLimit
   } = useReaderSettings();
-  const [activeTab, setActiveTab] = useState<'api' | 'names' | 'voice' | 'quotas' | 'tokens' | 'servers'>(initialTab || (initialMatch ? 'names' : 'api'));
+  const [activeTab, setActiveTab] = useState<'api' | 'names' | 'voice' | 'ai' | 'servers'>(initialTab || (initialMatch ? 'names' : 'api'));
+  const [aiSubTab, setAiSubTab] = useState<'tokens' | 'models'>('tokens');
 
   // Names State
   const [replacements, setReplacements] = useState<Replacement[]>([]);
@@ -299,19 +300,11 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
               </button>
 
               <button 
-                onClick={() => setActiveTab('tokens')}
-                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'tokens' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+                onClick={() => setActiveTab('ai')}
+                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'ai' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
               >
-                <KeyRound size={16} />
-                <span className={activeTab === 'tokens' ? 'block' : 'hidden sm:block'}>Tokens</span>
-              </button>
-
-              <button 
-                onClick={() => setActiveTab('quotas')}
-                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'quotas' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
-              >
-                <Globe size={16} />
-                <span className={activeTab === 'quotas' ? 'block' : 'hidden sm:block'}>Models</span>
+                <Bot size={16} />
+                <span className={activeTab === 'ai' ? 'block' : 'hidden sm:block'}>AI</span>
               </button>
 
               <button 
@@ -679,12 +672,32 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
             </div>
           )}
 
-          {activeTab === 'tokens' && (
-            <TokenManagerSheet isEmbedded={true} />
-          )}
-
-          {activeTab === 'quotas' && (
-            <QuotaSettingsSheet isEmbedded={true} />
+          {activeTab === 'ai' && (
+            <div className="flex flex-col h-full overflow-hidden">
+              <div className="p-3 sm:p-5 flex-shrink-0 border-b border-outline-variant/10 bg-surface">
+                <div className="flex bg-surface-container-highest/50 p-1 rounded-full w-full sm:w-fit mx-auto sm:mx-0">
+                  <button
+                    onClick={() => setAiSubTab('tokens')}
+                    className={`flex-1 sm:flex-none px-6 py-2.5 rounded-full text-[13px] font-bold transition-all duration-300 ${aiSubTab === 'tokens' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+                  >
+                    API Tokens
+                  </button>
+                  <button
+                    onClick={() => setAiSubTab('models')}
+                    className={`flex-1 sm:flex-none px-6 py-2.5 rounded-full text-[13px] font-bold transition-all duration-300 ${aiSubTab === 'models' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+                  >
+                    AI Models
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-hidden relative">
+                {aiSubTab === 'tokens' ? (
+                  <TokenManagerSheet isEmbedded={true} />
+                ) : (
+                  <QuotaSettingsSheet isEmbedded={true} />
+                )}
+              </div>
+            </div>
           )}
 
           {activeTab === 'servers' && (

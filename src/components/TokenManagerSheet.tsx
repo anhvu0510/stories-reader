@@ -104,7 +104,7 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
   };
 
   const content = (
-      <div className={`relative bg-surface text-on-surface w-full max-w-[600px] flex flex-col flex-1 overflow-hidden ${!isEmbedded && 'border border-outline-variant/30 h-[85vh] sm:h-[80vh] rounded-t-3xl sm:rounded-3xl shadow-2xl z-10'}`}>
+      <div className={`relative bg-surface text-on-surface w-full flex flex-col ${!isEmbedded ? 'flex-1 overflow-hidden border border-outline-variant/30 h-[85vh] sm:h-[80vh] rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-[600px] z-10' : 'h-full max-w-full'}`}>
         
         {/* Header */}
         <div className="flex-shrink-0 p-3 sm:p-5 border-b border-outline-variant/10 flex flex-col gap-3 bg-surface-container-low">
@@ -210,7 +210,7 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
   );
 
   if (isEmbedded) {
-    return <div className="flex-1 overflow-hidden flex flex-col w-full h-full">{content}</div>;
+    return <div className="flex flex-col w-full h-full bg-surface">{content}</div>;
   }
 
   return (
