@@ -286,12 +286,11 @@ export function LibraryScreen() {
           <h1 className="font-serif text-[28px] font-black tracking-tight drop-shadow-lg select-none bg-gradient-to-r from-primary via-primary-fixed to-primary bg-clip-text text-transparent animate-gradient-x pb-1">
             Reader Stories
           </h1>
-          
+
           <button
             onClick={() => setOfflineMode(!isOfflineMode)}
-            className={`absolute right-0 flex items-center justify-center p-2 rounded-full transition-all active:scale-95 ${
-              isOfflineMode ? 'text-on-surface-variant/70 bg-surface-variant/30' : 'text-primary bg-primary/10'
-            }`}
+            className={`absolute right-0 top-0 flex items-center justify-center p-2 rounded-full transition-all active:scale-95 ${isOfflineMode ? 'text-on-surface-variant/70 bg-surface-variant/30' : 'text-primary bg-primary/10'
+              }`}
             title={isOfflineMode ? "Chế độ Ngoại tuyến" : "Chế độ Trực tuyến"}
           >
             {isOfflineMode ? <WifiOff size={14} strokeWidth={2.5} /> : <Wifi size={14} strokeWidth={2.5} />}
@@ -401,8 +400,8 @@ export function LibraryScreen() {
                 key={book.bookId}
                 to={getBookUrl(book)}
                 className={`relative overflow-hidden block rounded-2xl p-3 sm:p-4 transition-all duration-300 active:scale-[0.98] ${isRead || activeTab !== 'books'
-                    ? 'bg-surface-container-low border border-outline-variant/30 active:bg-surface-container active:border-primary/40'
-                    : 'bg-surface border border-outline-variant/20 active:border-outline-variant/40'
+                  ? 'bg-surface-container-low border border-outline-variant/30 active:bg-surface-container active:border-primary/40'
+                  : 'bg-surface border border-outline-variant/20 active:border-outline-variant/40'
                   }`}
               >
                 {/* Subtle side indicator */}
@@ -413,8 +412,8 @@ export function LibraryScreen() {
 
                   {/* Left Number Badge for total chapters */}
                   <div className={`shrink-0 w-[52px] h-[52px] sm:w-[56px] sm:h-[56px] rounded-full flex flex-col items-center justify-center border font-bold transition-colors ${isRead || activeTab === 'history'
-                      ? 'bg-primary/10 text-primary border-primary/20'
-                      : 'bg-surface-variant/50 text-on-surface-variant border-outline-variant/30'
+                    ? 'bg-primary/10 text-primary border-primary/20'
+                    : 'bg-surface-variant/50 text-on-surface-variant border-outline-variant/30'
                     }`}>
                     <span className="text-[9px] sm:text-[10px] leading-none opacity-80 mt-0.5 uppercase tracking-wider">{activeTab === 'history' && book.lastReadChapter ? 'C.' + book.lastReadChapter.chapterNumber : 'Tổng'}</span>
                     <span className="text-[14px] sm:text-[16px] leading-none mt-0.5">{activeTab === 'history' ? Math.round(progress) + '%' : book.chapterCount}</span>
@@ -469,7 +468,7 @@ export function LibraryScreen() {
                           try {
                             await syncBook(book.bookId, book.bookName);
                           } catch (err) {
-                            window.dispatchEvent(new CustomEvent('app-toast', { 
+                            window.dispatchEvent(new CustomEvent('app-toast', {
                               detail: { message: 'Có lỗi xảy ra, vui lòng thử lại sau', type: 'error' }
                             }));
                           }
