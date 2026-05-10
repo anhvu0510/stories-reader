@@ -5,6 +5,7 @@ import { useReaderSettings } from '../contexts/ReaderContext';
 
 import { QuotaSettingsSheet } from './QuotaSettingsSheet';
 import { TokenManagerSheet } from './TokenManagerSheet';
+import { OfflineManagerSheet } from './OfflineManagerSheet';
 import { cn } from '../lib/utils';
 import { showToast } from './Toast';
 
@@ -13,7 +14,7 @@ type RealScope = 'chapter' | 'book' | 'global';
 interface GlobalSettingsSheetProps {
   onClose: () => void;
   initialMatch?: string;
-  initialTab?: 'api' | 'names' | 'voice' | 'ai' | 'servers';
+  initialTab?: 'api' | 'names' | 'voice' | 'ai' | 'servers' | 'offline';
   currentBookId?: string;
   currentChapterId?: string;
 }
@@ -24,7 +25,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
     theme, setTheme, font, setFont, fontSize, setFontSize, lineHeight, setLineHeight, groupLines, setGroupLines,
     speechRate, setSpeechRate, bookLimit, setBookLimit, chapterLimit, setChapterLimit
   } = useReaderSettings();
-  const [activeTab, setActiveTab] = useState<'api' | 'names' | 'voice' | 'ai' | 'servers'>(initialTab || (initialMatch ? 'names' : 'api'));
+  const [activeTab, setActiveTab] = useState<'api' | 'names' | 'voice' | 'ai' | 'servers' | 'offline'>(initialTab || (initialMatch ? 'names' : 'api'));
   const [aiSubTab, setAiSubTab] = useState<'tokens' | 'models'>('tokens');
 
   // Names State
@@ -305,6 +306,14 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
               >
                 <Bot size={16} />
                 <span className={activeTab === 'ai' ? 'block' : 'hidden sm:block'}>AI</span>
+              </button>
+
+              <button 
+                onClick={() => setActiveTab('offline')}
+                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'offline' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+              >
+                <MonitorSmartphone size={16} />
+                <span className={activeTab === 'offline' ? 'block' : 'hidden sm:block'}>Ngoại tuyến</span>
               </button>
 
               <button 
@@ -698,6 +707,10 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                 )}
               </div>
             </div>
+          )}
+
+          {activeTab === 'offline' && (
+            <OfflineManagerSheet isEmbedded={true} />
           )}
 
           {activeTab === 'servers' && (

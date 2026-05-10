@@ -1,6 +1,16 @@
-import { Home, Clock, Sparkles } from 'lucide-react';
+import { Home, Clock, Sparkles, Settings } from 'lucide-react';
 
-export function BottomDock({ activeTab, onTabSelect }: { activeTab: 'books' | 'history' | 'ai', onTabSelect: (tab: 'books' | 'history' | 'ai') => void }) {
+export function BottomDock({ 
+  activeTab, 
+  onTabSelect,
+  isOfflineMode,
+  onSettingsClick
+}: { 
+  activeTab: 'books' | 'history' | 'ai', 
+  onTabSelect: (tab: 'books' | 'history' | 'ai') => void,
+  isOfflineMode?: boolean,
+  onSettingsClick?: () => void
+}) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)] pointer-events-none drop-shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
       <div className="flex justify-center w-full mt-4">
@@ -33,15 +43,26 @@ export function BottomDock({ activeTab, onTabSelect }: { activeTab: 'books' | 'h
              </svg>
           </div>
 
-          {/* Left item: Dịch AI */}
-          <button 
-             onClick={() => onTabSelect('ai')}
-             className="relative flex items-center justify-center w-16 h-[64px] transition-all duration-300"
-          >
-             <div className={`transition-all duration-300 ${activeTab === 'ai' ? 'text-primary scale-110 drop-shadow-md' : 'text-on-surface-variant hover:text-on-surface'}`}>
-               <Sparkles size={24} strokeWidth={activeTab === 'ai' ? 2.5 : 2} />
-             </div>
-          </button>
+          {/* Left item: Dịch AI or Settings */}
+          {isOfflineMode ? (
+            <button 
+               onClick={onSettingsClick}
+               className="relative flex items-center justify-center w-16 h-[64px] transition-all duration-300"
+            >
+               <div className="transition-all duration-300 text-on-surface-variant hover:text-on-surface">
+                 <Settings size={24} strokeWidth={2} />
+               </div>
+            </button>
+          ) : (
+            <button 
+               onClick={() => onTabSelect('ai')}
+               className="relative flex items-center justify-center w-16 h-[64px] transition-all duration-300"
+            >
+               <div className={`transition-all duration-300 ${activeTab === 'ai' ? 'text-primary scale-110 drop-shadow-md' : 'text-on-surface-variant hover:text-on-surface'}`}>
+                 <Sparkles size={24} strokeWidth={activeTab === 'ai' ? 2.5 : 2} />
+               </div>
+            </button>
+          )}
 
           {/* Center item: Home (Floating) */}
           <div className="relative flex flex-col items-center -mt-8 mb-[30px]">

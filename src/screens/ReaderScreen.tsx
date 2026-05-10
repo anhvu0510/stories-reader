@@ -52,6 +52,7 @@ export function ReaderScreen() {
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [historyBooks, setHistoryBooks] = useState<Book[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
   const [showControls, setShowControls] = useState(true);
 
   const loadHistoryBooks = async () => {
@@ -72,6 +73,12 @@ export function ReaderScreen() {
 
   const { isPlaying, isPaused, startReading, pauseReading, stopReading, jumpToContent, nextSection } = useReadAloud(content?.chapter?.content || []);
   const [showAudioBar, setShowAudioBar] = useState(false);
+
+  const filteredHistoryBooks = useMemo(() => {
+    if (!historySearch) return historyBooks;
+    const lowerSearch = historySearch.toLowerCase();
+    return historyBooks.filter(b => b.bookName.toLowerCase().includes(lowerSearch));
+  }, [historyBooks, historySearch]);
 
   useEffect(() => {
     if (content?.chapter?.bookName) {
@@ -339,9 +346,18 @@ export function ReaderScreen() {
     // Colors are now handled globally via CSS variables and data-theme
   }, []);
 
+  const hasScrolledDrawerRef = useRef(false);
+
+  useEffect(() => {
+    if (!showChapterDrawer) {
+      hasScrolledDrawerRef.current = false;
+    }
+  }, [showChapterDrawer]);
+
   // Scroll to active chapter when drawer opens
   useEffect(() => {
-    if (showChapterDrawer && bookChapters.length > 0) {
+    if (showChapterDrawer && bookChapters.length > 0 && !hasScrolledDrawerRef.current) {
+      hasScrolledDrawerRef.current = true;
       setTimeout(() => {
         const el = document.getElementById(`chapter-${chapterId}`);
         if (el) {
@@ -527,20 +543,48 @@ export function ReaderScreen() {
           "w-[85%] max-w-sm bg-surface-container h-full relative flex flex-col shadow-2xl transition-transform duration-300",
           showHistoryDrawer ? "translate-x-0" : "translate-x-full"
         )}>
-          <div className="p-4 border-b border-surface-variant flex items-center justify-between">
-            <h2 className="font-serif text-lg font-bold">Lịch sử đọc</h2>
-            <button onClick={() => setShowHistoryDrawer(false)} className="p-2 text-on-surface-variant hover:text-on-surface rounded-full">
-              <X size={20} />
-            </button>
+          <div className="p-4 border-b border-surface-variant flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-serif text-lg font-bold">Lịch sử đọc</h2>
+              <button onClick={() => setShowHistoryDrawer(false)} className="p-2 text-on-surface-variant hover:text-on-surface rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+            {historyBooks.length > 0 && (
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-on-surface-variant group-focus-within:text-primary transition-colors">
+                  <Search size={16} />
+                </div>
+                <input
+                  type="text"
+                  className="block w-full pl-9 pr-9 py-2 bg-surface-container-highest/30 border border-outline-variant/30 rounded-xl text-on-surface focus:bg-surface-container focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all text-sm outline-none placeholder:text-on-surface-variant/50"
+                  placeholder="Tìm kiếm truyện..."
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                />
+                {historySearch && (
+                  <button 
+                    onClick={() => setHistorySearch('')}
+                    className="absolute inset-y-0 right-0 pr-2 flex items-center text-on-surface-variant active:text-on-surface transition-colors focus:outline-none"
+                  >
+                    <div className="bg-surface-variant/50 rounded-full p-1 active:bg-surface-variant">
+                      <X size={10} />
+                    </div>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto hide-scrollbar p-2">
             {isLoadingHistory && historyBooks.length === 0 ? (
               <div className="flex justify-center items-center h-20 text-on-surface-variant text-sm">Đang tải lịch sử...</div>
             ) : historyBooks.length === 0 ? (
               <div className="flex justify-center items-center h-20 text-on-surface-variant text-sm">Chưa có lịch sử.</div>
+            ) : filteredHistoryBooks.length === 0 ? (
+              <div className="flex justify-center items-center h-20 text-on-surface-variant text-sm">Không tìm thấy truyện.</div>
             ) : (
               <div className="flex flex-col gap-2">
-                {historyBooks.map(book => {
+                {filteredHistoryBooks.map(book => {
                   const progress = book.chapterCount > 0 ? (book.totalTranslated / book.chapterCount) * 100 : 0;
                   return (
                     <button

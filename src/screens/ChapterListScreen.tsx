@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { Search, SortDesc, ArrowLeft, Loader2, AlertCircle, Clock, Settings } from 'lucide-react';
+import { Search, SortDesc, ArrowLeft, Loader2, AlertCircle, Clock, Settings, Download } from 'lucide-react';
 import { api, Chapter, Book } from '../lib/api';
 import { TranslationSheet } from '../components/TranslationSheet';
 import { GlobalSettingsSheet } from '../components/GlobalSettingsSheet';
@@ -8,6 +8,7 @@ import { LoadingOverlay } from '../components/LoadingOverlay';
 import { BottomDock } from '../components/BottomDock';
 import { ChapterList } from '../components/ChapterList';
 import { useReaderSettings } from '../contexts/ReaderContext';
+import { useOfflineSync } from '../hooks/useOfflineSync';
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -81,6 +82,7 @@ export function ChapterListScreen() {
 
   // Track if we've successfully scrolled to the focused chapter to avoid repeated scrolling
   const [hasScrolled, setHasScrolled] = useState(false);
+  const { isSyncing, syncProgress, syncStatus, syncBook } = useOfflineSync();
 
   useEffect(() => {
     if (book?.bookName) {
@@ -92,8 +94,10 @@ export function ChapterListScreen() {
 
   useEffect(() => {
     if (focusChapterId && !hasScrolled && chapters.length > 0) {
+      // Mark as scrolled immediately so we don't yank the user later when they load more chapters
+      setHasScrolled(true);
+
       if (filterState === 'PENDING') {
-        setHasScrolled(true);
         return;
       }
       
@@ -101,7 +105,6 @@ export function ChapterListScreen() {
       if (el) {
         setTimeout(() => {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          setHasScrolled(true);
           // Highlight the flash briefly
           el.classList.add('bg-primary/10');
           setTimeout(() => el.classList.remove('bg-primary/10'), 1500);
@@ -283,14 +286,36 @@ export function ChapterListScreen() {
               )}
             </div>
 
-            <button 
-              onClick={() => setShowGlobalSettings(true)}
-              className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
-              title="Cài đặt hệ thống"
-            >
-              <Settings size={20} />
-            </button>
+            <div className="flex items-center gap-2">
+              {!api.isOfflineMode() && (
+                <button 
+                  onClick={() => bookId && syncBook(bookId)}
+                  disabled={isSyncing}
+                  className={`w-10 h-10 flex items-center justify-center transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md ${isSyncing ? 'text-primary animate-pulse' : 'text-on-surface-variant active:text-primary'}`}
+                  title={isSyncing ? "Đang lưu ngoại tuyến..." : "Lưu đọc ngoại tuyến"}
+                >
+                  <Download size={20} />
+                </button>
+              )}
+              <button 
+                onClick={() => setShowGlobalSettings(true)}
+                className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
+                title="Cài đặt hệ thống"
+              >
+                <Settings size={20} />
+              </button>
+            </div>
           </div>
+          
+          {isSyncing && (
+            <div className="w-full mt-2 bg-surface-container-high rounded-full h-1.5 overflow-hidden">
+              <div 
+                className="bg-primary h-full transition-all duration-300"
+                style={{ width: `${syncProgress}%` }}
+              />
+              <p className="text-[10px] text-center text-on-surface-variant mt-1 mb-0">{syncStatus} ({syncProgress}%)</p>
+            </div>
+          )}
         </div>
       </header>
 
@@ -298,13 +323,13 @@ export function ChapterListScreen() {
         <div className="flex bg-surface-container-low p-1 rounded-full border border-outline-variant/30 w-full mb-4">
           <button 
             onClick={() => { setFilterState('all'); }}
-            className={`flex-1 px-4 py-2.5 text-[13px] font-medium rounded-full transition-all ${filterState === 'all' ? 'bg-surface-bright text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+            className={`flex-1 px-4 py-2.5 text-[13px] font-medium rounded-full transition-all ${filterState === 'all' ? 'bg-surface-bright text-on-surface shadow-sm' : 'text-on-surface-variant active:text-on-surface active:bg-surface-variant/30'}`}
           >
             Tất cả
           </button>
           <button 
             onClick={() => { setFilterState('PENDING'); }}
-            className={`flex-1 px-4 py-2.5 text-[13px] font-medium rounded-full transition-all ${filterState === 'PENDING' ? 'bg-surface-bright text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+            className={`flex-1 px-4 py-2.5 text-[13px] font-medium rounded-full transition-all ${filterState === 'PENDING' ? 'bg-surface-bright text-on-surface shadow-sm' : 'text-on-surface-variant active:text-on-surface active:bg-surface-variant/30'}`}
           >
             Chưa dịch
           </button>
@@ -323,7 +348,7 @@ export function ChapterListScreen() {
           </div>
           <button 
             onClick={() => { setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC'); }}
-            className="flex items-center justify-center bg-transparent border border-outline-variant/50 rounded-full w-9 h-9 text-on-surface hover:bg-surface-variant transition-colors flex-shrink-0"
+            className="flex items-center justify-center bg-transparent border border-outline-variant/50 rounded-full w-9 h-9 text-on-surface active:bg-surface-variant transition-colors flex-shrink-0"
           >
             <SortDesc size={16} className={`transition-transform duration-300 ${sortOrder === 'ASC' ? 'rotate-180' : ''}`} />
           </button>

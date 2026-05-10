@@ -60,9 +60,9 @@ export function ChapterList({
                 isActive 
                   ? 'bg-primary/10 border-primary/30 shadow-[0_2px_8px_rgba(0,0,0,0.1)] ring-1 ring-primary/20' 
                   : isSucceeded 
-                    ? 'bg-surface border-transparent hover:bg-surface-container-high active:scale-[0.98]' 
+                    ? 'bg-surface border-transparent active:bg-surface-container-high active:scale-[0.98]' 
                     : isPending
-                      ? 'bg-surface border-transparent opacity-80 hover:bg-surface-container-high active:scale-[0.98]'
+                      ? 'bg-surface border-transparent opacity-80 active:bg-surface-container-high active:scale-[0.98]'
                       : 'bg-surface-container-lowest border-transparent opacity-50 cursor-not-allowed'
               }`}
               onClick={() => {
@@ -132,18 +132,18 @@ export function ChapterList({
                 onChapterClick(chapter);
               }
             }}
-            className={`cursor-pointer w-full text-left relative overflow-hidden block rounded-2xl p-3.5 sm:p-4 transition-all duration-300 group ${
+            className={`cursor-pointer w-full text-left relative overflow-hidden block rounded-2xl p-3 sm:p-4 transition-all duration-300 active:scale-[0.98] ${
               isActive ? 'bg-primary/5 border border-primary/40 shadow-[0_2px_12px_rgba(var(--color-primary-rgb),0.15)] ring-1 ring-primary/20' :
-              isSucceeded ? 'bg-surface-container-low border border-outline-variant/30 shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:bg-surface-container hover:border-primary/40 focus:border-primary/40 active:scale-[0.98]' : 
-              isPending ? 'bg-surface border border-outline-variant/20 hover:border-outline-variant/40 active:scale-[0.98]' : 
+              isSucceeded ? 'bg-surface-container-low border border-outline-variant/30 active:bg-surface-container active:border-primary/40 focus:border-primary/40' : 
+              isPending ? 'bg-surface border border-outline-variant/20 active:border-outline-variant/40' : 
               'bg-surface-container-lowest border border-transparent opacity-60 cursor-not-allowed'
             }`}
           >
             {/* Subtle side indicator */}
             <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${
               isActive ? 'bg-primary' :
-              isSucceeded ? 'bg-primary/20 group-hover:bg-primary/60' :
-              isPending ? 'bg-warning/20 group-hover:bg-warning/50' :
+              isSucceeded ? 'bg-primary/30' :
+              isPending ? 'bg-warning/30' :
               'bg-error/20'
             }`} />
 
@@ -151,7 +151,7 @@ export function ChapterList({
               {/* Left Number Badge */}
               <div className={`shrink-0 w-[42px] h-[42px] sm:w-[48px] sm:h-[48px] rounded-full flex flex-col items-center justify-center border font-bold transition-colors ${
                 isActive ? 'bg-primary text-on-primary border-primary' :
-                isSucceeded ? 'bg-primary/10 text-primary border-primary/20 group-hover:bg-primary group-hover:text-on-primary' :
+                isSucceeded ? 'bg-primary/10 text-primary border-primary/20' :
                 isPending ? 'bg-warning/10 text-warning border-warning/20' :
                 'bg-error/10 text-error border-error/20'
               }`}>
@@ -162,7 +162,7 @@ export function ChapterList({
               {/* Middle Content */}
               <div className="flex-1 min-w-0 py-0.5 flex flex-col justify-center">
                 <h3 className={`text-[14px] sm:text-[15px] font-semibold leading-[1.3] truncate mb-1 ${
-                  isSucceeded ? 'text-on-surface group-hover:text-primary transition-colors' :
+                  isSucceeded ? 'text-on-surface transition-colors' :
                   isPending ? 'text-on-surface-variant' :
                   'text-on-surface-variant/70'
                 }`}>
@@ -190,10 +190,10 @@ export function ChapterList({
               </div>
 
               {/* Right Action */}
-              <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full transition-all group-hover:bg-surface-container-highest">
+              <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full transition-all">
                 <ArrowRight size={18} className={`transition-all ${
-                  isSucceeded ? 'text-primary/70 group-hover:text-primary group-hover:translate-x-0.5' :
-                  isPending ? 'text-warning/70 group-hover:text-warning group-hover:translate-x-0.5' :
+                  isSucceeded ? 'text-primary/70' :
+                  isPending ? 'text-warning/70' :
                   'text-on-surface-variant/30 grayscale'
                 }`} />
               </div>

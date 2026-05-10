@@ -29,6 +29,11 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const checkConnection = async () => {
+      if (localStorage.getItem('offlineMode') === 'true') {
+        setIsInitializing(false);
+        return;
+      }
+
       let activeDomainUrl = '';
       
       try {
@@ -166,12 +171,24 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center font-sans">
-        <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center mb-6 shadow-sm ring-1 ring-primary/20 relative">
-          <BookOpen size={28} className="animate-pulse" />
-          <div className="absolute inset-0 border-2 border-primary/30 rounded-3xl animate-ping opacity-50" />
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center font-sans gap-6">
+        <div className="flex flex-col items-center justify-center">
+          <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center mb-6 shadow-sm ring-1 ring-primary/20 relative">
+            <BookOpen size={28} className="animate-pulse" />
+            <div className="absolute inset-0 border-2 border-primary/30 rounded-3xl animate-ping opacity-50" />
+          </div>
+          <div className="text-on-surface-variant font-medium text-[15px] animate-pulse">Đang kết nối máy chủ...</div>
         </div>
-        <div className="text-on-surface-variant font-medium text-[15px] animate-pulse">Đang kết nối máy chủ...</div>
+        
+        <button
+          onClick={() => {
+            localStorage.setItem('offlineMode', 'true');
+            window.location.reload();
+          }}
+          className="mt-8 px-5 py-2.5 rounded-full bg-surface-container border border-outline-variant/30 text-[14px] font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all"
+        >
+          Vào chế độ Ngoại tuyến
+        </button>
       </div>
     );
   }

@@ -1,4 +1,5 @@
 import { showToast } from '../components/Toast';
+import { offlineDb } from './offlineDb';
 
 // API Types
 export interface Book {
@@ -230,16 +231,45 @@ const settingsCache: { [key: string]: { data: any; timestamp: number } } = {};
 const pendingSettingsRequests: { [key: string]: Promise<any> } = {};
 
 export const api = {
+  isOfflineMode: () => localStorage.getItem('offlineMode') === 'true',
   testConnection: async (domainUrl: string): Promise<boolean> => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
       // Just check any lightweight endpoint, or the health endpoint if it exists
-      const res = await fetch(`${domainUrl}/api/stories/setting/stories.ui.domain`);
+      const res = await fetch(`${domainUrl}/api/stories/setting/stories.ui.domain`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
       return res.ok;
     } catch {
       return false;
     }
   },
-  getBooks: async (page = 1, search = '', current?: string, limit = 20): Promise<{ data: Book[], pagination: any }> => {
+  getBooks: async (page = 1, search = '', current?: string, limit = 20, forceDataSource?: 'online' | 'offline'): Promise<{ data: Book[], pagination: any }> => {
+    const isOffline = forceDataSource === 'offline' || (api.isOfflineMode() && forceDataSource !== 'online');
+    if (isOffline) {
+      let books = await offlineDb.getBooks();
+      if (search) {
+        books = books.filter(b => b.bookName.toLowerCase().includes(search.toLowerCase()));
+      }
+      
+      if (current === 'HISTORY') {
+        books = books.filter(b => b.totalTranslated > 0 || b.lastReadChapter);
+        // sort by updatedAt descending (simplest) if possible
+        books.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+      } else if (current === 'AI') {
+        books = [];
+      }
+
+      const total = books.length;
+      const data = books.slice((page - 1) * limit, page * limit);
+      return { 
+        data, 
+        pagination: { currentPage: page, totalPages: Math.ceil(total / limit) || 1, total } 
+      };
+    }
+
     try {
       let url = `/api/books?page=${page}&limit=${limit}&search=${search}`;
       if (current) {
@@ -268,6 +298,32 @@ export const api = {
     state?: string,
     search?: string
   ): Promise<{ chapters: Chapter[], pagination: any }> => {
+    if (api.isOfflineMode()) {
+      let chapters = await offlineDb.getChapters(bookId);
+      
+      if (state && state !== 'all') {
+        chapters = chapters.filter(c => c.state === state) as any;
+      }
+      if (search) {
+        chapters = chapters.filter(c => c.title.toLowerCase().includes(search.toLowerCase()) || c.chapterNumber.toString().includes(search)) as any;
+      }
+      
+      if (sortBy === 'chapterNumber') {
+        chapters.sort((a, b) => sortOrder === 'ASC' ? a.chapterNumber - b.chapterNumber : b.chapterNumber - a.chapterNumber);
+      } else if (sortBy === 'updatedAt') {
+        chapters.sort((a, b) => sortOrder === 'ASC' ? new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime() : new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      }
+      
+      const total = chapters.length;
+      const totalPages = Math.ceil(total / limit);
+      const paginatedChapters = chapters.slice((page - 1) * limit, page * limit);
+      
+      return {
+        chapters: paginatedChapters,
+        pagination: { currentPage: page, totalPages: Math.max(1, totalPages), total }
+      };
+    }
+
     try {
       const query = new URLSearchParams({
         page: page.toString(),
@@ -312,6 +368,32 @@ export const api = {
   },
 
   getChapterContent: async (chapterId: string, groupLines: number = 1, isEnabledReplace: boolean = true, rootTab=''): Promise<ChapterContent> => {
+    if (api.isOfflineMode()) {
+      const content = await offlineDb.getChapterContent(chapterId);
+      if (!content) throw new Error("Chapter not downloaded for offline");
+      
+      // Update lastReadChapter
+      try {
+        const chapMeta = await offlineDb.getChapterMeta(chapterId);
+        if (chapMeta && chapMeta.bookId) {
+          const book = await offlineDb.getBook(chapMeta.bookId);
+          if (book) {
+            book.lastReadChapter = {
+              chapterId: content.chapter.chapterId,
+              chapterNumber: content.chapter.chapterNumber.toString(),
+              title: content.chapter.title
+            };
+            book.updatedAt = new Date().toISOString();
+            await offlineDb.saveBook(book);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to update lastReadChapter offline", e);
+      }
+
+      return content;
+    }
+
     try {
       const res = await fetchWithRetry(`/api/chapters/${chapterId}?groupLines=${groupLines}&isEnabledReplace=${isEnabledReplace}&rootTab=${rootTab}`);
       return await res.json();
@@ -325,6 +407,15 @@ export const api = {
   },
 
   getReplacements: async (bookId?: string, chapterId?: string): Promise<{ data: Replacement[] }> => {
+    if (api.isOfflineMode()) {
+      let reps = await offlineDb.getReplacements();
+      if (bookId) {
+        reps = reps.filter(r => r.scope === 'global' || r.bookId === bookId);
+      }
+      // If we need to filter by chapterId, we can add it here.
+      return { data: reps };
+    }
+
     try {
       const query = new URLSearchParams();
       if (bookId) query.append('bookId', bookId);
@@ -353,6 +444,19 @@ export const api = {
   },
 
   saveReplacement: async (data: Partial<Replacement>): Promise<Replacement> => {
+    if (api.isOfflineMode()) {
+      const newRep = {
+        id: data.id || Date.now().toString(),
+        match: data.match || '',
+        replacement: data.replacement || '',
+        scope: data.scope || 'global',
+        bookId: data.bookId,
+        chapterId: data.chapterId,
+      } as Replacement;
+      await offlineDb.saveReplacement(newRep);
+      return newRep;
+    }
+
     try {
       const isEditing = !!data.id;
       const url = isEditing ? `/api/replacements/${data.id}` : `/api/replacements`;
@@ -388,6 +492,11 @@ export const api = {
   },
 
   deleteReplacement: async (id: string): Promise<void> => {
+    if (api.isOfflineMode()) {
+      await offlineDb.deleteReplacement(id);
+      return;
+    }
+    
     try {
       await fetchWithRetry(`/api/replacements/${id}`, { method: 'DELETE' });
     } catch (e) {
@@ -402,6 +511,18 @@ export const api = {
     // 1. Check in-memory cache
     if (!skipCache && settingsCache[key] && now - settingsCache[key].timestamp < CACHE_TTL_MS) {
       return settingsCache[key].data;
+    }
+
+    if (api.isOfflineMode()) {
+      const cached = localStorage.getItem(`setting_${key}`);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          settingsCache[key] = { data: parsed, timestamp: Date.now() };
+          return parsed;
+        } catch (e) {}
+      }
+      return null;
     }
 
     // 2. Avoid duplicate concurrent requests
@@ -439,6 +560,12 @@ export const api = {
   },
 
   updateSettings: async (key: string, value: any): Promise<any> => {
+    if (api.isOfflineMode()) {
+      try { localStorage.setItem(`setting_${key}`, JSON.stringify({ value })); } catch(e){}
+      settingsCache[key] = { data: { value }, timestamp: Date.now() };
+      return { value };
+    }
+
     try {
       // Update local storage and memory cache immediately for instant sync
       try { localStorage.setItem(`setting_${key}`, JSON.stringify({ value })); } catch(e){}
