@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { User, Search, MoreVertical, BookOpen, Settings, History, Sparkles, Library, X, Clock, Loader2, Save, ArrowRight, Lock, Cloud, Wifi, WifiOff, CheckSquare, Square, Download, ExternalLink, RefreshCw, Trash2, StopCircle } from 'lucide-react';
+import { User, Search, MoreVertical, BookOpen, Settings, History, Sparkles, Library, X, Clock, Loader2, Save, ArrowRight, Lock, Cloud, Wifi, WifiOff, CheckSquare, Square, Download, ExternalLink, RefreshCw, Trash2, StopCircle, Database } from 'lucide-react';
 import { api, Book } from '../lib/api';
 import { offlineDb } from '../lib/offlineDb';
 import { LoadingOverlay } from '../components/LoadingOverlay';
@@ -38,9 +38,20 @@ export function LibraryScreen() {
     document.title = 'Reader Stories App';
   }, []);
 
+  const [storageUsage, setStorageUsage] = useState<string | null>(null);
+  const [deleteProgress, setDeleteProgress] = useState<{current: number, total: number} | null>(null);
+
   useEffect(() => {
     offlineDb.getBooks().then(books => setDownloadedBookIds(new Set(books.map(b => b.bookId))));
-  }, [isSyncing, activeTab, refreshCounter]);
+    
+    // Calculate accurate storage usage
+    if (isOfflineMode) {
+      offlineDb.getDbSize().then(bytes => {
+        const mb = (bytes / (1024 * 1024)).toFixed(2);
+        setStorageUsage(`${mb} MB`);
+      });
+    }
+  }, [isSyncing, activeTab, refreshCounter, isOfflineMode]);
 
   useEffect(() => {
     const handleOfflineModeChanged = (e: CustomEvent) => {
@@ -264,14 +275,31 @@ export function LibraryScreen() {
   };
 
   const handleClearOfflineDb = async () => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa TOÀN BỘ dữ liệu ngoại tuyến? Hành động này không thể hoàn tác.')) {
+    if (window.confirm("Bạn có chắc chắn muốn XÓA TOÀN BỘ dữ liệu ngoại tuyến (offline) không? Hành động này không thể hoàn tác.")) {
       try {
+        const booksToDelete = await offlineDb.getBooks();
+        if (booksToDelete.length > 0) {
+          setDeleteProgress({ current: 0, total: booksToDelete.length });
+          
+          let count = 0;
+          for (const book of booksToDelete) {
+            await offlineDb.deleteBook(book.bookId);
+            count++;
+            setDeleteProgress({ current: count, total: booksToDelete.length });
+          }
+        }
+        
+        // Final sweep to clear replacements and any orphaned records
         await offlineDb.deleteAllBooks();
-        window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Đã xóa toàn bộ dữ liệu', type: 'success' } }));
+        
         setBooks([]);
         setDownloadedBookIds(new Set());
+        setStorageUsage(null);
+        setDeleteProgress(null);
         window.dispatchEvent(new CustomEvent('app-refresh'));
+        window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Đã xóa toàn bộ dữ liệu', type: 'success' } }));
       } catch (e) {
+        setDeleteProgress(null);
         window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Xóa dữ liệu thất bại', type: 'error' } }));
       }
     }
@@ -279,22 +307,53 @@ export function LibraryScreen() {
 
   return (
     <>
+      {deleteProgress && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface-container w-full max-w-[320px] p-6 rounded-3xl flex flex-col items-center shadow-xl border border-error/20">
+            <div className="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-4">
+              <Trash2 size={32} className="text-error" />
+            </div>
+            <h3 className="font-bold text-lg mb-4 text-on-surface">Đang xóa dữ liệu...</h3>
+            <div className="w-full bg-surface-container-highest rounded-full h-3 mb-3 overflow-hidden shadow-inner">
+              <div 
+                className="bg-error h-full rounded-full transition-all duration-300 relative overflow-hidden" 
+                style={{ width: `${Math.max(5, (deleteProgress.current / deleteProgress.total) * 100)}%` }}
+              >
+                <div className="absolute inset-0 bg-white/20 animate-[shimmer_1s_infinite]"></div>
+              </div>
+            </div>
+            <p className="text-sm text-on-surface-variant font-medium bg-surface-container-low px-3 py-1 rounded-full border border-outline-variant/30">
+              {deleteProgress.current} / {deleteProgress.total} truyện
+            </p>
+          </div>
+        </div>
+      )}
+
       <header className="bg-surface/75 backdrop-blur-[32px] sticky top-0 z-40 border-b border-outline-variant/20 flex flex-col w-full px-4 pb-4 pt-3 shadow-sm saturate-150">
 
         {/* Decorative Title */}
-        <div className="flex justify-center mb-4 relative items-center">
-          <h1 className="font-serif text-[28px] font-black tracking-tight drop-shadow-lg select-none bg-gradient-to-r from-primary via-primary-fixed to-primary bg-clip-text text-transparent animate-gradient-x pb-1">
-            Reader Stories
-          </h1>
-
-          <button
-            onClick={() => setOfflineMode(!isOfflineMode)}
-            className={`absolute right-0 top-0 flex items-center justify-center p-2 rounded-full transition-all active:scale-95 ${isOfflineMode ? 'text-on-surface-variant/70 bg-surface-variant/30' : 'text-primary bg-primary/10'
-              }`}
-            title={isOfflineMode ? "Chế độ Ngoại tuyến" : "Chế độ Trực tuyến"}
-          >
-            {isOfflineMode ? <WifiOff size={14} strokeWidth={2.5} /> : <Wifi size={14} strokeWidth={2.5} />}
-          </button>
+        <div className="flex flex-col items-center justify-center mb-4 relative w-full">
+          <div className="flex items-center justify-center relative w-full">
+            <h1 className="font-serif text-[28px] font-black tracking-tight drop-shadow-lg select-none bg-gradient-to-r from-primary via-primary-fixed to-primary bg-clip-text text-transparent animate-gradient-x pb-1">
+              Reader Stories
+            </h1>
+  
+            <button
+              onClick={() => setOfflineMode(!isOfflineMode)}
+              className={`absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center p-2 rounded-full transition-all active:scale-95 ${isOfflineMode ? 'text-on-surface-variant/70 bg-surface-variant/30' : 'text-primary bg-primary/10'
+                }`}
+              title={isOfflineMode ? "Chế độ Ngoại tuyến" : "Chế độ Trực tuyến"}
+            >
+              {isOfflineMode ? <WifiOff size={14} strokeWidth={2.5} /> : <Wifi size={14} strokeWidth={2.5} />}
+            </button>
+          </div>
+          
+          {isOfflineMode && storageUsage && (
+             <div className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-on-surface-variant bg-surface-container-low px-2.5 py-0.5 rounded-full border border-outline-variant/30 shadow-sm">
+               <Database size={10} className="opacity-70" />
+               <span>Dữ liệu đang lưu: <strong className="text-primary font-bold">{storageUsage}</strong></span>
+             </div>
+          )}
         </div>
 
         {/* Header Row (Search + Settings) */}

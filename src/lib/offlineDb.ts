@@ -107,11 +107,50 @@ export const offlineDb = {
   // Chapter Content
   async getChapterContent(chapterId: string): Promise<ChapterContent | undefined> {
     const db = await initDB();
-    return await db.get('chapterContents', chapterId);
+    const content = await db.get('chapterContents', chapterId);
+    if (!content) return undefined;
+
+    // Decompress if compressed
+    if (content.chapter.compressedContent) {
+      try {
+        const stream = new Blob([content.chapter.compressedContent]).stream().pipeThrough(new DecompressionStream('deflate'));
+        const response = new Response(stream);
+        const blob = await response.blob();
+        const jsonStr = await blob.text();
+        content.chapter.content = JSON.parse(jsonStr);
+        delete content.chapter.compressedContent;
+      } catch (e) {
+        console.error("Decompression failed", e);
+        content.chapter.content = [];
+      }
+    }
+
+    return content;
   },
   async saveChapterContent(content: ChapterContent) {
     const db = await initDB();
-    await db.put('chapterContents', content);
+    
+    // Create a copy to modify
+    const contentToSave = JSON.parse(JSON.stringify(content));
+    
+    // Compress content if available
+    if (contentToSave.chapter.content && contentToSave.chapter.content.length > 0) {
+      try {
+        const jsonStr = JSON.stringify(contentToSave.chapter.content);
+        if (window.CompressionStream) {
+          const stream = new Blob([jsonStr]).stream().pipeThrough(new CompressionStream('deflate'));
+          const response = new Response(stream);
+          const buffer = await response.arrayBuffer();
+          
+          contentToSave.chapter.compressedContent = new Uint8Array(buffer);
+          delete contentToSave.chapter.content; // Free up space
+        }
+      } catch (e) {
+        console.warn("Compression failed, saving as raw", e);
+      }
+    }
+
+    await db.put('chapterContents', contentToSave);
   },
 
   // Replacements
@@ -130,5 +169,41 @@ export const offlineDb = {
   async clearReplacements() {
     const db = await initDB();
     await db.clear('replacements');
+  },
+
+  // Utilities
+  async getDbSize(): Promise<number> {
+    const db = await initDB();
+    let size = 0;
+    
+    try {
+      // Books
+      const books = await db.getAll('books');
+      size += JSON.stringify(books).length;
+      
+      // Chapters metadata
+      const chapters = await db.getAll('chapters');
+      size += JSON.stringify(chapters).length;
+      
+      // Chapter Contents (large, use cursor)
+      let cursor = await db.transaction('chapterContents').store.openCursor();
+      while (cursor) {
+        const val = cursor.value;
+        if (val.chapter && val.chapter.compressedContent) {
+          size += val.chapter.compressedContent.byteLength;
+          // Add roughly the rest of the metadata size
+          const meta = { ...val };
+          delete meta.chapter.compressedContent;
+          size += JSON.stringify(meta).length;
+        } else {
+          size += JSON.stringify(val).length;
+        }
+        cursor = await cursor.continue();
+      }
+    } catch (e) {
+      console.error("Failed to calculate DB size", e);
+    }
+    
+    return size;
   }
 };

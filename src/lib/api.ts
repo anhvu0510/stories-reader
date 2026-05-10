@@ -39,6 +39,7 @@ export interface ChapterContent {
     state: string;
     totalTokens: number;
     content: string[];
+    compressedContent?: Uint8Array;
     rootTab: string;
   };
   navigation?: {
@@ -433,6 +434,36 @@ export const api = {
           grouped.push(currentGroup.join(' '));
         }
         content.chapter.content = grouped;
+      }
+
+      // Dynamically compute navigation
+      try {
+        const chapMeta = await offlineDb.getChapterMeta(chapterId);
+        if (chapMeta && chapMeta.bookId) {
+          const chapters = await offlineDb.getChapters(chapMeta.bookId);
+          chapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
+          const idx = chapters.findIndex(c => c.chapterId === chapterId);
+          if (idx !== -1) {
+            content.navigation = {};
+            if (idx > 0) {
+              content.navigation.prev = { chapterId: chapters[idx - 1].chapterId };
+            } else {
+              content.navigation.prev = { chapterId: null };
+            }
+
+            if (idx < chapters.length - 1) {
+              content.navigation.next = { 
+                chapterId: chapters[idx + 1].chapterId,
+                chapterNumber: chapters[idx + 1].chapterNumber,
+                title: chapters[idx + 1].title
+              };
+            } else {
+              content.navigation.next = { chapterId: null };
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to compute navigation", e);
       }
 
       return content;
