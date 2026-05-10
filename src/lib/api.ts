@@ -256,11 +256,12 @@ export const api = {
       
       if (current === 'HISTORY') {
         books = books.filter(b => b.totalTranslated > 0 || b.lastReadChapter);
-        // sort by updatedAt descending (simplest) if possible
-        books.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
       } else if (current === 'AI') {
         books = [];
       }
+
+      // sort by updatedAt descending
+      books.sort((a, b) => new Date(a.updatedAt || 0).getTime() - new Date(b.updatedAt || 0).getTime());
 
       const total = books.length;
       const data = books.slice((page - 1) * limit, page * limit);
@@ -387,8 +388,51 @@ export const api = {
             await offlineDb.saveBook(book);
           }
         }
+        
+        // Handle replacements locally if enabled
+        if (isEnabledReplace && content.chapter.content && Array.isArray(content.chapter.content)) {
+           let reps = await offlineDb.getReplacements();
+           if (chapMeta && chapMeta.bookId) {
+              reps = reps.filter(r => r.scope === 'global' || r.bookId === chapMeta.bookId || r.chapterId === chapterId);
+           } else {
+              reps = reps.filter(r => r.scope === 'global');
+           }
+           
+           // Sort by match length descending
+           reps.sort((a, b) => (b.match?.length || 0) - (a.match?.length || 0));
+           
+           if (reps.length > 0) {
+             content.chapter.content = content.chapter.content.map(line => {
+               let res = line;
+               for (const r of reps) {
+                 if (r.match) {
+                   res = res.split(r.match).join(r.replacement);
+                 }
+               }
+               return res;
+             });
+           }
+        }
       } catch (e) {
-        console.error("Failed to update lastReadChapter offline", e);
+        console.error("Failed to update lastReadChapter or apply replacements offline", e);
+      }
+
+      // Handle groupLines locally
+      if (groupLines > 1 && content.chapter.content && Array.isArray(content.chapter.content)) {
+        const grouped: string[] = [];
+        let currentGroup: string[] = [];
+        for (const line of content.chapter.content) {
+          if (!line.trim()) continue; // Skip empty lines when grouping
+          currentGroup.push(line);
+          if (currentGroup.length >= groupLines) {
+            grouped.push(currentGroup.join(' '));
+            currentGroup = [];
+          }
+        }
+        if (currentGroup.length > 0) {
+          grouped.push(currentGroup.join(' '));
+        }
+        content.chapter.content = grouped;
       }
 
       return content;

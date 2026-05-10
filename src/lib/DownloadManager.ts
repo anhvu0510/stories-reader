@@ -25,6 +25,10 @@ class DownloadManager {
   private listeners: Set<Listener> = new Set();
   private stopMap: Map<string, boolean> = new Map();
 
+  public batchTotal: number = 0;
+  public batchCompleted: number = 0;
+  public lastProcessedBookName: string = '';
+
   subscribe(listener: Listener) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -54,6 +58,12 @@ class DownloadManager {
       }
     }
 
+    if (this.queue.length === 0 && this.activeCount === 0) {
+      this.batchTotal = 0;
+      this.batchCompleted = 0;
+      this.lastProcessedBookName = '';
+    }
+
     const newTask: DownloadTask = {
       bookId,
       bookName,
@@ -66,6 +76,7 @@ class DownloadManager {
     this.tasks.set(bookId, newTask);
     this.queue.push(bookId);
     this.stopMap.set(bookId, false);
+    this.batchTotal++;
     
     this.notify();
     this.processQueue();
@@ -78,6 +89,7 @@ class DownloadManager {
       if (task.status === 'waiting') {
         this.queue = this.queue.filter(id => id !== bookId);
         this.tasks.delete(bookId);
+        this.batchTotal--;
       }
       this.notify();
     }
@@ -105,17 +117,40 @@ class DownloadManager {
     try {
       await this.downloadBookFlow(task);
       task.status = 'completed';
-      window.dispatchEvent(new CustomEvent('app-toast', { 
-        detail: { message: `Đã tải xong: ${task.bookName}`, type: 'success' }
-      }));
+      this.batchCompleted++;
+      this.lastProcessedBookName = task.bookName;
+      if (this.batchTotal <= 1) {
+        window.dispatchEvent(new CustomEvent('app-toast', { 
+          detail: { message: `Đã tải xong: ${task.bookName}`, type: 'success' }
+        }));
+      }
       this.tasks.delete(bookId);
       this.notify();
     } catch (e: any) {
       task.status = 'error';
       task.error = e.message;
-      window.dispatchEvent(new CustomEvent('app-toast', { 
-        detail: { message: `Lỗi tải ${task.bookName}. Đã lưu ${task.completedChapters}/${task.totalChapters} chương.`, type: 'error' }
-      }));
+      
+      // Rollback: clear the book and any partially downloaded chapters
+      try {
+        await offlineDb.deleteBook(bookId);
+      } catch (err) {
+        console.error('Failed to rollback book:', err);
+      }
+      
+      this.batchCompleted++; // Count as processed for batch tracking
+      this.lastProcessedBookName = task.bookName;
+
+      if (this.batchTotal <= 1) {
+        if (e.message === "Đã hủy") {
+          window.dispatchEvent(new CustomEvent('app-toast', { 
+            detail: { message: `Đã ngừng tải ${task.bookName}. Dữ liệu tải dở đã được dọn dẹp.`, type: 'info' }
+          }));
+        } else {
+          window.dispatchEvent(new CustomEvent('app-toast', { 
+            detail: { message: `Lỗi tải ${task.bookName}. Dữ liệu tải dở đã được dọn dẹp.`, type: 'error' }
+          }));
+        }
+      }
       this.tasks.delete(bookId);
       this.notify();
     } finally {
@@ -183,14 +218,14 @@ class DownloadManager {
              if (bookSavePromise && !isBookSaved) {
                await bookSavePromise;
              }
-             await offlineDb.saveChapter({ ...chap, bookId: task.bookId, content: undefined });
+             await offlineDb.saveChapter({ ...chap, bookId: task.bookId, content: undefined, state: chap.state ?? 'SUCCEEDED' });
              const content = {
                chapter: {
                  chapterId: chap.chapterId,
                  chapterNumber: chap.chapterNumber,
                  title: chap.title,
                  bookName: chap.bookName || task.bookName,
-                 state: chap.state || 'translated',
+                 state: chap.state ?? 'SUCCEEDED',
                  totalTokens: chap.totalTokens || 0,
                  content: chap.content || [],
                  rootTab: chap.rootTab || ''

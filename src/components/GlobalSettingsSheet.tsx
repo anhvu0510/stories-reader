@@ -29,7 +29,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
   const [activeTab, setActiveTab] = useState<'api' | 'names' | 'voice' | 'ai' | 'servers'>(initialTab || (initialMatch ? 'names' : 'api'));
 
   useEffect(() => {
-    if (isOfflineMode && (activeTab === 'ai' || activeTab === 'servers')) {
+    if (isOfflineMode && (activeTab === 'ai' || activeTab === 'names')) {
       setActiveTab('api');
     }
   }, [isOfflineMode, activeTab]);
@@ -292,13 +292,15 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                 <span className={activeTab === 'api' ? 'block' : 'hidden sm:block'}>Cơ bản</span>
               </button>
               
-              <button 
-                onClick={() => setActiveTab('names')}
-                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'names' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
-              >
-                <Edit3 size={16} />
-                <span className={activeTab === 'names' ? 'block' : 'hidden sm:block'}>Từ điển</span>
-              </button>
+              {!isOfflineMode && (
+                <button 
+                  onClick={() => setActiveTab('names')}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'names' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+                >
+                  <Edit3 size={16} />
+                  <span className={activeTab === 'names' ? 'block' : 'hidden sm:block'}>Từ điển</span>
+                </button>
+              )}
 
               <button 
                 onClick={() => setActiveTab('voice')}
@@ -309,24 +311,22 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
               </button>
 
               {!isOfflineMode && (
-                <>
-                  <button 
-                    onClick={() => setActiveTab('ai')}
-                    className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'ai' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
-                  >
-                    <Bot size={16} />
-                    <span className={activeTab === 'ai' ? 'block' : 'hidden sm:block'}>AI</span>
-                  </button>
-
-                  <button 
-                    onClick={() => setActiveTab('servers')}
-                    className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'servers' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
-                  >
-                    <Server size={16} />
-                    <span className={activeTab === 'servers' ? 'block' : 'hidden sm:block'}>Máy chủ API</span>
-                  </button>
-                </>
+                <button 
+                  onClick={() => setActiveTab('ai')}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'ai' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+                >
+                  <Bot size={16} />
+                  <span className={activeTab === 'ai' ? 'block' : 'hidden sm:block'}>AI</span>
+                </button>
               )}
+
+              <button 
+                onClick={() => setActiveTab('servers')}
+                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'servers' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+              >
+                <Server size={16} />
+                <span className={activeTab === 'servers' ? 'block' : 'hidden sm:block'}>Máy chủ API</span>
+              </button>
             </div>
 
             <button onClick={onClose} className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 ml-2 flex items-center justify-center bg-surface-container-highest/30 hover:bg-surface-bright rounded-full text-on-surface-variant hover:text-on-surface hover:rotate-90 transition-all duration-300 active:scale-95">

@@ -57,9 +57,10 @@ const defaultSettings: ReaderConfig = {
   chapterLimit: 50,
 };
 
-function getInitialSettings(): ReaderConfig {
+function getInitialSettings(isOffline: boolean): ReaderConfig {
+  const key = isOffline ? `${SETTINGS_KEY}.offline` : SETTINGS_KEY;
   try {
-    const local = localStorage.getItem(SETTINGS_KEY);
+    const local = localStorage.getItem(key);
     if (local) {
       return { ...defaultSettings, ...JSON.parse(local) };
     }
@@ -68,10 +69,23 @@ function getInitialSettings(): ReaderConfig {
 }
 
 export function ReaderProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<ReaderConfig>(getInitialSettings);
+  const [isOffline, setIsOffline] = useState(() => localStorage.getItem('offlineMode') === 'true');
+  const [settings, setSettings] = useState<ReaderConfig>(() => getInitialSettings(localStorage.getItem('offlineMode') === 'true'));
   const debounceRef = useRef<any>(null);
 
   useEffect(() => {
+    const handleOfflineChanged = (e: CustomEvent) => {
+      const newOffline = e.detail;
+      setIsOffline(newOffline);
+      setSettings(getInitialSettings(newOffline));
+    };
+    window.addEventListener('offline-mode-changed', handleOfflineChanged as EventListener);
+    return () => window.removeEventListener('offline-mode-changed', handleOfflineChanged as EventListener);
+  }, []);
+
+  useEffect(() => {
+    if (isOffline) return;
+    
     // Initial fetch from API
     api.getSettings(SETTINGS_KEY).then(res => {
       if (res) {
@@ -104,7 +118,7 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
         api.updateSettings(SETTINGS_KEY, apiSync);
       }
     });
-  }, []);
+  }, [isOffline]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme);
@@ -113,9 +127,10 @@ export function ReaderProvider({ children }: { children: ReactNode }) {
   const updateSetting = (key: keyof ReaderConfig, value: any, syncWithApi: boolean = true) => {
     setSettings(prev => {
       const next = { ...prev, [key]: value };
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+      const storageKey = isOffline ? `${SETTINGS_KEY}.offline` : SETTINGS_KEY;
+      localStorage.setItem(storageKey, JSON.stringify(next));
       
-      if (syncWithApi) {
+      if (syncWithApi && !isOffline) {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
           const { voiceUri, speechRate, ...apiSync } = next;

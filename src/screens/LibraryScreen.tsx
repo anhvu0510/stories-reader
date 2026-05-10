@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { User, Search, MoreVertical, BookOpen, Settings, History, Sparkles, Library, X, Clock, Loader2, Save, ArrowRight, Lock, Cloud, WifiOff, CheckSquare, Square, Download, ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
+import { User, Search, MoreVertical, BookOpen, Settings, History, Sparkles, Library, X, Clock, Loader2, Save, ArrowRight, Lock, Cloud, Wifi, WifiOff, CheckSquare, Square, Download, ExternalLink, RefreshCw, Trash2, StopCircle } from 'lucide-react';
 import { api, Book } from '../lib/api';
 import { offlineDb } from '../lib/offlineDb';
 import { LoadingOverlay } from '../components/LoadingOverlay';
@@ -16,21 +16,23 @@ export function LibraryScreen() {
   const navigate = useNavigate();
   const [books, setBooks] = useState<Book[]>([]);
   const [aiBooks, setAiBooks] = useState<Book[]>([]);
-  
+
   const initialTab = (searchParams.get('tab') as 'books' | 'history' | 'ai') || 'books';
   const [activeTab, setActiveTab] = useState<'books' | 'history' | 'ai'>(initialTab);
 
   const initialOffline = api.isOfflineMode();
   const [isOfflineMode, setIsOfflineMode] = useState(initialOffline);
-  const { 
+  const {
     isSyncing,
     tasks,
-    syncMultipleBooks, 
-    syncBook 
+    syncMultipleBooks,
+    syncBook,
+    cancelSync
   } = useOfflineSync();
   const [downloadedBookIds, setDownloadedBookIds] = useState<Set<string>>(new Set());
   const [refreshCounter, setRefreshCounter] = useState(0);
   const isRefreshingRef = useRef(false);
+  const [downloadSession, setDownloadSession] = useState<{ total: number, completed: number, active: boolean, bookIds: string[] } | null>(null);
 
   useEffect(() => {
     document.title = 'Reader Stories App';
@@ -49,8 +51,25 @@ export function LibraryScreen() {
   }, []);
 
   useEffect(() => {
+    if (downloadSession?.active) {
+      const completedCount = downloadSession.bookIds.filter(id => downloadedBookIds.has(id)).length;
+      if (completedCount !== downloadSession.completed) {
+        setDownloadSession(prev => prev ? { ...prev, completed: completedCount } : null);
+      }
+
+      const remainingTasks = tasks.filter(t => downloadSession.bookIds.includes(t.bookId));
+      if (remainingTasks.length === 0 && completedCount === downloadSession.total && downloadSession.total > 0) {
+        window.dispatchEvent(new CustomEvent('app-toast', {
+          detail: { message: `Đã hoàn tất tải ${completedCount}/${downloadSession.total} truyện`, type: 'success' }
+        }));
+        setDownloadSession(null);
+      }
+    }
+  }, [downloadedBookIds, tasks, downloadSession]);
+
+  useEffect(() => {
     if (activeTab !== searchParams.get('tab')) {
-        setSearchParams({ tab: activeTab });
+      setSearchParams({ tab: activeTab });
     }
   }, [activeTab, setSearchParams, searchParams]);
 
@@ -62,7 +81,7 @@ export function LibraryScreen() {
 
   const [aiPagination, setAiPagination] = useState({ currentPage: 1, totalPages: 1 });
   const [booksPagination, setBooksPagination] = useState({ currentPage: 1, totalPages: 1 });
-  
+
   const [showGlobalSettings, setShowGlobalSettings] = useState(false);
 
   useEffect(() => {
@@ -83,7 +102,7 @@ export function LibraryScreen() {
   const lastBookElementRef = useCallback((node: HTMLElement | null) => {
     if (observerRef.current) observerRef.current.disconnect();
     if (isLoading) return;
-    
+
     if (!hasMore) return;
 
     observerRef.current = new IntersectionObserver(entries => {
@@ -99,7 +118,7 @@ export function LibraryScreen() {
   useEffect(() => {
     let active = true;
     const reqId = ++loadingRequestRef.current;
-    
+
     const isRefresh = isRefreshingRef.current;
     isRefreshingRef.current = false;
 
@@ -119,12 +138,12 @@ export function LibraryScreen() {
     const fetchData = async () => {
       try {
         const fetchLimit = bookLimit || 20;
-        
+
         // If it's a refresh, we want to fetch page 1 directly to prevent append duplicate issues, unless page is already 1.
         // Actually, just let the second useEffect reset the page to 1. But wait, if page is currently > 1, 
         // the second useEffect sets page to 1, causing a double render.
         // For simplicity, we just use the current page.
-        
+
         const targetPage = isRefresh ? 1 : page;
 
         if (activeTab === 'ai') {
@@ -154,7 +173,7 @@ export function LibraryScreen() {
         if (!active) return;
         console.error(e);
         if (e instanceof Error && e.message === 'API_DOMAIN_NOT_SET' && !api.isOfflineMode()) {
-          window.dispatchEvent(new CustomEvent('app-toast', { 
+          window.dispatchEvent(new CustomEvent('app-toast', {
             detail: { message: 'Vui lòng chọn máy chủ để tiếp tục.', type: 'info' }
           }));
           window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
@@ -178,9 +197,9 @@ export function LibraryScreen() {
 
   const currentPagination = activeTab === 'ai' ? aiPagination : booksPagination;
 
-  const displayedBooks = activeTab === 'books' 
+  const displayedBooks = activeTab === 'books'
     ? books
-    : activeTab === 'history' 
+    : activeTab === 'history'
       ? books.filter(b => b.totalTranslated > 0 || b.lastReadChapter)
       : aiBooks;
 
@@ -193,15 +212,90 @@ export function LibraryScreen() {
     window.dispatchEvent(new CustomEvent('offline-mode-changed', { detail: offline }));
   };
 
+  const handleDownloadAllOrStop = async () => {
+    if (downloadSession?.active) {
+      const remainingTasks = tasks.filter(t => downloadSession.bookIds.includes(t.bookId));
+      remainingTasks.forEach(t => {
+        cancelSync(t.bookId);
+      });
+
+      window.dispatchEvent(new CustomEvent('app-toast', {
+        detail: { message: `Đã dừng. Tải thành công ${downloadSession.completed}/${downloadSession.total} truyện`, type: 'info' }
+      }));
+      setDownloadSession(null);
+    } else {
+      try {
+        window.dispatchEvent(new CustomEvent('app-toast', {
+          detail: { message: `Đang lấy danh sách toàn bộ truyện...`, type: 'info' }
+        }));
+
+        const fetchLimit = 9999;
+        const res = await api.getBooks(1, debouncedSearch, activeTab.toUpperCase(), fetchLimit, isOfflineMode ? 'offline' : 'online');
+
+        const allBooks = activeTab === 'history'
+          ? res.data.filter(b => b.totalTranslated > 0 || b.lastReadChapter)
+          : res.data;
+
+        const booksToDownload = allBooks.filter(b => !downloadedBookIds.has(b.bookId));
+
+        if (booksToDownload.length > 0) {
+          const bookIds = booksToDownload.map(b => b.bookId);
+          syncMultipleBooks(bookIds);
+          setDownloadSession({
+            total: bookIds.length,
+            completed: 0,
+            active: true,
+            bookIds
+          });
+          window.dispatchEvent(new CustomEvent('app-toast', {
+            detail: { message: `Bắt đầu tải ${bookIds.length} truyện`, type: 'success' }
+          }));
+        } else {
+          window.dispatchEvent(new CustomEvent('app-toast', {
+            detail: { message: `Tất cả truyện trong danh sách đã được tải`, type: 'info' }
+          }));
+        }
+      } catch (err) {
+        window.dispatchEvent(new CustomEvent('app-toast', {
+          detail: { message: `Lỗi khi lấy danh sách truyện`, type: 'error' }
+        }));
+      }
+    }
+  };
+
+  const handleClearOfflineDb = async () => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa TOÀN BỘ dữ liệu ngoại tuyến? Hành động này không thể hoàn tác.')) {
+      try {
+        await offlineDb.deleteAllBooks();
+        window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Đã xóa toàn bộ dữ liệu', type: 'success' } }));
+        setBooks([]);
+        setDownloadedBookIds(new Set());
+        window.dispatchEvent(new CustomEvent('app-refresh'));
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Xóa dữ liệu thất bại', type: 'error' } }));
+      }
+    }
+  };
+
   return (
     <>
-    <header className="bg-surface/75 backdrop-blur-[32px] sticky top-0 z-40 border-b border-outline-variant/20 flex flex-col w-full px-4 pb-4 pt-3 shadow-sm saturate-150">
+      <header className="bg-surface/75 backdrop-blur-[32px] sticky top-0 z-40 border-b border-outline-variant/20 flex flex-col w-full px-4 pb-4 pt-3 shadow-sm saturate-150">
 
         {/* Decorative Title */}
-        <div className="flex justify-center mb-3 relative">
-          <h1 className="font-serif text-2xl font-bold tracking-tight text-primary drop-shadow-sm select-none">
+        <div className="flex justify-center mb-4 relative items-center">
+          <h1 className="font-serif text-[28px] font-black tracking-tight drop-shadow-lg select-none bg-gradient-to-r from-primary via-primary-fixed to-primary bg-clip-text text-transparent animate-gradient-x pb-1">
             Reader Stories
           </h1>
+          
+          <button
+            onClick={() => setOfflineMode(!isOfflineMode)}
+            className={`absolute right-0 flex items-center justify-center p-2 rounded-full transition-all active:scale-95 ${
+              isOfflineMode ? 'text-on-surface-variant/70 bg-surface-variant/30' : 'text-primary bg-primary/10'
+            }`}
+            title={isOfflineMode ? "Chế độ Ngoại tuyến" : "Chế độ Trực tuyến"}
+          >
+            {isOfflineMode ? <WifiOff size={14} strokeWidth={2.5} /> : <Wifi size={14} strokeWidth={2.5} />}
+          </button>
         </div>
 
         {/* Header Row (Search + Settings) */}
@@ -223,7 +317,7 @@ export function LibraryScreen() {
                 <Loader2 size={16} className="animate-spin text-primary opacity-60" />
               )}
               {search && (
-                <button 
+                <button
                   onClick={() => setSearch('')}
                   className="pr-2 flex items-center text-on-surface-variant active:text-on-surface transition-colors focus:outline-none p-2"
                 >
@@ -236,15 +330,24 @@ export function LibraryScreen() {
           </div>
 
           {/* Settings Button */}
-          {!isOfflineMode && (
-            <button 
+          <div className="flex items-center gap-2">
+            {!isOfflineMode && (
+              <button
+                onClick={handleDownloadAllOrStop}
+                className={`w-11 h-11 rounded-[18px] backdrop-blur-md border text-on-surface-variant transition-all shrink-0 flex items-center justify-center shadow-inner ${downloadSession?.active ? 'bg-error/10 border-error/30 text-error active:bg-error/20 active:scale-95' : 'bg-surface-container-low/50 border-outline-variant/30 active:text-primary active:bg-primary/5 active:scale-95'}`}
+                title={downloadSession?.active ? "Dừng tải tất cả" : "Tải tất cả truyện trên trang"}
+              >
+                {downloadSession?.active ? <StopCircle size={22} /> : <Download size={22} />}
+              </button>
+            )}
+            <button
               onClick={() => setShowGlobalSettings(true)}
               className="w-11 h-11 rounded-[18px] bg-surface-container-low/50 backdrop-blur-md border border-outline-variant/30 text-on-surface-variant active:text-primary active:bg-primary/5 active:scale-95 transition-all shrink-0 flex items-center justify-center shadow-inner"
               title="Cài đặt Hệ thống"
             >
               <Settings size={22} />
             </button>
-          )}
+          </div>
         </div>
       </header>
 
@@ -255,13 +358,13 @@ export function LibraryScreen() {
               <Library size={48} className="mb-4 opacity-50" strokeWidth={1} />
               <p className="font-medium text-on-surface">Không có truyện nào</p>
               <p className="text-sm mt-1 opacity-80">
-                {!localStorage.getItem('API_DOMAIN_CONFIG') 
-                 ? 'Vui lòng nhấn biểu tượng cài đặt (bánh răng) ở góc trên bên phải để cấu hình API Domain.' 
-                 : activeTab === 'history' ? 'Bạn chưa đọc truyện nào gần đây hoặc cần tải thêm để kiểm tra.' : 
-                 activeTab === 'ai' ? 'Không có truyện nào đang chờ dịch.' : 
-                 search ? 'Không tìm thấy truyện phù hợp.' : 'Thư viện trống.'}
+                {!localStorage.getItem('API_DOMAIN_CONFIG')
+                  ? ''
+                  : activeTab === 'history' ? 'Bạn chưa đọc truyện nào gần đây hoặc cần tải thêm để kiểm tra.' :
+                    activeTab === 'ai' ? 'Không có truyện nào đang chờ dịch.' :
+                      search ? 'Không tìm thấy truyện phù hợp.' : 'Thư viện trống.'}
               </p>
-              
+
               {isLoading && currentPagination.currentPage === 1 && (
                 <div className="flex items-center gap-2 mt-6">
                   <div className="flex-1 flex justify-center items-center gap-2 px-4 py-2.5 bg-surface-container-high rounded-xl font-medium opacity-50 text-sm">
@@ -274,12 +377,12 @@ export function LibraryScreen() {
             const isRead = book.totalTranslated > 0;
             const progress = book.chapterCount > 0 ? (book.totalTranslated / book.chapterCount) * 100 : 0;
             const isLast = index === displayedBooks.length - 1;
-            
+
             const isDownloaded = downloadedBookIds.has(book.bookId);
             const currentTask = tasks.find(t => t.bookId === book.bookId);
             const isThisBookSyncing = !!currentTask;
             const openInNewTab = activeTab === 'books' || activeTab === 'history';
-            
+
             const getBookUrl = (book: Book) => {
               if (book?.lastReadChapter && activeTab === 'history') {
                 return `/book/${book.bookId}/chapter/${book.lastReadChapter.chapterId}?rootTab=${activeTab}`;
@@ -292,139 +395,168 @@ export function LibraryScreen() {
                 return `/book/${book.bookId}${filterStateStr}`;
               }
             };
-            
+
             return (
-            <Link 
-              key={book.bookId}
-              to={getBookUrl(book)}
-              className={`relative overflow-hidden block rounded-2xl p-3 sm:p-4 transition-all duration-300 active:scale-[0.98] ${
-                isRead || activeTab !== 'books' 
-                  ? 'bg-surface-container-low border border-outline-variant/30 active:bg-surface-container active:border-primary/40' 
-                  : 'bg-surface border border-outline-variant/20 active:border-outline-variant/40'
-              }`}
-            >
-              {/* Subtle side indicator */}
-              <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${
-                isRead || activeTab === 'history' ? 'bg-primary/30' : 'bg-outline-variant/30'
-              }`} />
-              
-              <div className="flex items-center gap-3.5 sm:gap-4 pl-1">
+              <Link
+                key={book.bookId}
+                to={getBookUrl(book)}
+                className={`relative overflow-hidden block rounded-2xl p-3 sm:p-4 transition-all duration-300 active:scale-[0.98] ${isRead || activeTab !== 'books'
+                    ? 'bg-surface-container-low border border-outline-variant/30 active:bg-surface-container active:border-primary/40'
+                    : 'bg-surface border border-outline-variant/20 active:border-outline-variant/40'
+                  }`}
+              >
+                {/* Subtle side indicator */}
+                <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${isRead || activeTab === 'history' ? 'bg-primary/30' : 'bg-outline-variant/30'
+                  }`} />
 
-                {/* Left Number Badge for total chapters */}
-                <div className={`shrink-0 w-[52px] h-[52px] sm:w-[56px] sm:h-[56px] rounded-full flex flex-col items-center justify-center border font-bold transition-colors ${
-                  isRead || activeTab === 'history' 
-                    ? 'bg-primary/10 text-primary border-primary/20' 
-                    : 'bg-surface-variant/50 text-on-surface-variant border-outline-variant/30'
-                }`}>
-                  <span className="text-[9px] sm:text-[10px] leading-none opacity-80 mt-0.5 uppercase tracking-wider">{activeTab === 'history' && book.lastReadChapter ? 'C.' + book.lastReadChapter.chapterNumber : 'Tổng'}</span>
-                  <span className="text-[14px] sm:text-[16px] leading-none mt-0.5">{activeTab === 'history' ? Math.round(progress) + '%' : book.chapterCount}</span>
-                </div>
+                <div className="flex items-center gap-3.5 sm:gap-4 pl-1">
 
-                {/* Middle Content */}
-                <div className="flex-1 min-w-0 py-0.5 flex flex-col justify-center">
-                  <h3 className="text-[14px] sm:text-[15px] font-semibold leading-[1.3] truncate mb-1 text-on-surface transition-colors">
-                    {book.bookName}
-                  </h3>
+                  {/* Left Number Badge for total chapters */}
+                  <div className={`shrink-0 w-[52px] h-[52px] sm:w-[56px] sm:h-[56px] rounded-full flex flex-col items-center justify-center border font-bold transition-colors ${isRead || activeTab === 'history'
+                      ? 'bg-primary/10 text-primary border-primary/20'
+                      : 'bg-surface-variant/50 text-on-surface-variant border-outline-variant/30'
+                    }`}>
+                    <span className="text-[9px] sm:text-[10px] leading-none opacity-80 mt-0.5 uppercase tracking-wider">{activeTab === 'history' && book.lastReadChapter ? 'C.' + book.lastReadChapter.chapterNumber : 'Tổng'}</span>
+                    <span className="text-[14px] sm:text-[16px] leading-none mt-0.5">{activeTab === 'history' ? Math.round(progress) + '%' : book.chapterCount}</span>
+                  </div>
 
-                  <div className="flex flex-col gap-1.5 mt-0.5">
-                    {/* Badges Row */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      {activeTab !== 'history' ? (
-                        <>
-                          {book.totalTranslated > 0 && (
-                            <div className="flex items-center text-[9px] sm:text-[10px] font-bold text-primary uppercase tracking-wide bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 shrink-0 shadow-sm">
-                              Đã dịch: {book.totalTranslated}
-                            </div>
-                          )}
-                          {book.totalPending > 0 && (
-                            <div className="flex items-center text-[9px] sm:text-[10px] font-bold text-error uppercase tracking-wide bg-error/10 px-1.5 py-0.5 rounded border border-error/20 shrink-0 shadow-sm">
-                              Chưa dịch: {book.totalPending}
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-primary text-[10px] sm:text-[11px] font-semibold bg-primary/5 border border-primary/10 shadow-sm w-fit max-w-full">
-                          <History size={10} className="shrink-0" />
-                          <span className="truncate">{book.lastReadChapter?.title ? book.lastReadChapter.title : `Chương ${book.lastReadChapter?.chapterNumber}`}</span>
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* Date Row */}
-                    <div className="flex items-center text-[10px] sm:text-[11px] text-primary/80 font-medium">
-                      <Clock size={10} className="mr-1 opacity-80 shrink-0" />
-                      <span className="truncate">{book.updatedAt ? book.updatedAt : book.createdAt ? book.createdAt : 'N/A'}</span>
+                  {/* Middle Content */}
+                  <div className="flex-1 min-w-0 py-0.5 flex flex-col justify-center">
+                    <h3 className="text-[14px] sm:text-[15px] font-semibold leading-[1.3] truncate mb-1 text-on-surface transition-colors">
+                      {book.bookName}
+                    </h3>
+
+                    <div className="flex flex-col gap-1.5 mt-0.5">
+                      {/* Badges Row */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {activeTab !== 'history' ? (
+                          <>
+                            {book.totalTranslated > 0 && (
+                              <div className="flex items-center text-[9px] sm:text-[10px] font-bold text-primary uppercase tracking-wide bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 shrink-0 shadow-sm">
+                                Đã dịch: {book.totalTranslated}
+                              </div>
+                            )}
+                            {book.totalPending > 0 && (
+                              <div className="flex items-center text-[9px] sm:text-[10px] font-bold text-error uppercase tracking-wide bg-error/10 px-1.5 py-0.5 rounded border border-error/20 shrink-0 shadow-sm">
+                                Chưa dịch: {book.totalPending}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-primary text-[10px] sm:text-[11px] font-semibold bg-primary/5 border border-primary/10 shadow-sm w-fit max-w-full">
+                            <History size={10} className="shrink-0" />
+                            <span className="truncate">{book.lastReadChapter?.title ? book.lastReadChapter.title : `Chương ${book.lastReadChapter?.chapterNumber}`}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Date Row */}
+                      <div className="flex items-center text-[10px] sm:text-[11px] text-primary/80 font-medium">
+                        <Clock size={10} className="mr-1 opacity-80 shrink-0" />
+                        <span className="truncate">{book.updatedAt ? book.updatedAt : book.createdAt ? book.createdAt : 'N/A'}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Right Actions */}
-                <div className="shrink-0 pr-1 sm:pr-2 flex items-center gap-1.5 sm:gap-2">
-                  {isOfflineMode && activeTab === 'books' && (
-                    <button 
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        //if (window.confirm("Bạn có chắc chắn muốn xóa truyện này khỏi máy?")) { // Using just action for now to avoid alert
+                  {/* Right Actions */}
+                  <div className="shrink-0 pr-1 sm:pr-2 flex items-center gap-1.5 sm:gap-2">
+                    {isOfflineMode && activeTab === 'books' && (
+                      <button
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (isThisBookSyncing) return;
+                          try {
+                            await syncBook(book.bookId, book.bookName);
+                          } catch (err) {
+                            window.dispatchEvent(new CustomEvent('app-toast', { 
+                              detail: { message: 'Có lỗi xảy ra, vui lòng thử lại sau', type: 'error' }
+                            }));
+                          }
+                        }}
+                        disabled={isThisBookSyncing}
+                        className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-primary/80 active:text-primary bg-primary/10 active:bg-primary/20 rounded-full transition-all active:scale-95 disabled:opacity-100"
+                        title="Đồng bộ mới nhất"
+                      >
+                        {currentTask ? (
+                          <div className="relative flex items-center justify-center w-full h-full text-primary">
+                            <svg className="absolute w-[80%] h-[80%] -rotate-90 transform" viewBox="0 0 36 36">
+                              <path stroke="currentColor" className="opacity-20" fill="none" strokeWidth="3" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
+                              <path stroke="currentColor" className="transition-all duration-300" fill="none" strokeWidth="3" strokeDasharray={`${currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
+                            </svg>
+                            <span className="text-[10px] font-bold z-10">{currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}%</span>
+                          </div>
+                        ) : (
+                          <RefreshCw size={18} />
+                        )}
+                      </button>
+                    )}
+                    {isOfflineMode && activeTab === 'books' && (
+                      <button
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          //if (window.confirm("Bạn có chắc chắn muốn xóa truyện này khỏi máy?")) { // Using just action for now to avoid alert
                           await offlineDb.deleteBook(book.bookId);
-                          window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Đã xóa truyện', type: 'success' }}));
+                          window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Đã xóa truyện', type: 'success' } }));
                           setBooks(prev => prev.filter(b => b.bookId !== book.bookId));
                           window.dispatchEvent(new CustomEvent('app-refresh'));
-                        //}
-                      }}
-                      className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-error/80 active:text-error bg-error/10 active:bg-error/20 rounded-full transition-all active:scale-95"
-                      title="Xóa truyện"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  )}
-                  {activeTab === 'books' && !isOfflineMode && (!isDownloaded || isThisBookSyncing) && (
-                    <button 
-                      onClick={async (e) => {
+                          //}
+                        }}
+                        className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-error/80 active:text-error bg-error/10 active:bg-error/20 rounded-full transition-all active:scale-95"
+                        title="Xóa truyện"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                    {activeTab === 'books' && !isOfflineMode && (!isDownloaded || isThisBookSyncing) && (
+                      <button
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (isThisBookSyncing) return;
+                          try {
+                            await syncBook(book.bookId);
+                          } catch (err) {
+                            window.dispatchEvent(new CustomEvent('app-toast', {
+                              detail: { message: 'Có lỗi xảy ra, vui lòng thử lại sau', type: 'error' }
+                            }));
+                          }
+                        }}
+                        disabled={isThisBookSyncing}
+                        className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-on-surface-variant/60 active:text-primary bg-surface-variant/40 active:bg-primary/10 rounded-full transition-all active:scale-95 disabled:opacity-100"
+                        title="Tải về"
+                      >
+                        {currentTask ? (
+                          <div className="relative flex items-center justify-center w-full h-full text-primary">
+                            <svg className="absolute w-[80%] h-[80%] -rotate-90 transform" viewBox="0 0 36 36">
+                              <path stroke="currentColor" className="opacity-20" fill="none" strokeWidth="3" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
+                              <path stroke="currentColor" className="transition-all duration-300" fill="none" strokeWidth="3" strokeDasharray={`${currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
+                            </svg>
+                            <span className="text-[10px] font-bold z-10">{currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}%</span>
+                          </div>
+                        ) : (
+                          <Download size={18} />
+                        )}
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (isThisBookSyncing) return;
-                        try {
-                          await syncBook(book.bookId);
-                        } catch (err) {
-                          window.dispatchEvent(new CustomEvent('app-toast', { 
-                            detail: { message: 'Có lỗi xảy ra, vui lòng thử lại sau', type: 'error' }
-                          }));
-                        }
+                        window.open('#' + getBookUrl(book), '_blank', 'noopener,noreferrer');
                       }}
-                      disabled={isThisBookSyncing}
-                      className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-on-surface-variant/60 active:text-primary bg-surface-variant/40 active:bg-primary/10 rounded-full transition-all active:scale-95 disabled:opacity-100"
-                      title="Tải về"
+                      className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-on-surface-variant/60 active:text-primary bg-surface-variant/40 active:bg-primary/10 rounded-full transition-all active:scale-95"
+                      title="Mở trong tab mới"
                     >
-                      {currentTask ? (
-                        <div className="relative flex items-center justify-center w-full h-full text-primary">
-                          <svg className="absolute w-[80%] h-[80%] -rotate-90 transform" viewBox="0 0 36 36">
-                            <path stroke="currentColor" className="opacity-20" fill="none" strokeWidth="3" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
-                            <path stroke="currentColor" className="transition-all duration-300" fill="none" strokeWidth="3" strokeDasharray={`${currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
-                          </svg>
-                          <span className="text-[10px] font-bold z-10">{currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}%</span>
-                        </div>
-                      ) : (
-                        <Download size={18} />
-                      )}
+                      <ExternalLink size={18} />
                     </button>
-                  )}
-                  <button 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      window.open('#' + getBookUrl(book), '_blank', 'noopener,noreferrer');
-                    }}
-                    className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-on-surface-variant/60 active:text-primary bg-surface-variant/40 active:bg-primary/10 rounded-full transition-all active:scale-95"
-                    title="Mở trong tab mới"
-                  >
-                    <ExternalLink size={18} />
-                  </button>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          )})}
-          
+              </Link>
+            )
+          })}
+
           {hasMore && (
             <div ref={lastBookElementRef} className="h-4 w-full" aria-hidden="true" />
           )}
@@ -441,12 +573,11 @@ export function LibraryScreen() {
         <GlobalSettingsSheet onClose={() => setShowGlobalSettings(false)} isOfflineMode={isOfflineMode} />
       )}
 
-      <BottomDock 
-        activeTab={activeTab} 
-        onTabSelect={setActiveTab} 
-        isOfflineMode={isOfflineMode} 
-        onToggleOffline={() => setOfflineMode(!isOfflineMode)}
-        onSettingsClick={() => setShowGlobalSettings(true)}
+      <BottomDock
+        activeTab={activeTab}
+        onTabSelect={setActiveTab}
+        isOfflineMode={isOfflineMode}
+        onClearDbClick={handleClearOfflineDb}
       />
 
       <LoadingOverlay isLoading={isLoading && page === 1} message="Đang tải danh sách truyện..." />
