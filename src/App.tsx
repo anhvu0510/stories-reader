@@ -6,6 +6,7 @@ import { ChapterListScreen } from './screens/ChapterListScreen';
 import { ReaderScreen } from './screens/ReaderScreen';
 import { ToastContainer } from './components/Toast';
 import { GlobalSettingsSheet } from './components/GlobalSettingsSheet';
+import { GlobalDownloadProgress } from './components/GlobalDownloadProgress';
 import { BookOpen } from 'lucide-react';
 
 function AppContent() {
@@ -287,6 +288,7 @@ function GlobalEventWrapper({ children }: { children: React.ReactNode }) {
   
   return (
     <>
+      <GlobalDownloadProgress />
       {children}
       {showSettings && <GlobalSettingsSheet onClose={() => setShowSettings(false)} initialTab="servers" />}
     </>

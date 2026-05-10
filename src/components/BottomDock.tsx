@@ -1,15 +1,17 @@
-import { Home, Clock, Sparkles, Settings } from 'lucide-react';
+import { Home, Clock, Sparkles, Settings, Wifi, WifiOff } from 'lucide-react';
 
 export function BottomDock({ 
   activeTab, 
   onTabSelect,
   isOfflineMode,
-  onSettingsClick
+  onSettingsClick,
+  onToggleOffline
 }: { 
   activeTab: 'books' | 'history' | 'ai', 
   onTabSelect: (tab: 'books' | 'history' | 'ai') => void,
   isOfflineMode?: boolean,
-  onSettingsClick?: () => void
+  onSettingsClick?: () => void,
+  onToggleOffline?: () => void
 }) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)] pointer-events-none drop-shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
@@ -67,17 +69,28 @@ export function BottomDock({
           {/* Center item: Home (Floating) */}
           <div className="relative flex flex-col items-center -mt-8 mb-[30px]">
             <button 
-               onClick={() => onTabSelect('books')}
+               onClick={() => {
+                 if (activeTab === 'books' && onToggleOffline) {
+                   onToggleOffline();
+                 } else {
+                   onTabSelect('books');
+                 }
+               }}
                className={`relative flex items-center justify-center w-[56px] h-[56px] rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-300 active:scale-95 ${
                  activeTab === 'books' 
                    ? 'bg-primary text-on-primary scale-105' 
                    : 'bg-surface-container-highest text-on-surface hover:bg-surface-container'
                }`}
+               title={activeTab === 'books' ? (isOfflineMode ? 'Chuyển sang Trực tuyến' : 'Chuyển sang Ngoại tuyến') : 'Thư viện'}
             >
                {/* Rings */}
                <div className="absolute inset-0 rounded-full border-2 border-transparent ring-1 ring-primary/20 ring-offset-2 ring-offset-surface"></div>
                <div className="absolute inset-[-4px] rounded-full ring-1 ring-outline-variant/20"></div>
-               <Home size={26} strokeWidth={activeTab === 'books' ? 2.5 : 2} className={activeTab === 'books' ? 'drop-shadow-sm' : ''} />
+               {isOfflineMode ? (
+                 <WifiOff size={26} strokeWidth={activeTab === 'books' ? 2.5 : 2} className={activeTab === 'books' ? 'drop-shadow-sm' : ''} />
+               ) : (
+                 <Wifi size={26} strokeWidth={activeTab === 'books' ? 2.5 : 2} className={activeTab === 'books' ? 'drop-shadow-sm' : ''} />
+               )}
             </button>
           </div>
 

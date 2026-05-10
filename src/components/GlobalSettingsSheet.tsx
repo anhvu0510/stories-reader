@@ -14,18 +14,26 @@ type RealScope = 'chapter' | 'book' | 'global';
 interface GlobalSettingsSheetProps {
   onClose: () => void;
   initialMatch?: string;
-  initialTab?: 'api' | 'names' | 'voice' | 'ai' | 'servers' | 'offline';
+  initialTab?: 'api' | 'names' | 'voice' | 'ai' | 'servers';
   currentBookId?: string;
   currentChapterId?: string;
+  isOfflineMode?: boolean;
 }
 
-export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, currentBookId, currentChapterId }: GlobalSettingsSheetProps) {
+export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, currentBookId, currentChapterId, isOfflineMode = false }: GlobalSettingsSheetProps) {
   const { 
     isEnabledReplace, setIsEnabledReplace,
     theme, setTheme, font, setFont, fontSize, setFontSize, lineHeight, setLineHeight, groupLines, setGroupLines,
     speechRate, setSpeechRate, bookLimit, setBookLimit, chapterLimit, setChapterLimit
   } = useReaderSettings();
-  const [activeTab, setActiveTab] = useState<'api' | 'names' | 'voice' | 'ai' | 'servers' | 'offline'>(initialTab || (initialMatch ? 'names' : 'api'));
+  const [activeTab, setActiveTab] = useState<'api' | 'names' | 'voice' | 'ai' | 'servers'>(initialTab || (initialMatch ? 'names' : 'api'));
+
+  useEffect(() => {
+    if (isOfflineMode && (activeTab === 'ai' || activeTab === 'servers')) {
+      setActiveTab('api');
+    }
+  }, [isOfflineMode, activeTab]);
+
   const [aiSubTab, setAiSubTab] = useState<'tokens' | 'models'>('tokens');
 
   // Names State
@@ -300,29 +308,25 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                 <span className={activeTab === 'voice' ? 'block' : 'hidden sm:block'}>Giọng đọc</span>
               </button>
 
-              <button 
-                onClick={() => setActiveTab('ai')}
-                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'ai' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
-              >
-                <Bot size={16} />
-                <span className={activeTab === 'ai' ? 'block' : 'hidden sm:block'}>AI</span>
-              </button>
+              {!isOfflineMode && (
+                <>
+                  <button 
+                    onClick={() => setActiveTab('ai')}
+                    className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'ai' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+                  >
+                    <Bot size={16} />
+                    <span className={activeTab === 'ai' ? 'block' : 'hidden sm:block'}>AI</span>
+                  </button>
 
-              <button 
-                onClick={() => setActiveTab('offline')}
-                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'offline' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
-              >
-                <MonitorSmartphone size={16} />
-                <span className={activeTab === 'offline' ? 'block' : 'hidden sm:block'}>Ngoại tuyến</span>
-              </button>
-
-              <button 
-                onClick={() => setActiveTab('servers')}
-                className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'servers' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
-              >
-                <Server size={16} />
-                <span className={activeTab === 'servers' ? 'block' : 'hidden sm:block'}>Máy chủ API</span>
-              </button>
+                  <button 
+                    onClick={() => setActiveTab('servers')}
+                    className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'servers' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
+                  >
+                    <Server size={16} />
+                    <span className={activeTab === 'servers' ? 'block' : 'hidden sm:block'}>Máy chủ API</span>
+                  </button>
+                </>
+              )}
             </div>
 
             <button onClick={onClose} className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 ml-2 flex items-center justify-center bg-surface-container-highest/30 hover:bg-surface-bright rounded-full text-on-surface-variant hover:text-on-surface hover:rotate-90 transition-all duration-300 active:scale-95">
@@ -707,10 +711,6 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                 )}
               </div>
             </div>
-          )}
-
-          {activeTab === 'offline' && (
-            <OfflineManagerSheet isEmbedded={true} />
           )}
 
           {activeTab === 'servers' && (

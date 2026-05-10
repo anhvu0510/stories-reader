@@ -654,7 +654,7 @@ export function ReaderScreen() {
 
       <div aria-hidden="true">
         {showTranslation && <TranslationSheet onClose={() => setShowTranslation(false)} currentBookName={content.chapter.bookName} currentChapterName={`Chương ${content.chapter.chapterNumber}: ${content.chapter.title}`} currentBookId={bookId} initialSelectedChapters={[chapterId]} onSuccess={fetchChapter} />}
-        {showGlobalSettings && <GlobalSettingsSheet onClose={() => setShowGlobalSettings(false)} initialMatch={selectedText} currentBookId={bookId} currentChapterId={chapterId} />}
+        {showGlobalSettings && <GlobalSettingsSheet onClose={() => setShowGlobalSettings(false)} initialMatch={selectedText} currentBookId={bookId} currentChapterId={chapterId} isOfflineMode={api.isOfflineMode()} />}
       </div>
 
       {/* Bottom Controls Overlay */}

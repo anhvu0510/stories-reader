@@ -288,3 +288,10 @@ body {
   fill: var(--surface);
   transition: fill 0.3s ease;
 }
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+

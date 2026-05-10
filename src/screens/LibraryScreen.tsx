@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { User, Search, MoreVertical, BookOpen, Settings, History, Sparkles, Library, X, Clock, Loader2, Save, ArrowRight, Lock, Cloud, WifiOff, CheckSquare, Square, Download, ExternalLink, RefreshCw } from 'lucide-react';
+import { User, Search, MoreVertical, BookOpen, Settings, History, Sparkles, Library, X, Clock, Loader2, Save, ArrowRight, Lock, Cloud, WifiOff, CheckSquare, Square, Download, ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
 import { api, Book } from '../lib/api';
 import { offlineDb } from '../lib/offlineDb';
 import { LoadingOverlay } from '../components/LoadingOverlay';
@@ -22,13 +22,15 @@ export function LibraryScreen() {
 
   const initialOffline = api.isOfflineMode();
   const [isOfflineMode, setIsOfflineMode] = useState(initialOffline);
-  
-  const [offlineBooks, setOfflineBooks] = useState<Book[]>([]);
-  const [bookSubTab, setBookSubTab] = useState<'online' | 'offline'>(initialOffline ? 'offline' : 'online');
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [selectedBooks, setSelectedBooks] = useState<Set<string>>(new Set());
-  const { isSyncing, syncProgress, syncStatus, syncMultipleBooks, syncBook, syncingBookId } = useOfflineSync();
+  const { 
+    isSyncing,
+    tasks,
+    syncMultipleBooks, 
+    syncBook 
+  } = useOfflineSync();
   const [downloadedBookIds, setDownloadedBookIds] = useState<Set<string>>(new Set());
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const isRefreshingRef = useRef(false);
 
   useEffect(() => {
     document.title = 'Reader Stories App';
@@ -36,12 +38,11 @@ export function LibraryScreen() {
 
   useEffect(() => {
     offlineDb.getBooks().then(books => setDownloadedBookIds(new Set(books.map(b => b.bookId))));
-  }, [isSyncing, activeTab]);
+  }, [isSyncing, activeTab, refreshCounter]);
 
   useEffect(() => {
     const handleOfflineModeChanged = (e: CustomEvent) => {
       setIsOfflineMode(e.detail);
-      setBookSubTab(e.detail ? 'offline' : 'online');
     };
     window.addEventListener('offline-mode-changed', handleOfflineModeChanged as EventListener);
     return () => window.removeEventListener('offline-mode-changed', handleOfflineModeChanged as EventListener);
@@ -63,6 +64,15 @@ export function LibraryScreen() {
   const [booksPagination, setBooksPagination] = useState({ currentPage: 1, totalPages: 1 });
   
   const [showGlobalSettings, setShowGlobalSettings] = useState(false);
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      isRefreshingRef.current = true;
+      setRefreshCounter(c => c + 1);
+    };
+    window.addEventListener('app-refresh', handleRefresh);
+    return () => window.removeEventListener('app-refresh', handleRefresh);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 800);
@@ -89,56 +99,53 @@ export function LibraryScreen() {
   useEffect(() => {
     let active = true;
     const reqId = ++loadingRequestRef.current;
-    setIsLoading(true);
+    
+    const isRefresh = isRefreshingRef.current;
+    isRefreshingRef.current = false;
 
-    if (page === 1) {
-      setHasMore(true);
-      if (activeTab === 'ai') {
-        setAiBooks([]);
-      } else if (activeTab === 'books' && bookSubTab === 'offline' && !isOfflineMode) {
-        setOfflineBooks([]);
-      } else {
-        setBooks([]);
+    if (!isRefresh) {
+      setIsLoading(true);
+
+      if (page === 1) {
+        setHasMore(true);
+        if (activeTab === 'ai') {
+          setAiBooks([]);
+        } else {
+          setBooks([]);
+        }
       }
     }
 
     const fetchData = async () => {
       try {
         const fetchLimit = bookLimit || 20;
-
-        if (activeTab === 'books' && bookSubTab === 'offline' && !isOfflineMode) {
-          const res = await api.getBooks(page, debouncedSearch, activeTab.toUpperCase(), fetchLimit, 'offline');
-          if (!active) return;
-          setOfflineBooks(prev => page === 1 ? res.data : [...prev, ...res.data]);
-          if (res.pagination) {
-            const totalPages = Number(res.pagination.totalPages) || 1;
-            setBooksPagination({ currentPage: page, totalPages });
-            setHasMore(page < totalPages && res.data.length > 0);
-          } else {
-            setHasMore(res.data.length === fetchLimit);
-          }
-          return;
-        }
+        
+        // If it's a refresh, we want to fetch page 1 directly to prevent append duplicate issues, unless page is already 1.
+        // Actually, just let the second useEffect reset the page to 1. But wait, if page is currently > 1, 
+        // the second useEffect sets page to 1, causing a double render.
+        // For simplicity, we just use the current page.
+        
+        const targetPage = isRefresh ? 1 : page;
 
         if (activeTab === 'ai') {
-          const res = await api.getBooks(page, debouncedSearch, activeTab.toUpperCase(), fetchLimit, 'online');
+          const res = await api.getBooks(targetPage, debouncedSearch, activeTab.toUpperCase(), fetchLimit, 'online');
           if (!active) return;
-          setAiBooks(prev => page === 1 ? res.data : [...prev, ...res.data]);
+          setAiBooks(prev => targetPage === 1 ? res.data : [...prev, ...res.data]);
           if (res.pagination) {
             const totalPages = Number(res.pagination.totalPages) || 1;
-            setAiPagination({ currentPage: page, totalPages });
-            setHasMore(page < totalPages && res.data.length > 0);
+            setAiPagination({ currentPage: targetPage, totalPages });
+            setHasMore(targetPage < totalPages && res.data.length > 0);
           } else {
             setHasMore(res.data.length === fetchLimit);
           }
         } else {
-          const res = await api.getBooks(page, debouncedSearch, activeTab.toUpperCase(), fetchLimit, isOfflineMode ? 'offline' : 'online');
+          const res = await api.getBooks(targetPage, debouncedSearch, activeTab.toUpperCase(), fetchLimit, isOfflineMode ? 'offline' : 'online');
           if (!active) return;
-          setBooks(prev => page === 1 ? res.data : [...prev, ...res.data]);
+          setBooks(prev => targetPage === 1 ? res.data : [...prev, ...res.data]);
           if (res.pagination) {
             const totalPages = Number(res.pagination.totalPages) || 1;
-            setBooksPagination({ currentPage: page, totalPages });
-            setHasMore(page < totalPages && res.data.length > 0);
+            setBooksPagination({ currentPage: targetPage, totalPages });
+            setHasMore(targetPage < totalPages && res.data.length > 0);
           } else {
             setHasMore(res.data.length === fetchLimit);
           }
@@ -162,17 +169,17 @@ export function LibraryScreen() {
     fetchData();
 
     return () => { active = false; };
-  }, [page, debouncedSearch, activeTab, bookLimit, bookSubTab]);
+  }, [page, debouncedSearch, activeTab, bookLimit, isOfflineMode, refreshCounter]);
 
   useEffect(() => {
     setPage(1);
     setHasMore(false);
-  }, [activeTab, debouncedSearch, bookLimit, bookSubTab]);
+  }, [activeTab, debouncedSearch, bookLimit, isOfflineMode, refreshCounter]);
 
   const currentPagination = activeTab === 'ai' ? aiPagination : booksPagination;
 
   const displayedBooks = activeTab === 'books' 
-    ? (isOfflineMode || bookSubTab === 'online' ? books : offlineBooks)
+    ? books
     : activeTab === 'history' 
       ? books.filter(b => b.totalTranslated > 0 || b.lastReadChapter)
       : aiBooks;
@@ -180,34 +187,15 @@ export function LibraryScreen() {
   const setOfflineMode = (offline: boolean) => {
     localStorage.setItem('offlineMode', String(offline));
     setIsOfflineMode(offline);
-    setBookSubTab(offline ? 'offline' : 'online');
+    if (offline && activeTab === 'ai') {
+      setActiveTab('books');
+    }
     window.dispatchEvent(new CustomEvent('offline-mode-changed', { detail: offline }));
-  };
-
-  const toggleSelection = (e: React.MouseEvent, bookId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const newSet = new Set(selectedBooks);
-    if (newSet.has(bookId)) newSet.delete(bookId);
-    else newSet.add(bookId);
-    setSelectedBooks(newSet);
   };
 
   return (
     <>
     <header className="bg-surface/75 backdrop-blur-[32px] sticky top-0 z-40 border-b border-outline-variant/20 flex flex-col w-full px-4 pb-4 pt-3 shadow-sm saturate-150">
-
-        {isSyncing && (
-          <div className="absolute top-0 left-0 right-0 z-50 pointer-events-none">
-            <div className="w-full bg-surface-container-high h-1.5 overflow-hidden">
-              <div 
-                className="bg-primary h-full transition-all duration-300"
-                style={{ width: `${syncProgress}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-center text-primary mt-0.5 bg-surface-container-lowest mx-auto px-2 py-0.5 rounded-b-lg w-fit shadow-xs">{syncStatus} ({syncProgress}%)</p>
-          </div>
-        )}
 
         {/* Decorative Title */}
         <div className="flex justify-center mb-3 relative">
@@ -247,19 +235,6 @@ export function LibraryScreen() {
             </div>
           </div>
 
-          {activeTab === 'books' && bookSubTab === 'online' && !isOfflineMode && (
-            <button 
-              onClick={() => {
-                setIsSelecting(!isSelecting);
-                if (isSelecting) setSelectedBooks(new Set());
-              }}
-              className={`w-11 h-11 rounded-[18px] backdrop-blur-md border transition-all shrink-0 flex items-center justify-center shadow-inner active:scale-95 ${isSelecting ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-surface-container-low/50 border-outline-variant/30 text-on-surface-variant active:text-primary active:bg-primary/5'}`}
-              title="Chọn nhiều truyện"
-            >
-              <Download size={22} />
-            </button>
-          )}
-
           {/* Settings Button */}
           {!isOfflineMode && (
             <button 
@@ -271,39 +246,6 @@ export function LibraryScreen() {
             </button>
           )}
         </div>
-
-        {/* Sub tabs for Books */}
-        {activeTab === 'books' && (
-          <div className="flex bg-surface-container-highest/50 p-1 rounded-full w-full max-w-[400px] mt-3 mx-auto shadow-inner">
-            <button
-              onClick={() => { setOfflineMode(false); setIsSelecting(false); setSelectedBooks(new Set()); }}
-              className={`flex-1 flex justify-center items-center gap-2 px-4 py-2 rounded-full text-[13px] font-bold transition-all duration-300 ${bookSubTab === 'online' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20' : 'text-on-surface-variant active:text-on-surface active:bg-surface-variant/30'}`}
-            >
-              <Cloud size={16} className={bookSubTab === 'online' ? 'text-primary' : 'opacity-60'} />
-              Trực tuyến
-            </button>
-            <button
-              onClick={() => { setOfflineMode(true); setIsSelecting(false); setSelectedBooks(new Set()); }}
-              className={`flex-1 flex justify-center items-center gap-2 px-4 py-2 rounded-full text-[13px] font-bold transition-all duration-300 ${bookSubTab === 'offline' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20' : 'text-on-surface-variant active:text-on-surface active:bg-surface-variant/30'}`}
-            >
-              <WifiOff size={16} className={bookSubTab === 'offline' ? 'text-primary' : 'opacity-60'} />
-              Ngoại tuyến
-            </button>
-          </div>
-        )}
-        
-        {isSelecting && activeTab === 'books' && bookSubTab === 'online' && (
-          <div className="flex items-center justify-between mt-3 px-2 py-2 bg-primary/10 rounded-xl border border-primary/20">
-            <span className="text-sm font-bold text-primary pl-2">Đã chọn: {selectedBooks.size} truyện</span>
-            <button 
-              onClick={() => { if (selectedBooks.size > 0) { syncMultipleBooks(Array.from(selectedBooks)); setIsSelecting(false); setSelectedBooks(new Set()); } }}
-              disabled={selectedBooks.size === 0 || isSyncing}
-              className="bg-primary text-on-primary px-4 py-1.5 rounded-full text-sm font-bold disabled:opacity-50"
-            >
-              Bắt đầu tải
-            </button>
-          </div>
-        )}
       </header>
 
       <main className="flex-grow w-full mx-auto px-4 py-4 sm:py-6 flex flex-col gap-4 pb-24">
@@ -333,9 +275,9 @@ export function LibraryScreen() {
             const progress = book.chapterCount > 0 ? (book.totalTranslated / book.chapterCount) * 100 : 0;
             const isLast = index === displayedBooks.length - 1;
             
-            const isSelected = selectedBooks.has(book.bookId);
             const isDownloaded = downloadedBookIds.has(book.bookId);
-            const isThisBookSyncing = syncingBookId === book.bookId;
+            const currentTask = tasks.find(t => t.bookId === book.bookId);
+            const isThisBookSyncing = !!currentTask;
             const openInNewTab = activeTab === 'books' || activeTab === 'history';
             
             const getBookUrl = (book: Book) => {
@@ -354,46 +296,19 @@ export function LibraryScreen() {
             return (
             <Link 
               key={book.bookId}
-              to={isSelecting ? "#" : getBookUrl(book)}
-              onClick={(e) => {
-                if (isSelecting) {
-                  toggleSelection(e, book.bookId);
-                }
-              }}
+              to={getBookUrl(book)}
               className={`relative overflow-hidden block rounded-2xl p-3 sm:p-4 transition-all duration-300 active:scale-[0.98] ${
                 isRead || activeTab !== 'books' 
                   ? 'bg-surface-container-low border border-outline-variant/30 active:bg-surface-container active:border-primary/40' 
-                  : isSelected ? 'bg-primary/5 border border-primary/40' : 'bg-surface border border-outline-variant/20 active:border-outline-variant/40'
+                  : 'bg-surface border border-outline-variant/20 active:border-outline-variant/40'
               }`}
             >
               {/* Subtle side indicator */}
               <div className={`absolute left-0 top-0 bottom-0 w-1 transition-colors ${
-                isSelected ? 'bg-primary' : isRead || activeTab === 'history' ? 'bg-primary/30' : 'bg-outline-variant/30'
+                isRead || activeTab === 'history' ? 'bg-primary/30' : 'bg-outline-variant/30'
               }`} />
-
-              {/* Subtle top loading indicator */}
-              {isThisBookSyncing && (
-                <div className="absolute top-0 left-0 right-0 h-1 bg-surface-variant overflow-hidden z-20">
-                  <div 
-                    className="h-full bg-primary transition-all duration-300"
-                    style={{ width: `${Math.max(1, syncProgress)}%` }}
-                  />
-                </div>
-              )}
               
               <div className="flex items-center gap-3.5 sm:gap-4 pl-1">
-                
-                {isSelecting && (
-                  <div 
-                    className="shrink-0 flex items-center justify-center p-2 -ml-1 text-on-surface-variant transition-colors"
-                  >
-                    {isSelected ? (
-                      <CheckSquare className="text-primary" size={24} />
-                    ) : (
-                      <Square size={24} />
-                    )}
-                  </div>
-                )}
 
                 {/* Left Number Badge for total chapters */}
                 <div className={`shrink-0 w-[52px] h-[52px] sm:w-[56px] sm:h-[56px] rounded-full flex flex-col items-center justify-center border font-bold transition-colors ${
@@ -445,37 +360,66 @@ export function LibraryScreen() {
 
                 {/* Right Actions */}
                 <div className="shrink-0 pr-1 sm:pr-2 flex items-center gap-1.5 sm:gap-2">
-                  {!isSelecting && !isOfflineMode && activeTab === 'books' && (
+                  {isOfflineMode && activeTab === 'books' && (
                     <button 
                       onClick={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        await syncBook(book.bookId);
+                        //if (window.confirm("Bạn có chắc chắn muốn xóa truyện này khỏi máy?")) { // Using just action for now to avoid alert
+                          await offlineDb.deleteBook(book.bookId);
+                          window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Đã xóa truyện', type: 'success' }}));
+                          setBooks(prev => prev.filter(b => b.bookId !== book.bookId));
+                          window.dispatchEvent(new CustomEvent('app-refresh'));
+                        //}
                       }}
-                      disabled={isSyncing}
-                      className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-on-surface-variant/60 active:text-primary bg-surface-variant/40 active:bg-primary/10 rounded-full transition-all active:scale-95 disabled:opacity-50"
-                      title={isDownloaded ? "Đồng bộ" : "Tải về"}
+                      className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-error/80 active:text-error bg-error/10 active:bg-error/20 rounded-full transition-all active:scale-95"
+                      title="Xóa truyện"
                     >
-                      {isDownloaded ? (
-                        <RefreshCw size={18} className={isThisBookSyncing ? "animate-spin" : ""} />
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                  {activeTab === 'books' && !isOfflineMode && (!isDownloaded || isThisBookSyncing) && (
+                    <button 
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (isThisBookSyncing) return;
+                        try {
+                          await syncBook(book.bookId);
+                        } catch (err) {
+                          window.dispatchEvent(new CustomEvent('app-toast', { 
+                            detail: { message: 'Có lỗi xảy ra, vui lòng thử lại sau', type: 'error' }
+                          }));
+                        }
+                      }}
+                      disabled={isThisBookSyncing}
+                      className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-on-surface-variant/60 active:text-primary bg-surface-variant/40 active:bg-primary/10 rounded-full transition-all active:scale-95 disabled:opacity-100"
+                      title="Tải về"
+                    >
+                      {currentTask ? (
+                        <div className="relative flex items-center justify-center w-full h-full text-primary">
+                          <svg className="absolute w-[80%] h-[80%] -rotate-90 transform" viewBox="0 0 36 36">
+                            <path stroke="currentColor" className="opacity-20" fill="none" strokeWidth="3" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
+                            <path stroke="currentColor" className="transition-all duration-300" fill="none" strokeWidth="3" strokeDasharray={`${currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
+                          </svg>
+                          <span className="text-[10px] font-bold z-10">{currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}%</span>
+                        </div>
                       ) : (
                         <Download size={18} />
                       )}
                     </button>
                   )}
-                  {!isSelecting && (
-                    <button 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.open(getBookUrl(book), '_blank', 'noopener,noreferrer');
-                      }}
-                      className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-on-surface-variant/60 active:text-primary bg-surface-variant/40 active:bg-primary/10 rounded-full transition-all active:scale-95"
-                      title="Mở trong tab mới"
-                    >
-                      <ExternalLink size={18} />
-                    </button>
-                  )}
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      window.open('#' + getBookUrl(book), '_blank', 'noopener,noreferrer');
+                    }}
+                    className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-on-surface-variant/60 active:text-primary bg-surface-variant/40 active:bg-primary/10 rounded-full transition-all active:scale-95"
+                    title="Mở trong tab mới"
+                  >
+                    <ExternalLink size={18} />
+                  </button>
                 </div>
               </div>
             </Link>
@@ -494,13 +438,14 @@ export function LibraryScreen() {
       </main>
 
       {showGlobalSettings && (
-        <GlobalSettingsSheet onClose={() => setShowGlobalSettings(false)} />
+        <GlobalSettingsSheet onClose={() => setShowGlobalSettings(false)} isOfflineMode={isOfflineMode} />
       )}
 
       <BottomDock 
         activeTab={activeTab} 
         onTabSelect={setActiveTab} 
         isOfflineMode={isOfflineMode} 
+        onToggleOffline={() => setOfflineMode(!isOfflineMode)}
         onSettingsClick={() => setShowGlobalSettings(true)}
       />
 

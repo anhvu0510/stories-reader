@@ -406,6 +406,32 @@ export const api = {
     }
   },
 
+  downloadBooksStream: async (bookIds: string[]): Promise<Response> => {
+    if (api.isOfflineMode()) {
+      throw new Error("Cannot download books in offline mode");
+    }
+    
+    const domain = getActiveDomain();
+    if (!domain) {
+      throw new Error("Không có kết nối API. Vui lòng cấu hình API Domain.");
+    }
+
+    const res = await fetch(`${domain.url}/api/books/download`, {
+      method: 'POST',
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ bookIds }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+
+    return res;
+  },
+
   getReplacements: async (bookId?: string, chapterId?: string): Promise<{ data: Replacement[] }> => {
     if (api.isOfflineMode()) {
       let reps = await offlineDb.getReplacements();

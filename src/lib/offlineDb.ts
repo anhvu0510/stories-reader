@@ -62,17 +62,31 @@ export const offlineDb = {
   },
   async deleteBook(bookId: string) {
     const db = await initDB();
-    const tx = db.transaction(['books', 'chapters', 'chapterContents'], 'readwrite');
-    await tx.objectStore('books').delete(bookId);
     
-    // delete related chapters
+    // First find all related chapters
+    const keys = await db.getAllKeysFromIndex('chapters', 'by-book', bookId);
+    
+    // Delete in chunks/separate transactions to avoid transaction inactivity
+    const tx = db.transaction(['books', 'chapters', 'chapterContents'], 'readwrite');
+    tx.objectStore('books').delete(bookId);
+    
     const chapterStore = tx.objectStore('chapters');
-    const index = chapterStore.index('by-book');
-    const keys = await index.getAllKeys(bookId);
+    const chapterContentStore = tx.objectStore('chapterContents');
+    
     for (const key of keys) {
-      await chapterStore.delete(key);
-      await tx.objectStore('chapterContents').delete(key);
+      chapterStore.delete(key);
+      chapterContentStore.delete(key);
     }
+    
+    await tx.done;
+  },
+  async deleteAllBooks() {
+    const db = await initDB();
+    const tx = db.transaction(['books', 'chapters', 'chapterContents', 'replacements'], 'readwrite');
+    await tx.objectStore('books').clear();
+    await tx.objectStore('chapters').clear();
+    await tx.objectStore('chapterContents').clear();
+    await tx.objectStore('replacements').clear();
     await tx.done;
   },
 

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { Search, SortDesc, ArrowLeft, Loader2, AlertCircle, Clock, Settings, Download } from 'lucide-react';
+import { Search, SortDesc, ArrowLeft, Loader2, AlertCircle, Clock, Settings, Download, Cloud } from 'lucide-react';
 import { api, Chapter, Book } from '../lib/api';
+import { offlineDb } from '../lib/offlineDb';
 import { TranslationSheet } from '../components/TranslationSheet';
 import { GlobalSettingsSheet } from '../components/GlobalSettingsSheet';
 import { LoadingOverlay } from '../components/LoadingOverlay';
@@ -82,7 +83,24 @@ export function ChapterListScreen() {
 
   // Track if we've successfully scrolled to the focused chapter to avoid repeated scrolling
   const [hasScrolled, setHasScrolled] = useState(false);
-  const { isSyncing, syncProgress, syncStatus, syncBook } = useOfflineSync();
+  const { 
+    isSyncing, 
+    tasks,
+    syncBook
+  } = useOfflineSync();
+
+  const currentTask = tasks.find(t => t.bookId === bookId);
+  const isThisBookSyncing = !!currentTask;
+  const [isDownloaded, setIsDownloaded] = useState(false);
+
+  useEffect(() => {
+    if (bookId) {
+      offlineDb.getBooks().then(books => {
+        setIsDownloaded(books.some(b => b.bookId === bookId));
+      });
+    }
+  }, [bookId]);
+
 
   useEffect(() => {
     if (book?.bookName) {
@@ -287,14 +305,34 @@ export function ChapterListScreen() {
             </div>
 
             <div className="flex items-center gap-2">
-              {!api.isOfflineMode() && (
+              {!api.isOfflineMode() && (!isDownloaded || isThisBookSyncing) && (
                 <button 
-                  onClick={() => bookId && syncBook(bookId)}
-                  disabled={isSyncing}
-                  className={`w-10 h-10 flex items-center justify-center transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md ${isSyncing ? 'text-primary animate-pulse' : 'text-on-surface-variant active:text-primary'}`}
-                  title={isSyncing ? "Đang lưu ngoại tuyến..." : "Lưu đọc ngoại tuyến"}
+                  onClick={async () => {
+                    if (bookId) {
+                      try {
+                        await syncBook(bookId);
+                      } catch (err) {
+                        window.dispatchEvent(new CustomEvent('app-toast', { 
+                          detail: { message: 'Máy chủ đang bận, vui lòng thử lại sau', type: 'error' }
+                        }));
+                      }
+                    }
+                  }}
+                  disabled={isThisBookSyncing}
+                  className={`w-10 h-10 flex items-center justify-center transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md ${isThisBookSyncing ? 'text-primary' : 'text-on-surface-variant active:text-primary'}`}
+                  title={isThisBookSyncing ? "Đang tải về..." : "Tải về ngoại tuyến"}
                 >
-                  <Download size={20} />
+                  {currentTask ? (
+                    <div className="relative flex items-center justify-center w-full h-full text-primary">
+                      <svg className="absolute w-[80%] h-[80%] -rotate-90 transform" viewBox="0 0 36 36">
+                        <path stroke="currentColor" className="opacity-20" fill="none" strokeWidth="3" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
+                        <path stroke="currentColor" className="transition-all duration-300" fill="none" strokeWidth="3" strokeDasharray={`${currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
+                      </svg>
+                      <span className="text-[10px] font-bold z-10">{currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}%</span>
+                    </div>
+                  ) : (
+                    <Download size={20} />
+                  )}
                 </button>
               )}
               <button 
@@ -306,16 +344,6 @@ export function ChapterListScreen() {
               </button>
             </div>
           </div>
-          
-          {isSyncing && (
-            <div className="w-full mt-2 bg-surface-container-high rounded-full h-1.5 overflow-hidden">
-              <div 
-                className="bg-primary h-full transition-all duration-300"
-                style={{ width: `${syncProgress}%` }}
-              />
-              <p className="text-[10px] text-center text-on-surface-variant mt-1 mb-0">{syncStatus} ({syncProgress}%)</p>
-            </div>
-          )}
         </div>
       </header>
 
