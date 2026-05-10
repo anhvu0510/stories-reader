@@ -21,7 +21,7 @@ class DownloadManager {
   private queue: string[] = [];
   private tasks: Map<string, DownloadTask> = new Map();
   private activeCount: number = 0;
-  private concurrency: number = 20; // Process 2 books at a time
+  private concurrency: number = 2; // Process 2 books at a time
   private listeners: Set<Listener> = new Set();
   private stopMap: Map<string, boolean> = new Map();
 
