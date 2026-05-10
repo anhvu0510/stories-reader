@@ -3,6 +3,15 @@ import { offlineDb } from './offlineDb';
 import oboe from 'oboe';
 import { getActiveDomain } from './api';
 
+// Suppress Oboe's attempt to set Content-Length which causes an ugly red browser warning
+const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+XMLHttpRequest.prototype.setRequestHeader = function(header: string, value: string) {
+  if (header.toLowerCase() === 'content-length') {
+    return; // Ignore to prevent "Refused to set unsafe header" warning
+  }
+  return originalSetRequestHeader.apply(this, [header, value]);
+};
+
 export type DownloadStatus = 'waiting' | 'downloading' | 'completed' | 'error';
 
 export interface DownloadTask {
