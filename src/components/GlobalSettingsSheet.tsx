@@ -328,7 +328,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                 className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'servers' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
               >
                 <Server size={16} />
-                <span className={activeTab === 'servers' ? 'block' : 'hidden sm:block'}>Máy chủ API</span>
+                <span className={activeTab === 'servers' ? 'block' : 'hidden sm:block'}>API</span>
               </button>
             </div>
 
@@ -430,7 +430,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
 
                   <div className="grid grid-cols-2 gap-5">
                     <div className="flex flex-col gap-3">
-                      <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Số truyện mỗi trang</h2>
+                      <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Books</h2>
                       <div className="flex bg-surface-container-highest rounded-xl p-1 items-center gap-1">
                          <button onClick={() => setBookLimit(Math.max(10, (bookLimit || 20) - 10))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
                           -
@@ -446,7 +446,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                     </div>
 
                     <div className="flex flex-col gap-3">
-                      <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Số chương mỗi trang</h2>
+                      <h2 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Pages</h2>
                       <div className="flex bg-surface-container-highest rounded-xl p-1 items-center gap-1">
                          <button onClick={() => setChapterLimit(Math.max(10, (chapterLimit || 50) - 10))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
                           -
@@ -721,7 +721,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
               <h3 className="font-bold text-on-surface flex items-center justify-between border-b border-outline-variant/20 pb-2">
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-4 bg-[#b47a18] rounded-full"></span>
-                  Máy chủ API
+                  API
                 </div>
                 {!showDomainForm && (
                   <button 

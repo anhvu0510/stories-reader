@@ -348,17 +348,19 @@ export function LibraryScreen() {
         {/* Decorative Title */}
         <div className="flex flex-col items-center justify-center mb-4 relative w-full">
           <div className="flex items-center justify-center relative w-full">
-            <h1 className="font-serif text-[28px] font-black tracking-tight drop-shadow-lg select-none bg-gradient-to-r from-primary via-primary-fixed to-primary bg-clip-text text-transparent animate-gradient-x pb-1">
-              Reader Stories
-            </h1>
-  
-            <button
+            <button 
               onClick={() => setOfflineMode(!isOfflineMode)}
-              className={`absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center p-2 rounded-full transition-all active:scale-95 ${isOfflineMode ? 'text-on-surface-variant/70 bg-surface-variant/30' : 'text-primary bg-primary/10'
-                }`}
-              title={isOfflineMode ? "Chế độ Ngoại tuyến" : "Chế độ Trực tuyến"}
+              className="font-serif text-[28px] font-black tracking-tight drop-shadow-lg select-none pb-1 active:scale-[0.98] transition-transform flex items-center justify-center w-full"
+              title={isOfflineMode ? "Ngoại tuyến (Nhấn để bật Mạng)" : "Trực tuyến (Nhấn để chuyển Ngoại tuyến)"}
             >
-              {isOfflineMode ? <WifiOff size={14} strokeWidth={2.5} /> : <Wifi size={14} strokeWidth={2.5} />}
+              <div className="flex items-center justify-center">
+                <span className="bg-gradient-to-r from-primary via-primary-fixed to-primary bg-clip-text text-transparent animate-gradient-x whitespace-pre">Reader Stor</span>
+                <span className="relative inline-flex justify-center isolate">
+                   <span className="bg-gradient-to-r from-primary via-primary-fixed to-primary bg-clip-text text-transparent animate-gradient-x">i</span>
+                   <span className={`absolute top-[4.5px] left-[50%] -translate-x-1/2 w-[7px] h-[7px] rounded-full transition-colors shadow-sm z-10 ${isOfflineMode ? 'bg-error animate-pulse' : 'bg-green-500'}`}></span>
+                </span>
+                <span className="bg-gradient-to-r from-primary via-primary-fixed to-primary bg-clip-text text-transparent animate-gradient-x">es</span>
+              </div>
             </button>
           </div>
           
