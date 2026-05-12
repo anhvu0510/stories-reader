@@ -66,37 +66,29 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const res = await fetch(`${activeDomainUrl}/api/stories/setting/stories.ui.domain`, { signal: controller.signal });
+        const res = await fetch(`${activeDomainUrl}`, { 
+          signal: controller.signal,
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
         clearTimeout(timeoutId);
         
         if (res.ok) {
           try {
             const data = await res.json();
-            const serverName = typeof data === 'string' ? data : (data?.name || data?.value || data?.title);
-            if (serverName && typeof serverName === 'string') {
-              const domainsData = localStorage.getItem('API_DOMAINS_CONFIG');
-              if (domainsData) {
-                let currentDomains = JSON.parse(domainsData);
-                if (Array.isArray(currentDomains)) {
-                  let updated = false;
-                  currentDomains = currentDomains.map((d: any) => {
-                    if (d.url === activeDomainUrl && (d.name === 'Server Mặc định' || !d.name)) {
-                      d.name = serverName;
-                      updated = true;
-                    }
-                    return d;
-                  });
-                  if (updated) localStorage.setItem('API_DOMAINS_CONFIG', JSON.stringify(currentDomains));
-                }
-              }
+            if (data?.succeeded === true && data?.message === "System is running") {
+               // We don't try to get the server name anymore to optimize speed, just proceed
+               setShowSettings(false);
+            } else {
+               throw new Error('Invalid format');
             }
-          } catch(e) {}
-          setShowSettings(false);
+          } catch(e) {
+            throw new Error('Invalid response');
+          }
         } else {
           // If they fail to connect to activeDomainUrl but it exists, open the server switch setting.
           setShowSettings(false);
           window.dispatchEvent(new CustomEvent('app-toast', { 
-            detail: { message: 'Máy chủ mặc định không phản hồi. Vui lòng chọn máy chủ khác.', type: 'error' }
+            detail: { message: 'Máy chủ mặc định không phản hồi đúng định dạng.', type: 'error' }
           }));
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('open-global-settings', { detail: { tab: 'servers' } }));
@@ -138,7 +130,9 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
           }
         } catch {}
 
-        const res = await fetch(`${newDomain.url}/api/stories/setting/stories.ui.domain`).catch(() => null);
+        const res = await fetch(`${newDomain.url}`, { 
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        }).catch(() => null);
         if (!res || !res.ok) {
           window.dispatchEvent(new CustomEvent('app-toast', { 
             detail: { message: 'Máy chủ không phản hồi hoặc URL không hợp lệ.', type: 'error' }

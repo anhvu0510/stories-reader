@@ -237,12 +237,16 @@ export const api = {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
-      // Just check any lightweight endpoint, or the health endpoint if it exists
-      const res = await fetch(`${domainUrl}/api/stories/setting/stories.ui.domain`, {
-        signal: controller.signal
+      const res = await fetch(`${domainUrl}`, {
+        signal: controller.signal,
+        headers: { 'ngrok-skip-browser-warning': 'true' }
       });
       clearTimeout(timeoutId);
-      return res.ok;
+      if (res.ok) {
+        const data = await res.json();
+        return data?.succeeded === true && data?.message === "System is running";
+      }
+      return false;
     } catch {
       return false;
     }

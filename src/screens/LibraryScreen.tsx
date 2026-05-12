@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { User, Search, MoreVertical, BookOpen, Settings, History, Sparkles, Library, X, Clock, Loader2, Save, ArrowRight, Lock, Cloud, Wifi, WifiOff, CheckSquare, Square, Download, ExternalLink, RefreshCw, Trash2, StopCircle, Database } from 'lucide-react';
 import { api, Book } from '../lib/api';
 import { offlineDb } from '../lib/offlineDb';
@@ -14,7 +14,9 @@ export function LibraryScreen() {
   const { bookLimit } = useReaderSettings();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [books, setBooks] = useState<Book[]>([]);
+
   const [aiBooks, setAiBooks] = useState<Book[]>([]);
 
   const initialTab = (searchParams.get('tab') as 'books' | 'history' | 'ai') || 'books';
@@ -89,6 +91,18 @@ export function LibraryScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (location.hash && !isLoading) {
+      const id = location.hash.replace('#', '');
+      const element = document.getElementById(id);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }
+    }
+  }, [location.hash, books, aiBooks, isLoading]);
 
   const [aiPagination, setAiPagination] = useState({ currentPage: 1, totalPages: 1 });
   const [booksPagination, setBooksPagination] = useState({ currentPage: 1, totalPages: 1 });
@@ -456,6 +470,7 @@ export function LibraryScreen() {
 
             return (
               <Link
+                id={`book-${book.bookId}`}
                 key={book.bookId}
                 to={getBookUrl(book)}
                 className={`relative overflow-hidden block rounded-2xl p-3 sm:p-4 transition-all duration-300 active:scale-[0.98] ${isRead || activeTab !== 'books'

@@ -6,8 +6,7 @@ export function BottomDock({
   activeTab,
   onTabSelect,
   isOfflineMode,
-  onClearDbClick,
-  onToggleOffline
+  onClearDbClick
 }: {
   activeTab: 'books' | 'history' | 'ai',
   onTabSelect: (tab: 'books' | 'history' | 'ai') => void,

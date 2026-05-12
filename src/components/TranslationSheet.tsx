@@ -36,9 +36,10 @@ interface TranslationSheetProps {
   initialTab?: Tab;
   initialSelectedChapters?: string[];
   onSuccess?: () => void;
+  disableCurrent?: boolean;
 }
 
-export function TranslationSheet({ onClose, currentBookName, currentChapterName, currentBookId, initialTab = 'current', initialSelectedChapters = [], onSuccess }: TranslationSheetProps) {
+export function TranslationSheet({ onClose, currentBookName, currentChapterName, currentBookId, initialTab = 'current', initialSelectedChapters = [], onSuccess, disableCurrent = false }: TranslationSheetProps) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [activeModelTab, setActiveModelTab] = useState<'VERTEX_API' | 'AI_STUDIO'>('VERTEX_API');
   const [options, setOptions] = useState<TranslationOptions>(defaultOptions);
@@ -301,7 +302,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           <div className="w-12 h-1.5 bg-outline-variant/30 rounded-full mx-auto mb-2 sm:mb-3"></div>
           <div className="flex justify-between items-center bg-surface-container p-1 rounded-xl">
              <div className="flex bg-surface-container-low p-1 rounded-lg flex-1">
-               <TabButton active={activeTab === 'current'} onClick={() => setActiveTab('current')}>Hiện tại</TabButton>
+               <TabButton active={activeTab === 'current'} onClick={() => setActiveTab('current')} disabled={disableCurrent}>Hiện tại</TabButton>
                <TabButton active={activeTab === 'batch_chapter'} onClick={() => setActiveTab('batch_chapter')}>Nhiều chương</TabButton>
                <TabButton active={activeTab === 'story'} onClick={() => setActiveTab('story')}>Truyện</TabButton>
              </div>
@@ -599,11 +600,18 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   );
 }
 
-function TabButton({ active, children, onClick }: { active: boolean, children: React.ReactNode, onClick: () => void }) {
+function TabButton({ active, children, onClick, disabled }: { active: boolean, children: React.ReactNode, onClick: () => void, disabled?: boolean }) {
   return (
     <button 
       onClick={onClick} 
-      className={`flex-1 py-1.5 sm:py-2 text-[11px] sm:text-[13px] font-bold rounded-lg transition-all duration-200 ${active ? 'bg-surface text-primary shadow-sm border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface border border-transparent'}`}
+      disabled={disabled}
+      className={`flex-1 py-1.5 sm:py-2 text-[11px] sm:text-[13px] font-bold rounded-lg transition-all duration-200 ${
+        disabled 
+          ? 'opacity-30 cursor-not-allowed bg-transparent text-on-surface-variant' 
+          : active 
+            ? 'bg-surface text-primary shadow-sm border border-outline-variant/10' 
+            : 'text-on-surface-variant hover:text-on-surface border border-transparent cursor-pointer'
+      }`}
     >
       {children}
     </button>

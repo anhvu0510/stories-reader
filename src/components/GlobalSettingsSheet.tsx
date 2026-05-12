@@ -205,17 +205,20 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
     
     // Check server info
     try {
-      const res = await fetch(`${domainUrl.trim()}/api/stories/setting/stories.ui.domain`);
+      const res = await fetch(`${domainUrl.trim()}`, {
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+      });
       if (res.ok) {
         const data = await res.json();
-        const serverName = typeof data === 'string' ? data : (data?.name || data?.value || data?.title);
-        if (serverName && typeof serverName === 'string' && !domainName.trim()) {
-          finalDomainName = serverName;
+        if (data?.succeeded === true && data?.message === "System is running") {
+          // Valid server
+        } else {
+          showToast('Máy chủ không phản hồi đúng định dạng.', 'error');
+          return;
         }
       } else {
-        // If domain setting API isn't active, fail the submission!
-        showToast('Máy chủ không phản hồi hoặc URL không hợp lệ.', 'error');
-        return;
+         showToast('Máy chủ không phản hồi hoặc URL không hợp lệ.', 'error');
+         return;
       }
     } catch (e) {
       showToast('Máy chủ không phản hồi hoặc URL không hợp lệ.', 'error');

@@ -271,14 +271,37 @@ export function ChapterListScreen() {
         <div className="flex flex-col w-full px-3 pt-3 pb-4 max-w-reading-max-width mx-auto gap-2 relative z-10">
           <div className="flex justify-between items-start w-full">
             <button 
-              onClick={() => navigate('/')} 
-              className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
+              onClick={async () => {
+                if (isThisBookSyncing) return;
+                try {
+                  await syncBook(bookId || '', book?.bookName || 'Unknown');
+                } catch (err) {
+                  window.dispatchEvent(new CustomEvent('app-toast', { 
+                    detail: { message: 'Có lỗi xảy ra, vui lòng thử lại sau', type: 'error' }
+                  }));
+                }
+              }}
+              disabled={isThisBookSyncing}
+              className={`w-10 h-10 flex items-center justify-center transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md ${isThisBookSyncing ? 'text-primary' : 'text-on-surface-variant hover:text-primary'} disabled:opacity-100`}
             >
-              <ArrowLeft size={20} />
+              {currentTask ? (
+                <div className="relative flex items-center justify-center w-full h-full text-primary">
+                  <svg className="absolute w-[80%] h-[80%] -rotate-90 transform" viewBox="0 0 36 36">
+                    <path stroke="currentColor" className="opacity-20" fill="none" strokeWidth="3" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
+                    <path stroke="currentColor" className="transition-all duration-300" fill="none" strokeWidth="3" strokeDasharray={`${currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
+                  </svg>
+                  <span className="text-[10px] font-bold z-10">{currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}%</span>
+                </div>
+              ) : (
+                <Download size={20} />
+              )}
             </button>
             
-            <div className="flex-1 px-3 flex flex-col items-center pt-1">
-              <h1 className="text-on-surface font-extrabold text-[16px] sm:text-[18px] text-center line-clamp-2 leading-[1.25] tracking-tight">
+            <div 
+              className="flex-1 px-3 flex flex-col items-center pt-1 cursor-pointer transition-transform active:scale-[0.98]" 
+              onClick={() => navigate(`/#book-${bookId}`)}
+            >
+              <h1 className="text-on-surface hover:text-primary font-extrabold text-[16px] sm:text-[18px] text-center line-clamp-2 leading-[1.25] tracking-tight transition-colors">
                 {book?.bookName || 'Đang tải...'}
               </h1>
               
@@ -305,36 +328,6 @@ export function ChapterListScreen() {
             </div>
 
             <div className="flex items-center gap-2">
-              {!api.isOfflineMode() && (!isDownloaded || isThisBookSyncing) && (
-                <button 
-                  onClick={async () => {
-                    if (bookId) {
-                      try {
-                        await syncBook(bookId);
-                      } catch (err) {
-                        window.dispatchEvent(new CustomEvent('app-toast', { 
-                          detail: { message: 'Máy chủ đang bận, vui lòng thử lại sau', type: 'error' }
-                        }));
-                      }
-                    }
-                  }}
-                  disabled={isThisBookSyncing}
-                  className={`w-10 h-10 flex items-center justify-center transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md ${isThisBookSyncing ? 'text-primary' : 'text-on-surface-variant active:text-primary'}`}
-                  title={isThisBookSyncing ? "Đang tải về..." : "Tải về ngoại tuyến"}
-                >
-                  {currentTask ? (
-                    <div className="relative flex items-center justify-center w-full h-full text-primary">
-                      <svg className="absolute w-[80%] h-[80%] -rotate-90 transform" viewBox="0 0 36 36">
-                        <path stroke="currentColor" className="opacity-20" fill="none" strokeWidth="3" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
-                        <path stroke="currentColor" className="transition-all duration-300" fill="none" strokeWidth="3" strokeDasharray={`${currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeLinecap="round" />
-                      </svg>
-                      <span className="text-[10px] font-bold z-10">{currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}%</span>
-                    </div>
-                  ) : (
-                    <Download size={20} />
-                  )}
-                </button>
-              )}
               <button 
                 onClick={() => setShowGlobalSettings(true)}
                 className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
@@ -391,7 +384,7 @@ export function ChapterListScreen() {
             <button 
               onClick={() => setShowTranslation(true)}
               className="bg-warning text-warning-on-container px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap">
-              Dịch nhanh
+              Dịch AI
             </button>
           </div>
         )}
@@ -444,6 +437,7 @@ export function ChapterListScreen() {
           currentBookName={book?.bookName} 
           initialTab="batch_chapter" 
           initialSelectedChapters={chapters.filter(c => c.state === 'PENDING').map(c => c.chapterId)} 
+          disableCurrent={true}
         />
       )}
 
@@ -453,7 +447,13 @@ export function ChapterListScreen() {
       
       <BottomDock 
         activeTab="books"
-        onTabSelect={(t) => navigate(`/?tab=${t}`)} 
+        onTabSelect={(t) => {
+          if (t === 'ai') {
+            setShowTranslation(true);
+          } else {
+            navigate(`/?tab=${t}`);
+          }
+        }} 
       />
       
       <LoadingOverlay isLoading={isLoading && chapters.length === 0} message="Đang tải danh sách chương..." />
