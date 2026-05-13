@@ -63,6 +63,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
 
   const [testingDomainId, setTestingDomainId] = useState<string | null>(null);
   const [isFetchingDomains, setIsFetchingDomains] = useState(false);
+  const [isCheckingDomain, setIsCheckingDomain] = useState(false);
 
   const handleFetchDomainsFromAPI = async () => {
     setIsFetchingDomains(true);
@@ -203,6 +204,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
     
     let finalDomainName = domainName.trim() || 'Server Mặc định';
     
+    setIsCheckingDomain(true);
     // Check server info
     try {
       const res = await fetch(`${domainUrl.trim()}`, {
@@ -212,16 +214,20 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
         const data = await res.json();
         if (data?.succeeded === true && data?.message === "System is running") {
           // Valid server
+          showToast('Đã lưu máy chủ thành công.', 'success');
         } else {
           showToast('Máy chủ không phản hồi đúng định dạng.', 'error');
+          setIsCheckingDomain(false);
           return;
         }
       } else {
          showToast('Máy chủ không phản hồi hoặc URL không hợp lệ.', 'error');
+         setIsCheckingDomain(false);
          return;
       }
     } catch (e) {
       showToast('Máy chủ không phản hồi hoặc URL không hợp lệ.', 'error');
+      setIsCheckingDomain(false);
       return;
     }
 
@@ -243,6 +249,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
     setEditingDomainId(null);
     setDomainName('');
     setDomainUrl('');
+    setIsCheckingDomain(false);
   };
   
   const handleEditDomain = (domain: ApiDomain) => {
@@ -771,10 +778,10 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                     </button>
                     <button 
                       onClick={handleSaveDomain}
-                      disabled={!domainUrl.trim()}
+                      disabled={!domainUrl.trim() || isCheckingDomain}
                       className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#b47a18] text-black hover:bg-[#c98a1b] disabled:opacity-50 transition-colors flex items-center gap-1.5"
                     >
-                      <Save size={12} /> Lưu lại
+                      {isCheckingDomain ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Lưu lại
                     </button>
                   </div>
                 </div>
