@@ -768,18 +768,23 @@ export function ReaderScreen() {
                        <ChevronLeft size={28} strokeWidth={2.5} />
                      </div>
                   </button>
+                  
+                     {/* 5. Sau */}
+                  <button 
+                    disabled={!content.navigation?.next?.chapterId}
+                    onClick={() => {
+                      stopReading();
+                      const rootTabStr = rootTab ? `&rootTab=${rootTab}` : '';
+                      content.navigation?.next?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.next.chapterId}?filterState=${filterState}${rootTabStr}`);
+                    }}
+                    className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
+                  >
+                     <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
+                       <ChevronRight size={28} strokeWidth={2.5} />
+                     </div>
+                  </button> 
 
-                  {/* 2. Dịch AI */}
-                  <div className="relative">
-                    <button 
-                      onClick={() => { setShowTranslation(true); setShowControls(false); }}
-                      className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
-                    >
-                       <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
-                         <Sparkles size={26} strokeWidth={2.5} />
-                       </div>
-                    </button>
-                  </div>
+                
                 </div>
 
                 {/* Center Floating: 3. Audio/Read */}
@@ -820,6 +825,20 @@ export function ReaderScreen() {
 
                 {/* Right Items */}
                 <div className="flex items-center w-[120px] justify-between pr-3 sm:pr-4">
+
+                      {/* 2. Dịch AI */}
+                  <div className="relative">
+                    <button 
+                      onClick={() => { setShowTranslation(true); setShowControls(false); }}
+                      className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
+                    >
+                       <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
+                         <Sparkles size={26} strokeWidth={2.5} />
+                       </div>
+                    </button>
+                  </div>
+                  
+
                   {/* 4. Cài đặt */}
                   <button 
                     onClick={() => { setShowGlobalSettings(true); setShowControls(false); }}
@@ -833,20 +852,9 @@ export function ReaderScreen() {
                      </div>
                   </button>
 
-                  {/* 5. Sau */}
-                  <button 
-                    disabled={!content.navigation?.next?.chapterId}
-                    onClick={() => {
-                      stopReading();
-                      const rootTabStr = rootTab ? `&rootTab=${rootTab}` : '';
-                      content.navigation?.next?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.next.chapterId}?filterState=${filterState}${rootTabStr}`);
-                    }}
-                    className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
-                  >
-                     <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
-                       <ChevronRight size={28} strokeWidth={2.5} />
-                     </div>
-                  </button>
+                
+
+                 
                 </div>
               </>
             )}
