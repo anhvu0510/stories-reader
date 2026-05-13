@@ -1,16 +1,14 @@
 import { Home, Clock, Sparkles, Settings, Globe, Trash2 } from 'lucide-react';
 
-
-
 export function BottomDock({
   activeTab,
   onTabSelect,
   isOfflineMode,
   onClearDbClick
 }: {
-  activeTab: 'books' | 'history' | 'ai',
-  onTabSelect: (tab: 'books' | 'history' | 'ai') => void,
-  isOfflineMode?: boolean,
+  activeTab: 'books' | 'history' | 'ai';
+  onTabSelect: (tab: 'books' | 'history' | 'ai') => void;
+  isOfflineMode?: boolean;
   onClearDbClick?: () => void
 }) {
   return (

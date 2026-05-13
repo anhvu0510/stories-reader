@@ -682,7 +682,7 @@ export function ReaderScreen() {
             {showAudioBar ? (
               <>
                 {/* Audio Left Items */}
-                <div className="flex items-center w-[120px] justify-between pl-3 sm:pl-4">
+                <div className="flex items-center w-[130px] h-full sm:w-[140px] justify-between">
                   {/* 1. Next Chương */}
                   <button 
                     disabled={!content.navigation?.next?.chapterId}
@@ -691,24 +691,24 @@ export function ReaderScreen() {
                       const rootTabStr = rootTab ? `&rootTab=${rootTab}` : '';
                       content.navigation?.next?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.next.chapterId}?filterState=${filterState}${rootTabStr}`);
                     }}
-                    className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
+                    className="relative flex-1 h-full flex items-center justify-center disabled:opacity-30 transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
                        <ChevronRight size={28} strokeWidth={2.5} />
                      </div>
                   </button>
 
+                  <div className="w-[1px] h-8 bg-outline-variant/40 rounded-full shrink-0" />
+
                   {/* 2. Next Đoạn */}
                   <button 
                     onClick={() => nextSection()}
-                    className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
+                    className="relative flex-1 h-full flex items-center justify-center transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
                        <SkipForward size={26} strokeWidth={2.5} />
                      </div>
                   </button>
-
-              
                 </div>
 
                 {/* Audio Center Floating */}
@@ -728,21 +728,23 @@ export function ReaderScreen() {
                 </div>
 
                 {/* Audio Right Items */}
-                <div className="flex items-center w-[120px] justify-between pr-3 sm:pr-4">
-                      {/* 4. Stop */}
+                <div className="flex items-center w-[130px] h-full sm:w-[140px] justify-between">
+                  {/* 4. Stop */}
                   <button 
                     onClick={() => { stopReading(); setShowAudioBar(false); }}
-                    className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
+                    className="relative flex-1 h-full flex items-center justify-center transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className="transition-all duration-300 text-error hover:text-error/80 group-hover:scale-110 active:scale-95">
                        <StopCircle size={26} strokeWidth={2.5} />
                      </div>
                   </button>
 
+                  <div className="w-[1px] h-8 bg-outline-variant/40 rounded-full shrink-0" />
+
                   {/* 5. Menu Cũ */}
                   <button 
                     onClick={() => setShowAudioBar(false)}
-                    className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
+                    className="relative flex-1 h-full flex items-center justify-center transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
                        <List size={26} strokeWidth={2.5} />
@@ -753,7 +755,7 @@ export function ReaderScreen() {
             ) : (
               <>
                 {/* Left Items */}
-                <div className="flex items-center w-[120px] justify-between pl-3 sm:pl-4">
+                <div className="flex items-center w-[130px] h-full sm:w-[140px] justify-between">
                   {/* 1. Trước */}
                   <button 
                     disabled={!content.navigation?.prev?.chapterId}
@@ -762,13 +764,15 @@ export function ReaderScreen() {
                       const rootTabStr = rootTab ? `&rootTab=${rootTab}` : '';
                       content.navigation?.prev?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.prev.chapterId}?filterState=${filterState}${rootTabStr}`);
                     }}
-                    className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
+                    className="relative flex-1 h-full flex items-center justify-center disabled:opacity-30 transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
                        <ChevronLeft size={28} strokeWidth={2.5} />
                      </div>
                   </button>
                   
+                  <div className="w-[1px] h-8 bg-outline-variant/40 rounded-full shrink-0" />
+
                      {/* 5. Sau */}
                   <button 
                     disabled={!content.navigation?.next?.chapterId}
@@ -777,14 +781,12 @@ export function ReaderScreen() {
                       const rootTabStr = rootTab ? `&rootTab=${rootTab}` : '';
                       content.navigation?.next?.chapterId && navigate(`/book/${bookId}/chapter/${content.navigation.next.chapterId}?filterState=${filterState}${rootTabStr}`);
                     }}
-                    className="relative flex items-center justify-center w-12 h-[64px] disabled:opacity-30 transition-all duration-300 group"
+                    className="relative flex-1 h-full flex items-center justify-center disabled:opacity-30 transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
                        <ChevronRight size={28} strokeWidth={2.5} />
                      </div>
                   </button> 
-
-                
                 </div>
 
                 {/* Center Floating: 3. Audio/Read */}
@@ -824,25 +826,23 @@ export function ReaderScreen() {
                 </div>
 
                 {/* Right Items */}
-                <div className="flex items-center w-[120px] justify-between pr-3 sm:pr-4">
-
-                      {/* 2. Dịch AI */}
-                  <div className="relative">
-                    <button 
-                      onClick={() => { setShowTranslation(true); setShowControls(false); }}
-                      className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
-                    >
-                       <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
-                         <Sparkles size={26} strokeWidth={2.5} />
-                       </div>
-                    </button>
-                  </div>
+                <div className="flex items-center w-[130px] h-full sm:w-[140px] justify-between">
+                  {/* 2. Dịch AI */}
+                  <button 
+                    onClick={() => { setShowTranslation(true); setShowControls(false); }}
+                    className="relative flex-1 h-full flex items-center justify-center transition-all duration-200 group active:bg-on-surface/10"
+                  >
+                     <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
+                       <Sparkles size={26} strokeWidth={2.5} />
+                     </div>
+                  </button>
                   
+                  <div className="w-[1px] h-8 bg-outline-variant/40 rounded-full shrink-0" />
 
                   {/* 4. Cài đặt */}
                   <button 
                     onClick={() => { setShowGlobalSettings(true); setShowControls(false); }}
-                    className="relative flex items-center justify-center w-12 h-[64px] transition-all duration-300 group"
+                    className="relative flex-1 h-full flex items-center justify-center transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className={cn("relative transition-all duration-300 group-hover:scale-110 active:scale-95", selectedText ? "text-primary drop-shadow-md" : "text-on-surface-variant group-hover:text-on-surface")}>
                        <Settings size={26} strokeWidth={2.5} />
@@ -851,13 +851,10 @@ export function ReaderScreen() {
                        )}
                      </div>
                   </button>
-
-                
-
-                 
                 </div>
               </>
             )}
+
           </div>
         </div>
       </nav>
