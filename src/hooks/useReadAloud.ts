@@ -196,9 +196,11 @@ export function useReadAloud(paragraphs: string[]) {
     synth.onvoiceschanged = loadVoices;
 
     return () => {
+      if (isPlayingRef.current || isPausedRef.current) {
+        synth.cancel();
+      }
       isPlayingRef.current = false;
       isPausedRef.current = false;
-      synth.cancel();
       synth.onvoiceschanged = null;
     };
   }, [synth]);
@@ -400,12 +402,12 @@ export function useReadAloud(paragraphs: string[]) {
   };
 
   const stopReading = () => {
-
+    const wasActive = isPlayingRef.current || isPausedRef.current;
     setIsPlaying(false);
     setIsPaused(false);
     isPlayingRef.current = false;
     isPausedRef.current = false;
-    if (synth) synth.cancel();
+    if (synth && wasActive) synth.cancel();
     currentChunkIdxRef.current = 0;
     setCurrentChunkIndex(-1);
     setCharIndex(-1);
