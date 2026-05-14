@@ -293,7 +293,7 @@ export default function App() {
   return (
     <ReaderProvider>
       <ApplicationGate>
-        <Router>
+        <Router basename={import.meta.env.BASE_URL}>
           <GlobalEventWrapper>
             <AppContent />
           </GlobalEventWrapper>

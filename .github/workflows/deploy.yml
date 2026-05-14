@@ -25,6 +25,8 @@ jobs:
         run: npm ci
 
       - name: Build Project
+        env:
+          VITE_BASE_PATH: /stories-reader/
         run: npm run build
 
       - name: Deploy to gh-pages branch
