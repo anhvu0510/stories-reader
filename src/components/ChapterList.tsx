@@ -191,7 +191,7 @@ export function ChapterList({
 
               {/* Right Action */}
               <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full transition-all">
-                <ArrowRight size={18} className={`transition-all ${
+                <ArrowRight size={16} className={`transition-all ${
                   isSucceeded ? 'text-primary/70' :
                   isPending ? 'text-warning/70' :
                   'text-on-surface-variant/30 grayscale'

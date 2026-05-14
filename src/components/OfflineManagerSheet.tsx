@@ -47,12 +47,12 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
       <div className="flex-shrink-0 p-3 sm:p-5 border-b border-outline-variant/10 flex flex-col gap-3 bg-surface-container-low">
         <div className="flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-bold font-serif text-primary flex items-center gap-2">
-            <Download size={20} /> Đọc ngoại tuyến
+            <Download size={18} /> Đọc ngoại tuyến
           </h2>
           <div className="flex items-center gap-1 sm:gap-2">
             {!isEmbedded && onClose && (
              <button onClick={onClose} className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
-                <X size={16} />
+                <X size={14} />
               </button>
             )}
           </div>
@@ -84,7 +84,7 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
           
           {isLoading ? (
             <div className="py-20 flex justify-center text-on-surface-variant">
-              <RotateCw className="animate-spin" size={24} />
+              <RotateCw className="animate-spin" size={20} />
             </div>
           ) : savedBooks.length === 0 ? (
             <div className="py-20 flex flex-col items-center justify-center text-center gap-4 border border-dashed border-outline-variant/30 rounded-3xl bg-surface-container-lowest">
@@ -109,7 +109,7 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
                     className="p-2 text-red-400 hover:bg-red-400/10 rounded-full transition-colors flex-shrink-0"
                     title="Xoá khỏi máy"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>

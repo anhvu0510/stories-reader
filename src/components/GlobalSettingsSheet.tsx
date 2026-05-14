@@ -298,7 +298,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                 onClick={() => setActiveTab('api')}
                 className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'api' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
               >
-                <MonitorSmartphone size={16} className={activeTab === 'api' ? 'animate-pulse' : ''} />
+                <MonitorSmartphone size={14} className={activeTab === 'api' ? 'animate-pulse' : ''} />
                 <span className={activeTab === 'api' ? 'block' : 'hidden sm:block'}>Cơ bản</span>
               </button>
               
@@ -307,7 +307,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                   onClick={() => setActiveTab('names')}
                   className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'names' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
                 >
-                  <Edit3 size={16} />
+                  <Edit3 size={14} />
                   <span className={activeTab === 'names' ? 'block' : 'hidden sm:block'}>Từ điển</span>
                 </button>
               )}
@@ -316,7 +316,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                 onClick={() => setActiveTab('voice')}
                 className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'voice' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
               >
-                <Volume2 size={16} />
+                <Volume2 size={14} />
                 <span className={activeTab === 'voice' ? 'block' : 'hidden sm:block'}>Giọng đọc</span>
               </button>
 
@@ -325,7 +325,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                   onClick={() => setActiveTab('ai')}
                   className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'ai' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
                 >
-                  <Bot size={16} />
+                  <Bot size={14} />
                   <span className={activeTab === 'ai' ? 'block' : 'hidden sm:block'}>AI</span>
                 </button>
               )}
@@ -334,13 +334,13 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                 onClick={() => setActiveTab('servers')}
                 className={`flex items-center justify-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-full transition-all duration-300 font-bold text-[12px] sm:text-[13px] outline-none whitespace-nowrap ${activeTab === 'servers' ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20 scale-100' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 scale-95 hover:scale-100'}`}
               >
-                <Server size={16} />
+                <Server size={14} />
                 <span className={activeTab === 'servers' ? 'block' : 'hidden sm:block'}>API</span>
               </button>
             </div>
 
             <button onClick={onClose} className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 ml-2 flex items-center justify-center bg-surface-container-highest/30 hover:bg-surface-bright rounded-full text-on-surface-variant hover:text-on-surface hover:rotate-90 transition-all duration-300 active:scale-95">
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
         </div>
@@ -353,10 +353,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
               
               {/* Display Settings Section */}
               <div className="flex flex-col gap-6">
-                <h3 className="font-bold text-on-surface flex items-center gap-2 border-b border-outline-variant/20 pb-2">
-                  <span className="w-1.5 h-4 bg-primary rounded-full"></span>
-                  Giao diện đọc
-                </h3>
+
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <section className="flex flex-col gap-3">
@@ -423,7 +420,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                           -
                          </button>
                          <div className="flex-1 text-center font-bold text-sm text-primary flex items-center justify-center gap-1.5">
-                           <Layers size={14} className="opacity-70" />
+                           <Layers size={12} className="opacity-70" />
                            {groupLines}
                          </div>
                          <button onClick={() => setGroupLines(Math.min(10, groupLines + 1))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
@@ -443,7 +440,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                           -
                          </button>
                          <div className="flex-1 text-center font-bold text-sm text-primary flex items-center justify-center gap-1.5">
-                           <BookOpen size={14} className="opacity-70" />
+                           <BookOpen size={12} className="opacity-70" />
                            {bookLimit || 20}
                          </div>
                          <button onClick={() => setBookLimit(Math.min(100, (bookLimit || 20) + 10))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
@@ -459,7 +456,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                           -
                          </button>
                          <div className="flex-1 text-center font-bold text-sm text-primary flex items-center justify-center gap-1.5">
-                           <List size={14} className="opacity-70" />
+                           <List size={12} className="opacity-70" />
                            {chapterLimit || 50}
                          </div>
                          <button onClick={() => setChapterLimit(Math.min(200, (chapterLimit || 50) + 10))} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center hover:bg-surface-bright active:scale-95 transition-all text-on-surface flex-shrink-0">
@@ -479,7 +476,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
               <div className="p-3 sm:p-4 border-b border-outline-variant/10 sticky top-0 z-100 flex flex-col gap-3 bg-surface-container/95 backdrop-blur-md shadow-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                     <Edit3 size={14} className="text-primary" />
+                     <Edit3 size={12} className="text-primary" />
                      <h3 className="text-[11px] font-bold text-on-surface uppercase tracking-widest">{editingId ? 'Chỉnh sửa' : 'Thêm từ'}</h3>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer group" title="Bật/Tắt Thay thế">
@@ -503,7 +500,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                       className="flex-1 w-full min-w-0 bg-transparent py-2 pl-3 pr-2 text-[13px] sm:text-sm focus:outline-none text-on-surface placeholder-on-surface-variant/40 font-medium"
                     />
                     <div className="flex items-center justify-center px-1 text-primary opacity-60">
-                      <ArrowRight size={14} />
+                      <ArrowRight size={12} />
                     </div>
                     <input 
                       type="text" 
@@ -545,7 +542,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                           className="w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-highest hover:text-error transition-colors"
                           title="Hủy"
                         >
-                          <X size={16} />
+                          <X size={14} />
                         </button>
                       )}
                       <button 
@@ -554,7 +551,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                         className="w-8 h-8 sm:w-auto sm:px-4 flex items-center justify-center rounded-full bg-primary text-on-primary hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed transition-all gap-1.5 shadow-sm"
                         title="Lưu"
                       >
-                        <Save size={14} />
+                        <Save size={12} />
                         <span className="hidden sm:block text-[11px] font-bold">Lưu</span>
                       </button>
                     </div>
@@ -566,7 +563,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                 {/* Search & Filter */}
                 <div className="flex gap-2 sm:gap-3">
                   <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-70" size={16} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-70" size={14} />
                     <input 
                       type="text" 
                       placeholder="Tìm kiếm từ thay thế..." 
@@ -586,7 +583,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                       <option value="book">Truyện</option>
                       <option value="global">Toàn cục</option>
                     </select>
-                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-70 pointer-events-none" size={14} />
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant opacity-70 pointer-events-none" size={12} />
                   </div>
                 </div>
 
@@ -620,8 +617,8 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                          
                          {/* Arrow */}
                          <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-surface-container border border-outline-variant/20 text-on-surface-variant shadow-sm z-10 -mx-3 sm:-mx-3.5 group-hover:text-primary transition-colors duration-300">
-                           <ArrowRight size={14} className="sm:hidden" strokeWidth={3} />
-                           <ArrowRight size={16} className="hidden sm:block" strokeWidth={3} />
+                           <ArrowRight size={12} className="sm:hidden" strokeWidth={3} />
+                           <ArrowRight size={14} className="hidden sm:block" strokeWidth={3} />
                          </div>
 
                          {/* Replacement string [b] */}
@@ -636,16 +633,16 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                           className={`w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center rounded-full transition-all duration-200 ${editingId === r.id ? 'bg-primary text-on-primary shadow-md scale-105' : 'text-on-surface-variant hover:bg-surface-variant hover:text-primary active:scale-95'}`}
                           title="Sửa"
                         >
-                          <Edit3 size={14} className="sm:hidden" strokeWidth={2.5} />
-                          <Edit3 size={16} className="hidden sm:block" strokeWidth={2.5} />
+                          <Edit3 size={12} className="sm:hidden" strokeWidth={2.5} />
+                          <Edit3 size={14} className="hidden sm:block" strokeWidth={2.5} />
                         </button>
                         <button 
                           onClick={(e) => handleDelete(r.id, e)}
                           className="w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-error/10 hover:text-error transition-all duration-200 active:scale-95"
                           title="Xóa"
                         >
-                          <Trash2 size={14} className="sm:hidden" strokeWidth={2.5} />
-                          <Trash2 size={16} className="hidden sm:block" strokeWidth={2.5} />
+                          <Trash2 size={12} className="sm:hidden" strokeWidth={2.5} />
+                          <Trash2 size={14} className="hidden sm:block" strokeWidth={2.5} />
                         </button>
                       </div>
                     </div>
@@ -740,7 +737,7 @@ export function GlobalSettingsSheet({ onClose, initialMatch = '', initialTab, cu
                     }}
                     className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 transition-colors"
                   >
-                    <Plus size={14} /> Thêm mới
+                    <Plus size={12} /> Thêm mới
                   </button>
                 )}
               </h3>
@@ -937,7 +934,7 @@ function VoiceSelect() {
           </option>
         ))}
       </select>
-      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" size={16} />
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" size={14} />
     </div>
   );
 }
@@ -947,7 +944,7 @@ function ThemeButton({ currentTheme, targetTheme, bg, ringColor, checkColor, lab
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-2 group outline-none">
       <div className={`w-12 h-12 rounded-full ${bg} flex items-center justify-center transition-all duration-300 shadow-sm ${active ? `ring-2 ring-offset-2 ring-offset-surface ${ringColor} scale-105` : 'border border-outline-variant/30 group-hover:scale-105'}`}>
-        <Check size={20} className={`${checkColor} transition-transform duration-300 ${active ? 'scale-100 opacity-100' : 'scale-50 opacity-0 group-hover:scale-100 group-hover:opacity-50'}`} />
+        <Check size={18} className={`${checkColor} transition-transform duration-300 ${active ? 'scale-100 opacity-100' : 'scale-50 opacity-0 group-hover:scale-100 group-hover:opacity-50'}`} />
       </div>
       <span className={`text-[11px] font-bold transition-colors ${active ? 'text-primary' : 'text-on-surface-variant'}`}>{label}</span>
     </button>

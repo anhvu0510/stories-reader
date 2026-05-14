@@ -391,7 +391,7 @@ export function ReaderScreen() {
               className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
               title="Về trang chủ"
             >
-              <Home size={20} />
+              <Home size={18} />
             </button>
           </div>
 
@@ -426,7 +426,7 @@ export function ReaderScreen() {
               className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
               title="Lịch sử đọc"
             >
-              <Clock size={20} />
+              <Clock size={18} />
             </button>
             <button 
               onClick={() => { 
@@ -440,7 +440,7 @@ export function ReaderScreen() {
               className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
               title="Mục lục"
             >
-              <List size={20} />
+              <List size={18} />
             </button>
           </div>
         </div>
@@ -462,13 +462,13 @@ export function ReaderScreen() {
             <div className="flex items-center justify-between">
               <h2 className="font-serif text-lg font-bold">Mục lục</h2>
               <button onClick={() => setShowChapterDrawer(false)} className="p-2 text-on-surface-variant hover:text-on-surface rounded-full">
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
             
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-on-surface-variant">
-                <Search size={16} />
+                <Search size={14} />
               </div>
               <input
                 type="text"
@@ -492,7 +492,7 @@ export function ReaderScreen() {
               <>
                 {hasMorePrevChapters && (
                   <div ref={firstChapterElementRef} className="h-4 w-full flex justify-center py-2 min-h-[40px]">
-                    {isLoadingChapters && <Loader2 className="animate-spin text-primary" size={20} />}
+                    {isLoadingChapters && <Loader2 className="animate-spin text-primary" size={18} />}
                   </div>
                 )}
                 <ChapterList
@@ -511,7 +511,7 @@ export function ReaderScreen() {
                 )}
                 {bookChapters.length > 0 && hasMoreNextChapters && (
                   <div className="py-6 flex justify-center w-full min-h-[72px]">
-                    {isLoadingChapters && <Loader2 className="animate-spin text-primary" size={24} />}
+                    {isLoadingChapters && <Loader2 className="animate-spin text-primary" size={20} />}
                   </div>
                 )}
               </>
@@ -547,13 +547,13 @@ export function ReaderScreen() {
             <div className="flex items-center justify-between">
               <h2 className="font-serif text-lg font-bold">Lịch sử đọc</h2>
               <button onClick={() => setShowHistoryDrawer(false)} className="p-2 text-on-surface-variant hover:text-on-surface rounded-full">
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
             {historyBooks.length > 0 && (
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-on-surface-variant group-focus-within:text-primary transition-colors">
-                  <Search size={16} />
+                  <Search size={14} />
                 </div>
                 <input
                   type="text"
@@ -694,7 +694,7 @@ export function ReaderScreen() {
                     className="relative flex-1 h-full flex items-center justify-center disabled:opacity-30 transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
-                       <ChevronRight size={28} strokeWidth={2.5} />
+                       <ChevronRight size={24} strokeWidth={2.5} />
                      </div>
                   </button>
 
@@ -706,7 +706,7 @@ export function ReaderScreen() {
                     className="relative flex-1 h-full flex items-center justify-center transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
-                       <SkipForward size={26} strokeWidth={2.5} />
+                       <SkipForward size={22} strokeWidth={2.5} />
                      </div>
                   </button>
                 </div>
@@ -722,7 +722,7 @@ export function ReaderScreen() {
                      <div className="absolute top-[2px] inset-x-[6px] h-1/2 bg-gradient-to-b from-white/40 to-transparent rounded-t-full opacity-90 pointer-events-none"></div>
                      
                      <div className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">
-                        {isPlaying ? <Pause fill="currentColor" size={24} strokeWidth={2.5} /> : <Play fill="currentColor" size={24} strokeWidth={2.5} className="ml-1" />}
+                        {isPlaying ? <Pause fill="currentColor" size={20} strokeWidth={2.5} /> : <Play fill="currentColor" size={20} strokeWidth={2.5} className="ml-1" />}
                      </div>
                   </button>
                 </div>
@@ -735,7 +735,7 @@ export function ReaderScreen() {
                     className="relative flex-1 h-full flex items-center justify-center transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className="transition-all duration-300 text-error hover:text-error/80 group-hover:scale-110 active:scale-95">
-                       <StopCircle size={26} strokeWidth={2.5} />
+                       <StopCircle size={22} strokeWidth={2.5} />
                      </div>
                   </button>
 
@@ -747,7 +747,7 @@ export function ReaderScreen() {
                     className="relative flex-1 h-full flex items-center justify-center transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
-                       <List size={26} strokeWidth={2.5} />
+                       <List size={22} strokeWidth={2.5} />
                      </div>
                   </button>
                 </div>
@@ -767,7 +767,7 @@ export function ReaderScreen() {
                     className="relative flex-1 h-full flex items-center justify-center disabled:opacity-30 transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
-                       <ChevronLeft size={28} strokeWidth={2.5} />
+                       <ChevronLeft size={24} strokeWidth={2.5} />
                      </div>
                   </button>
                   
@@ -784,7 +784,7 @@ export function ReaderScreen() {
                     className="relative flex-1 h-full flex items-center justify-center disabled:opacity-30 transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
-                       <ChevronRight size={28} strokeWidth={2.5} />
+                       <ChevronRight size={24} strokeWidth={2.5} />
                      </div>
                   </button> 
                 </div>
@@ -820,7 +820,7 @@ export function ReaderScreen() {
                      <div className="absolute top-[2px] inset-x-[6px] h-1/2 bg-gradient-to-b from-white/40 to-transparent rounded-t-full opacity-90 pointer-events-none"></div>
                      
                      <div className={cn("relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]", isPlaying && "animate-[pulse_2s_ease-in-out_infinite]")}>
-                        {isPlaying ? <Pause fill="currentColor" size={24} strokeWidth={2.5} /> : <Play fill="currentColor" size={24} strokeWidth={2.5} className="ml-1" />}
+                        {isPlaying ? <Pause fill="currentColor" size={20} strokeWidth={2.5} /> : <Play fill="currentColor" size={20} strokeWidth={2.5} className="ml-1" />}
                      </div>
                   </button>
                 </div>
@@ -833,7 +833,7 @@ export function ReaderScreen() {
                     className="relative flex-1 h-full flex items-center justify-center transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className="transition-all duration-300 text-on-surface-variant group-hover:text-on-surface group-hover:scale-110 active:scale-95">
-                       <Sparkles size={26} strokeWidth={2.5} />
+                       <Sparkles size={22} strokeWidth={2.5} />
                      </div>
                   </button>
                   
@@ -845,7 +845,7 @@ export function ReaderScreen() {
                     className="relative flex-1 h-full flex items-center justify-center transition-all duration-200 group active:bg-on-surface/10"
                   >
                      <div className={cn("relative transition-all duration-300 group-hover:scale-110 active:scale-95", selectedText ? "text-primary drop-shadow-md" : "text-on-surface-variant group-hover:text-on-surface")}>
-                       <Settings size={26} strokeWidth={2.5} />
+                       <Settings size={22} strokeWidth={2.5} />
                        {selectedText && (
                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-full border-2 border-surface"></span>
                        )}

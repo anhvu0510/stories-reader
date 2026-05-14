@@ -169,7 +169,7 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen bg-background flex flex-col items-center justify-center font-sans gap-6">
         <div className="flex flex-col items-center justify-center">
           <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center mb-6 shadow-sm ring-1 ring-primary/20 relative">
-            <BookOpen size={28} className="animate-pulse" />
+            <BookOpen size={24} className="animate-pulse" />
             <div className="absolute inset-0 border-2 border-primary/30 rounded-3xl animate-ping opacity-50" />
           </div>
           <div className="text-on-surface-variant font-medium text-[15px] animate-pulse">Đang kết nối máy chủ...</div>
@@ -199,7 +199,7 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
           <div className="w-full max-w-[400px] mx-auto flex flex-col gap-8 relative z-10">
             <div className="flex flex-col items-center text-center gap-4">
               <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center mb-2 shadow-sm ring-1 ring-primary/20">
-                <BookOpen size={36} strokeWidth={2.5} className="drop-shadow-sm" />
+                <BookOpen size={28} strokeWidth={2.5} className="drop-shadow-sm" />
               </div>
               <div>
                 <h1 className="text-3xl sm:text-4xl font-black text-on-surface tracking-tight mb-2">Stories Reader</h1>

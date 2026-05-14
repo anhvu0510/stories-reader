@@ -64,9 +64,9 @@ export function ToastContainer() {
              toast.type === 'info' && 'bg-surface-container-highest/95 border-outline-variant/30 text-on-surface'
            )}
         >
-          {toast.type === 'success' && <CheckCircle2 size={18} className="text-white flex-shrink-0" />}
-          {toast.type === 'error' && <AlertCircle size={18} className="text-white flex-shrink-0" />}
-          {toast.type === 'info' && <Info size={18} className="text-on-surface-variant flex-shrink-0" />}
+          {toast.type === 'success' && <CheckCircle2 size={16} className="text-white flex-shrink-0" />}
+          {toast.type === 'error' && <AlertCircle size={16} className="text-white flex-shrink-0" />}
+          {toast.type === 'info' && <Info size={16} className="text-on-surface-variant flex-shrink-0" />}
           
           <span className="text-[13px] sm:text-sm font-bold leading-tight truncate">{toast.message}</span>
         </motion.div>

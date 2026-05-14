@@ -325,7 +325,7 @@ export function LibraryScreen() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-surface-container w-full max-w-[320px] p-6 rounded-3xl flex flex-col items-center shadow-xl border border-error/20">
             <div className="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-4">
-              <Trash2 size={32} className="text-error" />
+              <Trash2 size={24} className="text-error" />
             </div>
             <h3 className="font-bold text-lg mb-4 text-on-surface">Đang xóa dữ liệu...</h3>
             <div className="w-full bg-surface-container-highest rounded-full h-3 mb-3 overflow-hidden shadow-inner">
@@ -377,7 +377,7 @@ export function LibraryScreen() {
           {/* Search Bar */}
           <div className="relative flex-1 group">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant group-focus-within:text-primary transition-colors">
-              <Search size={18} />
+              <Search size={16} />
             </div>
             <input
               type="text"
@@ -388,7 +388,7 @@ export function LibraryScreen() {
             />
             <div className="absolute inset-y-0 right-0 flex items-center pr-1.5 gap-1">
               {isLoading && search && (
-                <Loader2 size={16} className="animate-spin text-primary opacity-60" />
+                <Loader2 size={14} className="animate-spin text-primary opacity-60" />
               )}
               {search && (
                 <button
@@ -411,7 +411,7 @@ export function LibraryScreen() {
                 className={`w-11 h-11 rounded-[18px] backdrop-blur-md border text-on-surface-variant transition-all shrink-0 flex items-center justify-center shadow-inner ${downloadSession?.active ? 'bg-error/10 border-error/30 text-error active:bg-error/20 active:scale-95' : 'bg-surface-container-low/50 border-outline-variant/30 active:text-primary active:bg-primary/5 active:scale-95'}`}
                 title={downloadSession?.active ? "Dừng tải tất cả" : "Tải tất cả truyện trên trang"}
               >
-                {downloadSession?.active ? <StopCircle size={22} /> : <Download size={22} />}
+                {downloadSession?.active ? <StopCircle size={18} /> : <Download size={18} />}
               </button>
             )}
             <button
@@ -419,7 +419,7 @@ export function LibraryScreen() {
               className="w-11 h-11 rounded-[18px] bg-surface-container-low/50 backdrop-blur-md border border-outline-variant/30 text-on-surface-variant active:text-primary active:bg-primary/5 active:scale-95 transition-all shrink-0 flex items-center justify-center shadow-inner"
               title="Cài đặt Hệ thống"
             >
-              <Settings size={22} />
+              <Settings size={18} />
             </button>
           </div>
         </div>
@@ -429,7 +429,7 @@ export function LibraryScreen() {
         <section className="flex flex-col gap-4">
           {displayedBooks.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-on-surface-variant text-center px-4 py-12 bg-surface-container-lowest rounded-2xl border border-dashed border-outline-variant/30">
-              <Library size={48} className="mb-4 opacity-50" strokeWidth={1} />
+              <Library size={36} className="mb-4 opacity-50" strokeWidth={1} />
               <p className="font-medium text-on-surface">Không có truyện nào</p>
               <p className="text-sm mt-1 opacity-80">
                 {!localStorage.getItem('API_DOMAIN_CONFIG')
@@ -562,7 +562,7 @@ export function LibraryScreen() {
                             <span className="text-[10px] font-bold z-10">{currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}%</span>
                           </div>
                         ) : (
-                          <RefreshCw size={18} />
+                          <RefreshCw size={16} />
                         )}
                       </button>
                     )}
@@ -581,7 +581,7 @@ export function LibraryScreen() {
                         className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-error/80 active:text-error bg-error/10 active:bg-error/20 rounded-full transition-all active:scale-95"
                         title="Xóa truyện"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
                       </button>
                     )}
                     {activeTab === 'books' && !isOfflineMode && (!isDownloaded || isThisBookSyncing) && (
@@ -611,7 +611,7 @@ export function LibraryScreen() {
                             <span className="text-[10px] font-bold z-10">{currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}%</span>
                           </div>
                         ) : (
-                          <Download size={18} />
+                          <Download size={16} />
                         )}
                       </button>
                     )}
@@ -624,7 +624,7 @@ export function LibraryScreen() {
                       className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-on-surface-variant/60 active:text-primary bg-surface-variant/40 active:bg-primary/10 rounded-full transition-all active:scale-95"
                       title="Mở trong tab mới"
                     >
-                      <ExternalLink size={18} />
+                      <ExternalLink size={16} />
                     </button>
                   </div>
                 </div>
@@ -638,7 +638,7 @@ export function LibraryScreen() {
 
           {displayedBooks.length > 0 && hasMore && (
             <div className="py-6 flex justify-center w-full min-h-[72px]">
-              {isLoading && page > 1 && <Loader2 className="animate-spin text-primary" size={24} />}
+              {isLoading && page > 1 && <Loader2 className="animate-spin text-primary" size={20} />}
             </div>
           )}
         </section>

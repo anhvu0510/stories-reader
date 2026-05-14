@@ -307,7 +307,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                <TabButton active={activeTab === 'story'} onClick={() => setActiveTab('story')}>Truyện</TabButton>
              </div>
              <button onClick={onClose} className="p-2 ml-2 bg-surface-container-highest/50 rounded-full text-on-surface-variant hover:text-on-surface transition-colors">
-               <X size={18} className="sm:w-5 sm:h-5" />
+               <X size={16} className="sm:w-5 sm:h-5" />
              </button>
           </div>
         </div>
@@ -362,7 +362,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
               >
                 <Sparkles size={12} />
               </button>
-              {showConfig ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+              {showConfig ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
             </div>
           </div>
           
@@ -452,7 +452,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                             {m.replace(/^gemini-/, '').replace(/-/g, ' ').toUpperCase() || m}
                           </div>
                         </div>
-                        {isSelected && <Check size={14} className="text-primary flex-shrink-0" />}
+                        {isSelected && <Check size={12} className="text-primary flex-shrink-0" />}
                       </button>
                     );
                   })}
@@ -534,7 +534,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                         {(chap.state === 'FAILED' || chap.state === 'PENDING') && <span className="text-[9px] text-warning/70 font-semibold mt-0.5">Chưa được dịch</span>}
                       </div>
                     </div>
-                    {selectedChapters.has(chap.chapterId) ? <Check size={16} className="text-primary flex-shrink-0 drop-shadow-sm mr-1" /> : <Square size={16} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />}
+                    {selectedChapters.has(chap.chapterId) ? <Check size={14} className="text-primary flex-shrink-0 drop-shadow-sm mr-1" /> : <Square size={14} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />}
                   </div>
                 ))}
               </div>
@@ -544,7 +544,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           {activeTab === 'story' && (
             <div className="flex-1 flex flex-col min-h-0">
               <div className="relative mb-3">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant sm:left-3.5" size={14} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant sm:left-3.5" size={12} />
                 <input 
                   type="text" 
                   placeholder="Tìm truyện..." 
@@ -563,11 +563,11 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                     {selectedBooks.has(book.bookId) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>}
                     <div className="flex items-center gap-3 overflow-hidden pl-1">
                       <div className={cn("flex flex-col items-center justify-center w-8 h-8 rounded-lg shrink-0 border transition-colors", selectedBooks.has(book.bookId) ? "bg-primary/10 border-primary/20 text-primary" : "bg-surface-container-highest border-transparent text-on-surface-variant")}>
-                        <Languages size={14} />
+                        <Languages size={12} />
                       </div>
                       <span className={cn("text-[12px] sm:text-[13px] truncate font-medium transition-colors", selectedBooks.has(book.bookId) ? "text-primary font-bold" : "text-on-surface")}>{book.bookName}</span>
                     </div>
-                    {selectedBooks.has(book.bookId) ? <Check size={16} className="text-primary flex-shrink-0 drop-shadow-sm mr-1" /> : <Square size={16} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />}
+                    {selectedBooks.has(book.bookId) ? <Check size={14} className="text-primary flex-shrink-0 drop-shadow-sm mr-1" /> : <Square size={14} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />}
                    </div>
                 ))}
               </div>
@@ -584,9 +584,9 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
             className="w-full py-3 sm:py-4 bg-primary text-on-primary rounded-xl sm:rounded-2xl text-sm sm:text-base font-bold font-sans flex items-center justify-center gap-2 hover:bg-primary-fixed active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
-              <Loader size={18} className="animate-spin sm:w-5 sm:h-5 text-on-primary" />
+              <Loader size={16} className="animate-spin sm:w-5 sm:h-5 text-on-primary" />
             ) : (
-              <Sparkles size={18} className="fill-black/50 sm:w-5 sm:h-5" />
+              <Sparkles size={16} className="fill-black/50 sm:w-5 sm:h-5" />
             )}
             
             {activeTab === 'current' ? (isSubmitting ? 'Đang Dịch...' : 'Dịch Ngay Chương Này') : 

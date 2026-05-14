@@ -112,14 +112,14 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
             <h2 className="text-base sm:text-lg font-bold font-serif text-primary">Quản lý API Token</h2>
             <div className="flex items-center gap-1 sm:gap-2">
               <button title="Thêm Token Mới" onClick={startCreate} disabled={editingId === 'new'} className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors disabled:opacity-50">
-                <Plus size={16} />
+                <Plus size={14} />
               </button>
               <button title="Làm Mới" onClick={fetchTokens} className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
-                <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+                <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
               </button>
               {!isEmbedded && onClose && (
                <button title="Đóng" onClick={onClose} className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors">
-                  <X size={16} />
+                  <X size={14} />
                 </button>
               )}
             </div>
@@ -169,11 +169,11 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
                       <div className="flex gap-1 shrink-0 bg-surface-container-high rounded-xl p-0.5 h-fit">
                         {t.status !== 'banned' && (
                             <button onClick={() => handleToggleStatus(t)} className={`p-2 rounded-lg transition-colors ${t.status === 'active' ? 'text-warning hover:bg-warning/10' : 'text-primary hover:bg-primary/10'}`}>
-                              {t.status === 'active' ? <PauseCircle size={14} /> : <PlayCircle size={14} />}
+                              {t.status === 'active' ? <PauseCircle size={12} /> : <PlayCircle size={12} />}
                             </button>
                         )}
-                        <button onClick={() => handleEdit(t)} className="p-2 rounded-lg text-primary hover:bg-surface-container-highest transition-colors"><Edit2 size={14} /></button>
-                        <button onClick={() => handleDelete(t._id)} className="p-2 rounded-lg text-error hover:bg-surface-container-highest transition-colors"><Trash2 size={14} /></button>
+                        <button onClick={() => handleEdit(t)} className="p-2 rounded-lg text-primary hover:bg-surface-container-highest transition-colors"><Edit2 size={12} /></button>
+                        <button onClick={() => handleDelete(t._id)} className="p-2 rounded-lg text-error hover:bg-surface-container-highest transition-colors"><Trash2 size={12} /></button>
                       </div>
                     </div>
                     
@@ -303,7 +303,7 @@ function TokenEditor({ formData, setFormData, onSave, onCancel, isNew }: { formD
 
       <div className="flex gap-2 pt-1 border-t border-outline-variant/10 mt-2 pt-3">
         <button onClick={onCancel} className="flex-1 py-1.5 sm:py-2 bg-surface-container-high rounded-lg text-xs font-bold hover:bg-surface-container-highest transition-colors">Huỷ Bỏ</button>
-        <button onClick={onSave} className="flex-1 py-1.5 sm:py-2 bg-primary text-on-primary rounded-lg text-xs font-bold flex animate-none items-center justify-center gap-1 hover:bg-primary-fixed transition-colors"><Check size={14} /> Lưu Lại</button>
+        <button onClick={onSave} className="flex-1 py-1.5 sm:py-2 bg-primary text-on-primary rounded-lg text-xs font-bold flex animate-none items-center justify-center gap-1 hover:bg-primary-fixed transition-colors"><Check size={12} /> Lưu Lại</button>
       </div>
     </div>
   );

@@ -293,7 +293,7 @@ export function ChapterListScreen() {
                   <span className="text-[10px] font-bold z-10">{currentTask.totalChapters > 0 ? Math.round((currentTask.completedChapters / Math.max(1, currentTask.totalChapters)) * 100) : currentTask.progress || 0}%</span>
                 </div>
               ) : (
-                <Download size={20} />
+                <Download size={18} />
               )}
             </button>
             
@@ -333,7 +333,7 @@ export function ChapterListScreen() {
                 className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-95 bg-surface-container-lowest/50 rounded-full border border-outline-variant/30 flex-shrink-0 shadow-sm backdrop-blur-md"
                 title="Cài đặt hệ thống"
               >
-                <Settings size={20} />
+                <Settings size={18} />
               </button>
             </div>
           </div>
@@ -358,7 +358,7 @@ export function ChapterListScreen() {
         
         <div className="flex items-center gap-3 w-full mb-6 relative">
           <div className="flex-1 relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant" size={16} />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant" size={14} />
             <input 
               type="text" 
               value={search}
@@ -371,7 +371,7 @@ export function ChapterListScreen() {
             onClick={() => { setSortOrder(prev => prev === 'ASC' ? 'DESC' : 'ASC'); }}
             className="flex items-center justify-center bg-transparent border border-outline-variant/50 rounded-full w-9 h-9 text-on-surface active:bg-surface-variant transition-colors flex-shrink-0"
           >
-            <SortDesc size={16} className={`transition-transform duration-300 ${sortOrder === 'ASC' ? 'rotate-180' : ''}`} />
+            <SortDesc size={14} className={`transition-transform duration-300 ${sortOrder === 'ASC' ? 'rotate-180' : ''}`} />
           </button>
         </div>
 
@@ -423,7 +423,7 @@ export function ChapterListScreen() {
           
           {chapters.length > 0 && hasMoreNext && (
             <div className="py-6 flex justify-center w-full min-h-[72px]">
-              {isLoading && maxPage > 1 && <Loader2 className="animate-spin text-primary" size={24} />}
+              {isLoading && maxPage > 1 && <Loader2 className="animate-spin text-primary" size={20} />}
             </div>
           )}
         </div>

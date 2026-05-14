@@ -51,7 +51,7 @@ export function BottomDock({
               title="Xóa toàn bộ dữ liệu Offline"
             >
               <div className="transition-all duration-300 text-error/80 hover:text-error hover:scale-110">
-                <Trash2 size={24} strokeWidth={2} />
+                <Trash2 size={20} strokeWidth={2} />
               </div>
             </button>
           ) : (
@@ -60,7 +60,7 @@ export function BottomDock({
               className="relative flex items-center justify-center w-16 h-[64px] transition-all duration-300"
             >
               <div className={`transition-all duration-300 ${activeTab === 'ai' ? 'text-primary scale-110 drop-shadow-md' : 'text-on-surface-variant hover:text-on-surface'}`}>
-                <Sparkles size={24} strokeWidth={activeTab === 'ai' ? 2.5 : 2} />
+                <Sparkles size={20} strokeWidth={activeTab === 'ai' ? 2.5 : 2} />
               </div>
             </button>
           )}
@@ -78,7 +78,7 @@ export function BottomDock({
               {/* Rings */}
               <div className="absolute inset-0 rounded-full border-2 border-transparent ring-1 ring-primary/20 ring-offset-2 ring-offset-surface"></div>
               <div className="absolute inset-[-4px] rounded-full ring-1 ring-outline-variant/20"></div>
-              <Home size={26} strokeWidth={activeTab === 'books' ? 2.5 : 2} className={activeTab === 'books' ? 'drop-shadow-sm' : ''} />
+              <Home size={22} strokeWidth={activeTab === 'books' ? 2.5 : 2} className={activeTab === 'books' ? 'drop-shadow-sm' : ''} />
             </button>
           </div>
 
@@ -88,7 +88,7 @@ export function BottomDock({
             className="relative flex items-center justify-center w-16 h-[64px] transition-all duration-300"
           >
             <div className={`transition-all duration-300 ${activeTab === 'history' ? 'text-primary scale-110 drop-shadow-md' : 'text-on-surface-variant hover:text-on-surface'}`}>
-              <Clock size={24} strokeWidth={activeTab === 'history' ? 2.5 : 2} />
+              <Clock size={20} strokeWidth={activeTab === 'history' ? 2.5 : 2} />
             </div>
           </button>
 
