@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ReaderProvider } from './contexts/ReaderContext';
 import { LibraryScreen } from './screens/LibraryScreen';
 import { ChapterListScreen } from './screens/ChapterListScreen';
@@ -293,7 +293,7 @@ export default function App() {
   return (
     <ReaderProvider>
       <ApplicationGate>
-        <Router basename={import.meta.env.BASE_URL}>
+        <Router>
           <GlobalEventWrapper>
             <AppContent />
           </GlobalEventWrapper>

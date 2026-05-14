@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Check, Layers, MonitorSmartphone, ChevronDown, ChevronUp, Volume2, KeyRound, Server, Plus, RefreshCw, BookOpen, List, Bot } from 'lucide-react';
+import { X, Edit3, Search, Trash2, ArrowRight, Save, Filter, Settings, Globe, Check, Layers, MonitorSmartphone, ChevronDown, ChevronUp, Volume2, KeyRound, Server, Plus, RefreshCw, BookOpen, List, Bot, Loader2 } from 'lucide-react';
 import { api, Replacement, ApiDomain, getApiDomains } from '../lib/api';
 import { useReaderSettings } from '../contexts/ReaderContext';
 
