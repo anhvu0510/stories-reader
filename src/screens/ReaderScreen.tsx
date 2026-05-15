@@ -679,7 +679,7 @@ export function ReaderScreen() {
           style={{ top: selectionPlayPos.top, left: selectionPlayPos.left }}
         >
           <button
-            className="group relative flex items-center justify-center w-9 h-9 bg-primary text-on-primary rounded-full hover:scale-105 active:scale-95 transition-transform shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4)]"
+            className="group relative flex items-center justify-center w-4 h-4 bg-primary text-on-primary rounded-full hover:scale-105 active:scale-95 transition-transform shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4)]"
             onPointerDown={(e) => {
               e.preventDefault(); // prevent selection clearing
               jumpToContent(selectionPlayPos.pIdx, selectionPlayPos.offset);
