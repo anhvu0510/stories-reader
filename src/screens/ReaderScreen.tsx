@@ -306,7 +306,7 @@ export function ReaderScreen() {
             if (pIdx !== -1 && window.innerWidth < 768) {
               const rect = range.getBoundingClientRect();
               setSelectionPlayPos({
-                top: Math.max(10, window.scrollY + rect.top - 60),
+                top: Math.max(10, window.scrollY + rect.top - 90),
                 left: Math.max(20, Math.min(window.innerWidth - 60, rect.left + rect.width / 2 - 18)),
                 pIdx,
                 offset
@@ -679,7 +679,7 @@ export function ReaderScreen() {
           style={{ top: selectionPlayPos.top, left: selectionPlayPos.left }}
         >
           <button
-            className="group relative flex items-center justify-center w-4 h-4 bg-primary text-on-primary rounded-full hover:scale-105 active:scale-95 transition-transform shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4)]"
+            className="group relative flex items-center justify-center w-6 h-6 bg-primary text-on-primary rounded-full hover:scale-105 active:scale-95 transition-transform shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4)]"
             onPointerDown={(e) => {
               e.preventDefault(); // prevent selection clearing
               jumpToContent(selectionPlayPos.pIdx, selectionPlayPos.offset);
