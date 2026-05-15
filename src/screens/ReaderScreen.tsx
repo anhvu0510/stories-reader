@@ -73,6 +73,7 @@ export function ReaderScreen() {
 
   const { isPlaying, isPaused, startReading, pauseReading, stopReading, jumpToContent, nextSection } = useReadAloud(content?.chapter?.content || []);
   const [showAudioBar, setShowAudioBar] = useState(false);
+  const [selectionPlayPos, setSelectionPlayPos] = useState<{top: number, left: number, pIdx: number, offset: number} | null>(null);
 
   const filteredHistoryBooks = useMemo(() => {
     if (!historySearch) return historyBooks;
@@ -261,47 +262,62 @@ export function ReaderScreen() {
       selectionTimeout = setTimeout(() => {
         const selection = window.getSelection();
         if (selection && selection.toString().trim()) {
-          if (isReadAloudActiveRef.current) {
-             // In read aloud mode, don't set selectedText for replace settings. Just jump.
-            const range = selection.getRangeAt(0);
-            const container = range.startContainer;
-            const mb4Div = container.nodeType === Node.TEXT_NODE ? container.parentElement?.closest('div.mb-4') : (container as HTMLElement).closest('div.mb-4');
-            
-            if (mb4Div) {
-              const article = mb4Div.closest('article');
-              if (article) {
-                const pNodes = Array.from(article.querySelectorAll(':scope > div.mb-4'));
-                const pIdx = pNodes.indexOf(mb4Div);
-                if (pIdx !== -1) {
-                  let offset = 0;
-                  const walker = document.createTreeWalker(mb4Div, NodeFilter.SHOW_TEXT, null);
-                  let node;
-                  while ((node = walker.nextNode())) {
-                    if (node === container) {
-                      offset += range.startOffset;
-                      break;
-                    }
-                    offset += node.nodeValue?.length || 0;
+          const range = selection.getRangeAt(0);
+          const container = range.startContainer;
+          const mb4Div = container.nodeType === Node.TEXT_NODE ? container.parentElement?.closest('div.mb-4') : (container as HTMLElement).closest('div.mb-4');
+          
+          let pIdx = -1;
+          let offset = 0;
+          
+          if (mb4Div) {
+            const article = mb4Div.closest('article');
+            if (article) {
+              const pNodes = Array.from(article.querySelectorAll(':scope > div.mb-4'));
+              pIdx = pNodes.indexOf(mb4Div as Element);
+              if (pIdx !== -1) {
+                const walker = document.createTreeWalker(mb4Div, NodeFilter.SHOW_TEXT, null);
+                let node;
+                while ((node = walker.nextNode())) {
+                  if (node === container) {
+                    offset += range.startOffset;
+                    break;
                   }
+                  offset += node.nodeValue?.length || 0;
+                }
 
-                  const textContent = mb4Div.textContent || '';
-                  while (offset > 0 && !/[\s.,;!?"'()[\]{}—\-“”‘’]/.test(textContent[offset - 1])) {
-                    offset--;
-                  }
-                  
-                  jumpToContentRef.current(pIdx, offset);
-                  
-                  // Clear selection so the browser selection goes away
-                  window.getSelection()?.removeAllRanges();
+                const textContent = mb4Div.textContent || '';
+                while (offset > 0 && !/[\s.,;!?"'()[\]{}—\-“”‘’]/.test(textContent[offset - 1])) {
+                  offset--;
                 }
               }
+            }
+          }
+
+          if (isReadAloudActiveRef.current) {
+             // In read aloud mode, don't set selectedText for replace settings. Just jump.
+            if (pIdx !== -1) {
+              jumpToContentRef.current(pIdx, offset);
+              window.getSelection()?.removeAllRanges();
             }
           } else {
             setSelectedText(selection.toString().trim());
             setShowControls(true); // Auto show controls when text is selected
+
+            if (pIdx !== -1 && window.innerWidth < 768) {
+              const rect = range.getBoundingClientRect();
+              setSelectionPlayPos({
+                top: Math.max(10, window.scrollY + rect.top - 60),
+                left: Math.max(20, Math.min(window.innerWidth - 60, rect.left + rect.width / 2 - 18)),
+                pIdx,
+                offset
+              });
+            } else {
+              setSelectionPlayPos(null);
+            }
           }
         } else {
           setSelectedText('');
+          setSelectionPlayPos(null);
         }
       }, 150); // 150ms debounce
     };
@@ -656,6 +672,35 @@ export function ReaderScreen() {
         {showTranslation && <TranslationSheet onClose={() => setShowTranslation(false)} currentBookName={content.chapter.bookName} currentChapterName={`Chương ${content.chapter.chapterNumber}: ${content.chapter.title}`} currentBookId={bookId} initialSelectedChapters={[chapterId]} onSuccess={fetchChapter} />}
         {showGlobalSettings && <GlobalSettingsSheet onClose={() => setShowGlobalSettings(false)} initialMatch={selectedText} currentBookId={bookId} currentChapterId={chapterId} isOfflineMode={api.isOfflineMode()} />}
       </div>
+
+      {selectionPlayPos && (
+        <div 
+          className="absolute z-50 transition-all duration-200 animate-in fade-in zoom-in-50"
+          style={{ top: selectionPlayPos.top, left: selectionPlayPos.left }}
+        >
+          <button
+            className="group relative flex items-center justify-center w-9 h-9 bg-primary text-on-primary rounded-full hover:scale-105 active:scale-95 transition-transform shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.4)]"
+            onPointerDown={(e) => {
+              e.preventDefault(); // prevent selection clearing
+              jumpToContent(selectionPlayPos.pIdx, selectionPlayPos.offset);
+              setShowAudioBar(true);
+              setSelectionPlayPos(null);
+              window.getSelection()?.removeAllRanges();
+            }}
+            onTouchEnd={(e) => {
+              // Also prevent default on touch end to avoid virtual click clearing selection immediately
+              e.preventDefault();
+            }}
+          >
+            <div className="absolute inset-[2px] rounded-full bg-primary/90 shadow-[inset_0_2px_4px_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.2)]"></div>
+            <div className="absolute top-[1.5px] inset-x-[5px] h-1/2 bg-gradient-to-b from-white/40 to-transparent rounded-t-full opacity-90 pointer-events-none"></div>
+            
+            <div className="relative z-10 drop-shadow-[0_2px_2px_rgba(0,0,0,0.4)]">
+              <Play fill="currentColor" size={16} className="ml-0.5" />
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* Bottom Controls Overlay */}
       <nav 

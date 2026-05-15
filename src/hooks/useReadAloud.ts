@@ -283,11 +283,21 @@ export function useReadAloud(paragraphs: string[]) {
 
     utterance.onerror = (e) => {
       if (currentUtteranceIdRef.current !== utteranceId) return;
-      if (e.error !== 'canceled' && !isSettingsChangingRef.current) {
-        console.error('Speech synthesis error on chunk', index, e);
-        if (isPlayingRef.current && !isPausedRef.current) {
-          playChunk(index + 1);
-        }
+      if (e.error === 'canceled' || isSettingsChangingRef.current) return;
+      
+      console.error('Speech synthesis error on chunk', index, e.error);
+      
+      // If interrupted by system/another tab or browser blocks autoplay, pause instead of skipping.
+      if (e.error === 'interrupted' || e.error === 'not-allowed' || e.error === 'audio-busy') {
+        setIsPaused(true);
+        setIsPlaying(false);
+        isPausedRef.current = true;
+        isPlayingRef.current = false;
+        return;
+      }
+
+      if (isPlayingRef.current && !isPausedRef.current) {
+        playChunk(index + 1);
       }
     };
 
@@ -407,6 +417,7 @@ export function useReadAloud(paragraphs: string[]) {
     setIsPaused(false);
     isPlayingRef.current = false;
     isPausedRef.current = false;
+    currentUtteranceIdRef.current = null;
     if (synth && wasActive) synth.cancel();
     currentChunkIdxRef.current = 0;
     setCurrentChunkIndex(-1);
