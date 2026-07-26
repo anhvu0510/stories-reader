@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { X, Wifi, Download, Trash2, CheckCircle2, RotateCw } from 'lucide-react';
-import { api, Book } from '../lib/api';
+import { Book } from '../shared/types';
 import { offlineDb } from '../lib/offlineDb';
-import { showToast } from './Toast';
+import { useAppStore } from '../stores/useAppStore';
+import { useToastStore } from '../stores/useToastStore';
 
 export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?: () => void, isEmbedded?: boolean }) {
-  const [isOffline, setIsOffline] = useState(api.isOfflineMode());
+  const isOffline = useAppStore((state) => state.isOfflineMode);
+  const setOfflineMode = useAppStore((state) => state.setOfflineMode);
+  const showToast = useToastStore((state) => state.showToast);
   const [savedBooks, setSavedBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [downloadingBookId, setDownloadingBookId] = useState<string | null>(null);
@@ -27,9 +30,7 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
   };
 
   const toggleOfflineMode = (val: boolean) => {
-    localStorage.setItem('offlineMode', String(val));
-    setIsOffline(val);
-    window.dispatchEvent(new CustomEvent('offline-mode-changed', { detail: val }));
+    setOfflineMode(val);
   };
 
   const handleDeleteParams = async (bookId: string) => {
@@ -37,11 +38,12 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
       await offlineDb.deleteBook(bookId);
       showToast('Đã xoá truyện', 'success');
       fetchSavedBooks();
+      window.dispatchEvent(new CustomEvent('app-refresh'));
     }
   };
 
   const content = (
-    <div className={`relative bg-surface text-on-surface w-full flex flex-col ${!isEmbedded ? 'flex-1 overflow-hidden border border-outline-variant/30 h-[85vh] sm:h-[80vh] rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-[600px] z-10' : 'h-full max-w-full'}`}>
+    <div className={`relative bg-surface-container text-on-surface w-full flex flex-col transition-colors duration-200 ${!isEmbedded ? 'flex-1 overflow-hidden border-t border-outline-variant/30 max-h-[85dvh] rounded-t-[28px] shadow-2xl max-w-md mx-auto z-10 transform-gpu overscroll-contain' : 'h-full max-w-full'}`}>
       
       {/* Header */}
       <div className="flex-shrink-0 p-3 sm:p-5 border-b border-outline-variant/10 flex flex-col gap-3 bg-surface-container-low">
@@ -125,7 +127,7 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
   }
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-x-hidden box-border">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
       {content}
     </div>

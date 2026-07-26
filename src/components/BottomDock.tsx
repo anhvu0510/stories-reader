@@ -1,99 +1,167 @@
-import { Home, Clock, Sparkles, Settings, Globe, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronLeft, ChevronRight, ChevronUp, X, Check } from 'lucide-react';
+
+interface BottomDockProps {
+  page?: number;
+  totalPages?: number;
+  total?: number;
+  loading?: boolean;
+  onPageChange?: (newPage: number) => void;
+}
 
 export function BottomDock({
-  activeTab,
-  onTabSelect,
-  isOfflineMode,
-  onClearDbClick
-}: {
-  activeTab: 'books' | 'history' | 'ai';
-  onTabSelect: (tab: 'books' | 'history' | 'ai') => void;
-  isOfflineMode?: boolean;
-  onClearDbClick?: () => void
-}) {
+  page = 1,
+  totalPages = 1,
+  total = 0,
+  loading = false,
+  onPageChange,
+}: BottomDockProps) {
+  const [showPagePicker, setShowPagePicker] = useState(false);
+  const [inputPage, setInputPage] = useState<string>(String(page));
+
+  const canPrev = page > 1 && !loading;
+  const canNext = page < totalPages && !loading;
+
+  const handleGoToPage = (target: number) => {
+    if (target >= 1 && target <= totalPages && target !== page && onPageChange) {
+      onPageChange(target);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    setShowPagePicker(false);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const p = parseInt(inputPage, 10);
+    if (!isNaN(p)) {
+      handleGoToPage(Math.max(1, Math.min(p, totalPages)));
+    }
+  };
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 pb-[env(safe-area-inset-bottom)] pointer-events-none drop-shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
-      <div className="flex justify-center w-full mt-4">
-        <div className="relative flex items-center justify-around px-6 h-[64px] mx-auto w-full pointer-events-auto">
-
-          {/* Advanced Curved Background (SVG) */}
-          <div className="absolute inset-x-0 bottom-0 w-full h-[55px] -z-10">
-            {/* The SVG acts as the base */}
-            <svg width="100%" height="100%" viewBox="0 0 375 64" preserveAspectRatio="none" className="absolute inset-0 w-full h-full drop-shadow-sm style-nav-bg">
-              {/* Solid backdrop */}
-              <path
-                d="M0 24 C0 10.745 10.745 0 24 0 H130 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0 H351 C364.255 0 375 10.745 375 24 V64 H0 V24 Z"
-                className="nav-bg-fill"
-              />
-              {/* Full top border spanning the curve and rounded edges */}
-              <path
-                d="M0 24 C0 10.745 10.745 0 24 0 H130 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0 H351 C364.255 0 375 10.745 375 24"
-                fill="none"
-                className="stroke-outline-variant/30"
-                strokeWidth="1.5"
-              />
-              {/* Center highlight over the curve */}
-              <path
-                d="M130 0 C138 0 144 6 148 14 C154 32 165 42 187.5 42 C210 42 221 32 227 14 C231 6 237 0 245 0"
-                fill="none"
-                className="stroke-primary/40"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-
-          {/* Left item: Dịch AI or Delete DB */}
-          {isOfflineMode ? (
-            <button
-              onClick={onClearDbClick}
-              className="relative flex items-center justify-center w-16 h-[64px] transition-all duration-300"
-              title="Xóa toàn bộ dữ liệu Offline"
-            >
-              <div className="transition-all duration-300 text-error/80 hover:text-error hover:scale-110">
-                <Trash2 size={20} strokeWidth={2} />
-              </div>
-            </button>
-          ) : (
-            <button
-              onClick={() => onTabSelect('ai')}
-              className="relative flex items-center justify-center w-16 h-[64px] transition-all duration-300"
-            >
-              <div className={`transition-all duration-300 ${activeTab === 'ai' ? 'text-primary scale-110 drop-shadow-md' : 'text-on-surface-variant hover:text-on-surface'}`}>
-                <Sparkles size={20} strokeWidth={activeTab === 'ai' ? 2.5 : 2} />
-              </div>
-            </button>
-          )}
-
-          {/* Center item: Home (Floating) */}
-          <div className="relative flex flex-col items-center -mt-8 mb-[10px]">
-            <button
-              onClick={() => onTabSelect('books')}
-              className={`relative flex items-center justify-center w-[40px] h-[40px] rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-all duration-300 active:scale-95 ${activeTab === 'books'
-                ? 'bg-primary text-on-primary scale-105'
-                : 'bg-surface-container-highest text-on-surface hover:bg-surface-container'
-                }`}
-              title="Thư viện"
-            >
-              {/* Rings */}
-              <div className="absolute inset-0 rounded-full border-2 border-transparent ring-1 ring-primary/20 ring-offset-2 ring-offset-surface"></div>
-              <div className="absolute inset-[-4px] rounded-full ring-1 ring-outline-variant/20"></div>
-              <Home size={22} strokeWidth={activeTab === 'books' ? 2.5 : 2} className={activeTab === 'books' ? 'drop-shadow-sm' : ''} />
-            </button>
-          </div>
-
-          {/* Right item: Lịch sử */}
+    <>
+      <nav className="fixed bottom-4 left-0 right-0 z-40 w-full max-w-md mx-auto px-4 pointer-events-none box-border overflow-x-hidden transition-colors duration-200">
+        <div className="bg-surface-container-high/95 backdrop-blur-2xl border border-outline-variant/30 shadow-2xl rounded-full px-2.5 py-1.5 flex items-center justify-between pointer-events-auto transform-gpu transition-all duration-200 gap-2">
+          {/* Prev Page Button (Rich "Trang X" format) */}
           <button
-            onClick={() => onTabSelect('history')}
-            className="relative flex items-center justify-center w-16 h-[64px] transition-all duration-300"
+            onClick={() => {
+              if (canPrev && onPageChange) {
+                onPageChange(page - 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+            disabled={!canPrev}
+            className={`px-3 py-2 rounded-full flex items-center gap-1.5 transition-all text-xs font-extrabold shadow-sm active:scale-95 ${
+              canPrev
+                ? 'bg-primary text-on-primary hover:opacity-90'
+                : 'bg-surface-container text-on-surface-variant/30 cursor-not-allowed border border-transparent'
+            }`}
+            title="Trang trước"
           >
-            <div className={`transition-all duration-300 ${activeTab === 'history' ? 'text-primary scale-110 drop-shadow-md' : 'text-on-surface-variant hover:text-on-surface'}`}>
-              <Clock size={20} strokeWidth={activeTab === 'history' ? 2.5 : 2} />
-            </div>
+            <ChevronLeft size={16} />
+            <span>Trang {page > 1 ? page - 1 : 1}</span>
           </button>
 
+          {/* Center Interactive Page Indicator Pill */}
+          <button
+            onClick={() => {
+              setInputPage(String(page));
+              setShowPagePicker(true);
+            }}
+            className="flex-1 min-w-0 px-2 py-1 rounded-2xl bg-surface border border-outline-variant/20 hover:border-primary/40 text-center flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 group"
+            title="Nhấp để nhảy trang nhanh"
+          >
+            <div className="flex items-center justify-center gap-1 text-xs font-mono font-black text-primary truncate">
+              <span>Trang {page}/{totalPages || 1}</span>
+              <ChevronUp size={12} className="group-hover:-translate-y-0.5 transition-transform text-primary/70" />
+            </div>
+            {total > 0 && (
+              <span className="text-[9.5px] font-mono text-on-surface-variant/70 block truncate leading-none mt-0.5">
+                {total} truyện
+              </span>
+            )}
+          </button>
+
+          {/* Next Page Button (Rich "Trang X" format) */}
+          <button
+            onClick={() => {
+              if (canNext && onPageChange) {
+                onPageChange(page + 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+            disabled={!canNext}
+            className={`px-3 py-2 rounded-full flex items-center gap-1.5 transition-all text-xs font-extrabold shadow-sm active:scale-95 ${
+              canNext
+                ? 'bg-primary text-on-primary hover:opacity-90'
+                : 'bg-surface-container text-on-surface-variant/30 cursor-not-allowed border border-transparent'
+            }`}
+            title="Trang sau"
+          >
+            <span>{page < totalPages ? `Trang ${page + 1}` : 'Trang sau'}</span>
+            <ChevronRight size={16} />
+          </button>
         </div>
-      </div>
-    </nav>
+      </nav>
+
+      {/* Quick Page Picker Modal */}
+      {showPagePicker && (
+        <div className="fixed inset-0 z-[90000] bg-black/60 flex items-center justify-center p-4">
+          <div className="absolute inset-0" onClick={() => setShowPagePicker(false)} />
+
+          <div className="relative z-10 bg-surface-container text-on-surface w-full max-w-xs rounded-3xl border border-outline-variant/30 shadow-2xl p-5 flex flex-col gap-4 animate-none">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-extrabold text-on-surface flex items-center gap-1.5">
+                Nhảy tới trang
+              </h3>
+              <button
+                onClick={() => setShowPagePicker(false)}
+                className="p-1 rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleFormSubmit} className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={inputPage}
+                onChange={(e) => setInputPage(e.target.value)}
+                autoFocus
+                className="flex-1 h-11 px-3.5 rounded-2xl bg-surface border border-outline-variant/40 text-center font-mono font-extrabold text-sm text-on-surface focus:outline-none focus:border-primary"
+                placeholder={`1 - ${totalPages}`}
+              />
+              <button
+                type="submit"
+                className="h-11 px-4 rounded-2xl bg-primary text-on-primary font-bold text-xs flex items-center justify-center gap-1 shadow-sm hover:opacity-90 transition-all"
+              >
+                <Check size={14} /> Đi
+              </button>
+            </form>
+
+            {/* Quick Page Shortcut Buttons */}
+            {totalPages > 1 && (
+              <div className="flex flex-wrap gap-1.5 pt-1 border-t border-outline-variant/10">
+                {Array.from({ length: Math.min(totalPages, 6) }, (_, i) => i + 1).map((pNum) => (
+                  <button
+                    key={pNum}
+                    onClick={() => handleGoToPage(pNum)}
+                    className={`flex-1 min-w-[42px] py-1.5 rounded-xl text-xs font-mono font-bold transition-all ${
+                      pNum === page
+                        ? 'bg-primary text-on-primary'
+                        : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    Trang {pNum}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

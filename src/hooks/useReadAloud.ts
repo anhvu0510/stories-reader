@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useReaderSettings } from '../contexts/ReaderContext';
+import { useReaderConfigStore } from '../stores/useReaderConfigStore';
 
 interface Chunk {
   pIdx: number;
@@ -53,7 +53,8 @@ function highlightText(rootElement: HTMLElement, startOffset: number, length: nu
 }
 
 export function useReadAloud(paragraphs: string[]) {
-  const { voiceUri, speechRate } = useReaderSettings();
+  const voiceUri = useReaderConfigStore((state) => state.voiceUri);
+  const speechRate = useReaderConfigStore((state) => state.speechRate);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(-1);

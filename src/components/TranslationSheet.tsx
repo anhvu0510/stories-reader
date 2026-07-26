@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, Languages, Settings2, Sparkles, CheckSquare, Square, Search, ChevronDown, ChevronUp, Loader, Check, KeyRound, Group } from 'lucide-react';
-import { Book, Chapter, api } from '../lib/api';
+import { Book, Chapter } from '../shared/types';
+import { BookRepository } from '../repositories/BookRepository';
+import { ChapterRepository } from '../repositories/ChapterRepository';
+import { AIRepository } from '../repositories/AIRepository';
+import { SettingsRepository } from '../repositories/SettingsRepository';
+import { useToastStore } from '../stores/useToastStore';
 import { cn } from '../lib/utils';
-import { showToast } from './Toast';
 
 type Tab = 'current' | 'batch_chapter' | 'story';
 
@@ -40,6 +44,7 @@ interface TranslationSheetProps {
 }
 
 export function TranslationSheet({ onClose, currentBookName, currentChapterName, currentBookId, initialTab = 'current', initialSelectedChapters = [], onSuccess, disableCurrent = false }: TranslationSheetProps) {
+  const showToast = useToastStore((state) => state.showToast);
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [activeModelTab, setActiveModelTab] = useState<'VERTEX_API' | 'AI_STUDIO'>('VERTEX_API');
   const [options, setOptions] = useState<TranslationOptions>(defaultOptions);
@@ -67,7 +72,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
     let active = true;
     if (options.model && isOptionsLoaded) {
       const platform = options.platform || 'VERTEX_API';
-      api.getPoolStatus(options.model, platform).then(res => {
+      ChapterRepository.getPoolStatus(options.model, platform).then(res => {
         if (active && res) {
           setPoolStatus(res);
         }
@@ -79,7 +84,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   useEffect(() => {
     let active = true;
     
-    api.getQuota().then(res => {
+    AIRepository.getQuotas().then(res => {
       if (!active) return;
       if (res) {
         setQuotas(res.availableModels || []);
@@ -98,7 +103,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           });
           
           if (loadedPlatform) {
-             setActiveModelTab(loadedPlatform);
+             setActiveModelTab(loadedPlatform as any);
           } else {
             const modelObj = (res.availableModels || []).find((m: any) => m.model === loadedModel);
             if (modelObj) {
@@ -132,7 +137,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           batchingGroup: options.batchingGroup,
           availableModels: options.availableModels
         };
-        api.updateSettings('stories.ui.translate', JSON.stringify(payload));
+        SettingsRepository.updateSettings('stories.ui.translate', payload);
       }, 500);
       return () => clearTimeout(t);
     }
@@ -141,10 +146,10 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   useEffect(() => {
     let t: NodeJS.Timeout;
     if (activeTab === 'batch_chapter' && currentBookId) {
-      api.getChapters(currentBookId, 1, 9999, 'chapterNumber', 'ASC').then(res => setChapters(res.chapters));
+      ChapterRepository.getChapters(currentBookId, 1, 9999, 'chapterNumber', 'ASC').then(res => setChapters(res.chapters));
     } else if (activeTab === 'story') {
       t = setTimeout(() => {
-        api.getBooks(1, searchBook, undefined, 9999).then(res => setBooks(res.data));
+        BookRepository.getBooks(1, 9999, searchBook).then(res => setBooks(res.books));
       }, 500);
     }
     return () => clearTimeout(t);
@@ -165,7 +170,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
         }
         
         showToast("Đang dịch chương...", "info");
-        const response = await api.translate({
+        const response = await ChapterRepository.translate({
           mode: 'current',
           model: options.model,
           platform: platform,
@@ -195,7 +200,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           return;
         }
         
-        await api.translate({
+        await ChapterRepository.translate({
           mode: 'batch_chapter',
           model: options.model,
           platform: platform,
@@ -219,7 +224,7 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           return;
         }
         
-        await api.translate({
+        await ChapterRepository.translate({
           mode: 'story',
           model: options.model,
           platform: platform,
@@ -290,15 +295,15 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 bg-black/80 overflow-x-hidden box-border">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={onClose} />
+      <div className="absolute inset-0" onClick={onClose} />
       
       {/* Sheet Content */}
-      <div className="relative bg-surface-container text-on-surface w-full max-w-[680px] mx-auto rounded-t-3xl sm:rounded-2xl max-h-[90vh] h-[85vh] sm:h-auto sm:max-h-[85vh] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.3)] z-10 overflow-hidden border-t sm:border border-outline-variant/30">
+      <div className="relative bg-surface-container text-on-surface w-full max-w-md mx-auto rounded-t-[28px] h-[78vh] min-h-[520px] max-h-[85dvh] flex flex-col shadow-2xl z-10 overflow-hidden box-border transform-gpu overscroll-contain transition-all duration-200">
         
         {/* Drag Handle & Header */}
-        <div className="flex-shrink-0 pt-3 px-4 sm:px-5 pb-3 border-b border-outline-variant/10">
+        <div className="flex-shrink-0 pt-3 px-4 sm:px-5 pb-3 border-b border-outline-variant/20 bg-surface-container-low">
           <div className="w-12 h-1.5 bg-outline-variant/30 rounded-full mx-auto mb-2 sm:mb-3"></div>
           <div className="flex justify-between items-center bg-surface-container p-1 rounded-xl">
              <div className="flex bg-surface-container-low p-1 rounded-lg flex-1">
@@ -472,9 +477,9 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
         </div>
 
         {/* Scrollable Dynamic Content */}
-        <div className="flex-1 overflow-y-auto hide-scrollbar p-4 sm:p-5 flex flex-col">
+        <div className="flex-1 overflow-y-auto hide-scrollbar p-4 sm:p-5 flex flex-col min-h-0">
           {activeTab === 'current' && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
+            <div className="flex-1 flex flex-col items-center justify-center text-center py-6 h-full my-auto">
               <p className="text-[10px] sm:text-[11px] text-on-surface-variant uppercase tracking-widest font-bold mb-2">Chương đang mở</p>
               <h3 className="font-serif text-lg sm:text-xl font-bold text-primary leading-snug">{currentChapterName || 'Chưa chọn chương'}</h3>
               <p className="text-xs sm:text-sm text-on-surface-variant mt-2 font-medium">{currentBookName}</p>
