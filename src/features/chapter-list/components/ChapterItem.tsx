@@ -72,11 +72,7 @@ export const ChapterItem = forwardRef<HTMLDivElement, ChapterItemProps>(
               {chapter.title || `Chương ${chapter.chapterNumber}`}
             </h4>
 
-            {isActive && (
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[9.5px] font-mono font-black shrink-0 tracking-wider flex items-center gap-1 shadow-2xs">
-                <span>📌</span>
-              </span>
-            )}
+            
           </div>
 
           {formattedDate && (

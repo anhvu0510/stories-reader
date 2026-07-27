@@ -297,9 +297,9 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
             {/* Recently Read Chapter Info Pill */}
             {book.lastReadChapter?.chapterId && (
               <div className="flex items-center gap-2 text-xs text-on-surface-variant min-w-0 overflow-hidden">
-                {/* Circle Number Badge (No 'Ch.' text) */}
-                <span className="w-6 h-6 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono font-extrabold text-[10px] flex items-center justify-center shrink-0 shadow-xs">
-                  {book.lastReadChapter.chapterNumber}
+                {/* Pill CH Badge */}
+                <span className="px-2 py-0.5 min-w-[32px] h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono font-extrabold text-[10px] whitespace-nowrap flex items-center justify-center shrink-0 shadow-xs">
+                  Ch.{book.lastReadChapter.chapterNumber}
                 </span>
 
                 {/* Marquee or Truncated Chapter Title */}

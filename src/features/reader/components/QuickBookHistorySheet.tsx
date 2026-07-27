@@ -114,8 +114,8 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
           {/* Recently Read Chapter Info Pill */}
           {book.lastReadChapter?.chapterId && (
             <div className="flex items-center gap-1.5 text-xs text-on-surface-variant min-w-0 overflow-hidden">
-              <span className="w-5 h-5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono font-extrabold text-[9px] flex items-center justify-center shrink-0 shadow-2xs">
-                {book.lastReadChapter.chapterNumber}
+              <span className="px-1.5 py-0.5 min-w-[28px] h-5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono font-extrabold text-[9.5px] whitespace-nowrap flex items-center justify-center shrink-0 shadow-2xs">
+                Ch.{book.lastReadChapter.chapterNumber}
               </span>
               {book.lastReadChapter.title && (
                 <div className="flex-1 min-w-0 overflow-hidden">
@@ -223,9 +223,6 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
               {/* Permanently Pinned Current Book Section */}
               {currentBook && !searchQuery && (
                 <div className="space-y-1.5 pb-1">
-                  <div className="flex items-center gap-1 text-[10px] font-mono font-extrabold text-amber-400 uppercase tracking-widest px-1">
-                    <span>📌</span>
-                  </div>
                   {renderBookCard(currentBook, true)}
                   {otherBooks.length > 0 && (
                     <div className="h-px w-full bg-outline-variant/30 my-2.5" />
