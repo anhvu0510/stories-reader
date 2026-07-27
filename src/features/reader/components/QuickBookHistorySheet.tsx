@@ -224,7 +224,7 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
               {currentBook && !searchQuery && (
                 <div className="space-y-1.5 pb-1">
                   <div className="flex items-center gap-1 text-[10px] font-mono font-extrabold text-amber-400 uppercase tracking-widest px-1">
-                    <span>📌</span> TRUYỆN ĐANG ĐỌC
+                    <span>📌</span>
                   </div>
                   {renderBookCard(currentBook, true)}
                   {otherBooks.length > 0 && (
