@@ -6,12 +6,14 @@ interface LibraryHeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onOpenSettings: () => void;
+  onSubmitSearch?: () => void;
 }
 
 export function LibraryHeader({
   searchQuery,
   onSearchChange,
   onOpenSettings,
+  onSubmitSearch,
 }: LibraryHeaderProps) {
   const { isOfflineMode, setOfflineMode } = useAppStore();
 
@@ -59,18 +61,31 @@ export function LibraryHeader({
 
       {/* Search Input */}
       <div className="relative">
-        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
+        <button
+          type="button"
+          onClick={onSubmitSearch}
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60 hover:text-primary transition-colors cursor-pointer"
+          title="Bấm để tìm kiếm"
+        >
+          <Search size={14} />
+        </button>
         <input
           type="text"
-          placeholder="Tìm kiếm truyện chữ..."
+          placeholder="Tìm kiếm truyện chữ (nhấn Enter)..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && onSubmitSearch) {
+              onSubmitSearch();
+            }
+          }}
           className="w-full pl-9 pr-8 py-2 rounded-2xl bg-surface-container border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium transition-all"
         />
         {searchQuery && (
           <button
             onClick={() => onSearchChange('')}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-on-surface-variant/60 hover:text-on-surface active:scale-90 transition-all"
+            title="Xóa từ khóa"
           >
             <X size={13} />
           </button>
