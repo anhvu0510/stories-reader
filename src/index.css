@@ -10,10 +10,10 @@
   --surface-bright: #18181b;
   --surface-container-lowest: #000000;
   --surface-container-low: #0c0c0e;
-  --surface-container: #141417;
-  --surface-container-high: #1f1f23;
-  --surface-container-highest: #27272a;
-  --surface-variant: #1f1f23;
+  --surface-container: #101014;
+  --surface-container-high: #141418;
+  --surface-container-highest: #1a1a20;
+  --surface-variant: #141418;
   --glass: rgba(9,9,11,0.85);
   --on-surface: #f4f4f5;
   --on-surface-variant: #a1a1aa;
@@ -30,7 +30,7 @@
   --secondary-container: #27272a;
   --on-secondary-container: #e4e4e7;
   --outline: #3f3f46;
-  --outline-variant: #27272a;
+  --outline-variant: #222228;
   --warning: #f59e0b;
   --warning-on-container: #451a03;
   --warning-bg: rgba(245, 158, 11, 0.15);
@@ -45,11 +45,11 @@
   --surface-dim: #000000;
   --surface-bright: #111111;
   --surface-container-lowest: #000000;
-  --surface-container-low: #050505;
-  --surface-container: #0a0a0a;
-  --surface-container-high: #141414;
-  --surface-container-highest: #1f1f1f;
-  --surface-variant: #1a1a1a;
+  --surface-container-low: #040404;
+  --surface-container: #080808;
+  --surface-container-high: #0d0d0d;
+  --surface-container-highest: #141414;
+  --surface-variant: #0d0d0d;
   --glass: rgba(0,0,0,0.92);
   --on-surface: #8a8a8e;
   --on-surface-variant: #6b6b6e;
@@ -66,7 +66,7 @@
   --secondary-container: #3f3f46;
   --on-secondary-container: #e4e4e7;
   --outline: #333333;
-  --outline-variant: #1a1a1a;
+  --outline-variant: #181818;
   --warning: #f59e0b;
   --warning-on-container: #451a03;
   --warning-bg: rgba(245, 158, 11, 0.15);
@@ -82,10 +82,10 @@
   --surface-bright: #1e293b;
   --surface-container-lowest: #020617;
   --surface-container-low: #0b1120;
-  --surface-container: #0f172a;
-  --surface-container-high: #1e293b;
-  --surface-container-highest: #334155;
-  --surface-variant: #1e293b;
+  --surface-container: #121c33;
+  --surface-container-high: #16223e;
+  --surface-container-highest: #1f2d4f;
+  --surface-variant: #16223e;
   --glass: rgba(15,23,42,0.92);
   --on-surface: #cbd5e1;
   --on-surface-variant: #94a3b8;
@@ -118,10 +118,10 @@
   --surface-bright: #1c1c24;
   --surface-container-lowest: #000000;
   --surface-container-low: #0a0a0e;
-  --surface-container: #0d0d12;
-  --surface-container-high: #1c1c24;
-  --surface-container-highest: #272733;
-  --surface-variant: #1c1c24;
+  --surface-container: #111117;
+  --surface-container-high: #15151e;
+  --surface-container-highest: #1c1c28;
+  --surface-variant: #15151e;
   --glass: rgba(13,13,18,0.92);
   --on-surface: #a1a1aa;
   --on-surface-variant: #71717a;
@@ -154,10 +154,10 @@
   --surface-bright: #2e2822;
   --surface-container-lowest: #090706;
   --surface-container-low: #14110f;
-  --surface-container: #1c1814;
-  --surface-container-high: #2e2822;
-  --surface-container-highest: #453c33;
-  --surface-variant: #3b332b;
+  --surface-container: #211c18;
+  --surface-container-high: #27211c;
+  --surface-container-highest: #332b24;
+  --surface-variant: #27211c;
   --glass: rgba(28,24,20,0.92);
   --on-surface: #d7c4b4;
   --on-surface-variant: #a38d7a;
@@ -190,10 +190,10 @@
   --surface-bright: #31394d;
   --surface-container-lowest: #060e20;
   --surface-container-low: #131b2e;
-  --surface-container: #171f33;
-  --surface-container-high: #222a3d;
-  --surface-container-highest: #2d3449;
-  --surface-variant: #2d3449;
+  --surface-container: #101930;
+  --surface-container-high: #162039;
+  --surface-container-highest: #202b47;
+  --surface-variant: #162039;
   --glass: rgba(11,19,38,0.92);
   --on-surface: #dae2fd;
   --on-surface-variant: #d8c3ad;
@@ -226,10 +226,10 @@
   --surface-bright: #fffbeb;
   --surface-container-lowest: #ffffff;
   --surface-container-low: #fffbeb;
-  --surface-container: #fef3c7;
-  --surface-container-high: #fde68a;
-  --surface-container-highest: #fcd34d;
-  --surface-variant: #fde68a;
+  --surface-container: #fef0a7;
+  --surface-container-high: #fdeaa0;
+  --surface-container-highest: #fce490;
+  --surface-variant: #fdeaa0;
   --glass: rgba(254,243,199,0.92);
   --on-surface: #78350f;
   --on-surface-variant: #92400e;
@@ -325,12 +325,19 @@ body {
   @apply bg-background text-on-background font-sans text-sm antialiased;
 }
 
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
 .hide-scrollbar::-webkit-scrollbar {
-    display: none;
+  display: none;
+  width: 0px;
+  height: 0px;
 }
+
+html,
+body,
 .hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .nav-bg-fill {

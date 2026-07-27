@@ -67,7 +67,7 @@ export function TranslationSheet({
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [selectedChapters, setSelectedChapters] = useState<Set<string>>(
-    new Set(initialSelectedChapters.length > 0 ? initialSelectedChapters : (currentChapterId ? [currentChapterId] : []))
+    new Set(initialSelectedChapters)
   );
   const [selectedBooks, setSelectedBooks] = useState<Set<string>>(new Set());
   const [searchBook, setSearchBook] = useState('');

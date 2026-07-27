@@ -125,12 +125,6 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
     }
   };
 
-  // Scroll active chapter into view once loaded
-  useEffect(() => {
-    if (!loading && activeItemRef.current) {
-      activeItemRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [loading]);
 
   const handleContinueReading = () => {
     onClose();
@@ -241,7 +235,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="p-3 overflow-y-auto overscroll-contain flex-1 min-h-0 space-y-1.5"
+          className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5"
         >
           {loading && chapters.length === 0 ? (
             <div className="py-16 text-center space-y-2 text-on-surface-variant">

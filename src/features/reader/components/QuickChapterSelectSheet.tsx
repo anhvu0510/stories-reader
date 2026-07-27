@@ -16,6 +16,7 @@ const PAGE_SIZE = 30;
 export function QuickChapterSelectSheet({ bookId, currentChapterId, onClose }: QuickChapterSelectSheetProps) {
   const navigate = useNavigate();
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [pinnedChapter, setPinnedChapter] = useState<Chapter | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
@@ -48,6 +49,13 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, onClose }: Q
 
         const newChapters = res.chapters || [];
         const totalPages = res.pagination?.totalPages || 1;
+
+        if (currentChapterId) {
+          const found = newChapters.find((c) => c.chapterId === currentChapterId);
+          if (found) {
+            setPinnedChapter(found);
+          }
+        }
 
         if (isAppend) {
           setChapters((prev) => {
@@ -96,12 +104,6 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, onClose }: Q
     }
   };
 
-  // Scroll active chapter into view once loaded
-  useEffect(() => {
-    if (!loading && activeItemRef.current) {
-      activeItemRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [loading]);
 
   const handleSelectChapter = (chapterId: string) => {
     onClose();
@@ -145,7 +147,7 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, onClose }: Q
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="p-3 overflow-y-auto overscroll-contain flex-1 min-h-0 space-y-2"
+          className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-2"
         >
           {loading && chapters.length === 0 ? (
             <div className="py-20 text-center space-y-2 text-on-surface-variant">
@@ -158,12 +160,31 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, onClose }: Q
             </div>
           ) : (
             <>
+              {/* Section 1: Permanently Pinned Current Chapter */}
+              {pinnedChapter && (
+                <div className="mb-3 space-y-1.5 shrink-0">
+                  <div className="text-[11px] font-mono font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1 px-1">
+                    <span>📌 Chương đang đọc</span>
+                  </div>
+                  <ChapterItem
+                    chapter={pinnedChapter}
+                    isActive={true}
+                    showStatus={true}
+                    onClick={() => handleSelectChapter(pinnedChapter.chapterId)}
+                  />
+                </div>
+              )}
+
+              {/* Section 2: All Chapters Header */}
+              <div className="text-[11px] font-mono font-black text-on-surface-variant/70 uppercase tracking-wider flex items-center justify-between px-1 pt-1 pb-0.5">
+                <span>📚 Tất cả chương</span>
+              </div>
+
               {chapters.map((c, idx) => {
                 const isActive = c.chapterId === currentChapterId;
                 return (
                   <ChapterItem
                     key={c.chapterId || `chap-${c.chapterNumber || idx}-${idx}`}
-                    ref={isActive ? activeItemRef : null}
                     chapter={c}
                     isActive={isActive}
                     showStatus={true}

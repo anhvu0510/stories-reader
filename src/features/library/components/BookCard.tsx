@@ -261,10 +261,10 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
           style={{
             transform: isSwipedOpen ? `translateX(-${actionTrayWidth}px)` : 'translateX(0px)',
           }}
-          className={`group relative z-10 bg-surface-container-high rounded-2xl border-l-4 border-l-primary border border-outline-variant/30 p-3.5 transition-transform duration-200 ease-out cursor-pointer flex items-center justify-between gap-3 shadow-sm hover:shadow-md hover:border-primary/40 overflow-hidden active:scale-[0.99] ${
+          className={`group relative z-10 bg-surface-container rounded-2xl border-l-4 border-l-primary border border-outline-variant/20 p-3.5 transition-transform duration-200 ease-out cursor-pointer flex items-center justify-between gap-3 shadow-xs hover:shadow-sm hover:border-primary/40 overflow-hidden active:scale-[0.99] ${
             isSelected
               ? 'border-primary ring-2 ring-primary/40 bg-primary/10'
-              : 'hover:bg-surface-container-highest/80'
+              : 'hover:bg-surface-container-high/80'
           }`}
         >
           {/* Left Side: Sleek Modern TỔNG Badge (Theme-Synced) */}
@@ -280,17 +280,32 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
               {book.bookName}
             </h3>
 
-            {/* Recently Read Chapter Info Pill (Ultra-compact & Clean) */}
+            {/* Recently Read Chapter Info Pill */}
             {book.lastReadChapter?.chapterId && (
-              <div className="flex items-center gap-1.5 text-xs text-on-surface-variant truncate">
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono font-extrabold text-[10px] shrink-0">
-                  <BookOpen size={10} />
-                  Ch.{book.lastReadChapter.chapterNumber}
+              <div className="flex items-center gap-2 text-xs text-on-surface-variant min-w-0 overflow-hidden">
+                {/* Circle Number Badge (No 'Ch.' text) */}
+                <span className="w-5 h-5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono font-extrabold text-[10px] flex items-center justify-center shrink-0 shadow-xs">
+                  {book.lastReadChapter.chapterNumber}
                 </span>
+
+                {/* Marquee or Truncated Chapter Title */}
                 {book.lastReadChapter.title && (
-                  <span className="truncate text-on-surface-variant/80 text-[11px] font-medium">
-                    {book.lastReadChapter.title}
-                  </span>
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    {book.lastReadChapter.title.length > 20 ? (
+                      <div className="animate-marquee-text whitespace-nowrap">
+                        <span className="text-[11px] font-medium text-on-surface-variant/90 pr-6">
+                          {book.lastReadChapter.title}
+                        </span>
+                        <span className="text-[11px] font-medium text-on-surface-variant/90 pr-6">
+                          {book.lastReadChapter.title}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="truncate block text-on-surface-variant/90 text-[11px] font-medium">
+                        {book.lastReadChapter.title}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             )}

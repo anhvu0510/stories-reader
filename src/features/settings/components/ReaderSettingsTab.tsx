@@ -36,23 +36,30 @@ export function ReaderSettingsTab() {
     <div className="space-y-6">
       {/* Theme selection */}
       <div>
-        <label className="text-xs font-semibold text-on-surface flex items-center gap-1.5 mb-2.5">
-          <Palette size={14} className="text-primary" /> Chủ đề Giao diện (Theme)
+        <label className="text-xs font-semibold text-on-surface flex items-center justify-between mb-2">
+          <span className="flex items-center gap-1.5">
+            <Palette size={14} className="text-primary" /> Chủ đề Giao diện (Theme)
+          </span>
+          <span className="text-[10px] font-mono text-primary font-bold uppercase">
+            {THEMES.find((t) => t.id === theme)?.label}
+          </span>
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar py-1 px-0.5">
           {THEMES.map((item) => {
             const isSelected = theme === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => setTheme(item.id)}
-                className={`p-2.5 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-xs ${
-                  isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-outline-variant/20 hover:border-outline-variant/50'
+                className={`px-3 py-1.5 rounded-full border flex items-center gap-2 transition-all text-xs shrink-0 active:scale-95 ${
+                  isSelected
+                    ? 'border-primary ring-2 ring-primary/30 font-bold shadow-xs'
+                    : 'border-outline-variant/30 hover:border-outline-variant/60'
                 }`}
                 style={{ backgroundColor: item.bg, color: item.color }}
               >
-                <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: item.bg }} />
-                <span className="font-medium text-[11px] truncate">{item.label}</span>
+                <div className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0" style={{ backgroundColor: item.bg }} />
+                <span className="text-xs truncate">{item.label}</span>
               </button>
             );
           })}

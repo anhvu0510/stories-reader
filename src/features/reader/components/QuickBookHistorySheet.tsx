@@ -64,7 +64,7 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
         </div>
 
         {/* Book List Area */}
-        <div className="p-3 overflow-y-auto overscroll-contain flex-1 min-h-0 space-y-2.5">
+        <div className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-2.5">
           {loading ? (
             <div className="py-20 text-center space-y-2 text-on-surface-variant">
               <RefreshCw size={20} className="animate-spin mx-auto text-primary" />
