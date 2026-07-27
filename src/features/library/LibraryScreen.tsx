@@ -48,10 +48,12 @@ export function LibraryScreen() {
 
   // Fetch paginated books directly from backend API with tab filter
   const fetchBooks = useCallback(
-    async (targetPage: number, querySearch: string = search, activeTab: string = tab) => {
+    async (targetPage: number, querySearch?: string, activeTab?: string) => {
       setLoading(true);
+      const q = querySearch !== undefined ? querySearch : search;
+      const t = activeTab !== undefined ? activeTab : tab;
       try {
-        const res = await BookRepository.getBooks(targetPage, 20, querySearch, activeTab);
+        const res = await BookRepository.getBooks(targetPage, 20, q, t);
         const fetchedBooks = res.books || [];
         const { currentPage, totalPages: pagesCount, total: totalCount } = res.pagination || {};
 
@@ -65,7 +67,7 @@ export function LibraryScreen() {
         setLoading(false);
       }
     },
-    [search, tab, showToast]
+    [showToast]
   );
 
   useEffect(() => {
@@ -82,7 +84,7 @@ export function LibraryScreen() {
       window.removeEventListener('app-refresh', handleRefresh);
       window.removeEventListener('offline-mode-changed', handleRefresh);
     };
-  }, [isOfflineMode, fetchBooks]);
+  }, [isOfflineMode]);
 
   // Restore scroll position after initial loading finishes
   useEffect(() => {
