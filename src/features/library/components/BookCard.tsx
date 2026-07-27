@@ -23,6 +23,7 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
   const [showQuickSheet, setShowQuickSheet] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isSwipedOpen, setIsSwipedOpen] = useState(false);
+  const [isSwiping, setIsSwiping] = useState(false);
 
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
   const showToast = useToastStore((state) => state.showToast);
@@ -75,6 +76,7 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
     touchStartYRef.current = e.touches[0].clientY;
     isDraggingRef.current = false;
     isScrollingYRef.current = false;
+    setIsSwiping(true);
 
     if (cardElementRef.current) {
       cardElementRef.current.style.transition = 'none';
@@ -94,6 +96,7 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
     if (!isDraggingRef.current && !isScrollingYRef.current) {
       if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 6) {
         isScrollingYRef.current = true;
+        setIsSwiping(false);
         if (isSwipedOpen) {
           setIsSwipedOpen(false);
         }
@@ -121,6 +124,7 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
+    setIsSwiping(false);
     if (cardElementRef.current) {
       cardElementRef.current.style.transition = 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)';
     }
@@ -215,7 +219,11 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
     <>
       <div className="relative overflow-hidden rounded-2xl w-full select-none">
         {/* Background Native Mobile Swipe Action Tiles (Theme-Synced) */}
-        <div className="absolute inset-y-0 right-0 z-0 flex items-center justify-end overflow-hidden rounded-r-2xl h-full">
+        <div
+          className={`absolute inset-y-0 right-0 z-0 flex items-center justify-end overflow-hidden rounded-r-2xl h-full transition-opacity duration-150 ${
+            isSwipedOpen || isSwiping ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+        >
           {/* Download Action Tile (Online Only) */}
           {!isOfflineMode && (
             <button
