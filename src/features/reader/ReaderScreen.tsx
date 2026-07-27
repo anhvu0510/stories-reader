@@ -252,14 +252,8 @@ export function ReaderScreen() {
     resetTTS();
   }, [resetTTS]);
 
-  // Memoized double-click handler to maintain ParagraphView React.memo
-  const handleDoubleClick = useCallback(() => {
-    const sel = window.getSelection();
-    const text = sel ? sel.toString().trim() : '';
-    if (text && text.length < 50) {
-      setSelectedWord(text);
-    }
-  }, []);
+  // No-op double-click handler (Quick replacement popup removed, feature available in Settings)
+  const handleDoubleClick = useCallback(() => {}, []);
 
   const handleOpenHistory = useCallback(() => setShowHistorySheet(true), []);
   const handleOpenChapterSelect = useCallback(() => setShowChapterSelectSheet(true), []);
@@ -381,16 +375,6 @@ export function ReaderScreen() {
           <QuickBookHistorySheet
             currentBookId={bookId}
             onClose={() => setShowHistorySheet(false)}
-          />
-        )}
-
-        {selectedWord && (
-          <QuickReplacementModal
-            matchText={selectedWord}
-            bookId={bookId}
-            chapterId={chapterId}
-            onClose={() => setSelectedWord(null)}
-            onSuccess={loadChapter}
           />
         )}
 
