@@ -62,7 +62,7 @@ export function TranslationSheet({
   const [isOptionsLoaded, setIsOptionsLoaded] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [poolStatus, setPoolStatus] = useState<any>(null);
-  const [showOnlyPending, setShowOnlyPending] = useState(false);
+  const [showOnlyPending, setShowOnlyPending] = useState(true);
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
