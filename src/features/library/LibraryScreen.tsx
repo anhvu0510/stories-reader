@@ -12,23 +12,44 @@ import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { OfflineManagerSheet } from '../../components/OfflineManagerSheet';
 import { RefreshCw, BookOpen, Clock, Sparkles } from 'lucide-react';
 
+import { useLibraryStore } from '../../stores/useLibraryStore';
+
 export function LibraryScreen() {
+  const { savedPage, savedTab, savedSearch, savedScrollY, setLibraryState } = useLibraryStore();
+
   const [books, setBooks] = useState<Book[]>([]);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(savedPage);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const [search, setSearch] = useState('');
-  const [tab, setTab] = useState<'ALL' | 'HISTORY' | 'AI'>('ALL');
+  const [search, setSearch] = useState(savedSearch);
+  const [tab, setTab] = useState<'ALL' | 'HISTORY' | 'AI'>(savedTab);
 
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
   const showToast = useToastStore((state) => state.showToast);
   const { openSettings, isOfflineManagerOpen, closeOfflineManager } = useModalStore();
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isRestoredRef = useRef(false);
 
-  // Fetch paginated books directly from backend API with tab filter (Server-Side Tab Pagination)
+  // Sync state to useLibraryStore whenever page, tab, or search changes
+  useEffect(() => {
+    setLibraryState(page, tab, search);
+  }, [page, tab, search, setLibraryState]);
+
+  // Track and save scroll Y position on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setLibraryState(page, tab, search, window.scrollY);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [page, tab, search, setLibraryState]);
+
+  // Fetch paginated books directly from backend API with tab filter
   const fetchBooks = useCallback(
     async (targetPage: number, querySearch: string = search, activeTab: string = tab) => {
       setLoading(true);
@@ -51,10 +72,10 @@ export function LibraryScreen() {
   );
 
   useEffect(() => {
-    fetchBooks(1, search, tab);
+    fetchBooks(page, search, tab);
 
     const handleRefresh = () => {
-      fetchBooks(1, search, tab);
+      fetchBooks(page, search, tab);
     };
 
     window.addEventListener('app-refresh', handleRefresh);
@@ -64,12 +85,33 @@ export function LibraryScreen() {
       window.removeEventListener('app-refresh', handleRefresh);
       window.removeEventListener('offline-mode-changed', handleRefresh);
     };
-  }, [isOfflineMode, search, tab, fetchBooks]);
+  }, [isOfflineMode, fetchBooks]);
+
+  // Restore scroll position after initial loading finishes
+  useEffect(() => {
+    if (!loading && books.length > 0 && !isRestoredRef.current) {
+      isRestoredRef.current = true;
+      if (savedScrollY > 0) {
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+        });
+      }
+    }
+  }, [loading, books, savedScrollY]);
+
+  // Page change handler
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    setLibraryState(newPage, tab, search, 0);
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    fetchBooks(newPage, search, tab);
+  };
 
   // Debounced search handler
   const handleSearchChange = (val: string) => {
     setSearch(val);
     setPage(1);
+    setLibraryState(1, tab, val, 0);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
       fetchBooks(1, val, tab);
@@ -80,6 +122,7 @@ export function LibraryScreen() {
   const handleTabChange = (newTab: 'ALL' | 'HISTORY' | 'AI') => {
     setTab(newTab);
     setPage(1);
+    setLibraryState(1, newTab, search, 0);
     fetchBooks(1, search, newTab);
   };
 
@@ -191,7 +234,7 @@ export function LibraryScreen() {
         totalPages={totalPages}
         total={total}
         loading={loading}
-        onPageChange={(newPage) => fetchBooks(newPage, search, tab)}
+        onPageChange={handlePageChange}
       />
     </div>
   );
