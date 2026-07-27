@@ -109,6 +109,15 @@ export function ReaderScreen() {
         if (totalHeight > 0) {
           const newProgress = (currentY / totalHeight) * 100;
           setScrollProgress((prev) => (Math.abs(prev - newProgress) > 0.5 ? newProgress : prev));
+
+          // Auto show controls when user reaches bottom of page
+          const isNearBottom = currentY >= totalHeight - 60 || newProgress >= 95;
+          if (isNearBottom) {
+            setShowZenControls(true);
+            lastScrollY.current = currentY;
+            scrollAnimRef.current = null;
+            return;
+          }
         }
 
         if (currentY > lastScrollY.current + 40 && currentY > 100) {
@@ -254,13 +263,11 @@ export function ReaderScreen() {
   const handleOpenTranslation = useCallback(() => setShowTranslateSheet(true), []);
 
   const fontClass =
-    font === 'palatino'
-      ? 'font-serif'
-      : font === 'bookerly'
-      ? 'font-serif'
-      : font === 'font_viet_tay'
+    font === 'font_viet_tay'
       ? 'font-mono'
-      : 'font-sans';
+      : font === 'default'
+      ? 'font-sans'
+      : 'font-serif';
 
   if (loading) return <LoadingOverlay message="Đang mở văn bản..." />;
 
@@ -284,7 +291,7 @@ export function ReaderScreen() {
 
   return (
     <div
-      className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-32 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200 ${fontClass}`}
+      className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-16 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200 ${fontClass}`}
     >
       {/* Sticky Header - ALWAYS VISIBLE */}
       <div aria-hidden="true">
@@ -387,7 +394,9 @@ export function ReaderScreen() {
         {showTranslateSheet && (
           <TranslationSheet
             currentBookId={bookId}
+            currentChapterId={chapterId}
             currentChapterName={chapter.title}
+            initialSelectedChapters={chapterId ? [chapterId] : []}
             onClose={() => setShowTranslateSheet(false)}
             onSuccess={loadChapter}
           />

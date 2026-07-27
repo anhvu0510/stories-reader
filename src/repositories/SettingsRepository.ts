@@ -9,8 +9,8 @@ export const SettingsRepository = {
     const cacheKey = `setting_${key}`;
     const now = Date.now();
 
-    // 1. Return from memory cache if fresh (10 min TTL)
-    if (!skipCache && settingsCache[key] && now - settingsCache[key].timestamp < 10 * 60 * 1000) {
+    // 1. Return from memory cache if fresh (30 sec TTL)
+    if (!skipCache && settingsCache[key] && now - settingsCache[key].timestamp < 30 * 1000) {
       return settingsCache[key].data;
     }
 
@@ -62,11 +62,11 @@ export const SettingsRepository = {
     } catch (e) {}
     settingsCache[key] = { data: { value }, timestamp: Date.now() };
 
-    if (isOffline) return { value };
+    const stringifiedValue = typeof value === 'string' ? value : JSON.stringify(value);
 
     // Post to original backend API endpoint `/api/stories/setting`
     try {
-      const res = await apiClient.post('/api/stories/setting', { key, value });
+      const res = await apiClient.post('/api/stories/setting', { key, value: stringifiedValue });
       return res;
     } catch (e) {
       console.warn(`Failed to sync settings for key ${key} to API:`, e);

@@ -280,6 +280,21 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
               {book.bookName}
             </h3>
 
+            {/* Recently Read Chapter Info Pill (Ultra-compact & Clean) */}
+            {book.lastReadChapter?.chapterId && (
+              <div className="flex items-center gap-1.5 text-xs text-on-surface-variant truncate">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono font-extrabold text-[10px] shrink-0">
+                  <BookOpen size={10} />
+                  Ch.{book.lastReadChapter.chapterNumber}
+                </span>
+                {book.lastReadChapter.title && (
+                  <span className="truncate text-on-surface-variant/80 text-[11px] font-medium">
+                    {book.lastReadChapter.title}
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Bottom Row: Date + Icon Badges (Single Non-Wrapping Line) */}
             <div className="flex items-center gap-1.5 text-[10.5px] font-mono whitespace-nowrap flex-nowrap shrink-0 overflow-hidden pt-0.5">
               {/* Timestamp */}

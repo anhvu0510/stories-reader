@@ -121,7 +121,7 @@ export interface ApiDomain {
 }
 
 export type ThemeType = 'default' | 'sepia' | 'amoled' | 'midnight' | 'obsidian' | 'coffee' | 'modern-vn';
-export type FontType = 'default' | 'palatino' | 'bookerly' | 'font_viet_tay';
+export type FontType = 'default' | 'palatino' | 'bookerly' | 'font_viet_tay' | 'merriweather' | 'lora' | 'charter';
 
 export interface ReaderConfig {
   theme: ThemeType;

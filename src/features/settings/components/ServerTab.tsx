@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Server, Plus, RefreshCw, Check, Trash2, Edit3, Loader2 } from 'lucide-react';
+import { Server, Plus, RefreshCw, Check, Trash2, Edit3, Loader2, Wifi, WifiOff } from 'lucide-react';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useToastStore } from '../../../stores/useToastStore';
 import { apiClient } from '../../../services/apiClient';
@@ -7,7 +7,7 @@ import { SettingsRepository } from '../../../repositories/SettingsRepository';
 import { ApiDomain } from '../../../shared/types';
 
 export function ServerTab() {
-  const { domains, activeDomainId, setDomains, setActiveDomainId, addDomain, removeDomain } = useAppStore();
+  const { domains, activeDomainId, isOfflineMode, setOfflineMode, setDomains, setActiveDomainId, addDomain, removeDomain } = useAppStore();
   const showToast = useToastStore((state) => state.showToast);
 
   const [showForm, setShowForm] = useState(false);
@@ -110,6 +110,27 @@ export function ServerTab() {
         </h3>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => {
+              const nextState = !isOfflineMode;
+              setOfflineMode(nextState);
+              showToast(
+                nextState
+                  ? 'Đã bật chế độ Ngoại tuyến (Offline Mode)'
+                  : 'Đã kết nối lại chế độ Trực tuyến (Online Mode)',
+                nextState ? 'info' : 'success'
+              );
+            }}
+            className={`p-1.5 rounded-lg transition-colors text-xs flex items-center gap-1 font-medium ${
+              isOfflineMode
+                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25'
+                : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25'
+            }`}
+            title={isOfflineMode ? 'Đang Ngoại tuyến (Nhấp để bật Online)' : 'Đang Trực tuyến (Nhấp để bật Offline)'}
+          >
+            {isOfflineMode ? <WifiOff size={14} /> : <Wifi size={14} />}
+            <span className="hidden sm:inline">{isOfflineMode ? 'Offline' : 'Online'}</span>
+          </button>
+          <button
             onClick={handleFetchDomains}
             disabled={isFetching}
             className="p-1.5 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest transition-colors text-xs flex items-center gap-1"
@@ -127,7 +148,7 @@ export function ServerTab() {
             }}
             className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-xs flex items-center gap-1 font-medium"
           >
-            <Plus size={14} /> Thêm Server
+            <Plus size={14} />
           </button>
         </div>
       </div>

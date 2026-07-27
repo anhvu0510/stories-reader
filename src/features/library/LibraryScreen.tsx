@@ -10,7 +10,7 @@ import { BottomDock } from '../../components/BottomDock';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { OfflineManagerSheet } from '../../components/OfflineManagerSheet';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, BookOpen, Clock, Sparkles } from 'lucide-react';
 
 export function LibraryScreen() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -89,29 +89,75 @@ export function LibraryScreen() {
       <LibraryHeader
         searchQuery={search}
         onSearchChange={handleSearchChange}
-        activeTab={tab}
-        onTabChange={handleTabChange}
         onOpenSettings={() => openSettings('reader')}
       />
 
       <main className="px-3.5 pt-3.5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[11px] font-mono font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-            {tab === 'HISTORY'
-              ? 'LỊCH SỬ ĐỌC TRUYỆN'
-              : tab === 'AI'
-              ? 'TRUYỆN CHỜ DỊCH AI'
-              : 'DANH SÁCH TRUYỆN'}
+        <div className="flex items-center justify-between mb-3 gap-2">
+          <h2 className="text-[11px] font-mono font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-1.5 min-w-0 truncate">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
+            <span className="truncate">
+              {tab === 'HISTORY'
+                ? 'LỊCH SỬ ĐỌC TRUYỆN'
+                : tab === 'AI'
+                ? 'TRUYỆN CHỜ DỊCH AI'
+                : 'DANH SÁCH TRUYỆN'}
+            </span>
           </h2>
-          <button
-            onClick={() => fetchBooks(page, search, tab)}
-            disabled={loading}
-            className="p-1.5 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface-variant text-[11px] font-mono flex items-center gap-1 transition-all active:scale-95 hover:bg-surface-container-high"
-          >
-            <RefreshCw size={12} className={loading ? 'animate-spin text-primary' : ''} />
-            <span>LÀM MỚI</span>
-          </button>
+
+          {/* Action Icon Group: All, History, Pending AI, Refresh (Icon-Only) */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* All Books Icon */}
+            <button
+              onClick={() => handleTabChange('ALL')}
+              className={`p-1.5 rounded-xl border transition-all active:scale-95 ${
+                tab === 'ALL'
+                  ? 'bg-primary text-on-primary border-primary shadow-xs'
+                  : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
+              }`}
+              title="Tất cả truyện"
+            >
+              <BookOpen size={14} />
+            </button>
+
+            {/* History Filter Icon */}
+            <button
+              onClick={() => handleTabChange(tab === 'HISTORY' ? 'ALL' : 'HISTORY')}
+              className={`p-1.5 rounded-xl border transition-all active:scale-95 ${
+                tab === 'HISTORY'
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-400 font-bold shadow-xs'
+                  : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
+              }`}
+              title="Lịch sử đọc truyện"
+            >
+              <Clock size={14} />
+            </button>
+
+            {/* Pending AI Translation Filter Icon (Online Only) */}
+            {!isOfflineMode && (
+              <button
+                onClick={() => handleTabChange(tab === 'AI' ? 'ALL' : 'AI')}
+                className={`p-1.5 rounded-xl border transition-all active:scale-95 ${
+                  tab === 'AI'
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 font-bold shadow-xs'
+                    : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
+                }`}
+                title="Truyện chờ dịch AI"
+              >
+                <Sparkles size={14} />
+              </button>
+            )}
+
+            {/* Refresh Button (Icon Only) */}
+            <button
+              onClick={() => fetchBooks(page, search, tab)}
+              disabled={loading}
+              className="p-1.5 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-primary transition-all active:scale-95 hover:bg-surface-container-high"
+              title="Làm mới danh sách"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin text-primary' : ''} />
+            </button>
+          </div>
         </div>
 
         {loading ? (

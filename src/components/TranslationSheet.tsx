@@ -37,25 +37,38 @@ interface TranslationSheetProps {
   currentBookName?: string;
   currentChapterName?: string;
   currentBookId?: string;
+  currentChapterId?: string;
   initialTab?: Tab;
   initialSelectedChapters?: string[];
   onSuccess?: () => void;
   disableCurrent?: boolean;
 }
 
-export function TranslationSheet({ onClose, currentBookName, currentChapterName, currentBookId, initialTab = 'current', initialSelectedChapters = [], onSuccess, disableCurrent = false }: TranslationSheetProps) {
+export function TranslationSheet({
+  onClose,
+  currentBookName,
+  currentChapterName,
+  currentBookId,
+  currentChapterId,
+  initialTab = 'current',
+  initialSelectedChapters = [],
+  onSuccess,
+  disableCurrent = false,
+}: TranslationSheetProps) {
   const showToast = useToastStore((state) => state.showToast);
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [activeModelTab, setActiveModelTab] = useState<'VERTEX_API' | 'AI_STUDIO'>('VERTEX_API');
   const [options, setOptions] = useState<TranslationOptions>(defaultOptions);
   const [isOptionsLoaded, setIsOptionsLoaded] = useState(false);
-  const [showConfig, setShowConfig] = useState(true);
+  const [showConfig, setShowConfig] = useState(false);
   const [poolStatus, setPoolStatus] = useState<any>(null);
   const [showOnlyPending, setShowOnlyPending] = useState(false);
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
-  const [selectedChapters, setSelectedChapters] = useState<Set<string>>(new Set(initialSelectedChapters));
+  const [selectedChapters, setSelectedChapters] = useState<Set<string>>(
+    new Set(initialSelectedChapters.length > 0 ? initialSelectedChapters : (currentChapterId ? [currentChapterId] : []))
+  );
   const [selectedBooks, setSelectedBooks] = useState<Set<string>>(new Set());
   const [searchBook, setSearchBook] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,50 +85,85 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
     let active = true;
     if (options.model && isOptionsLoaded) {
       const platform = options.platform || 'VERTEX_API';
-      ChapterRepository.getPoolStatus(options.model, platform).then(res => {
-        if (active && res) {
-          setPoolStatus(res);
-        }
-      });
+      ChapterRepository.getPoolStatus(options.model, platform)
+        .then((res) => {
+          if (active && res) {
+            setPoolStatus(res);
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to fetch pool status:', err);
+        });
     }
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [options.model, options.platform, activeTab, isOptionsLoaded, quotas]);
 
   useEffect(() => {
     let active = true;
-    
-    AIRepository.getQuotas().then(res => {
-      if (!active) return;
-      if (res) {
-        setQuotas(res.availableModels || []);
-        if (res.currentConfig) {
-          let loadedModel = res.currentConfig.model;
-          let loadedPlatform = res.currentConfig.platform;
-          setOptions(prev => {
-            const newOptions = { ...prev, ...res.currentConfig };
-            // Update available options
-            newOptions.availableModels = (res.availableModels || []).map((m: any) => m.model);
-            if (!newOptions.availableModels.includes(newOptions.model) && newOptions.availableModels.length > 0) {
-              newOptions.model = newOptions.availableModels[0];
+
+    // Load saved translate options from settings (force fresh fetch)
+    SettingsRepository.getSettings('stories.ui.translate', true)
+      .then((savedSettings) => {
+        if (!active) return;
+        if (savedSettings?.value) {
+          try {
+            const parsed = typeof savedSettings.value === 'string' ? JSON.parse(savedSettings.value) : savedSettings.value;
+            if (parsed && typeof parsed === 'object') {
+              setOptions((prev) => ({ ...prev, ...parsed }));
             }
-            loadedModel = newOptions.model;
-            return newOptions;
-          });
-          
-          if (loadedPlatform) {
-             setActiveModelTab(loadedPlatform as any);
-          } else {
-            const modelObj = (res.availableModels || []).find((m: any) => m.model === loadedModel);
-            if (modelObj) {
-              setActiveModelTab(modelObj.platform);
+          } catch (e) {}
+        }
+      })
+      .catch(() => {});
+
+    AIRepository.getQuotas()
+      .then((res) => {
+        if (!active) return;
+        if (res) {
+          const rawQuotas = (res as any).availableModels || (res as any).quotas || (Array.isArray(res) ? res : []);
+          setQuotas(Array.isArray(rawQuotas) ? rawQuotas : []);
+
+          const cfg = res.currentConfig || (res as any).config;
+          if (cfg && typeof cfg === 'object') {
+            let loadedPlatform = cfg.platform;
+            setOptions((prev) => {
+              const newOptions = { ...prev, ...cfg };
+              const modelsList = (Array.isArray(rawQuotas) ? rawQuotas : []).map((m: any) => m.model || m);
+              if (modelsList.length > 0) {
+                newOptions.availableModels = modelsList;
+              }
+              return newOptions;
+            });
+
+            if (loadedPlatform) {
+              setActiveModelTab(loadedPlatform as any);
             }
           }
         }
-      }
-      setIsOptionsLoaded(true);
-    });
+        setIsOptionsLoaded(true);
+      })
+      .catch((err) => {
+        console.warn('AIRepository.getQuotas error, repairing database setting:', err);
+        // Repair corrupt DB record by overwriting with valid JSON string
+        SettingsRepository.updateSettings('stories.ui.translate', defaultOptions)
+          .then(() => AIRepository.getQuotas())
+          .then((res) => {
+            if (active && res) {
+              const rawQuotas = (res as any).availableModels || (res as any).quotas || (Array.isArray(res) ? res : []);
+              setQuotas(Array.isArray(rawQuotas) ? rawQuotas : []);
+            }
+          })
+          .catch(() => {})
+          .finally(() => {
+            if (active) setIsOptionsLoaded(true);
+          });
+      });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Save configs to API
@@ -135,9 +183,9 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           temperature: options.temperature,
           forceRetranslate: options.forceRetranslate,
           batchingGroup: options.batchingGroup,
-          availableModels: options.availableModels
+          availableModels: options.availableModels,
         };
-        SettingsRepository.updateSettings('stories.ui.translate', payload);
+        SettingsRepository.updateSettings('stories.ui.translate', payload).catch(() => {});
       }, 500);
       return () => clearTimeout(t);
     }
@@ -146,11 +194,27 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
   useEffect(() => {
     let t: NodeJS.Timeout;
     if (activeTab === 'batch_chapter' && currentBookId) {
-      ChapterRepository.getChapters(currentBookId, 1, 9999, 'chapterNumber', 'ASC').then(res => setChapters(res.chapters));
+      ChapterRepository.getChapters(currentBookId, 1, 9999, 'chapterNumber', 'ASC')
+        .then((res) => setChapters(res?.chapters || []))
+        .catch(() => setChapters([]));
     } else if (activeTab === 'story') {
-      t = setTimeout(() => {
-        BookRepository.getBooks(1, 9999, searchBook).then(res => setBooks(res.books));
-      }, 500);
+      const fetchStoryBooks = () => {
+        BookRepository.getBooks(1, 9999, searchBook)
+          .then((res) => {
+            const list = res?.books || (res as any)?.data || (Array.isArray(res) ? res : []);
+            setBooks(Array.isArray(list) ? list : []);
+          })
+          .catch((err) => {
+            console.warn('Failed to fetch books for translation:', err);
+            setBooks([]);
+          });
+      };
+
+      if (searchBook) {
+        t = setTimeout(fetchStoryBooks, 300);
+      } else {
+        fetchStoryBooks();
+      }
     }
     return () => clearTimeout(t);
   }, [activeTab, currentBookId, searchBook]);
@@ -162,15 +226,16 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
     const platform = options.platform || 'VERTEX_API';
     try {
       if (activeTab === 'current') {
-        if (!initialSelectedChapters[0]) {
-          showToast("Không xác định được chương hiện tại", "error");
+        const chapterIdToUse = initialSelectedChapters[0] || currentChapterId;
+        if (!chapterIdToUse) {
+          showToast('Không xác định được chương hiện tại', 'error');
           setIsSubmitting(false);
           isSubmittingRef.current = false;
           return;
         }
-        
-        showToast("Đang dịch chương...", "info");
-        const response = await ChapterRepository.translate({
+
+        showToast('Đang gửi yêu cầu dịch...', 'info');
+        await ChapterRepository.translate({
           mode: 'current',
           model: options.model,
           platform: platform,
@@ -179,27 +244,22 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           temperature: options.temperature,
           retryTranslate: options.forceRetranslate,
           bookId: currentBookId,
-          chapterId: initialSelectedChapters
+          chapterId: [chapterIdToUse],
         });
-        
-        const chapResult = response?.[initialSelectedChapters[0]]?.chapter;
-        if (chapResult?.state === 'SUCCEEDED') {
-          showToast(`Dịch thành công! Mất ${chapResult.totalTokens} tokens`, 'success');
-          setTimeout(() => {
-            onClose();
-            if (onSuccess) onSuccess();
-          }, 1500);
-        } else {
-           throw new Error("Lỗi khi dịch chương này");
-        }
+
+        showToast('Gửi yêu cầu dịch thành công!', 'success');
+        setTimeout(() => {
+          onClose();
+          if (onSuccess) onSuccess();
+        }, 1500);
       } else if (activeTab === 'batch_chapter' && currentBookId) {
         if (selectedChapters.size === 0) {
-          showToast("Vui lòng chọn ít nhất 1 chương", "error");
+          showToast('Vui lòng chọn ít nhất 1 chương', 'error');
           setIsSubmitting(false);
           isSubmittingRef.current = false;
           return;
         }
-        
+
         await ChapterRepository.translate({
           mode: 'batch_chapter',
           model: options.model,
@@ -211,19 +271,18 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           batchingGroup: options.batchingGroup,
           bookId: currentBookId,
           chapterId: Array.from(selectedChapters),
-          currentChapterId: initialSelectedChapters[0]
+          currentChapterId: initialSelectedChapters[0] || currentChapterId,
         });
         showToast(`Đã gửi yêu cầu dịch ${selectedChapters.size} chương`, 'success');
         setTimeout(() => onClose(), 1500);
-
       } else if (activeTab === 'story') {
         if (selectedBooks.size === 0) {
-          showToast("Vui lòng chọn ít nhất 1 truyện", "error");
+          showToast('Vui lòng chọn ít nhất 1 truyện', 'error');
           setIsSubmitting(false);
           isSubmittingRef.current = false;
           return;
         }
-        
+
         await ChapterRepository.translate({
           mode: 'story',
           model: options.model,
@@ -234,14 +293,14 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
           retryTranslate: options.forceRetranslate,
           batchingGroup: options.batchingGroup,
           bookId: Array.from(selectedBooks),
-          currentChapterId: initialSelectedChapters[0]
+          currentChapterId: initialSelectedChapters[0] || currentChapterId,
         });
         showToast(`Đã gửi yêu cầu dịch ${selectedBooks.size} truyện`, 'success');
         setTimeout(() => onClose(), 1500);
       }
     } catch (e: any) {
       console.error(e);
-      showToast(e.message || "Có lỗi xảy ra, vui lòng thử lại", 'error');
+      showToast(e.message || 'Có lỗi xảy ra, vui lòng thử lại', 'error');
     } finally {
       setIsSubmitting(false);
       isSubmittingRef.current = false;
@@ -428,48 +487,47 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {quotas
-                    .filter(q => {
+                  {(() => {
+                    const filteredQuotas = quotas.filter((q) => {
                       const isPlatformMatch = (q.platform || 'VERTEX_API') === activeModelTab;
                       const isActive = q.isActive !== false;
                       return isPlatformMatch && isActive;
-                    })
-                    .map(q => {
-                    const m = q.model;
-                    const isSelected = options.model === m && (options.platform || 'VERTEX_API') === activeModelTab;
-                    
-                    return (
-                      <button
-                        key={`${activeModelTab}-${m}`}
-                        onClick={() => {
-                           setOptions({...options, model: m, platform: activeModelTab});
-                           setPoolStatus(null);
-                        }}
-                        className={cn(
-                          "px-3 py-2 rounded-lg text-left border transition-all flex items-center justify-between",
-                          isSelected 
-                            ? "bg-primary/10 border-primary/30 text-primary" 
-                            : "bg-surface-container-highest border-transparent text-on-surface-variant hover:bg-surface-container-high"
-                        )}
-                      >
-                        <div className="min-w-0 pr-2">
-                          <div className="font-bold text-xs truncate">
-                            {m.replace(/^gemini-/, '').replace(/-/g, ' ').toUpperCase() || m}
+                    });
+
+                    const modelsToRender =
+                      filteredQuotas.length > 0
+                        ? filteredQuotas.map((q) => q.model)
+                        : (options.availableModels && options.availableModels.length > 0
+                            ? options.availableModels
+                            : defaultOptions.availableModels!);
+
+                    return modelsToRender.map((m) => {
+                      const isSelected = options.model === m && (options.platform || 'VERTEX_API') === activeModelTab;
+
+                      return (
+                        <button
+                          key={`${activeModelTab}-${m}`}
+                          onClick={() => {
+                            setOptions({ ...options, model: m, platform: activeModelTab });
+                            setPoolStatus(null);
+                          }}
+                          className={cn(
+                            'px-3 py-2 rounded-lg text-left border transition-all flex items-center justify-between',
+                            isSelected
+                              ? 'bg-primary/10 border-primary/30 text-primary'
+                              : 'bg-surface-container-highest border-transparent text-on-surface-variant hover:bg-surface-container-high'
+                          )}
+                        >
+                          <div className="min-w-0 pr-2">
+                            <div className="font-bold text-xs truncate">
+                              {m.replace(/^gemini-/, '').replace(/-/g, ' ').toUpperCase() || m}
+                            </div>
                           </div>
-                        </div>
-                        {isSelected && <Check size={12} className="text-primary flex-shrink-0" />}
-                      </button>
-                    );
-                  })}
-                  {quotas.filter(q => {
-                      const isPlatformMatch = (q.platform || 'VERTEX_API') === activeModelTab;
-                      const isActive = q.isActive !== false;
-                      return isPlatformMatch && isActive;
-                    }).length === 0 && (
-                    <div className="text-[11px] text-on-surface-variant/70 text-center py-3 bg-surface-container-lowest rounded-lg border border-dashed border-outline-variant/30 col-span-full">
-                      Chưa có model nào cho {activeModelTab === 'VERTEX_API' ? 'Vertex API' : 'AI Studio'}.
-                    </div>
-                  )}
+                          {isSelected && <Check size={12} className="text-primary flex-shrink-0" />}
+                        </button>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             </div>
@@ -559,22 +617,51 @@ export function TranslationSheet({ onClose, currentBookName, currentChapterName,
                 />
               </div>
               <div className="flex-1 overflow-y-auto hide-scrollbar flex flex-col p-0 border border-outline-variant/20 bg-surface rounded-xl min-h-[30vh] shadow-sm overflow-hidden">
-                {books.filter(b => b.bookName.toLowerCase().includes(searchBook.toLowerCase())).map(book => (
-                  <div 
-                    key={book.bookId} 
-                    onClick={() => toggleBook(book.bookId)}
-                    className={cn("group flex justify-between items-center px-3 py-2.5 cursor-pointer transition-colors border-b border-outline-variant/10 last:border-b-0 relative", selectedBooks.has(book.bookId) ? "bg-primary/5" : "bg-surface hover:bg-surface-container-lowest")}
-                  >
-                    {selectedBooks.has(book.bookId) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>}
-                    <div className="flex items-center gap-3 overflow-hidden pl-1">
-                      <div className={cn("flex flex-col items-center justify-center w-8 h-8 rounded-lg shrink-0 border transition-colors", selectedBooks.has(book.bookId) ? "bg-primary/10 border-primary/20 text-primary" : "bg-surface-container-highest border-transparent text-on-surface-variant")}>
-                        <Languages size={12} />
+                {books.length === 0 ? (
+                  <div className="py-12 text-center text-xs text-on-surface-variant/60 font-medium">
+                    Không tìm thấy truyện nào trong thư viện
+                  </div>
+                ) : (
+                  books
+                    .filter((b) => b?.bookName && b.bookName.toLowerCase().includes((searchBook || '').toLowerCase()))
+                    .map((book) => (
+                      <div
+                        key={book.bookId}
+                        onClick={() => toggleBook(book.bookId)}
+                        className={cn(
+                          'group flex justify-between items-center px-3 py-2.5 cursor-pointer transition-colors border-b border-outline-variant/10 last:border-b-0 relative',
+                          selectedBooks.has(book.bookId) ? 'bg-primary/5' : 'bg-surface hover:bg-surface-container-lowest'
+                        )}
+                      >
+                        {selectedBooks.has(book.bookId) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>}
+                        <div className="flex items-center gap-3 overflow-hidden pl-1">
+                          <div
+                            className={cn(
+                              'flex flex-col items-center justify-center w-8 h-8 rounded-lg shrink-0 border transition-colors',
+                              selectedBooks.has(book.bookId)
+                                ? 'bg-primary/10 border-primary/20 text-primary'
+                                : 'bg-surface-container-highest border-transparent text-on-surface-variant'
+                            )}
+                          >
+                            <Languages size={12} />
+                          </div>
+                          <span
+                            className={cn(
+                              'text-[12px] sm:text-[13px] truncate font-medium transition-colors',
+                              selectedBooks.has(book.bookId) ? 'text-primary font-bold' : 'text-on-surface'
+                            )}
+                          >
+                            {book.bookName}
+                          </span>
+                        </div>
+                        {selectedBooks.has(book.bookId) ? (
+                          <Check size={14} className="text-primary flex-shrink-0 drop-shadow-sm mr-1" />
+                        ) : (
+                          <Square size={14} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />
+                        )}
                       </div>
-                      <span className={cn("text-[12px] sm:text-[13px] truncate font-medium transition-colors", selectedBooks.has(book.bookId) ? "text-primary font-bold" : "text-on-surface")}>{book.bookName}</span>
-                    </div>
-                    {selectedBooks.has(book.bookId) ? <Check size={14} className="text-primary flex-shrink-0 drop-shadow-sm mr-1" /> : <Square size={14} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />}
-                   </div>
-                ))}
+                    ))
+                )}
               </div>
             </div>
           )}

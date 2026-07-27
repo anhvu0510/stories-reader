@@ -254,6 +254,32 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
             </div>
           ) : (
             <>
+              {/* Section 1: Recently Read Chapter (Shown only if history exists) */}
+              {book.lastReadChapter?.chapterId && (
+                <div className="mb-3 space-y-1.5">
+                  <div className="text-[11px] font-mono font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1 px-1">
+                    <span>📌 Chương đọc gần đây</span>
+                  </div>
+                  <ChapterItem
+                    chapter={{
+                      chapterId: book.lastReadChapter.chapterId,
+                      chapterNumber: Number(book.lastReadChapter.chapterNumber || 1),
+                      title: book.lastReadChapter.title || `Chương ${book.lastReadChapter.chapterNumber}`,
+                      state: 'SUCCEEDED',
+                      updatedAt: new Date().toISOString(),
+                      bookId: book.bookId,
+                    }}
+                    isActive={true}
+                    onClick={() => handleSelectChapter(book.lastReadChapter!.chapterId)}
+                  />
+                </div>
+              )}
+
+              {/* Section 2: All Chapters */}
+              <div className="text-[11px] font-mono font-black text-on-surface-variant/70 uppercase tracking-wider flex items-center justify-between px-1 pt-1 pb-0.5">
+                <span>📚 Tất cả chương</span>
+              </div>
+
               {chapters.map((c, idx) => {
                 const isLastRead = book.lastReadChapter?.chapterId === c.chapterId;
 

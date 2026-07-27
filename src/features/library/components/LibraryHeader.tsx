@@ -5,22 +5,18 @@ import { useAppStore } from '../../../stores/useAppStore';
 interface LibraryHeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  activeTab: 'ALL' | 'HISTORY' | 'AI';
-  onTabChange: (tab: 'ALL' | 'HISTORY' | 'AI') => void;
   onOpenSettings: () => void;
 }
 
 export function LibraryHeader({
   searchQuery,
   onSearchChange,
-  activeTab,
-  onTabChange,
   onOpenSettings,
 }: LibraryHeaderProps) {
   const { isOfflineMode, setOfflineMode } = useAppStore();
 
   return (
-    <header className="sticky top-0 z-30 bg-surface/95 backdrop-blur-md border-b border-outline-variant/20 px-3.5 py-3 space-y-3 w-full max-w-md mx-auto overflow-x-hidden box-border transition-colors duration-200">
+    <header className="sticky top-0 z-30 bg-surface/95 backdrop-blur-md border-b border-outline-variant/20 px-3.5 py-3 space-y-2.5 w-full max-w-md mx-auto overflow-x-hidden box-border transition-colors duration-200">
       {/* Top Title Bar & Essential Shortcut Buttons Row */}
       <div className="flex items-center justify-between gap-2">
         <div>
@@ -66,23 +62,6 @@ export function LibraryHeader({
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full pl-9 pr-3 py-2 rounded-2xl bg-surface-container border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium transition-all"
         />
-      </div>
-
-      {/* Segmented Control Tabs */}
-      <div className="flex bg-surface-container p-1 rounded-2xl border border-outline-variant/30">
-        {((isOfflineMode ? ['ALL', 'HISTORY'] : ['ALL', 'HISTORY', 'AI']) as ('ALL' | 'HISTORY' | 'AI')[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => onTabChange(t)}
-            className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
-              activeTab === t
-                ? 'bg-primary text-on-primary shadow-md font-extrabold'
-                : 'text-on-surface-variant/70 hover:text-on-surface'
-            }`}
-          >
-            {t === 'ALL' ? 'Tất cả' : t === 'HISTORY' ? 'Lịch sử' : 'Chờ dịch AI'}
-          </button>
-        ))}
       </div>
     </header>
   );

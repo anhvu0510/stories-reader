@@ -2,7 +2,7 @@ import React from 'react';
 import {
   ChevronLeft,
   ChevronRight,
-  List,
+  Settings,
   Sparkles,
   Volume2,
   Play,
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../../stores/useAppStore';
+import { useModalStore } from '../../../stores/useModalStore';
 
 interface ReaderQuickControlProps {
   bookId: string;
@@ -54,6 +55,7 @@ export function ReaderQuickControl({
 }: ReaderQuickControlProps) {
   const navigate = useNavigate();
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
+  const openSettings = useModalStore((state) => state.openSettings);
 
   const hasPrev = Boolean(
     prevChapterId &&
@@ -206,7 +208,7 @@ export function ReaderQuickControl({
           )}
         </div>
 
-        {/* RIGHT GROUP: Speaker Toggle (Hidden when active), Chapter List & AI Translation */}
+        {/* RIGHT GROUP: Speaker Toggle (Hidden when active), System Settings & AI Translation */}
         <div className="flex items-center gap-1 flex-shrink-0">
           {/* Read Aloud TTS Toggle Button (Hidden when TTS is active to yield slot) */}
           {onToggleTTS && !isTTSActive && (
@@ -222,16 +224,16 @@ export function ReaderQuickControl({
             </button>
           )}
 
-          {/* Chapter List Popup Button */}
+          {/* System Settings Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onOpenChapterSelect();
+              openSettings('reader');
             }}
             className="p-2.5 rounded-full bg-surface-container-high border border-outline-variant/30 text-on-surface-variant hover:text-primary hover:bg-surface transition-all active:scale-95"
-            title="Mở bảng chọn chương"
+            title="Cài đặt đọc sách"
           >
-            <List size={16} />
+            <Settings size={16} />
           </button>
 
           {/* AI Translation Button (Online Only) */}

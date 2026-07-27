@@ -101,7 +101,7 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
 
                     {b.lastReadChapter ? (
                       <p className="text-[11px] text-on-surface-variant/80 truncate">
-                        Đang đọc: Chương {b.lastReadChapter.chapterNumber} - {b.lastReadChapter.title}
+                        Chương {b.lastReadChapter.chapterNumber} - {b.lastReadChapter.title}
                       </p>
                     ) : (
                       <p className="text-[11px] text-on-surface-variant/60 truncate">{b.author || 'Tác giả mờ'}</p>

@@ -196,11 +196,11 @@ export const ChapterRepository = {
   },
 
   async translate(data: any): Promise<any> {
-    return apiClient.post('/api/v1/translate', data);
+    return apiClient.post('/stories/gemini-ai/translate', data);
   },
 
   async getPoolStatus(model: string, platform?: string): Promise<any> {
-    const query = platform ? `?platform=${encodeURIComponent(platform)}` : '';
-    return apiClient.get(`/api/v1/translate/pool-status/${encodeURIComponent(model)}${query}`);
+    const platformQuery = platform ? `&platform=${encodeURIComponent(platform)}` : '';
+    return apiClient.get(`/api/ai-token/pool-status?model=${encodeURIComponent(model)}${platformQuery}`);
   },
 };

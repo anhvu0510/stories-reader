@@ -4,34 +4,34 @@ import { AIToken, AIQuota, QuotaResponse } from '../shared/types';
 export class AIRepository {
   static async getTokens(platform?: string): Promise<{ tokens: AIToken[] }> {
     const query = platform ? `?platform=${encodeURIComponent(platform)}` : '';
-    return apiClient.get<{ tokens: AIToken[] }>(`/api/v1/tokens${query}`);
+    return apiClient.get<{ tokens: AIToken[] }>(`/api/ai-token${query}`);
   }
 
   static async createToken(tokenData: any): Promise<AIToken> {
-    return apiClient.post<AIToken>('/api/v1/tokens', tokenData);
+    return apiClient.post<AIToken>('/api/ai-token', tokenData);
   }
 
   static async updateToken(id: string, tokenData: any): Promise<AIToken> {
-    return apiClient.put<AIToken>(`/api/v1/tokens/${id}`, tokenData);
+    return apiClient.put<AIToken>(`/api/ai-token/${id}`, tokenData);
   }
 
   static async deleteToken(id: string): Promise<void> {
-    return apiClient.delete(`/api/v1/tokens/${id}`);
+    return apiClient.delete(`/api/ai-token/${id}`);
   }
 
   static async getQuotas(): Promise<QuotaResponse> {
-    return apiClient.get<QuotaResponse>('/api/v1/quotas');
+    return apiClient.get<QuotaResponse>('/api/quota');
   }
 
   static async updateQuotaConfig(config: any): Promise<void> {
-    return apiClient.put('/api/v1/quotas/config', config);
+    return apiClient.put('/api/quota/config', config);
   }
 
   static async createQuota(quotaData: any): Promise<AIQuota> {
-    return apiClient.post<AIQuota>('/api/v1/quotas', quotaData);
+    return apiClient.post<AIQuota>('/api/quota', quotaData);
   }
 
   static async deleteQuota(id: string): Promise<void> {
-    return apiClient.delete(`/api/v1/quotas/${id}`);
+    return apiClient.delete(`/api/quota/${id}`);
   }
 }
