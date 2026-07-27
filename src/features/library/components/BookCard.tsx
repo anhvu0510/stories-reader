@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Book } from '../../../shared/types';
 import { Sparkles, BookOpen, ExternalLink, Trash2, Clock, Download, AlertCircle, Layers } from 'lucide-react';
 import { QuickBookSheet } from './QuickBookSheet';
+import { TranslationSheet } from '../../../components/TranslationSheet';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useToastStore } from '../../../stores/useToastStore';
 import { offlineDb } from '../../../lib/offlineDb';
@@ -21,6 +22,7 @@ interface BookCardProps {
 export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMode }: BookCardProps) {
   const navigate = useNavigate();
   const [showQuickSheet, setShowQuickSheet] = useState(false);
+  const [showTranslationSheet, setShowTranslationSheet] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isSwipedOpen, setIsSwipedOpen] = useState(false);
   const [isSwiping, setIsSwiping] = useState(false);
@@ -166,6 +168,8 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
 
     if (activeTab === 'HISTORY' && book.lastReadChapter?.chapterId) {
       navigate(`/book/${book.bookId}/chapter/${book.lastReadChapter.chapterId}`);
+    } else if (activeTab === 'AI') {
+      setShowTranslationSheet(true);
     } else {
       setShowQuickSheet(true);
     }
@@ -363,6 +367,16 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
 
       {showQuickSheet && (
         <QuickBookSheet book={book} onClose={() => setShowQuickSheet(false)} />
+      )}
+
+      {showTranslationSheet && (
+        <TranslationSheet
+          currentBookId={book.bookId}
+          currentBookName={book.bookName}
+          initialTab="batch_chapter"
+          disableCurrent={true}
+          onClose={() => setShowTranslationSheet(false)}
+        />
       )}
     </>
   );
