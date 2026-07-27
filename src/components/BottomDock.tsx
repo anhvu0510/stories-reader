@@ -60,6 +60,9 @@ export function BottomDock({
             <span>Trang {page > 1 ? page - 1 : 1}</span>
           </button>
 
+          {/* Vertical Divider */}
+          <div className="w-[1px] h-4.5 bg-white/25 shadow-xs shrink-0" />
+
           {/* Center Interactive Page Indicator Pill */}
           <button
             onClick={() => {
@@ -79,6 +82,9 @@ export function BottomDock({
               </span>
             )}
           </button>
+
+          {/* Vertical Divider */}
+          <div className="w-[1px] h-4.5 bg-white/25 shadow-xs shrink-0" />
 
           {/* Next Page Button (Rich "Trang X" format) */}
           <button

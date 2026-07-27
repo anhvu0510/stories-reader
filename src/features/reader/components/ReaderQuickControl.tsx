@@ -120,6 +120,9 @@ export function ReaderQuickControl({
           </button>
         </div>
 
+        {/* Vertical Divider */}
+        <div className="w-[1px] h-4.5 bg-white/25 shadow-xs shrink-0 mx-0.5" />
+
         {/* CENTER: Dynamic Mode (Normal Chapter Text vs Inline Read Aloud Controls) */}
         <div className="flex-1 flex items-center justify-center min-w-0 px-1">
           {isTTSActive ? (
@@ -172,7 +175,7 @@ export function ReaderQuickControl({
               </button>
 
               {/* Distinct Separator Line */}
-              <div className="w-[1px] h-4 bg-outline-variant/40 mx-1.5" />
+              <div className="w-[1px] h-4.5 bg-white/25 shadow-xs mx-1.5" />
 
               <button
                 onClick={(e) => {
@@ -207,6 +210,9 @@ export function ReaderQuickControl({
             </button>
           )}
         </div>
+
+        {/* Vertical Divider */}
+        <div className="w-[1px] h-4.5 bg-white/25 shadow-xs shrink-0 mx-0.5" />
 
         {/* RIGHT GROUP: Speaker Toggle (Hidden when active), System Settings & AI Translation */}
         <div className="flex items-center gap-1 flex-shrink-0">
