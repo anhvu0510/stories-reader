@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Book } from '../../../shared/types';
-import { Sparkles, BookOpen, ExternalLink, Trash2, Clock, Download, AlertCircle } from 'lucide-react';
+import { Sparkles, BookOpen, ExternalLink, Trash2, Clock, Download, AlertCircle, Layers } from 'lucide-react';
 import { QuickBookSheet } from './QuickBookSheet';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useToastStore } from '../../../stores/useToastStore';
@@ -269,8 +269,10 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
         >
           {/* Left Side: Sleek Modern TỔNG Badge (Theme-Synced) */}
           <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center flex-shrink-0 font-mono shadow-xs">
-            <span className="text-[8.5px] font-extrabold uppercase tracking-wider text-primary/70 leading-none">TỔNG</span>
-            <span className="text-sm font-black leading-none text-primary mt-0.5">{book.chapterCount}</span>
+            <span className="text-[8px] font-extrabold uppercase tracking-wider text-primary/70 leading-none flex items-center gap-0.5">
+              <Layers size={9} /> TỔNG
+            </span>
+            <span className="text-xs sm:text-sm font-black leading-none text-primary mt-1">{book.chapterCount}</span>
           </div>
 
           {/* Middle Content Section */}

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, ChevronUp, X, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, ChevronUp, X, Check, Minus, Plus } from 'lucide-react';
 
 interface BottomDockProps {
   page?: number;
@@ -17,26 +17,24 @@ export function BottomDock({
   onPageChange,
 }: BottomDockProps) {
   const [showPagePicker, setShowPagePicker] = useState(false);
-  const [inputPage, setInputPage] = useState<string>(String(page));
+  const [targetPage, setTargetPage] = useState<number>(page);
+
+  useEffect(() => {
+    setTargetPage(page);
+  }, [page]);
 
   const canPrev = page > 1 && !loading;
   const canNext = page < totalPages && !loading;
 
   const handleGoToPage = (target: number) => {
-    if (target >= 1 && target <= totalPages && target !== page && onPageChange) {
-      onPageChange(target);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    const validTarget = Math.max(1, Math.min(target, totalPages));
+    if (validTarget !== page && onPageChange) {
+      onPageChange(validTarget);
+      window.scrollTo({ top: 0, behavior: 'auto' });
     }
     setShowPagePicker(false);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const p = parseInt(inputPage, 10);
-    if (!isNaN(p)) {
-      handleGoToPage(Math.max(1, Math.min(p, totalPages)));
-    }
-  };
 
   return (
     <>
@@ -47,7 +45,7 @@ export function BottomDock({
             onClick={() => {
               if (canPrev && onPageChange) {
                 onPageChange(page - 1);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                window.scrollTo({ top: 0, behavior: 'auto' });
               }
             }}
             disabled={!canPrev}
@@ -65,11 +63,11 @@ export function BottomDock({
           {/* Center Interactive Page Indicator Pill */}
           <button
             onClick={() => {
-              setInputPage(String(page));
+              setTargetPage(page);
               setShowPagePicker(true);
             }}
             className="flex-1 min-w-0 px-2 py-1 rounded-2xl bg-surface border border-outline-variant/20 hover:border-primary/40 text-center flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 group"
-            title="Nhấp để nhảy trang nhanh"
+            title="Nhấp để chọn trang"
           >
             <div className="flex items-center justify-center gap-1 text-xs font-mono font-black text-primary truncate">
               <span>Trang {page}/{totalPages || 1}</span>
@@ -87,7 +85,7 @@ export function BottomDock({
             onClick={() => {
               if (canNext && onPageChange) {
                 onPageChange(page + 1);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                window.scrollTo({ top: 0, behavior: 'auto' });
               }
             }}
             disabled={!canNext}
@@ -104,61 +102,75 @@ export function BottomDock({
         </div>
       </nav>
 
-      {/* Quick Page Picker Modal */}
+      {/* Mobile-Native Touch Bottom Sheet Page Picker */}
       {showPagePicker && (
-        <div className="fixed inset-0 z-[90000] bg-black/60 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[95000] bg-black/75 flex justify-center items-end p-0 overflow-x-hidden box-border">
+          {/* Backdrop */}
           <div className="absolute inset-0" onClick={() => setShowPagePicker(false)} />
 
-          <div className="relative z-10 bg-surface-container text-on-surface w-full max-w-xs rounded-3xl border border-outline-variant/30 shadow-2xl p-5 flex flex-col gap-4 animate-none">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-extrabold text-on-surface flex items-center gap-1.5">
-                Nhảy tới trang
-              </h3>
+          {/* Touch Bottom Sheet */}
+          <div className="relative z-10 bg-surface-container text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t border-outline-variant/30 shadow-2xl p-4 sm:p-5 space-y-4 max-h-[85dvh] overflow-y-auto hide-scrollbar transform-gpu transition-all duration-200 box-border">
+            {/* Drag Handle & Header */}
+            <div>
+              <div className="w-10 h-1.5 rounded-full bg-outline-variant/50 mx-auto mb-3" />
+              <div className="flex items-center justify-between border-b border-outline-variant/20 pb-2.5">
+                <h3 className="text-sm font-black text-on-surface tracking-tight uppercase font-mono flex items-center gap-2">
+                  <span>🚀</span> Nhảy Tới Trang
+                </h3>
+                <button
+                  onClick={() => setShowPagePicker(false)}
+                  className="p-1.5 rounded-full bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors active:scale-95"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Big Target Page Badge */}
+            <div className="text-center py-2 bg-surface-container-low rounded-2xl border border-outline-variant/20">
+              <div className="text-2xl font-mono font-black text-primary">
+                Trang {targetPage} <span className="text-xs text-on-surface-variant font-normal">/ {totalPages}</span>
+              </div>
+              <p className="text-[10px] font-mono text-on-surface-variant/70 mt-0.5">
+                Vuốt slider hoặc chọn mốc nhanh bên dưới
+              </p>
+            </div>
+
+            {/* Stepper Buttons & Range Slider */}
+            <div className="flex items-center gap-3 bg-surface-container-low p-3 rounded-2xl border border-outline-variant/20">
               <button
-                onClick={() => setShowPagePicker(false)}
-                className="p-1 rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors"
+                onClick={() => setTargetPage((prev) => Math.max(1, prev - 1))}
+                disabled={targetPage <= 1}
+                className="w-10 h-10 rounded-xl bg-surface-container-high border border-outline-variant/30 text-on-surface disabled:opacity-40 font-bold flex items-center justify-center active:scale-95 shrink-0"
               >
-                <X size={16} />
+                <Minus size={18} />
+              </button>
+
+              <input
+                type="range"
+                min={1}
+                max={totalPages}
+                value={targetPage}
+                onChange={(e) => setTargetPage(Number(e.target.value))}
+                className="flex-1 accent-primary bg-surface-container-highest h-2.5 rounded-lg cursor-pointer"
+              />
+
+              <button
+                onClick={() => setTargetPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={targetPage >= totalPages}
+                className="w-10 h-10 rounded-xl bg-surface-container-high border border-outline-variant/30 text-on-surface disabled:opacity-40 font-bold flex items-center justify-center active:scale-95 shrink-0"
+              >
+                <Plus size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="flex items-center gap-2">
-              <input
-                type="number"
-                min={1}
-                max={totalPages}
-                value={inputPage}
-                onChange={(e) => setInputPage(e.target.value)}
-                autoFocus
-                className="flex-1 h-11 px-3.5 rounded-2xl bg-surface border border-outline-variant/40 text-center font-mono font-extrabold text-sm text-on-surface focus:outline-none focus:border-primary"
-                placeholder={`1 - ${totalPages}`}
-              />
-              <button
-                type="submit"
-                className="h-11 px-4 rounded-2xl bg-primary text-on-primary font-bold text-xs flex items-center justify-center gap-1 shadow-sm hover:opacity-90 transition-all"
-              >
-                <Check size={14} /> Đi
-              </button>
-            </form>
-
-            {/* Quick Page Shortcut Buttons */}
-            {totalPages > 1 && (
-              <div className="flex flex-wrap gap-1.5 pt-1 border-t border-outline-variant/10">
-                {Array.from({ length: Math.min(totalPages, 6) }, (_, i) => i + 1).map((pNum) => (
-                  <button
-                    key={pNum}
-                    onClick={() => handleGoToPage(pNum)}
-                    className={`flex-1 min-w-[42px] py-1.5 rounded-xl text-xs font-mono font-bold transition-all ${
-                      pNum === page
-                        ? 'bg-primary text-on-primary'
-                        : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
-                    }`}
-                  >
-                    Trang {pNum}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Primary Action Button */}
+            <button
+              onClick={() => handleGoToPage(targetPage)}
+              className="w-full h-12 rounded-2xl bg-primary text-on-primary font-black text-sm flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-transform uppercase tracking-wider"
+            >
+              <Check size={18} strokeWidth={3} /> Trang {targetPage}
+            </button>
           </div>
         </div>
       )}

@@ -10,7 +10,7 @@ import { BottomDock } from '../../components/BottomDock';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { OfflineManagerSheet } from '../../components/OfflineManagerSheet';
-import { RefreshCw, BookOpen, Clock, Sparkles } from 'lucide-react';
+import { BookOpen, Clock, Sparkles, Library } from 'lucide-react';
 
 import { useLibraryStore } from '../../stores/useLibraryStore';
 
@@ -30,6 +30,7 @@ export function LibraryScreen() {
   const showToast = useToastStore((state) => state.showToast);
   const { openSettings, isOfflineManagerOpen, closeOfflineManager } = useModalStore();
 
+  const mainScrollRef = useRef<HTMLDivElement | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isRestoredRef = useRef(false);
 
@@ -38,16 +39,12 @@ export function LibraryScreen() {
     setLibraryState(page, tab, search);
   }, [page, tab, search, setLibraryState]);
 
-  // Track and save scroll Y position on scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      setLibraryState(page, tab, search, window.scrollY);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [page, tab, search, setLibraryState]);
+  // Track and save scroll position on main container scroll
+  const handleMainScroll = () => {
+    if (mainScrollRef.current) {
+      setLibraryState(page, tab, search, mainScrollRef.current.scrollTop);
+    }
+  };
 
   // Fetch paginated books directly from backend API with tab filter
   const fetchBooks = useCallback(
@@ -91,9 +88,11 @@ export function LibraryScreen() {
   useEffect(() => {
     if (!loading && books.length > 0 && !isRestoredRef.current) {
       isRestoredRef.current = true;
-      if (savedScrollY > 0) {
+      if (savedScrollY > 0 && mainScrollRef.current) {
         requestAnimationFrame(() => {
-          window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+          if (mainScrollRef.current) {
+            mainScrollRef.current.scrollTop = savedScrollY;
+          }
         });
       }
     }
@@ -103,7 +102,9 @@ export function LibraryScreen() {
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
     setLibraryState(newPage, tab, search, 0);
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTop = 0;
+    }
     fetchBooks(newPage, search, tab);
   };
 
@@ -127,18 +128,24 @@ export function LibraryScreen() {
   };
 
   return (
-    <div className="min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-28 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden hide-scrollbar transition-colors duration-200">
-      {/* Header with Essential Shortcut Icons (Wifi & Settings) */}
-      <LibraryHeader
-        searchQuery={search}
-        onSearchChange={handleSearchChange}
-        onOpenSettings={() => openSettings('reader')}
-      />
+    <div className="h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-200">
+      {/* Pinned Sticky Header & Filters Section */}
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-outline-variant/20 shrink-0">
+        <LibraryHeader
+          searchQuery={search}
+          onSearchChange={handleSearchChange}
+          onOpenSettings={() => openSettings('reader')}
+        />
 
-      <main className="px-3.5 pt-3.5">
-        <div className="flex items-center justify-between mb-3 gap-2">
+        <div className="flex items-center justify-between px-3.5 py-2.5 gap-2 border-t border-outline-variant/10">
           <h2 className="text-[11px] font-mono font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-1.5 min-w-0 truncate">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
+            {tab === 'HISTORY' ? (
+              <Clock size={13} className="text-amber-400 shrink-0" />
+            ) : tab === 'AI' ? (
+              <Sparkles size={13} className="text-emerald-400 shrink-0" />
+            ) : (
+              <Library size={13} className="text-primary shrink-0" />
+            )}
             <span className="truncate">
               {tab === 'HISTORY'
                 ? 'LỊCH SỬ ĐỌC TRUYỆN'
@@ -148,9 +155,8 @@ export function LibraryScreen() {
             </span>
           </h2>
 
-          {/* Action Icon Group: All, History, Pending AI, Refresh (Icon-Only) */}
+          {/* Action Icon Group: All, History, Pending AI, Refresh */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            {/* All Books Icon */}
             <button
               onClick={() => handleTabChange('ALL')}
               className={`p-1.5 rounded-xl border transition-all active:scale-95 ${
@@ -163,7 +169,6 @@ export function LibraryScreen() {
               <BookOpen size={14} />
             </button>
 
-            {/* History Filter Icon */}
             <button
               onClick={() => handleTabChange(tab === 'HISTORY' ? 'ALL' : 'HISTORY')}
               className={`p-1.5 rounded-xl border transition-all active:scale-95 ${
@@ -176,7 +181,6 @@ export function LibraryScreen() {
               <Clock size={14} />
             </button>
 
-            {/* Pending AI Translation Filter Icon (Online Only) */}
             {!isOfflineMode && (
               <button
                 onClick={() => handleTabChange(tab === 'AI' ? 'ALL' : 'AI')}
@@ -190,19 +194,16 @@ export function LibraryScreen() {
                 <Sparkles size={14} />
               </button>
             )}
-
-            {/* Refresh Button (Icon Only) */}
-            <button
-              onClick={() => fetchBooks(page, search, tab)}
-              disabled={loading}
-              className="p-1.5 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-primary transition-all active:scale-95 hover:bg-surface-container-high"
-              title="Làm mới danh sách"
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin text-primary' : ''} />
-            </button>
           </div>
         </div>
+      </div>
 
+      {/* Independently Scrollable Book List */}
+      <main
+        ref={mainScrollRef}
+        onScroll={handleMainScroll}
+        className="flex-1 overflow-y-auto hide-scrollbar px-3.5 pt-3 pb-28 min-h-0"
+      >
         {loading ? (
           <LoadingOverlay message="Đang kết nối thư viện..." />
         ) : books.length === 0 ? (
