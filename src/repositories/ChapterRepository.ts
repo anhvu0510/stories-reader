@@ -11,7 +11,9 @@ export const ChapterRepository = {
     sortBy: string = 'chapterNumber',
     sortOrder: string = 'ASC',
     state?: string,
-    search?: string
+    search?: string,
+    fromChapterNumber?: number,
+    toChapterNumber?: number
   ): Promise<{ chapters: Chapter[]; pagination: any }> {
     const isOffline = useAppStore.getState().isOfflineMode;
 
@@ -25,6 +27,8 @@ export const ChapterRepository = {
         });
         if (state && state !== 'all') query.append('state', state);
         if (search) query.append('search', search);
+        if (fromChapterNumber !== undefined) query.append('fromChapterNumber', fromChapterNumber.toString());
+        if (toChapterNumber !== undefined) query.append('toChapterNumber', toChapterNumber.toString());
 
         const res = await apiClient.get<any>(`/api/books/${bookId}/chapters?${query.toString()}`);
         if (res) {

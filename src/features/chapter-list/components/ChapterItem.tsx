@@ -26,7 +26,7 @@ const formatDate = (dateStr?: string) => {
 };
 
 export const ChapterItem = forwardRef<HTMLDivElement, ChapterItemProps>(
-  ({ chapter, bookId, onClick, showStatus = true }, ref) => {
+  ({ chapter, bookId, isActive = false, onClick, showStatus = true }, ref) => {
     const navigate = useNavigate();
     const formattedDate = formatDate(chapter.updatedAt);
 
@@ -42,18 +42,43 @@ export const ChapterItem = forwardRef<HTMLDivElement, ChapterItemProps>(
       <div
         ref={ref}
         onClick={handleClick}
-        className="group relative rounded-2xl border border-outline-variant/30 bg-surface-container-high hover:bg-surface-container-highest/80 hover:border-primary/40 text-on-surface transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 p-3 shadow-xs active:scale-[0.985]"
+        className={`group relative rounded-2xl transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 p-3 active:scale-[0.985] ${
+          isActive
+            ? 'border-2 border-primary bg-primary/15 shadow-md ring-2 ring-primary/25 text-on-surface'
+            : 'border border-outline-variant/30 bg-surface-container-high hover:bg-surface-container-highest/80 hover:border-primary/40 text-on-surface'
+        }`}
       >
-        {/* Left Side: Compact Modern CH Badge (Theme-Synced) */}
-        <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 font-mono text-primary shadow-xs">
-          <span className="text-[11px] font-black leading-none">Ch.{chapter.chapterNumber}</span>
+        {/* Left Side: Flex Pill CH Badge (Never overflows for 4-6 digit numbers) */}
+        <div
+          className={`px-2.5 py-1 min-w-[40px] h-8 rounded-xl flex items-center justify-center flex-shrink-0 font-mono text-[11px] whitespace-nowrap shadow-xs transition-colors ${
+            isActive
+              ? 'bg-primary text-on-primary font-extrabold'
+              : 'bg-primary/10 border border-primary/20 text-primary'
+          }`}
+        >
+          <span>Ch.{chapter.chapterNumber}</span>
         </div>
 
         {/* Middle Content */}
         <div className="flex-1 min-w-0 space-y-0.5">
-          <h4 className="text-xs font-bold leading-snug text-on-surface group-hover:text-primary transition-colors break-words whitespace-normal">
-            {chapter.title || `Chương ${chapter.chapterNumber}`}
-          </h4>
+          <div className="flex items-center gap-2">
+            <h4
+              className={`text-xs leading-snug transition-colors break-words whitespace-normal ${
+                isActive
+                  ? 'text-primary font-black tracking-tight'
+                  : 'font-bold text-on-surface group-hover:text-primary'
+              }`}
+            >
+              {chapter.title || `Chương ${chapter.chapterNumber}`}
+            </h4>
+
+            {isActive && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[9.5px] font-mono font-black shrink-0 tracking-wider flex items-center gap-1 shadow-2xs">
+                <span>📌 ĐANG ĐỌC</span>
+              </span>
+            )}
+          </div>
+
           {formattedDate && (
             <div className="flex items-center gap-1 text-[10px] font-mono text-on-surface-variant/60">
               <Calendar size={10} className="text-on-surface-variant/50" />
@@ -95,7 +120,11 @@ export const ChapterItem = forwardRef<HTMLDivElement, ChapterItemProps>(
 
           <ArrowRight
             size={14}
-            className="text-primary/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all"
+            className={`transition-all ${
+              isActive
+                ? 'text-primary translate-x-0.5'
+                : 'text-primary/60 group-hover:text-primary group-hover:translate-x-0.5'
+            }`}
           />
         </div>
       </div>

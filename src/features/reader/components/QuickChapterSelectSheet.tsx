@@ -1,88 +1,227 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChapterRepository } from '../../../repositories/ChapterRepository';
 import { Chapter } from '../../../shared/types';
-import { X, Search, CheckCircle2, Clock, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Search, Clock, RefreshCw } from 'lucide-react';
 import { ChapterItem } from '../../chapter-list/components/ChapterItem';
 
 interface QuickChapterSelectSheetProps {
   bookId: string;
   currentChapterId?: string;
+  currentChapterNumber?: number;
   onClose: () => void;
 }
 
-const PAGE_SIZE = 30;
+const PAGE_SIZE = 20;
 
-export function QuickChapterSelectSheet({ bookId, currentChapterId, onClose }: QuickChapterSelectSheetProps) {
+export function QuickChapterSelectSheet({
+  bookId,
+  currentChapterId,
+  currentChapterNumber,
+  onClose,
+}: QuickChapterSelectSheetProps) {
   const navigate = useNavigate();
   const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [pinnedChapter, setPinnedChapter] = useState<Chapter | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [loadingBottom, setLoadingBottom] = useState(false);
+  const [loadingTop, setLoadingTop] = useState(false);
+
+  const [hasMoreTop, setHasMoreTop] = useState(false);
+  const [hasMoreBottom, setHasMoreBottom] = useState(true);
+  const [minChapterNum, setMinChapterNum] = useState<number>(1);
+  const [maxChapterNum, setMaxChapterNum] = useState<number>(1);
   const [search, setSearch] = useState('');
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const activeItemRef = useRef<HTMLDivElement | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialScrollDoneRef = useRef(false);
 
-  // Fetch chapters with pagination & search
-  const fetchChapters = useCallback(
-    async (targetPage: number, searchQuery: string, isAppend: boolean = false) => {
-      if (isAppend) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
-      }
+  // Primary single API fetch handler starting from (currentChapterNumber - 5) to (currentChapterNumber + 20)
+  const loadInitialChapters = useCallback(
+    async (searchQuery: string = '') => {
+      setLoading(true);
+      isInitialScrollDoneRef.current = false;
+      const startChapterNumber = searchQuery
+        ? undefined
+        : currentChapterNumber
+        ? Math.max(1, currentChapterNumber - 5)
+        : 1;
+      const endChapterNumber = searchQuery
+        ? undefined
+        : currentChapterNumber
+        ? currentChapterNumber + 20
+        : undefined;
 
       try {
         const res = await ChapterRepository.getChapters(
           bookId,
-          targetPage,
-          PAGE_SIZE,
+          1,
+          26,
           'chapterNumber',
           'ASC',
           'all',
-          searchQuery
+          searchQuery,
+          startChapterNumber,
+          endChapterNumber
         );
 
         const newChapters = res.chapters || [];
-        const totalPages = res.pagination?.totalPages || 1;
+        setChapters(newChapters);
 
-        if (currentChapterId) {
-          const found = newChapters.find((c) => c.chapterId === currentChapterId);
-          if (found) {
-            setPinnedChapter(found);
-          }
-        }
-
-        if (isAppend) {
-          setChapters((prev) => {
-            const existingIds = new Set(prev.map((c) => c.chapterId));
-            const uniqueNew = newChapters.filter((c) => !existingIds.has(c.chapterId));
-            return [...prev, ...uniqueNew];
-          });
+        if (newChapters.length > 0) {
+          const minNum = Math.min(...newChapters.map((c) => c.chapterNumber));
+          const maxNum = Math.max(...newChapters.map((c) => c.chapterNumber));
+          setMinChapterNum(minNum);
+          setMaxChapterNum(maxNum);
+          setHasMoreTop(!searchQuery && minNum > 1);
+          setHasMoreBottom(newChapters.length >= 20);
         } else {
-          setChapters(newChapters);
+          setHasMoreTop(false);
+          setHasMoreBottom(false);
         }
-
-        setPage(targetPage);
-        setHasMore(targetPage < totalPages && newChapters.length > 0);
       } catch {
-        // Ignore
+        // Ignore error
       } finally {
         setLoading(false);
-        setLoadingMore(false);
       }
     },
-    [bookId]
+    [bookId, currentChapterNumber]
   );
 
-  // Initial load
+  // Initial mount - Calls API EXACTLY ONCE
   useEffect(() => {
-    fetchChapters(1, '', false);
-  }, [fetchChapters]);
+    loadInitialChapters('');
+  }, [loadInitialChapters]);
+
+  // Auto-scroll positioning active chapter directly below search input
+  const scrollToActive = useCallback(() => {
+    if (activeItemRef.current && scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const activeEl = activeItemRef.current;
+      container.scrollTop = activeEl.offsetTop - container.offsetTop;
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!loading && chapters.length > 0 && !isInitialScrollDoneRef.current) {
+      isInitialScrollDoneRef.current = true;
+      requestAnimationFrame(() => {
+        scrollToActive();
+        setTimeout(scrollToActive, 50);
+        setTimeout(scrollToActive, 150);
+      });
+    }
+  }, [loading, chapters, scrollToActive]);
+
+  // Fetch next bottom chapters starting from maxChapterNum + 1 (Scroll Down)
+  const fetchNextBottomPage = async () => {
+    if (loadingBottom || !hasMoreBottom || search) return;
+    setLoadingBottom(true);
+    const targetFromChapter = maxChapterNum + 1;
+
+    try {
+      const res = await ChapterRepository.getChapters(
+        bookId,
+        1,
+        PAGE_SIZE,
+        'chapterNumber',
+        'ASC',
+        'all',
+        search,
+        targetFromChapter
+      );
+
+      const newChapters = res.chapters || [];
+
+      if (newChapters.length > 0) {
+        setChapters((prev) => {
+          const existingIds = new Set(prev.map((c) => c.chapterId));
+          const uniqueNew = newChapters.filter((c) => !existingIds.has(c.chapterId));
+          return [...prev, ...uniqueNew];
+        });
+        const newMax = Math.max(...newChapters.map((c) => c.chapterNumber));
+        setMaxChapterNum(newMax);
+        setHasMoreBottom(newChapters.length >= PAGE_SIZE);
+      } else {
+        setHasMoreBottom(false);
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setLoadingBottom(false);
+    }
+  };
+
+  // Fetch previous top chapters before minChapterNum (Scroll Up)
+  const fetchPrevTopPage = async () => {
+    if (loadingTop || !hasMoreTop || minChapterNum <= 1 || search) return;
+    setLoadingTop(true);
+
+    const container = scrollContainerRef.current;
+    const prevScrollHeight = container ? container.scrollHeight : 0;
+    const prevScrollTop = container ? container.scrollTop : 0;
+    const targetToChapter = minChapterNum - 1;
+    const targetFromChapter = Math.max(1, minChapterNum - PAGE_SIZE);
+
+    try {
+      const res = await ChapterRepository.getChapters(
+        bookId,
+        1,
+        PAGE_SIZE,
+        'chapterNumber',
+        'ASC',
+        'all',
+        search,
+        targetFromChapter,
+        targetToChapter
+      );
+
+      const newChapters = res.chapters || [];
+
+      if (newChapters.length > 0) {
+        setChapters((prev) => {
+          const existingIds = new Set(prev.map((c) => c.chapterId));
+          const uniqueNew = newChapters.filter((c) => !existingIds.has(c.chapterId));
+          return [...uniqueNew, ...prev];
+        });
+
+        const newMin = Math.min(...newChapters.map((c) => c.chapterNumber));
+        setMinChapterNum(newMin);
+        setHasMoreTop(newMin > 1);
+
+        // Adjust scroll position after prepending
+        requestAnimationFrame(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight;
+            container.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
+          }
+        });
+      } else {
+        setHasMoreTop(false);
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setLoadingTop(false);
+    }
+  };
+
+  // Scroll handler for 2-way Infinite Scroll (Top & Bottom)
+  const handleScroll = () => {
+    if (!scrollContainerRef.current || loading) return;
+    const { scrollTop, clientHeight, scrollHeight } = scrollContainerRef.current;
+
+    // Scroll Down -> Load More Bottom
+    if (scrollTop + clientHeight >= scrollHeight - 80) {
+      fetchNextBottomPage();
+    }
+
+    // Scroll Up -> Load More Top
+    if (scrollTop <= 50) {
+      fetchPrevTopPage();
+    }
+  };
 
   // Debounced API Search
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,19 +230,9 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, onClose }: Q
 
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      fetchChapters(1, val, false);
+      loadInitialChapters(val);
     }, 300);
   };
-
-  // Scroll event for Infinite Scroll pagination
-  const handleScroll = () => {
-    if (!scrollContainerRef.current || loading || loadingMore || !hasMore) return;
-    const { scrollTop, clientHeight, scrollHeight } = scrollContainerRef.current;
-    if (scrollTop + clientHeight >= scrollHeight - 60) {
-      fetchChapters(page + 1, search, true);
-    }
-  };
-
 
   const handleSelectChapter = (chapterId: string) => {
     onClose();
@@ -143,7 +272,7 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, onClose }: Q
           </div>
         </div>
 
-        {/* Chapters Scroll Area with Infinite Scroll */}
+        {/* Chapters Scroll Area with 2-way Infinite Scroll */}
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
@@ -160,44 +289,41 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, onClose }: Q
             </div>
           ) : (
             <>
-              {/* Section 1: Permanently Pinned Current Chapter */}
-              {pinnedChapter && (
-                <div className="mb-3 space-y-1.5 shrink-0">
-                  <div className="text-[11px] font-mono font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1 px-1">
-                    <span>📌 Chương đang đọc</span>
-                  </div>
-                  <ChapterItem
-                    chapter={pinnedChapter}
-                    isActive={true}
-                    showStatus={true}
-                    onClick={() => handleSelectChapter(pinnedChapter.chapterId)}
-                  />
+              {/* Top Loading Spinner Indicator when Scrolling Up */}
+              {loadingTop && (
+                <div className="py-2 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2 font-mono">
+                  <RefreshCw size={14} className="animate-spin text-primary" />
+                  <span>Đang tải chương trước...</span>
                 </div>
               )}
 
               {/* Section 2: All Chapters Header */}
               <div className="text-[11px] font-mono font-black text-on-surface-variant/70 uppercase tracking-wider flex items-center justify-between px-1 pt-1 pb-0.5">
-                <span>📚 Tất cả chương</span>
+                <span>📚 Danh sách chương ({chapters.length})</span>
               </div>
 
               {chapters.map((c, idx) => {
                 const isActive = c.chapterId === currentChapterId;
                 return (
-                  <ChapterItem
+                  <div
                     key={c.chapterId || `chap-${c.chapterNumber || idx}-${idx}`}
-                    chapter={c}
-                    isActive={isActive}
-                    showStatus={true}
-                    onClick={() => handleSelectChapter(c.chapterId)}
-                  />
+                    ref={isActive ? activeItemRef : null}
+                  >
+                    <ChapterItem
+                      chapter={c}
+                      isActive={isActive}
+                      showStatus={true}
+                      onClick={() => handleSelectChapter(c.chapterId)}
+                    />
+                  </div>
                 );
               })}
 
-              {/* Infinite Scroll Bottom Spinner Indicator */}
-              {loadingMore && (
+              {/* Bottom Loading Spinner Indicator when Scrolling Down */}
+              {loadingBottom && (
                 <div className="py-3 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2 font-mono">
                   <RefreshCw size={14} className="animate-spin text-primary" />
-                  <span>Đang tải thêm...</span>
+                  <span>Đang tải chương tiếp theo...</span>
                 </div>
               )}
             </>

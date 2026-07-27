@@ -367,6 +367,7 @@ export function ReaderScreen() {
           <QuickChapterSelectSheet
             bookId={bookId || ''}
             currentChapterId={chapterId}
+            currentChapterNumber={chapter.chapterNumber}
             onClose={() => setShowChapterSelectSheet(false)}
           />
         )}
