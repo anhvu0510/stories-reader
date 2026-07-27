@@ -108,15 +108,27 @@ export function LibraryScreen() {
     fetchBooks(newPage, search, tab);
   };
 
-  // Debounced search handler
+  // Optimized Debounced search handler (650ms delay + immediate clear)
   const handleSearchChange = (val: string) => {
     setSearch(val);
     setPage(1);
     setLibraryState(1, tab, val, 0);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+
+    if (val.trim() === '') {
+      fetchBooks(1, '', tab);
+      return;
+    }
+
     searchTimeoutRef.current = setTimeout(() => {
       fetchBooks(1, val, tab);
-    }, 300);
+    }, 650);
+  };
+
+  // Immediate search submit handler (e.g. Enter key or Search icon click)
+  const handleSearchSubmit = () => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    fetchBooks(1, search, tab);
   };
 
   // Tab switch handler: resets page and passes new tab to API
@@ -134,6 +146,7 @@ export function LibraryScreen() {
         <LibraryHeader
           searchQuery={search}
           onSearchChange={handleSearchChange}
+          onSubmitSearch={handleSearchSubmit}
           onOpenSettings={() => openSettings('reader')}
         />
 
