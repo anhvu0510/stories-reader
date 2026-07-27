@@ -2,11 +2,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Loader2, BookOpen } from 'lucide-react';
 
 interface LoadingOverlayProps {
-  isLoading: boolean;
+  isLoading?: boolean;
   message?: string;
 }
 
-export function LoadingOverlay({ isLoading, message = 'Đang tải dữ liệu...' }: LoadingOverlayProps) {
+export function LoadingOverlay({ isLoading = true, message = 'Đang tải dữ liệu...' }: LoadingOverlayProps) {
   return (
     <AnimatePresence>
       {isLoading && (

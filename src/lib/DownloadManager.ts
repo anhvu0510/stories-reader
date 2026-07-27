@@ -1,11 +1,11 @@
-import { api, Book, Chapter } from './api';
+import { Book, Chapter } from '../shared/types';
 import { offlineDb } from './offlineDb';
+import { useAppStore } from '../stores/useAppStore';
 import oboe from 'oboe';
-import { getActiveDomain } from './api';
 
 // Suppress Oboe's attempt to set Content-Length which causes an ugly red browser warning
 const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
-XMLHttpRequest.prototype.setRequestHeader = function(header: string, value: string) {
+XMLHttpRequest.prototype.setRequestHeader = function (header: string, value: string) {
   if (header.toLowerCase() === 'content-length') {
     return; // Ignore to prevent "Refused to set unsafe header" warning
   }
@@ -81,12 +81,12 @@ class DownloadManager {
       totalChapters: 0,
       completedChapters: 0,
     };
-    
+
     this.tasks.set(bookId, newTask);
     this.queue.push(bookId);
     this.stopMap.set(bookId, false);
     this.batchTotal++;
-    
+
     this.notify();
     this.processQueue();
   }
@@ -129,7 +129,7 @@ class DownloadManager {
       this.batchCompleted++;
       this.lastProcessedBookName = task.bookName;
       if (this.batchTotal <= 1) {
-        window.dispatchEvent(new CustomEvent('app-toast', { 
+        window.dispatchEvent(new CustomEvent('app-toast', {
           detail: { message: `Đã tải xong: ${task.bookName}`, type: 'success' }
         }));
       }
@@ -138,24 +138,24 @@ class DownloadManager {
     } catch (e: any) {
       task.status = 'error';
       task.error = e.message;
-      
+
       // Rollback: clear the book and any partially downloaded chapters
       try {
         await offlineDb.deleteBook(bookId);
       } catch (err) {
         console.error('Failed to rollback book:', err);
       }
-      
+
       this.batchCompleted++; // Count as processed for batch tracking
       this.lastProcessedBookName = task.bookName;
 
       if (this.batchTotal <= 1) {
         if (e.message === "Đã hủy") {
-          window.dispatchEvent(new CustomEvent('app-toast', { 
+          window.dispatchEvent(new CustomEvent('app-toast', {
             detail: { message: `Đã ngừng tải ${task.bookName}. Dữ liệu tải dở đã được dọn dẹp.`, type: 'info' }
           }));
         } else {
-          window.dispatchEvent(new CustomEvent('app-toast', { 
+          window.dispatchEvent(new CustomEvent('app-toast', {
             detail: { message: `Lỗi tải ${task.bookName}. Dữ liệu tải dở đã được dọn dẹp.`, type: 'error' }
           }));
         }
@@ -165,7 +165,7 @@ class DownloadManager {
     } finally {
       this.activeCount--;
       this.notify();
-      
+
       // dispatch success to reload ui
       window.dispatchEvent(new CustomEvent('app-refresh'));
 
@@ -183,7 +183,7 @@ class DownloadManager {
 
       if (this.stopMap.get(task.bookId)) throw new Error("Đã hủy");
 
-      const domain = getActiveDomain();
+      const domain = useAppStore.getState().activeDomain;
       if (!domain) {
         throw new Error("Không có kết nối API. Vui lòng cấu hình API Domain.");
       }
@@ -203,74 +203,74 @@ class DownloadManager {
           body: JSON.stringify({ bookIds: [task.bookId] }),
           cached: false
         })
-        .node('data.*.book', (book: any) => {
-          task.bookName = book.bookName;
-          task.totalChapters = book.chapterCount;
-          task.progress = 5;
-          this.notify();
-          
-          bookSavePromise = offlineDb.saveBook(book).then(() => {
-            isBookSaved = true;
-          });
-          
-          return oboe.drop;
-        })
-        .node('data.*.chapters.*', (chap: any) => {
-          if (this.stopMap.get(task.bookId)) {
-            stream.abort();
-            reject(new Error("Đã hủy"));
+          .node('data.*.book', (book: any) => {
+            task.bookName = book.bookName;
+            task.totalChapters = book.chapterCount;
+            task.progress = 5;
+            this.notify();
+
+            bookSavePromise = offlineDb.saveBook(book).then(() => {
+              isBookSaved = true;
+            });
+
             return oboe.drop;
-          }
+          })
+          .node('data.*.chapters.*', (chap: any) => {
+            if (this.stopMap.get(task.bookId)) {
+              stream.abort();
+              reject(new Error("Đã hủy"));
+              return oboe.drop;
+            }
 
-          // We wait for the book logic to complete if needed, but since offlineDb handles independent objects, we can just save.
-          const saveAction = async () => {
-             if (bookSavePromise && !isBookSaved) {
-               await bookSavePromise;
-             }
-             await offlineDb.saveChapter({ ...chap, bookId: task.bookId, content: undefined, state: chap.state ?? 'SUCCEEDED' });
-             const content = {
-               chapter: {
-                 chapterId: chap.chapterId,
-                 chapterNumber: chap.chapterNumber,
-                 title: chap.title,
-                 bookName: chap.bookName || task.bookName,
-                 state: chap.state ?? 'SUCCEEDED',
-                 totalTokens: chap.totalTokens || 0,
-                 content: chap.content || [],
-                 rootTab: chap.rootTab || ''
-               }
-             };
-             await offlineDb.saveChapterContent(content);
-             
-             task.completedChapters++;
-             task.progress = 5 + Math.round((task.completedChapters / Math.max(1, task.totalChapters)) * 90);
-             this.notify();
-          };
+            // We wait for the book logic to complete if needed, but since offlineDb handles independent objects, we can just save.
+            const saveAction = async () => {
+              if (bookSavePromise && !isBookSaved) {
+                await bookSavePromise;
+              }
+              await offlineDb.saveChapter({ ...chap, bookId: task.bookId, content: undefined, state: chap.state ?? 'SUCCEEDED' });
+              const content = {
+                chapter: {
+                  chapterId: chap.chapterId,
+                  chapterNumber: chap.chapterNumber,
+                  title: chap.title,
+                  bookName: chap.bookName || task.bookName,
+                  state: chap.state ?? 'SUCCEEDED',
+                  totalTokens: chap.totalTokens || 0,
+                  content: chap.content || [],
+                  rootTab: chap.rootTab || ''
+                }
+              };
+              await offlineDb.saveChapterContent(content);
 
-          chapterPromises.push(saveAction());
+              task.completedChapters++;
+              task.progress = 5 + Math.round((task.completedChapters / Math.max(1, task.totalChapters)) * 90);
+              this.notify();
+            };
 
-          // To prevent taking up too much memory, we discard the parsed chapter node
-          return oboe.drop;
-        })
-        .done(async () => {
-          try {
-            await Promise.all(chapterPromises);
-            resolve();
-          } catch (e) {
-            reject(e);
-          }
-        })
-        .fail((err: any) => {
-           if (this.stopMap.get(task.bookId)) {
-             reject(new Error("Đã hủy"));
-           } else {
-             reject(new Error("Lỗi luồng dữ liệu (Stream Error): " + (err.error?.message || err.statusCode || "Unknown")));
-           }
-        });
+            chapterPromises.push(saveAction());
+
+            // To prevent taking up too much memory, we discard the parsed chapter node
+            return oboe.drop;
+          })
+          .done(async () => {
+            try {
+              await Promise.all(chapterPromises);
+              resolve();
+            } catch (e) {
+              reject(e);
+            }
+          })
+          .fail((err: any) => {
+            if (this.stopMap.get(task.bookId)) {
+              reject(new Error("Đã hủy"));
+            } else {
+              reject(new Error("Lỗi luồng dữ liệu (Stream Error): " + (err.error?.message || err.statusCode || "Unknown")));
+            }
+          });
       });
 
       if (this.stopMap.get(task.bookId)) throw new Error("Đã hủy");
-      
+
       task.progress = 100;
       this.notify();
 

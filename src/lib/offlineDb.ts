@@ -1,5 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { Book, Chapter, ChapterContent, Replacement } from './api';
+import { Book, Chapter, ChapterContent, Replacement } from '../shared/types';
 
 interface ReaderDBSchema extends DBSchema {
   books: {
@@ -62,22 +62,22 @@ export const offlineDb = {
   },
   async deleteBook(bookId: string) {
     const db = await initDB();
-    
+
     // First find all related chapters
     const keys = await db.getAllKeysFromIndex('chapters', 'by-book', bookId);
-    
+
     // Delete in chunks/separate transactions to avoid transaction inactivity
     const tx = db.transaction(['books', 'chapters', 'chapterContents'], 'readwrite');
     tx.objectStore('books').delete(bookId);
-    
+
     const chapterStore = tx.objectStore('chapters');
     const chapterContentStore = tx.objectStore('chapterContents');
-    
+
     for (const key of keys) {
       chapterStore.delete(key);
       chapterContentStore.delete(key);
     }
-    
+
     await tx.done;
   },
   async deleteAllBooks() {
@@ -103,7 +103,7 @@ export const offlineDb = {
     const db = await initDB();
     await db.put('chapters', chapter);
   },
-  
+
   // Chapter Content
   async getChapterContent(chapterId: string): Promise<ChapterContent | undefined> {
     const db = await initDB();
@@ -129,10 +129,10 @@ export const offlineDb = {
   },
   async saveChapterContent(content: ChapterContent) {
     const db = await initDB();
-    
+
     // Create a copy to modify
     const contentToSave = JSON.parse(JSON.stringify(content));
-    
+
     // Compress content if available
     if (contentToSave.chapter.content && contentToSave.chapter.content.length > 0) {
       try {
@@ -141,7 +141,7 @@ export const offlineDb = {
           const stream = new Blob([jsonStr]).stream().pipeThrough(new CompressionStream('deflate'));
           const response = new Response(stream);
           const buffer = await response.arrayBuffer();
-          
+
           contentToSave.chapter.compressedContent = new Uint8Array(buffer);
           delete contentToSave.chapter.content; // Free up space
         }
@@ -175,16 +175,16 @@ export const offlineDb = {
   async getDbSize(): Promise<number> {
     const db = await initDB();
     let size = 0;
-    
+
     try {
       // Books
       const books = await db.getAll('books');
       size += JSON.stringify(books).length;
-      
+
       // Chapters metadata
       const chapters = await db.getAll('chapters');
       size += JSON.stringify(chapters).length;
-      
+
       // Chapter Contents (large, use cursor)
       let cursor = await db.transaction('chapterContents').store.openCursor();
       while (cursor) {
@@ -203,7 +203,7 @@ export const offlineDb = {
     } catch (e) {
       console.error("Failed to calculate DB size", e);
     }
-    
+
     return size;
   }
 };
