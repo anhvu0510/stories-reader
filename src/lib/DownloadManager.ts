@@ -181,20 +181,87 @@ class DownloadManager {
       task.progress = 5;
       this.notify();
 
-      if (this.stopMap.get(task.bookId)) throw new Error("Đã hủy");
-
       const domain = useAppStore.getState().activeDomain;
       if (!domain) {
         throw new Error("Không có kết nối API. Vui lòng cấu hình API Domain.");
       }
+      const baseUrl = domain.url.replace(/\/$/, '');
 
       await new Promise<void>((resolve, reject) => {
         let isBookSaved = false;
         let bookSavePromise: Promise<void> | null = null;
         let chapterPromises: Promise<any>[] = [];
 
+        const handleBookNode = (book: any) => {
+          const bookId = String(book.bookId || book._id || book.id || task.bookId);
+          const normalizedBook: Book = {
+            ...book,
+            bookId,
+            bookName: book.bookName || task.bookName,
+            chapterCount: typeof book.chapterCount === 'number' ? book.chapterCount : (book.totalChapters || task.totalChapters || 0),
+          };
+
+          task.bookName = normalizedBook.bookName;
+          task.totalChapters = normalizedBook.chapterCount;
+          task.progress = 5;
+          this.notify();
+
+          bookSavePromise = offlineDb.saveBook(normalizedBook).then(() => {
+            isBookSaved = true;
+          });
+
+          return oboe.drop;
+        };
+
+        const handleChapterNode = (chap: any) => {
+          if (this.stopMap.get(task.bookId)) {
+            stream.abort();
+            reject(new Error("Đã hủy"));
+            return oboe.drop;
+          }
+
+          const chapterId = String(chap.chapterId || chap._id || chap.id || `chap-${chap.chapterNumber}`);
+          const chapterNumber = typeof chap.chapterNumber === 'number' ? chap.chapterNumber : (parseInt(chap.chapterNumber, 10) || 0);
+
+          const saveAction = async () => {
+            if (bookSavePromise && !isBookSaved) {
+              await bookSavePromise;
+            }
+            await offlineDb.saveChapter({
+              ...chap,
+              chapterId,
+              chapterNumber,
+              title: chap.title || `Chương ${chapterNumber}`,
+              bookId: task.bookId,
+              content: undefined,
+              state: chap.state ?? 'SUCCEEDED'
+            });
+
+            const content = {
+              chapter: {
+                chapterId,
+                chapterNumber,
+                title: chap.title || `Chương ${chapterNumber}`,
+                bookName: chap.bookName || task.bookName,
+                state: chap.state ?? 'SUCCEEDED',
+                totalTokens: chap.totalTokens || 0,
+                content: chap.content || [],
+                rootTab: chap.rootTab || ''
+              }
+            };
+            await offlineDb.saveChapterContent(content);
+
+            task.completedChapters++;
+            task.progress = 5 + Math.round((task.completedChapters / Math.max(1, task.totalChapters)) * 90);
+            this.notify();
+          };
+
+          chapterPromises.push(saveAction());
+          return oboe.drop;
+        };
+
         const stream = oboe({
-          url: `${domain.url}/api/books/download`,
+          url: `${baseUrl}/api/books/download`,
           method: 'POST',
           headers: {
             'ngrok-skip-browser-warning': 'true',
@@ -203,55 +270,12 @@ class DownloadManager {
           body: JSON.stringify({ bookIds: [task.bookId] }),
           cached: false
         })
-          .node('data.*.book', (book: any) => {
-            task.bookName = book.bookName;
-            task.totalChapters = book.chapterCount;
-            task.progress = 5;
-            this.notify();
-
-            bookSavePromise = offlineDb.saveBook(book).then(() => {
-              isBookSaved = true;
-            });
-
-            return oboe.drop;
-          })
-          .node('data.*.chapters.*', (chap: any) => {
-            if (this.stopMap.get(task.bookId)) {
-              stream.abort();
-              reject(new Error("Đã hủy"));
-              return oboe.drop;
-            }
-
-            // We wait for the book logic to complete if needed, but since offlineDb handles independent objects, we can just save.
-            const saveAction = async () => {
-              if (bookSavePromise && !isBookSaved) {
-                await bookSavePromise;
-              }
-              await offlineDb.saveChapter({ ...chap, bookId: task.bookId, content: undefined, state: chap.state ?? 'SUCCEEDED' });
-              const content = {
-                chapter: {
-                  chapterId: chap.chapterId,
-                  chapterNumber: chap.chapterNumber,
-                  title: chap.title,
-                  bookName: chap.bookName || task.bookName,
-                  state: chap.state ?? 'SUCCEEDED',
-                  totalTokens: chap.totalTokens || 0,
-                  content: chap.content || [],
-                  rootTab: chap.rootTab || ''
-                }
-              };
-              await offlineDb.saveChapterContent(content);
-
-              task.completedChapters++;
-              task.progress = 5 + Math.round((task.completedChapters / Math.max(1, task.totalChapters)) * 90);
-              this.notify();
-            };
-
-            chapterPromises.push(saveAction());
-
-            // To prevent taking up too much memory, we discard the parsed chapter node
-            return oboe.drop;
-          })
+          .node('data.*.book', handleBookNode)
+          .node('data.book', handleBookNode)
+          .node('!data.*.book', handleBookNode)
+          .node('data.*.chapters.*', handleChapterNode)
+          .node('data.chapters.*', handleChapterNode)
+          .node('!data.*.chapters.*', handleChapterNode)
           .done(async () => {
             try {
               await Promise.all(chapterPromises);
@@ -264,7 +288,7 @@ class DownloadManager {
             if (this.stopMap.get(task.bookId)) {
               reject(new Error("Đã hủy"));
             } else {
-              reject(new Error("Lỗi luồng dữ liệu (Stream Error): " + (err.error?.message || err.statusCode || "Unknown")));
+              reject(new Error("Lỗi luồng dữ liệu (Stream Error): " + (err.error?.message || err.statusCode || (typeof err === 'string' ? err : "Unknown"))));
             }
           });
       });

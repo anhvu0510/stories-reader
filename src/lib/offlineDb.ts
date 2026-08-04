@@ -137,7 +137,7 @@ export const offlineDb = {
     if (contentToSave.chapter.content && contentToSave.chapter.content.length > 0) {
       try {
         const jsonStr = JSON.stringify(contentToSave.chapter.content);
-        if (window.CompressionStream) {
+        if (typeof window !== 'undefined' && window.CompressionStream && typeof Blob.prototype.stream === 'function') {
           const stream = new Blob([jsonStr]).stream().pipeThrough(new CompressionStream('deflate'));
           const response = new Response(stream);
           const buffer = await response.arrayBuffer();

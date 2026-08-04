@@ -2,11 +2,15 @@ import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from
 import { useNavigate } from 'react-router-dom';
 import { ChapterRepository } from '../../../repositories/ChapterRepository';
 import { Chapter } from '../../../shared/types';
-import { X, Search, Clock, RefreshCw } from 'lucide-react';
+import { X, Search, Clock, RefreshCw, Download, Trash2 } from 'lucide-react';
 import { ChapterItem } from '../../chapter-list/components/ChapterItem';
+import { downloadManager, DownloadTask } from '../../../lib/DownloadManager';
+import { offlineDb } from '../../../lib/offlineDb';
+import { useToastStore } from '../../../stores/useToastStore';
 
 interface QuickChapterSelectSheetProps {
   bookId: string;
+  bookName?: string;
   currentChapterId?: string;
   currentChapterNumber?: number;
   onClose: () => void;
@@ -21,6 +25,44 @@ export function QuickChapterSelectSheet({
   onClose,
 }: QuickChapterSelectSheetProps) {
   const navigate = useNavigate();
+  const showToast = useToastStore((state) => state.showToast);
+  const [isDownloaded, setIsDownloaded] = useState(false);
+  const [downloadTask, setDownloadTask] = useState<DownloadTask | undefined>(() => downloadManager.getTask(bookId));
+
+  useEffect(() => {
+    offlineDb.getBook(bookId).then((b) => setIsDownloaded(Boolean(b)));
+
+    const updateTask = () => {
+      setDownloadTask(downloadManager.getTask(bookId));
+      offlineDb.getBook(bookId).then((b) => setIsDownloaded(Boolean(b)));
+    };
+
+    updateTask();
+    const unsubscribe = downloadManager.subscribe(updateTask);
+    window.addEventListener('download-queue-updated', updateTask);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('download-queue-updated', updateTask);
+    };
+  }, [bookId]);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDownloadBook = () => {
+    const targetBookName = chapters[0]?.bookName || 'Truyện';
+    downloadManager.addBook(bookId, targetBookName);
+    showToast(`Đã thêm vào hàng đợi tải xuống`, 'info');
+  };
+
+  const handleConfirmDelete = async () => {
+    setShowDeleteConfirm(false);
+    const targetBookName = chapters[0]?.bookName || 'Truyện';
+    await offlineDb.deleteBook(bookId);
+    setIsDownloaded(false);
+    showToast(`Đã xóa "${targetBookName}" khỏi máy`, 'success');
+    window.dispatchEvent(new CustomEvent('app-refresh'));
+  };
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingBottom, setLoadingBottom] = useState(false);
@@ -248,15 +290,40 @@ export function QuickChapterSelectSheet({
         <div className="w-10 h-1 rounded-full bg-outline-variant/50 mx-auto my-2.5 flex-shrink-0" />
 
         {/* Header & Search */}
-        <div className="px-4 py-2 border-b border-outline-variant/20 space-y-2.5 flex-shrink-0 bg-surface-container-low">
+        <div className="px-4 py-2 mb-1 border-b border-outline-variant/20 space-y-2.5 flex-shrink-0 bg-surface-container-low">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-extrabold text-on-surface tracking-tight">Danh Sách Chương</h3>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors"
-            >
-              <X size={16} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={isDownloaded ? () => setShowDeleteConfirm(true) : handleDownloadBook}
+                disabled={Boolean(downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting'))}
+                title={isDownloaded ? "Xóa dữ liệu ngoại tuyến" : "Tải bộ truyện về đọc offline"}
+                aria-label={isDownloaded ? "Xóa dữ liệu ngoại tuyến" : "Tải bộ truyện về đọc offline"}
+                className={`p-1.5 rounded-full transition-colors ${
+                  isDownloaded
+                    ? "text-rose-500 bg-rose-500/10 hover:bg-rose-500/20"
+                    : downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting')
+                    ? "text-primary bg-primary/10"
+                    : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest"
+                }`}
+              >
+                {downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting') ? (
+                  <RefreshCw size={16} className="animate-spin text-primary" />
+                ) : isDownloaded ? (
+                  <Trash2 size={16} />
+                ) : (
+                  <Download size={16} />
+                )}
+              </button>
+
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-full hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors"
+                aria-label="Đóng"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
 
           {/* Search Input */}
@@ -330,6 +397,39 @@ export function QuickChapterSelectSheet({
           )}
         </div>
       </div>
+
+      {/* Mobile Delete Confirm Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[96000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-surface-container text-on-surface w-full max-w-xs sm:max-w-sm rounded-3xl p-5 border border-outline-variant/30 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto">
+              <Trash2 size={24} />
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h3 className="text-base font-bold text-on-surface">Xóa dữ liệu ngoại tuyến?</h3>
+              <p className="text-xs text-on-surface-variant/80 leading-relaxed">
+                Xoá toàn bộ các chương đã tải về sẽ bị xóa khỏi máy.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-xs bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-rose-600 text-white hover:bg-rose-700 shadow-md shadow-rose-600/20 transition-colors"
+              >
+                Xóa khỏi máy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
