@@ -144,15 +144,25 @@ export function ReaderScreen() {
     setShowZenControls((prev) => !prev);
   }, []);
 
-  // Fetch chapter data
+  // Fetch chapter data with guaranteed minimum loading delay for tactile feedback
   const loadChapter = useCallback(async () => {
     if (!chapterId) return;
+    const MIN_LOADING_TIME = 400;
+    const startTime = Date.now();
     setLoading(true);
     setError(null);
     try {
       const res = await ChapterRepository.getChapterContent(chapterId, groupLines, isEnabledReplace);
+      const elapsedTime = Date.now() - startTime;
+      if (elapsedTime < MIN_LOADING_TIME) {
+        await new Promise((resolve) => setTimeout(resolve, MIN_LOADING_TIME - elapsedTime));
+      }
       setContentData(res);
     } catch (e: any) {
+      const elapsedTime = Date.now() - startTime;
+      if (elapsedTime < MIN_LOADING_TIME) {
+        await new Promise((resolve) => setTimeout(resolve, MIN_LOADING_TIME - elapsedTime));
+      }
       setError(e.message || 'Lỗi khi tải nội dung chương');
     } finally {
       setLoading(false);
@@ -266,7 +276,9 @@ export function ReaderScreen() {
       ? 'font-sans'
       : 'font-serif';
 
-  if (loading) return <LoadingOverlay message="Đang mở văn bản..." />;
+  if (loading && !contentData) {
+    return <LoadingOverlay isLoading={true} message="Đang mở văn bản..." />;
+  }
 
   if (error || !contentData) {
     return (
@@ -290,6 +302,9 @@ export function ReaderScreen() {
     <div
       className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-16 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200 ${fontClass}`}
     >
+      {/* Smooth Non-Destructive Chapter Switching Loading Overlay */}
+      <LoadingOverlay isLoading={loading} message="Đang mở văn bản..." />
+
       {/* Sticky Header - ALWAYS VISIBLE */}
       <div aria-hidden="true">
         <ReaderHeader
