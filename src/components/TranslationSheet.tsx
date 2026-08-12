@@ -38,6 +38,7 @@ interface TranslationSheetProps {
   currentChapterName?: string;
   currentBookId?: string;
   currentChapterId?: string;
+  currentChapterNumber?: number;
   initialTab?: Tab;
   initialSelectedChapters?: string[];
   onSuccess?: () => void;
@@ -50,7 +51,8 @@ export function TranslationSheet({
   currentChapterName,
   currentBookId,
   currentChapterId,
-  initialTab = 'current',
+  currentChapterNumber,
+  initialTab = 'batch_chapter',
   initialSelectedChapters = [],
   onSuccess,
   disableCurrent = false,
@@ -62,7 +64,7 @@ export function TranslationSheet({
   const [isOptionsLoaded, setIsOptionsLoaded] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [poolStatus, setPoolStatus] = useState<any>(null);
-  const [showOnlyPending, setShowOnlyPending] = useState(true);
+  const [showOnlyPending, setShowOnlyPending] = useState(false);
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
@@ -77,6 +79,17 @@ export function TranslationSheet({
   const [rangeStart, setRangeStart] = useState('');
   const [rangeEnd, setRangeEnd] = useState('');
   const chapterListRef = React.useRef<HTMLDivElement>(null);
+  const activeItemRef = React.useRef<HTMLDivElement>(null);
+  const isInitialScrollDoneRef = React.useRef(false);
+
+  const PAGE_SIZE = 20;
+  const [loading, setLoading] = useState(false);
+  const [loadingTop, setLoadingTop] = useState(false);
+  const [loadingBottom, setLoadingBottom] = useState(false);
+  const [hasMoreTop, setHasMoreTop] = useState(false);
+  const [hasMoreBottom, setHasMoreBottom] = useState(true);
+  const [minChapterNum, setMinChapterNum] = useState<number>(1);
+  const [maxChapterNum, setMaxChapterNum] = useState<number>(1);
 
   // Load configs from API
   const [quotas, setQuotas] = useState<any[]>([]);
@@ -191,12 +204,56 @@ export function TranslationSheet({
     }
   }, [options, isOptionsLoaded, quotas]);
 
+  const loadInitialChapters = React.useCallback(async () => {
+    if (activeTab !== 'batch_chapter' || !currentBookId) return;
+    setLoading(true);
+    isInitialScrollDoneRef.current = false;
+
+    const startChapterNumber = currentChapterNumber
+      ? Math.max(1, currentChapterNumber - 5)
+      : 1;
+    const endChapterNumber = currentChapterNumber
+      ? currentChapterNumber + 20
+      : undefined;
+
+    try {
+      const res = await ChapterRepository.getChapters(
+        currentBookId,
+        1,
+        26,
+        'chapterNumber',
+        'ASC',
+        'all',
+        '',
+        startChapterNumber,
+        endChapterNumber
+      );
+
+      const newChapters = res?.chapters || [];
+      setChapters(newChapters);
+
+      if (newChapters.length > 0) {
+        const minNum = Math.min(...newChapters.map((c) => c.chapterNumber));
+        const maxNum = Math.max(...newChapters.map((c) => c.chapterNumber));
+        setMinChapterNum(minNum);
+        setMaxChapterNum(maxNum);
+        setHasMoreTop(minNum > 1);
+        setHasMoreBottom(newChapters.length >= 20);
+      } else {
+        setHasMoreTop(false);
+        setHasMoreBottom(false);
+      }
+    } catch {
+      setChapters([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab, currentBookId, currentChapterNumber]);
+
   useEffect(() => {
     let t: NodeJS.Timeout;
     if (activeTab === 'batch_chapter' && currentBookId) {
-      ChapterRepository.getChapters(currentBookId, 1, 9999, 'chapterNumber', 'ASC')
-        .then((res) => setChapters(res?.chapters || []))
-        .catch(() => setChapters([]));
+      loadInitialChapters();
     } else if (activeTab === 'story') {
       const fetchStoryBooks = () => {
         BookRepository.getBooks(1, 9999, searchBook)
@@ -217,7 +274,126 @@ export function TranslationSheet({
       }
     }
     return () => clearTimeout(t);
-  }, [activeTab, currentBookId, searchBook]);
+  }, [activeTab, currentBookId, searchBook, loadInitialChapters]);
+
+  const scrollToActive = React.useCallback(() => {
+    if (activeItemRef.current && chapterListRef.current) {
+      const container = chapterListRef.current;
+      const activeEl = activeItemRef.current;
+      container.scrollTop = activeEl.offsetTop - container.offsetTop;
+    }
+  }, []);
+
+  React.useLayoutEffect(() => {
+    if (activeTab === 'batch_chapter' && !loading && chapters.length > 0 && !isInitialScrollDoneRef.current) {
+      isInitialScrollDoneRef.current = true;
+      requestAnimationFrame(() => {
+        scrollToActive();
+        setTimeout(scrollToActive, 50);
+        setTimeout(scrollToActive, 150);
+      });
+    }
+  }, [activeTab, loading, chapters, scrollToActive]);
+
+  const fetchNextBottomPage = async () => {
+    if (loadingBottom || !hasMoreBottom || !currentBookId) return;
+    setLoadingBottom(true);
+    const targetFromChapter = maxChapterNum + 1;
+
+    try {
+      const res = await ChapterRepository.getChapters(
+        currentBookId,
+        1,
+        PAGE_SIZE,
+        'chapterNumber',
+        'ASC',
+        'all',
+        '',
+        targetFromChapter
+      );
+
+      const newChapters = res?.chapters || [];
+      if (newChapters.length > 0) {
+        setChapters((prev) => {
+          const existingIds = new Set(prev.map((c) => c.chapterId));
+          const uniqueNew = newChapters.filter((c) => !existingIds.has(c.chapterId));
+          return [...prev, ...uniqueNew];
+        });
+        const newMax = Math.max(...newChapters.map((c) => c.chapterNumber));
+        setMaxChapterNum(newMax);
+        setHasMoreBottom(newChapters.length >= PAGE_SIZE);
+      } else {
+        setHasMoreBottom(false);
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setLoadingBottom(false);
+    }
+  };
+
+  const fetchPrevTopPage = async () => {
+    if (loadingTop || !hasMoreTop || minChapterNum <= 1 || !currentBookId) return;
+    setLoadingTop(true);
+
+    const container = chapterListRef.current;
+    const prevScrollHeight = container ? container.scrollHeight : 0;
+    const prevScrollTop = container ? container.scrollTop : 0;
+    const targetToChapter = minChapterNum - 1;
+    const targetFromChapter = Math.max(1, minChapterNum - PAGE_SIZE);
+
+    try {
+      const res = await ChapterRepository.getChapters(
+        currentBookId,
+        1,
+        PAGE_SIZE,
+        'chapterNumber',
+        'ASC',
+        'all',
+        '',
+        targetFromChapter,
+        targetToChapter
+      );
+
+      const newChapters = res?.chapters || [];
+      if (newChapters.length > 0) {
+        setChapters((prev) => {
+          const existingIds = new Set(prev.map((c) => c.chapterId));
+          const uniqueNew = newChapters.filter((c) => !existingIds.has(c.chapterId));
+          return [...uniqueNew, ...prev];
+        });
+
+        const newMin = Math.min(...newChapters.map((c) => c.chapterNumber));
+        setMinChapterNum(newMin);
+        setHasMoreTop(newMin > 1);
+
+        requestAnimationFrame(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight;
+            container.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
+          }
+        });
+      } else {
+        setHasMoreTop(false);
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setLoadingTop(false);
+    }
+  };
+
+  const handleScroll = () => {
+    if (!chapterListRef.current || loading || activeTab !== 'batch_chapter') return;
+    const { scrollTop, clientHeight, scrollHeight } = chapterListRef.current;
+
+    if (scrollTop + clientHeight >= scrollHeight - 80) {
+      fetchNextBottomPage();
+    }
+    if (scrollTop <= 50) {
+      fetchPrevTopPage();
+    }
+  };
 
   const handleSubmit = async () => {
     if (isSubmittingRef.current) return;
@@ -550,12 +726,13 @@ export function TranslationSheet({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-3">
                     <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-wider">Chọn chương ({selectedChapters.size}/{chapters.length})</p>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
+                    <label className="flex items-center gap-1.5 cursor-not-allowed opacity-50 select-none">
                       <input 
                         type="checkbox" 
+                        disabled
                         checked={showOnlyPending}
                         onChange={(e) => setShowOnlyPending(e.target.checked)}
-                        className="accent-primary w-3.5 h-3.5 rounded"
+                        className="accent-primary w-3.5 h-3.5 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <span className="text-[11px] text-on-surface-variant font-medium select-none">Ẩn đã dịch</span>
                     </label>
@@ -574,32 +751,36 @@ export function TranslationSheet({
                   <button onClick={handleSelectRange} className="text-[11px] ml-auto bg-primary text-on-primary px-3 py-1 rounded font-bold hover:bg-primary-fixed transition-colors">Chọn</button>
                 </div>
               </div>
-              <div ref={chapterListRef} className="flex-1 overflow-y-auto hide-scrollbar flex flex-col p-0 border border-outline-variant/20 bg-surface rounded-xl min-h-[30vh] scroll-smooth shadow-sm overflow-hidden">
+              <div ref={chapterListRef} onScroll={handleScroll} className="flex-1 overflow-y-auto hide-scrollbar flex flex-col p-0 border border-outline-variant/20 bg-surface rounded-xl min-h-[30vh] scroll-smooth shadow-sm overflow-hidden">
                 {[...chapters]
                   .sort((a, b) => a.chapterNumber - b.chapterNumber)
                   .filter(chap => !showOnlyPending || chap.state === 'PENDING' || chap.state === 'FAILED')
-                  .map(chap => (
-                  <div 
-                    key={chap.chapterId} 
-                    id={`chapter-item-${chap.chapterNumber}`}
-                    onClick={() => toggleChapter(chap.chapterId)}
-                    className={cn("group flex justify-between items-center px-3 py-2 cursor-pointer transition-colors border-b border-outline-variant/10 last:border-b-0 relative", selectedChapters.has(chap.chapterId) ? "bg-primary/5" : "bg-surface hover:bg-surface-container-lowest")}
-                  >
-                    {selectedChapters.has(chap.chapterId) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>}
-                    <div className="flex items-center gap-3 overflow-hidden flex-1 pl-1">
-                      <div className={cn("shrink-0 w-8 h-8 rounded-full flex flex-col items-center justify-center font-bold tracking-tight border transition-colors", chap.state === 'SUCCEEDED' ? 'bg-primary/10 text-primary border-primary/20' : chap.state === 'PENDING' ? 'bg-warning/10 text-warning border-warning/20' : 'bg-surface-container-high text-on-surface-variant border-outline-variant/20')}>
-                        <span className="text-[7px] leading-none opacity-80 mt-[1px]">CH</span>
-                        <span className="text-[11px] leading-none mt-[1px]">{chap.chapterNumber}</span>
+                  .map(chap => {
+                    const isCurrentChapter = chap.chapterId === (initialSelectedChapters[0] || currentChapterId) || chap.chapterNumber === currentChapterNumber;
+                    return (
+                      <div 
+                        key={chap.chapterId} 
+                        id={`chapter-item-${chap.chapterNumber}`}
+                        ref={isCurrentChapter ? activeItemRef : undefined}
+                        onClick={() => toggleChapter(chap.chapterId)}
+                        className={cn("group flex justify-between items-center px-3 py-2 cursor-pointer transition-colors border-b border-outline-variant/10 last:border-b-0 relative", selectedChapters.has(chap.chapterId) ? "bg-primary/5" : "bg-surface hover:bg-surface-container-lowest")}
+                      >
+                        {selectedChapters.has(chap.chapterId) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>}
+                        <div className="flex items-center gap-3 overflow-hidden flex-1 pl-1">
+                          <div className={cn("shrink-0 w-8 h-8 rounded-full flex flex-col items-center justify-center font-bold tracking-tight border transition-colors", chap.state === 'SUCCEEDED' ? 'bg-primary/10 text-primary border-primary/20' : chap.state === 'PENDING' ? 'bg-warning/10 text-warning border-warning/20' : 'bg-surface-container-high text-on-surface-variant border-outline-variant/20')}>
+                            <span className="text-[7px] leading-none opacity-80 mt-[1px]">CH</span>
+                            <span className="text-[11px] leading-none mt-[1px]">{chap.chapterNumber}</span>
+                          </div>
+                          
+                          <div className="flex flex-col flex-1 truncate pr-2">
+                            <span className={cn("text-[12px] sm:text-[13px] truncate font-medium transition-colors", selectedChapters.has(chap.chapterId) ? "text-primary font-bold" : "text-on-surface")}>{chap.title || `Chương ${chap.chapterNumber}`}</span>
+                            {(chap.state === 'FAILED' || chap.state === 'PENDING') && <span className="text-[9px] text-warning/70 font-semibold mt-0.5">Chưa được dịch</span>}
+                          </div>
+                        </div>
+                        {selectedChapters.has(chap.chapterId) ? <Check size={14} className="text-primary flex-shrink-0 drop-shadow-sm mr-1" /> : <Square size={14} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />}
                       </div>
-                      
-                      <div className="flex flex-col flex-1 truncate pr-2">
-                        <span className={cn("text-[12px] sm:text-[13px] truncate font-medium transition-colors", selectedChapters.has(chap.chapterId) ? "text-primary font-bold" : "text-on-surface")}>{chap.title || `Chương ${chap.chapterNumber}`}</span>
-                        {(chap.state === 'FAILED' || chap.state === 'PENDING') && <span className="text-[9px] text-warning/70 font-semibold mt-0.5">Chưa được dịch</span>}
-                      </div>
-                    </div>
-                    {selectedChapters.has(chap.chapterId) ? <Check size={14} className="text-primary flex-shrink-0 drop-shadow-sm mr-1" /> : <Square size={14} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />}
-                  </div>
-                ))}
+                    );
+                  })}
               </div>
             </div>
           )}

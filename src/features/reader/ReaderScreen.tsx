@@ -399,6 +399,8 @@ export function ReaderScreen() {
             currentBookId={bookId}
             currentChapterId={chapterId}
             currentChapterName={chapter.title}
+            currentChapterNumber={chapter.chapterNumber}
+            initialTab="batch_chapter"
             initialSelectedChapters={chapterId ? [chapterId] : []}
             onClose={() => setShowTranslateSheet(false)}
             onSuccess={loadChapter}
