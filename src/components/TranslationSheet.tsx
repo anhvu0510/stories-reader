@@ -280,13 +280,17 @@ export function TranslationSheet({
     if (activeItemRef.current && chapterListRef.current) {
       const container = chapterListRef.current;
       const activeEl = activeItemRef.current;
-      container.scrollTop = activeEl.offsetTop - container.offsetTop;
+      const containerRect = container.getBoundingClientRect();
+      const activeRect = activeEl.getBoundingClientRect();
+      const targetScrollTop = container.scrollTop + (activeRect.top - containerRect.top);
+      container.scrollTop = Math.max(0, targetScrollTop);
     }
   }, []);
 
   React.useLayoutEffect(() => {
     if (activeTab === 'batch_chapter' && !loading && chapters.length > 0 && !isInitialScrollDoneRef.current) {
       isInitialScrollDoneRef.current = true;
+      scrollToActive();
       requestAnimationFrame(() => {
         scrollToActive();
         setTimeout(scrollToActive, 50);
@@ -751,7 +755,7 @@ export function TranslationSheet({
                   <button onClick={handleSelectRange} className="text-[11px] ml-auto bg-primary text-on-primary px-3 py-1 rounded font-bold hover:bg-primary-fixed transition-colors">Chọn</button>
                 </div>
               </div>
-              <div ref={chapterListRef} onScroll={handleScroll} className="flex-1 overflow-y-auto hide-scrollbar flex flex-col p-0 border border-outline-variant/20 bg-surface rounded-xl min-h-[30vh] scroll-smooth shadow-sm overflow-hidden">
+              <div ref={chapterListRef} onScroll={handleScroll} className="flex-1 overflow-y-auto hide-scrollbar flex flex-col p-0 border border-outline-variant/20 bg-surface rounded-xl min-h-[30vh] shadow-sm overflow-hidden">
                 {[...chapters]
                   .sort((a, b) => a.chapterNumber - b.chapterNumber)
                   .filter(chap => !showOnlyPending || chap.state === 'PENDING' || chap.state === 'FAILED')

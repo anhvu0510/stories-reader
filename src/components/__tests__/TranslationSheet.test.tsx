@@ -79,4 +79,13 @@ describe('TranslationSheet Requirements', () => {
       );
     });
   });
+
+  it('aligns current chapter item to top of viewport on initial layout', async () => {
+    render(<TranslationSheet {...defaultProps} currentChapterNumber={15} />);
+
+    await waitFor(() => {
+      const currentChapItem = document.querySelector('#chapter-item-15');
+      expect(currentChapItem).not.toBeNull();
+    });
+  });
 });

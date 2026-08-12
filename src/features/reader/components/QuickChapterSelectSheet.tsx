@@ -141,7 +141,10 @@ export function QuickChapterSelectSheet({
     if (activeItemRef.current && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
       const activeEl = activeItemRef.current;
-      container.scrollTop = activeEl.offsetTop - container.offsetTop;
+      const containerRect = container.getBoundingClientRect();
+      const activeRect = activeEl.getBoundingClientRect();
+      const targetScrollTop = container.scrollTop + (activeRect.top - containerRect.top);
+      container.scrollTop = Math.max(0, targetScrollTop);
     }
   }, []);
 
