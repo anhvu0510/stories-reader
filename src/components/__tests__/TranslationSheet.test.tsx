@@ -88,4 +88,51 @@ describe('TranslationSheet Requirements', () => {
       expect(currentChapItem).not.toBeNull();
     });
   });
+
+  it('dynamically fetches chapters when selecting range outside initial memory', async () => {
+    const { fireEvent } = await import('@testing-library/react');
+    render(<TranslationSheet {...defaultProps} currentChapterNumber={15} />);
+
+    const inputs = document.querySelectorAll<HTMLInputElement>('input[type="number"]');
+    const selectBtn = screen.getAllByRole('button', { name: 'Chọn' })[0];
+
+    if (inputs.length >= 2) {
+      fireEvent.change(inputs[0], { target: { value: '50' } });
+      fireEvent.change(inputs[1], { target: { value: '60' } });
+      fireEvent.click(selectBtn);
+
+      await waitFor(() => {
+        expect(ChapterRepository.getChapters).toHaveBeenCalledWith(
+          'book-123',
+          1,
+          50, // limit = Math.max(50, 60 - 50 + 1)
+          'chapterNumber',
+          'ASC',
+          'all',
+          '',
+          50,
+          60
+        );
+      });
+    }
+  });
+
+  it('fetches all chapters when clicking "Tất cả"', async () => {
+    const { fireEvent } = await import('@testing-library/react');
+    render(<TranslationSheet {...defaultProps} currentChapterNumber={15} />);
+
+    const selectAllBtn = screen.getAllByRole('button', { name: 'Tất cả' })[0];
+    fireEvent.click(selectAllBtn);
+
+    await waitFor(() => {
+      expect(ChapterRepository.getChapters).toHaveBeenCalledWith(
+        'book-123',
+        1,
+        9999,
+        'chapterNumber',
+        'ASC',
+        'all'
+      );
+    });
+  });
 });

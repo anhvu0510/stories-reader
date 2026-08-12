@@ -494,36 +494,144 @@ export function TranslationSheet({
     setSelectedChapters(next);
   };
 
-  const handleSelectRange = () => {
+  const handleSelectRange = async () => {
     const start = parseInt(rangeStart);
     const end = parseInt(rangeEnd);
-    if (isNaN(start) || isNaN(end) || start > end) {
+    if (isNaN(start) || isNaN(end) || start > end || start < 1) {
       showToast("Phạm vi không hợp lệ", "error");
       return;
     }
-    
-    // Sort chapters just in case
-    const sortedChapters = [...chapters].sort((a,b) => a.chapterNumber - b.chapterNumber);
-    
-    const chaptersInRange = sortedChapters.filter(c => c.chapterNumber >= start && c.chapterNumber <= end);
-    if (chaptersInRange.length === 0) {
-      showToast("Không tìm thấy chương nào trong phạm vi này", "error");
+
+    if (!currentBookId) return;
+
+    try {
+      const limit = Math.max(50, end - start + 1);
+      const res = await ChapterRepository.getChapters(
+        currentBookId,
+        1,
+        limit,
+        'chapterNumber',
+        'ASC',
+        'all',
+        '',
+        start,
+        end
+      );
+
+      const fetchedChapters = res?.chapters || [];
+
+      let allChapters: Chapter[] = [];
+      setChapters((prev) => {
+        const existingIds = new Set(prev.map((c) => c.chapterId));
+        const uniqueNew = fetchedChapters.filter((c) => !existingIds.has(c.chapterId));
+        const combined = [...prev, ...uniqueNew].sort((a, b) => a.chapterNumber - b.chapterNumber);
+        allChapters = combined;
+
+        if (combined.length > 0) {
+          const minNum = Math.min(...combined.map((c) => c.chapterNumber));
+          const maxNum = Math.max(...combined.map((c) => c.chapterNumber));
+          setMinChapterNum(minNum);
+          setMaxChapterNum(maxNum);
+        }
+        return combined;
+      });
+
+      const chaptersInRange = (fetchedChapters.length > 0 ? fetchedChapters : allChapters).filter(
+        (c) => c.chapterNumber >= start && c.chapterNumber <= end
+      );
+
+      if (chaptersInRange.length === 0) {
+        showToast("Không tìm thấy chương nào trong phạm vi này", "error");
+        return;
+      }
+
+      setSelectedChapters((prev) => {
+        const newSet = new Set(prev);
+        chaptersInRange.forEach((c) => newSet.add(c.chapterId));
+        return newSet;
+      });
+
+      showToast(`Đã chọn ${chaptersInRange.length} chương (Chương ${start} - ${end})`, "success");
+
+      setTimeout(() => {
+        if (chapterListRef.current) {
+          const firstEl = chapterListRef.current.querySelector(`#chapter-item-${start}`);
+          if (firstEl) {
+            const container = chapterListRef.current;
+            const containerRect = container.getBoundingClientRect();
+            const activeRect = firstEl.getBoundingClientRect();
+            const targetScrollTop = container.scrollTop + (activeRect.top - containerRect.top);
+            container.scrollTop = Math.max(0, targetScrollTop);
+          }
+        }
+      }, 100);
+    } catch {
+      showToast("Có lỗi xảy ra khi tải dải chương", "error");
+    }
+  };
+
+  const handleSelectAll = async () => {
+    if (!currentBookId) return;
+    if (!hasMoreTop && !hasMoreBottom && chapters.length > 0) {
+      setSelectedChapters(new Set(chapters.map((c) => c.chapterId)));
+      showToast(`Đã chọn tất cả ${chapters.length} chương`, "success");
       return;
     }
 
-    const newSet = new Set(selectedChapters);
-    chaptersInRange.forEach(c => newSet.add(c.chapterId));
-    setSelectedChapters(newSet);
-    
-    // Scroll to the first chapter in range
-    setTimeout(() => {
-      if (chapterListRef.current) {
-        const firstEl = chapterListRef.current.querySelector(`#chapter-item-${start}`);
-        if (firstEl) {
-          firstEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+    setIsSubmitting(true);
+    showToast("Đang tải tất cả chương...", "info");
+    try {
+      const res = await ChapterRepository.getChapters(currentBookId, 1, 9999, 'chapterNumber', 'ASC', 'all');
+      const allList = res?.chapters || [];
+      if (allList.length > 0) {
+        setChapters(allList);
+        setSelectedChapters(new Set(allList.map((c) => c.chapterId)));
+        const minNum = Math.min(...allList.map((c) => c.chapterNumber));
+        const maxNum = Math.max(...allList.map((c) => c.chapterNumber));
+        setMinChapterNum(minNum);
+        setMaxChapterNum(maxNum);
+        setHasMoreTop(false);
+        setHasMoreBottom(false);
+        showToast(`Đã chọn tất cả ${allList.length} chương`, "success");
       }
-    }, 100);
+    } catch {
+      showToast("Có lỗi xảy ra khi tải danh sách chương", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSelectPending = async () => {
+    if (!currentBookId) return;
+    if (!hasMoreTop && !hasMoreBottom && chapters.length > 0) {
+      const pendingList = chapters.filter((c) => c.state === 'PENDING' || c.state === 'FAILED');
+      setSelectedChapters(new Set(pendingList.map((c) => c.chapterId)));
+      showToast(`Đã chọn ${pendingList.length} chương chưa dịch`, "success");
+      return;
+    }
+
+    setIsSubmitting(true);
+    showToast("Đang tải chương chưa dịch...", "info");
+    try {
+      const res = await ChapterRepository.getChapters(currentBookId, 1, 9999, 'chapterNumber', 'ASC', 'all');
+      const allList = res?.chapters || [];
+      if (allList.length > 0) {
+        setChapters(allList);
+        const pendingList = allList.filter((c) => c.state === 'PENDING' || c.state === 'FAILED');
+        setSelectedChapters(new Set(pendingList.map((c) => c.chapterId)));
+        const minNum = Math.min(...allList.map((c) => c.chapterNumber));
+        const maxNum = Math.max(...allList.map((c) => c.chapterNumber));
+        setMinChapterNum(minNum);
+        setMaxChapterNum(maxNum);
+        setHasMoreTop(false);
+        setHasMoreBottom(false);
+        showToast(`Đã chọn ${pendingList.length} chương chưa dịch`, "success");
+      }
+    } catch {
+      showToast("Có lỗi xảy ra khi tải danh sách chương", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const toggleBook = (id: string) => {
@@ -742,8 +850,8 @@ export function TranslationSheet({
                     </label>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button onClick={() => setSelectedChapters(new Set(chapters.map(c => c.chapterId)))} className="px-2 py-1 bg-surface-container-high rounded text-[11px] font-bold text-primary hover:bg-surface-container-highest transition-colors">Tất cả</button>
-                    <button onClick={() => setSelectedChapters(new Set(chapters.filter(c => c.state === 'PENDING' || c.state === 'FAILED').map(c => c.chapterId)))} className="px-2 py-1 bg-surface-container-high rounded text-[11px] font-bold text-primary hover:bg-surface-container-highest transition-colors">Chưa dịch</button>
+                    <button onClick={handleSelectAll} className="px-2 py-1 bg-surface-container-high rounded text-[11px] font-bold text-primary hover:bg-surface-container-highest transition-colors">Tất cả</button>
+                    <button onClick={handleSelectPending} className="px-2 py-1 bg-surface-container-high rounded text-[11px] font-bold text-primary hover:bg-surface-container-highest transition-colors">Chưa dịch</button>
                     <button onClick={() => setSelectedChapters(new Set())} className="px-2 py-1 bg-surface-container-high rounded text-[11px] font-bold text-error hover:bg-surface-container-highest transition-colors">Bỏ chọn</button>
                   </div>
                 </div>
