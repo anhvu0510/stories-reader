@@ -299,6 +299,16 @@ export function TranslationSheet({
     }
   }, [activeTab, loading, chapters, scrollToActive]);
 
+  // Auto-backfill previous chapters if initial viewport has extra space and hasMoreTop is true
+  useEffect(() => {
+    if (activeTab === 'batch_chapter' && !loading && !loadingTop && hasMoreTop && chapterListRef.current) {
+      const { scrollHeight, clientHeight } = chapterListRef.current;
+      if (scrollHeight > 0 && scrollHeight <= clientHeight + 50) {
+        fetchPrevTopPage();
+      }
+    }
+  }, [activeTab, loading, loadingTop, hasMoreTop, chapters.length]);
+
   const fetchNextBottomPage = async () => {
     if (loadingBottom || !hasMoreBottom || !currentBookId) return;
     setLoadingBottom(true);

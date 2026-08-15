@@ -63,28 +63,34 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
   const percent = book.chapterCount > 0 ? Math.round((book.totalTranslated / book.chapterCount) * 100) : 0;
   const pendingCount = book.totalPending || Math.max(0, book.chapterCount - book.totalTranslated);
 
-  // Load initial chapters starting from lastReadChapterNumber so the recent chapter is at the top of the list
+  // Load initial chapters windowed around lastReadChapterNumber
   const loadInitialChapters = useCallback(
     async (searchQuery: string = '') => {
       setLoading(true);
       isInitialScrollDoneRef.current = false;
 
-      const startChapterNumber = searchQuery
-        ? undefined
-        : book.lastReadChapter?.chapterNumber
+      const targetChapter = book.lastReadChapter?.chapterNumber
         ? Math.max(1, Number(book.lastReadChapter.chapterNumber))
         : 1;
+
+      // Smart windowing: If targetChapter is near the end, backfill before it to always load enough chapters
+      const totalChapters = book.chapterCount || 0;
+      const remainingAhead = totalChapters > 0 ? Math.max(0, totalChapters - targetChapter) : 0;
+      const neededBehind = Math.max(5, PAGE_SIZE - remainingAhead);
+
+      const startChapterNumber = searchQuery
+        ? undefined
+        : Math.max(1, targetChapter - neededBehind);
+
       const endChapterNumber = searchQuery
         ? undefined
-        : startChapterNumber
-        ? startChapterNumber + PAGE_SIZE
-        : undefined;
+        : targetChapter + PAGE_SIZE;
 
       try {
         const res = await ChapterRepository.getChapters(
           book.bookId,
           1,
-          PAGE_SIZE + 1,
+          PAGE_SIZE + 10,
           'chapterNumber',
           'ASC',
           'all',
@@ -102,7 +108,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
           setMinChapterNum(minNum);
           setMaxChapterNum(maxNum);
           setHasMoreTop(!searchQuery && minNum > 1);
-          setHasMoreBottom(newChapters.length >= PAGE_SIZE);
+          setHasMoreBottom(maxNum < (book.chapterCount || 999999) && newChapters.length >= PAGE_SIZE);
         } else {
           setHasMoreTop(false);
           setHasMoreBottom(false);
@@ -113,12 +119,22 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
         setLoading(false);
       }
     },
-    [book.bookId, book.lastReadChapter]
+    [book.bookId, book.lastReadChapter, book.chapterCount]
   );
 
   useEffect(() => {
     loadInitialChapters('');
   }, [loadInitialChapters]);
+
+  // Auto-backfill previous chapters if initial viewport has extra space and hasMoreTop is true
+  useEffect(() => {
+    if (!loading && !loadingTop && hasMoreTop && scrollContainerRef.current) {
+      const { scrollHeight, clientHeight } = scrollContainerRef.current;
+      if (scrollHeight > 0 && scrollHeight <= clientHeight + 50) {
+        fetchPrevTopPage();
+      }
+    }
+  }, [loading, loadingTop, hasMoreTop, chapters.length]);
 
   // Auto-scroll positioning active chapter directly visible
   const scrollToActive = useCallback(() => {

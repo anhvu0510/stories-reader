@@ -136,6 +136,16 @@ export function QuickChapterSelectSheet({
     loadInitialChapters('');
   }, [loadInitialChapters]);
 
+  // Auto-backfill previous chapters if initial viewport has extra space and hasMoreTop is true
+  useEffect(() => {
+    if (!loading && !loadingTop && hasMoreTop && scrollContainerRef.current) {
+      const { scrollHeight, clientHeight } = scrollContainerRef.current;
+      if (scrollHeight > 0 && scrollHeight <= clientHeight + 50) {
+        fetchPrevTopPage();
+      }
+    }
+  }, [loading, loadingTop, hasMoreTop, chapters.length]);
+
   // Auto-scroll positioning active chapter directly below search input
   const scrollToActive = useCallback(() => {
     if (activeItemRef.current && scrollContainerRef.current) {
