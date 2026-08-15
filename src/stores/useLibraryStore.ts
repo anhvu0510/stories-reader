@@ -28,7 +28,7 @@ export const useLibraryStore = create<LibraryState>()(
           savedTab: tab,
           savedSearch: search,
           savedTags: tags !== undefined ? tags : state.savedTags,
-          savedScrollY: scrollY !== undefined ? scrollY : (typeof window !== 'undefined' ? window.scrollY : state.savedScrollY),
+          savedScrollY: scrollY !== undefined ? scrollY : state.savedScrollY,
         })),
 
       setSavedScrollY: (scrollY) => set({ savedScrollY: scrollY }),
@@ -44,6 +44,13 @@ export const useLibraryStore = create<LibraryState>()(
     }),
     {
       name: 'stories_library_state',
+      // Only persist filters & search to localStorage; do NOT persist scrollY so page reload always starts cleanly at the top
+      partialize: (state) => ({
+        savedPage: state.savedPage,
+        savedTab: state.savedTab,
+        savedSearch: state.savedSearch,
+        savedTags: state.savedTags,
+      }),
     }
   )
 );

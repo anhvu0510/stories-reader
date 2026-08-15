@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import { TranslationSheet } from '../TranslationSheet';
 import { ChapterRepository } from '../../repositories/ChapterRepository';
 import { AIRepository } from '../../repositories/AIRepository';
@@ -45,6 +45,10 @@ describe('TranslationSheet Requirements', () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it('defaults to batch_chapter tab when opened without explicit initialTab', () => {
     render(<TranslationSheet {...defaultProps} />);
 
@@ -54,12 +58,22 @@ describe('TranslationSheet Requirements', () => {
     expect(batchTabButton.className).toContain('text-primary');
   });
 
-  it('has disabled "Ẩn đã dịch" checkbox', () => {
+  it('has enabled "Ẩn đã dịch" checkbox and activates it when clicking "Chưa dịch"', async () => {
+    const { fireEvent } = await import('@testing-library/react');
     render(<TranslationSheet {...defaultProps} />);
 
-    const checkboxes = screen.getAllByRole('checkbox', { name: /Ẩn đã dịch/i });
-    expect(checkboxes.length).toBeGreaterThan(0);
-    expect(checkboxes[0].hasAttribute('disabled')).toBe(true);
+    const checkbox = screen.getByRole('checkbox', { name: /Ẩn đã dịch/i }) as HTMLInputElement;
+    expect(checkbox).toBeDefined();
+    expect(checkbox.hasAttribute('disabled')).toBe(false);
+    expect(checkbox.checked).toBe(false);
+
+    // Click Chưa dịch button
+    const pendingBtn = screen.getByRole('button', { name: 'Chưa dịch' });
+    fireEvent.click(pendingBtn);
+
+    await waitFor(() => {
+      expect(checkbox.checked).toBe(true);
+    });
   });
 
   it('fetches chapter range around currentChapterNumber when activeTab is batch_chapter', async () => {

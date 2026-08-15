@@ -17,7 +17,7 @@ describe('useLibraryStore', () => {
     expect(state.savedScrollY).toBe(0);
   });
 
-  it('should save and persist selected tags and state', () => {
+  it('should save and persist selected tags and state without persisting scrollY to localStorage', () => {
     useLibraryStore.getState().setLibraryState(2, 'HISTORY', 'tu tien', ['Sắc Hiệp', 'Mẹ Kế'], 250);
 
     const state = useLibraryStore.getState();
@@ -27,12 +27,13 @@ describe('useLibraryStore', () => {
     expect(state.savedTags).toEqual(['Sắc Hiệp', 'Mẹ Kế']);
     expect(state.savedScrollY).toBe(250);
 
-    // Verify localStorage has persisted the state
+    // Verify localStorage has persisted filters & search, but NOT savedScrollY
     const rawStored = localStorage.getItem('stories_library_state');
     expect(rawStored).toBeTruthy();
     const parsed = JSON.parse(rawStored!);
     expect(parsed.state.savedTags).toEqual(['Sắc Hiệp', 'Mẹ Kế']);
     expect(parsed.state.savedTab).toBe('HISTORY');
+    expect(parsed.state.savedScrollY).toBeUndefined();
   });
 
   it('should update tags without overwriting scrollY when scrollY is not passed', () => {

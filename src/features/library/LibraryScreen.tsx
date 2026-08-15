@@ -94,12 +94,17 @@ export function LibraryScreen() {
   useEffect(() => {
     if (!loading && books.length > 0 && !isRestoredRef.current) {
       isRestoredRef.current = true;
+      if (typeof window !== 'undefined') {
+        window.scrollTo(0, 0);
+      }
       if (savedScrollY > 0 && mainScrollRef.current) {
         requestAnimationFrame(() => {
           if (mainScrollRef.current) {
             mainScrollRef.current.scrollTop = savedScrollY;
           }
         });
+      } else if (mainScrollRef.current) {
+        mainScrollRef.current.scrollTop = 0;
       }
     }
   }, [loading, books, savedScrollY]);
@@ -154,13 +159,6 @@ export function LibraryScreen() {
       mainScrollRef.current.scrollTop = 0;
     }
     fetchBooks(1, search, tab, newTags);
-  };
-
-  // Quick tag click handler from BookCard
-  const handleQuickTagClick = (tag: string) => {
-    const newTags = selectedTags.includes(tag) ? selectedTags : [tag];
-    handleTagFilterApply(newTags);
-    showToast(`Đang lọc theo tag: ${tag}`, 'info');
   };
 
   return (
@@ -304,7 +302,6 @@ export function LibraryScreen() {
                 key={book.bookId}
                 book={book}
                 activeTab={tab}
-                onTagClick={handleQuickTagClick}
               />
             ))}
           </div>

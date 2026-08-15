@@ -572,6 +572,7 @@ export function TranslationSheet({
 
   const handleSelectAll = async () => {
     if (!currentBookId) return;
+    setShowOnlyPending(false);
     if (!hasMoreTop && !hasMoreBottom && chapters.length > 0) {
       setSelectedChapters(new Set(chapters.map((c) => c.chapterId)));
       showToast(`Đã chọn tất cả ${chapters.length} chương`, "success");
@@ -603,6 +604,7 @@ export function TranslationSheet({
 
   const handleSelectPending = async () => {
     if (!currentBookId) return;
+    setShowOnlyPending(true);
     if (!hasMoreTop && !hasMoreBottom && chapters.length > 0) {
       const pendingList = chapters.filter((c) => c.state === 'PENDING' || c.state === 'FAILED');
       setSelectedChapters(new Set(pendingList.map((c) => c.chapterId)));
@@ -642,7 +644,7 @@ export function TranslationSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 bg-black/80 overflow-x-hidden box-border">
+    <div className="fixed inset-0 z-[99999] flex items-end justify-center p-0 bg-black/80 overflow-x-hidden box-border">
       {/* Backdrop */}
       <div className="absolute inset-0" onClick={onClose} />
       
@@ -838,13 +840,12 @@ export function TranslationSheet({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-3">
                     <p className="text-[11px] text-on-surface-variant font-bold uppercase tracking-wider">Chọn chương ({selectedChapters.size}/{chapters.length})</p>
-                    <label className="flex items-center gap-1.5 cursor-not-allowed opacity-50 select-none">
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none">
                       <input 
                         type="checkbox" 
-                        disabled
                         checked={showOnlyPending}
                         onChange={(e) => setShowOnlyPending(e.target.checked)}
-                        className="accent-primary w-3.5 h-3.5 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="accent-primary w-3.5 h-3.5 rounded cursor-pointer"
                       />
                       <span className="text-[11px] text-on-surface-variant font-medium select-none">Ẩn đã dịch</span>
                     </label>

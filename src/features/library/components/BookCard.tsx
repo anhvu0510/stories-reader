@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Book } from '../../../shared/types';
-import { Sparkles, BookOpen, ExternalLink, Trash2, Clock, Download, AlertCircle, Layers } from 'lucide-react';
+import { Sparkles, BookOpen, ExternalLink, Trash2, Clock, Download, AlertCircle } from 'lucide-react';
 import { QuickBookSheet } from './QuickBookSheet';
 import { TranslationSheet } from '../../../components/TranslationSheet';
 import { useAppStore } from '../../../stores/useAppStore';
@@ -20,7 +20,7 @@ interface BookCardProps {
   onTagClick?: (tag: string) => void;
 }
 
-export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMode, onTagClick }: BookCardProps) {
+export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMode }: BookCardProps) {
   const navigate = useNavigate();
   const [showQuickSheet, setShowQuickSheet] = useState(false);
   const [showTranslationSheet, setShowTranslationSheet] = useState(false);
@@ -220,6 +220,10 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
   const formattedDate = formatDate(book.updatedAt || (book as any).lastedReadAt);
   const actionTrayWidth = isOfflineMode ? 120 : (isDownloaded ? 180 : 120);
 
+  const progressPct = book.chapterCount > 0
+    ? Math.min(100, Math.round((readCount / book.chapterCount) * 100))
+    : 0;
+
   return (
     <>
       <div className="relative overflow-hidden rounded-2xl w-full select-none">
@@ -264,7 +268,7 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
           )}
         </div>
 
-        {/* Foreground Sliding Main Card (Premium Cohesive Theme Design) */}
+        {/* Foreground Sliding Main Card */}
         <div
           ref={cardElementRef}
           onTouchStart={handleTouchStart}
@@ -274,110 +278,107 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
           style={{
             transform: isSwipedOpen ? `translateX(-${actionTrayWidth}px)` : 'translateX(0px)',
           }}
-          className={`group relative z-10 bg-surface-container rounded-2xl border-l-4 border-l-primary border border-outline-variant/20 p-3.5 transition-transform duration-200 ease-out cursor-pointer flex items-center justify-between gap-3 shadow-xs hover:shadow-sm hover:border-primary/40 overflow-hidden active:scale-[0.99] ${
+          className={`group relative z-10 bg-surface-container rounded-2xl border border-outline-variant/25 p-3 transition-transform duration-200 ease-out cursor-pointer flex items-center gap-3 shadow-xs hover:shadow-sm hover:border-primary/40 overflow-hidden active:scale-[0.99] ${
             isSelected
               ? 'border-primary ring-2 ring-primary/40 bg-primary/10'
               : 'hover:bg-surface-container-high/80'
           }`}
         >
-          {/* Left Side: Sleek Modern TỔNG Badge (Theme-Synced) */}
-          <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center flex-shrink-0 font-mono shadow-xs">
-            <span className="text-[8px] font-extrabold uppercase tracking-wider text-primary/70 leading-none flex items-center gap-0.5">
-              <Layers size={9} /> TỔNG
+          {/* Left: Square Book Icon Badge */}
+          <div className="relative w-12 h-12 sm:w-13 sm:h-13 rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-surface-container-highest border border-primary/25 flex flex-col items-center justify-center p-1 shrink-0 overflow-hidden shadow-xs group-hover:border-primary/40 group-hover:scale-105 transition-all">
+            <BookOpen size={20} className="text-primary shrink-0" />
+            <span className="text-[8.5px] font-mono font-black text-primary/90 mt-0.5 leading-none">
+              {book.chapterCount} ch
             </span>
-            <span className="text-xs sm:text-sm font-black leading-none text-primary mt-1">{book.chapterCount}</span>
+            {isDownloaded && (
+              <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-emerald-400" title="Đã tải offline" />
+            )}
           </div>
 
-          {/* Middle Content Section */}
-          <div className="flex-1 min-w-0 space-y-1.5">
-            {/* Title */}
-            <h3 className="text-sm sm:text-base font-extrabold text-on-surface leading-snug tracking-tight group-hover:text-primary transition-colors break-words whitespace-normal">
-              {book.bookName}
-            </h3>
+          {/* Right: Rich Content Details */}
+          <div className="flex-1 min-w-0 space-y-1">
+            {/* Row 1: Title + Date */}
+            <div className="flex items-start justify-between gap-2 min-w-0">
+              <h3 className="text-[13.5px] sm:text-sm font-bold text-on-surface leading-tight tracking-tight group-hover:text-primary transition-colors line-clamp-1 min-w-0">
+                {book.bookName}
+              </h3>
+              <span className="text-[10px] font-mono text-on-surface-variant/60 shrink-0 whitespace-nowrap pt-0.5">
+                {formattedDate}
+              </span>
+            </div>
 
-            {/* Recently Read Chapter Info Pill */}
-            {book.lastReadChapter?.chapterId && (
-              <div className="flex items-center gap-2 text-xs text-on-surface-variant min-w-0 overflow-hidden">
-                {/* Pill CH Badge */}
-                <span className="px-2 py-0.5 min-w-[32px] h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono font-extrabold text-[10px] whitespace-nowrap flex items-center justify-center shrink-0 shadow-xs">
+            {/* Row 2: Reading Progress / Chapter Title */}
+            {book.lastReadChapter?.chapterId ? (
+              <div className="flex items-center gap-1.5 text-[11px] text-on-surface-variant min-w-0">
+                <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono font-bold text-[9.5px] shrink-0">
                   Ch.{book.lastReadChapter.chapterNumber}
                 </span>
+                <span className="truncate text-on-surface-variant/80 text-[10.5px]">
+                  {book.lastReadChapter.title || `Chương ${book.lastReadChapter.chapterNumber}`}
+                </span>
+              </div>
+            ) : (
+              <div className="text-[10.5px] text-on-surface-variant/50 italic">
+                Chưa đọc
+              </div>
+            )}
 
-                {/* Marquee or Truncated Chapter Title */}
-                {book.lastReadChapter.title && (
-                  <div className="flex-1 min-w-0 overflow-hidden">
-                    {book.lastReadChapter.title.length > 20 ? (
-                      <div className="animate-marquee-text whitespace-nowrap">
-                        <span className="text-[11px] font-medium text-on-surface-variant/90 pr-6">
-                          {book.lastReadChapter.title}
-                        </span>
-                        <span className="text-[11px] font-medium text-on-surface-variant/90 pr-6">
-                          {book.lastReadChapter.title}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="truncate block text-on-surface-variant/90 text-[11px] font-medium">
-                        {book.lastReadChapter.title}
-                      </span>
-                    )}
-                  </div>
+            {/* Row 3: Mini Progress Bar if reading */}
+            {readCount > 0 && (
+              <div className="w-full bg-surface-container-highest/80 h-1 rounded-full overflow-hidden my-0.5">
+                <div
+                  className="bg-primary h-full rounded-full transition-all duration-300"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            )}
+
+            {/* Row 4: Streamlined Tags (Informational badges only, 1 line, max 3 tags + '+N' counter) */}
+            {book.tags && book.tags.length > 0 && (
+              <div className="flex items-center gap-1 flex-nowrap overflow-hidden pt-0.5">
+                {book.tags.slice(0, 3).map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-medium bg-surface-container-highest border border-outline-variant/30 text-on-surface-variant shrink-0"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+                {book.tags.length > 3 && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-surface-container-highest/60 border border-outline-variant/20 text-on-surface-variant/60 font-mono font-bold shrink-0">
+                    +{book.tags.length - 3}
+                  </span>
                 )}
               </div>
             )}
 
-            {/* Mini Tag Badges (Clickable for Quick Filter) */}
-            {book.tags && book.tags.length > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                {book.tags.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onTagClick?.(tag);
-                    }}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-medium bg-surface-container-high border border-outline-variant/30 text-on-surface-variant hover:text-primary hover:border-primary/40 active:scale-95 transition-all"
-                    title={`Lọc theo tag: ${tag}`}
-                  >
-                    <span>#{tag}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Bottom Row: Date + Icon Badges (Single Non-Wrapping Line) */}
-            <div className="flex items-center gap-1.5 text-[10.5px] font-mono whitespace-nowrap flex-nowrap shrink-0 overflow-hidden pt-0.5">
-              {/* Timestamp */}
-              <div className="flex items-center gap-1 text-on-surface-variant/70 shrink-0">
-                <Clock size={11} className="text-on-surface-variant/60" />
-                <span>{formattedDate}</span>
-              </div>
-
-              {/* Read Count Icon Badge */}
+            {/* Row 5: Stats Footer */}
+            <div className="flex items-center gap-2 text-[10px] font-mono whitespace-nowrap flex-nowrap shrink-0 overflow-hidden pt-0.5 text-on-surface-variant/70">
+              {/* Read Status */}
               <span
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-extrabold shrink-0"
-                title={`Đã đọc: ${readCount}/${book.chapterCount}`}
+                className="inline-flex items-center gap-0.5 text-emerald-400 font-bold"
+                title={`Đã đọc: ${readCount}/${book.chapterCount} (${progressPct}%)`}
               >
-                <BookOpen size={11} className="text-emerald-400" />
-                <span>{readCount}</span>
+                <BookOpen size={10} />
+                <span>{readCount}/{book.chapterCount}</span>
               </span>
 
-              {/* Translated Count Icon Badge (Theme-Synced) */}
+              {/* Translated Count */}
               <span
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-primary/30 bg-primary/10 text-primary font-extrabold shrink-0"
+                className="inline-flex items-center gap-0.5 text-primary font-bold"
                 title={`Đã dịch: ${book.totalTranslated}/${book.chapterCount}`}
               >
-                <Sparkles size={11} className="text-primary" />
+                <Sparkles size={10} />
                 <span>{book.totalTranslated}</span>
               </span>
 
-              {/* Pending Count Icon Badge (if pending > 0 or in AI Tab) */}
+              {/* Pending / Untranslated */}
               {(activeTab === 'AI' || unTranslatedCount > 0) && (
                 <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 font-extrabold shrink-0"
+                  className="inline-flex items-center gap-0.5 text-rose-400 font-bold"
                   title={`Chưa dịch: ${book.totalPending || unTranslatedCount}`}
                 >
-                  <AlertCircle size={11} className="text-rose-400" />
+                  <AlertCircle size={10} />
                   <span>{book.totalPending || unTranslatedCount}</span>
                 </span>
               )}
