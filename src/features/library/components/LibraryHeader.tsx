@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Wifi, WifiOff, Settings, BookOpenCheck, X } from 'lucide-react';
+import { Search, Wifi, WifiOff, Settings, BookOpenCheck, X, Tag } from 'lucide-react';
 import { useAppStore } from '../../../stores/useAppStore';
 
 interface LibraryHeaderProps {
@@ -7,6 +7,8 @@ interface LibraryHeaderProps {
   onSearchChange: (query: string) => void;
   onOpenSettings: () => void;
   onSubmitSearch?: () => void;
+  onOpenTagFilter?: () => void;
+  activeTagsCount?: number;
 }
 
 export function LibraryHeader({
@@ -14,6 +16,8 @@ export function LibraryHeader({
   onSearchChange,
   onOpenSettings,
   onSubmitSearch,
+  onOpenTagFilter,
+  activeTagsCount = 0,
 }: LibraryHeaderProps) {
   const { isOfflineMode, setOfflineMode } = useAppStore();
 
@@ -59,37 +63,60 @@ export function LibraryHeader({
         </div>
       </div>
 
-      {/* Search Input */}
-      <div className="relative">
+      {/* Search Input & Tag Filter Row */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <button
+            type="button"
+            onClick={onSubmitSearch}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60 hover:text-primary transition-colors cursor-pointer"
+            title="Bấm để tìm kiếm"
+          >
+            <Search size={14} />
+          </button>
+          <input
+            type="text"
+            placeholder="Tìm kiếm truyện chữ (nhấn Enter)..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && onSubmitSearch) {
+                onSubmitSearch();
+              }
+            }}
+            className="w-full pl-9 pr-8 py-2 rounded-2xl bg-surface-container border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => onSearchChange('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-on-surface-variant/60 hover:text-on-surface active:scale-90 transition-all"
+              title="Xóa từ khóa"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* Tag Filter Button with Active Badge */}
         <button
           type="button"
-          onClick={onSubmitSearch}
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60 hover:text-primary transition-colors cursor-pointer"
-          title="Bấm để tìm kiếm"
+          onClick={onOpenTagFilter}
+          className={`relative p-2 rounded-2xl border transition-all active:scale-95 flex items-center justify-center shrink-0 shadow-xs ${
+            activeTagsCount > 0
+              ? 'bg-primary text-on-primary border-primary shadow-sm'
+              : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-primary hover:border-primary/40'
+          }`}
+          title="Lọc theo Thể loại & Tags"
+          aria-label="Lọc theo Thể loại & Tags"
+          data-testid="tag-filter-trigger-btn"
         >
-          <Search size={14} />
+          <Tag size={15} />
+          {activeTagsCount > 0 && (
+            <span className="absolute -top-1 -right-1 px-1.5 py-0.2 min-w-4 h-4 rounded-full bg-error text-on-error text-[9px] font-bold font-mono flex items-center justify-center border-2 border-surface">
+              {activeTagsCount}
+            </span>
+          )}
         </button>
-        <input
-          type="text"
-          placeholder="Tìm kiếm truyện chữ (nhấn Enter)..."
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && onSubmitSearch) {
-              onSubmitSearch();
-            }
-          }}
-          className="w-full pl-9 pr-8 py-2 rounded-2xl bg-surface-container border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium transition-all"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => onSearchChange('')}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-on-surface-variant/60 hover:text-on-surface active:scale-90 transition-all"
-            title="Xóa từ khóa"
-          >
-            <X size={13} />
-          </button>
-        )}
       </div>
     </header>
   );

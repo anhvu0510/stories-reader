@@ -19,7 +19,8 @@ export const BookRepository = {
     search?: string,
     tab?: string,
     sortBy: string = 'updatedAt',
-    sortOrder: string = 'DESC'
+    sortOrder: string = 'DESC',
+    tags?: string[]
   ): Promise<GetBooksResult> {
     const isOffline = useAppStore.getState().isOfflineMode;
 
@@ -38,6 +39,9 @@ export const BookRepository = {
         if (tab && tab !== 'ALL') {
           query.append('tab', tab);
           query.append('rootTab', tab.toLowerCase());
+        }
+        if (tags && tags.length > 0) {
+          query.append('tags', tags.join(','));
         }
 
         const res = await apiClient.get<any>(`/api/books?${query.toString()}`);

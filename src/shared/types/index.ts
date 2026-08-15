@@ -16,6 +16,8 @@ export interface Book {
   coverUrl?: string;
   author?: string;
   source?: string;
+  tags?: string[];
+  pointOfView?: string;
 }
 
 export interface Chapter {

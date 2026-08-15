@@ -17,9 +17,10 @@ interface BookCardProps {
   isSelected?: boolean;
   isSelectionMode?: boolean;
   onRefresh?: () => void;
+  onTagClick?: (tag: string) => void;
 }
 
-export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMode }: BookCardProps) {
+export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMode, onTagClick }: BookCardProps) {
   const navigate = useNavigate();
   const [showQuickSheet, setShowQuickSheet] = useState(false);
   const [showTranslationSheet, setShowTranslationSheet] = useState(false);
@@ -321,6 +322,26 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Mini Tag Badges (Clickable for Quick Filter) */}
+            {book.tags && book.tags.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                {book.tags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTagClick?.(tag);
+                    }}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-medium bg-surface-container-high border border-outline-variant/30 text-on-surface-variant hover:text-primary hover:border-primary/40 active:scale-95 transition-all"
+                    title={`Lọc theo tag: ${tag}`}
+                  >
+                    <span>#{tag}</span>
+                  </button>
+                ))}
               </div>
             )}
 

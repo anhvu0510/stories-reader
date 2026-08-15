@@ -6,16 +6,17 @@ import { useModalStore } from '../../stores/useModalStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { BookCard } from './components/BookCard';
 import { LibraryHeader } from './components/LibraryHeader';
+import { TagFilterSheet } from './components/TagFilterSheet';
 import { BottomDock } from '../../components/BottomDock';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { OfflineManagerSheet } from '../../components/OfflineManagerSheet';
-import { BookOpen, Clock, Sparkles, Library } from 'lucide-react';
+import { BookOpen, Clock, Sparkles, Library, X, RotateCcw } from 'lucide-react';
 
 import { useLibraryStore } from '../../stores/useLibraryStore';
 
 export function LibraryScreen() {
-  const { savedPage, savedTab, savedSearch, savedScrollY, setLibraryState } = useLibraryStore();
+  const { savedPage, savedTab, savedSearch, savedTags, savedScrollY, setLibraryState } = useLibraryStore();
 
   const [books, setBooks] = useState<Book[]>([]);
   const [page, setPage] = useState(savedPage);
@@ -25,6 +26,8 @@ export function LibraryScreen() {
 
   const [search, setSearch] = useState(savedSearch);
   const [tab, setTab] = useState<'ALL' | 'HISTORY' | 'AI'>(savedTab);
+  const [selectedTags, setSelectedTags] = useState<string[]>(savedTags || []);
+  const [isTagFilterOpen, setIsTagFilterOpen] = useState(false);
 
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
   const showToast = useToastStore((state) => state.showToast);
@@ -34,26 +37,27 @@ export function LibraryScreen() {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isRestoredRef = useRef(false);
 
-  // Sync state to useLibraryStore whenever page, tab, or search changes
+  // Sync state to useLibraryStore whenever page, tab, search, or selectedTags changes
   useEffect(() => {
-    setLibraryState(page, tab, search);
-  }, [page, tab, search, setLibraryState]);
+    setLibraryState(page, tab, search, selectedTags);
+  }, [page, tab, search, selectedTags, setLibraryState]);
 
   // Track and save scroll position on main container scroll
   const handleMainScroll = () => {
     if (mainScrollRef.current) {
-      setLibraryState(page, tab, search, mainScrollRef.current.scrollTop);
+      setLibraryState(page, tab, search, selectedTags, mainScrollRef.current.scrollTop);
     }
   };
 
-  // Fetch paginated books directly from backend API with tab filter
+  // Fetch paginated books directly from backend API with tab and tags filter
   const fetchBooks = useCallback(
-    async (targetPage: number, querySearch?: string, activeTab?: string) => {
+    async (targetPage: number, querySearch?: string, activeTab?: string, filterTags?: string[]) => {
       setLoading(true);
       const q = querySearch !== undefined ? querySearch : search;
       const t = activeTab !== undefined ? activeTab : tab;
+      const tg = filterTags !== undefined ? filterTags : selectedTags;
       try {
-        const res = await BookRepository.getBooks(targetPage, 20, q, t);
+        const res = await BookRepository.getBooks(targetPage, 20, q, t, 'updatedAt', 'DESC', tg);
         const fetchedBooks = res.books || [];
         const { currentPage, totalPages: pagesCount, total: totalCount } = res.pagination || {};
 
@@ -67,14 +71,14 @@ export function LibraryScreen() {
         setLoading(false);
       }
     },
-    [showToast]
+    [search, tab, selectedTags, showToast]
   );
 
   useEffect(() => {
-    fetchBooks(page, search, tab);
+    fetchBooks(page, search, tab, selectedTags);
 
     const handleRefresh = () => {
-      fetchBooks(page, search, tab);
+      fetchBooks(page, search, tab, selectedTags);
     };
 
     window.addEventListener('app-refresh', handleRefresh);
@@ -103,42 +107,60 @@ export function LibraryScreen() {
   // Page change handler
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-    setLibraryState(newPage, tab, search, 0);
+    setLibraryState(newPage, tab, search, selectedTags, 0);
     if (mainScrollRef.current) {
       mainScrollRef.current.scrollTop = 0;
     }
-    fetchBooks(newPage, search, tab);
+    fetchBooks(newPage, search, tab, selectedTags);
   };
 
   // Optimized Debounced search handler (650ms delay + immediate clear)
   const handleSearchChange = (val: string) => {
     setSearch(val);
     setPage(1);
-    setLibraryState(1, tab, val, 0);
+    setLibraryState(1, tab, val, selectedTags, 0);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 
     if (val.trim() === '') {
-      fetchBooks(1, '', tab);
+      fetchBooks(1, '', tab, selectedTags);
       return;
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      fetchBooks(1, val, tab);
+      fetchBooks(1, val, tab, selectedTags);
     }, 650);
   };
 
   // Immediate search submit handler (e.g. Enter key or Search icon click)
   const handleSearchSubmit = () => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    fetchBooks(1, search, tab);
+    fetchBooks(1, search, tab, selectedTags);
   };
 
   // Tab switch handler: resets page and passes new tab to API
   const handleTabChange = (newTab: 'ALL' | 'HISTORY' | 'AI') => {
     setTab(newTab);
     setPage(1);
-    setLibraryState(1, newTab, search, 0);
-    fetchBooks(1, search, newTab);
+    setLibraryState(1, newTab, search, selectedTags, 0);
+    fetchBooks(1, search, newTab, selectedTags);
+  };
+
+  // Tag filter apply handler
+  const handleTagFilterApply = (newTags: string[]) => {
+    setSelectedTags(newTags);
+    setPage(1);
+    setLibraryState(1, tab, search, newTags, 0);
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTop = 0;
+    }
+    fetchBooks(1, search, tab, newTags);
+  };
+
+  // Quick tag click handler from BookCard
+  const handleQuickTagClick = (tag: string) => {
+    const newTags = selectedTags.includes(tag) ? selectedTags : [tag];
+    handleTagFilterApply(newTags);
+    showToast(`Đang lọc theo tag: ${tag}`, 'info');
   };
 
   return (
@@ -150,7 +172,41 @@ export function LibraryScreen() {
           onSearchChange={handleSearchChange}
           onSubmitSearch={handleSearchSubmit}
           onOpenSettings={() => openSettings('reader')}
+          onOpenTagFilter={() => setIsTagFilterOpen(true)}
+          activeTagsCount={selectedTags.length}
         />
+
+        {/* Active Tag Filter Pills Row */}
+        {selectedTags.length > 0 && (
+          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-primary/10 border-b border-primary/20 overflow-x-auto hide-scrollbar">
+            <button
+              onClick={() => handleTagFilterApply([])}
+              className="text-[10.5px] font-bold text-error hover:underline shrink-0 flex items-center gap-1 mr-0.5 px-1.5 py-0.5 rounded-md hover:bg-error/10 active:scale-95 transition-all"
+              title="Xóa tất cả tags đang lọc"
+            >
+              <RotateCcw size={11} />
+              <span>Xóa lọc</span>
+            </button>
+            {selectedTags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-primary text-on-primary shrink-0 shadow-xs"
+              >
+                <span>#{tag}</span>
+                <button
+                  onClick={() => {
+                    const updated = selectedTags.filter((t) => t !== tag);
+                    handleTagFilterApply(updated);
+                  }}
+                  className="hover:opacity-80 active:scale-90"
+                  title={`Bỏ tag ${tag}`}
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="flex items-center justify-between px-3.5 py-2.5 gap-2 border-t border-outline-variant/10">
           <h2 className="text-[11px] font-mono font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-1.5 min-w-0 truncate">
@@ -224,17 +280,32 @@ export function LibraryScreen() {
         ) : books.length === 0 ? (
           <div className="py-16 text-center space-y-2">
             <p className="text-xs font-medium text-on-surface-variant/60">
-              {tab === 'HISTORY'
+              {selectedTags.length > 0
+                ? 'Không tìm thấy truyện nào phù hợp với bộ lọc tags'
+                : tab === 'HISTORY'
                 ? 'Chưa có lịch sử đọc truyện nào'
                 : tab === 'AI'
                 ? 'Không có truyện nào đang chờ dịch AI'
                 : 'Không tìm thấy truyện nào trong thư viện'}
             </p>
+            {selectedTags.length > 0 && (
+              <button
+                onClick={() => handleTagFilterApply([])}
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                Xóa bộ lọc tags
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {books.map((book) => (
-              <BookCard key={book.bookId} book={book} activeTab={tab} />
+              <BookCard
+                key={book.bookId}
+                book={book}
+                activeTab={tab}
+                onTagClick={handleQuickTagClick}
+              />
             ))}
           </div>
         )}
@@ -243,6 +314,14 @@ export function LibraryScreen() {
       {/* Global Settings & Modals */}
       <GlobalSettingsSheet />
       {isOfflineManagerOpen && <OfflineManagerSheet onClose={closeOfflineManager} />}
+
+      {/* Tag Filter Bottom Sheet */}
+      <TagFilterSheet
+        isOpen={isTagFilterOpen}
+        selectedTags={selectedTags}
+        onApply={handleTagFilterApply}
+        onClose={() => setIsTagFilterOpen(false)}
+      />
 
       {/* Floating Paging Capsule Bottom Dock connected to Server-Side Tab API Pagination */}
       <BottomDock
