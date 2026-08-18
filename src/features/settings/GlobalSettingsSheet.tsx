@@ -24,7 +24,9 @@ export function GlobalSettingsSheet({
   const tabs = [
     { id: 'servers', label: 'Server API', icon: Server },
     { id: 'reader', label: 'Chế độ Đọc', icon: BookOpen },
+    /* READ ALOUD (TTS) TEMPORARILY DISABLED
     { id: 'voice', label: 'Giọng đọc TTS', icon: Volume2 },
+    */
     { id: 'translation', label: 'Dịch AI', icon: Sparkles },
     { id: 'replacements', label: 'Thay thế từ', icon: RefreshCw },
   ] as const;

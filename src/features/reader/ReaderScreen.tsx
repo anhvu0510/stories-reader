@@ -73,12 +73,16 @@ export function ReaderScreen() {
   const groupLines = useReaderConfigStore((state) => state.groupLines);
   const isEnabledReplace = useReaderConfigStore((state) => state.isEnabledReplace);
 
-  const isPlaying = useTTSStore((state) => state.isPlaying);
-  const isPaused = useTTSStore((state) => state.isPaused);
-  const currentParagraphIndex = useTTSStore((state) => state.currentParagraphIndex);
-  const setIsPlaying = useTTSStore((state) => state.setIsPlaying);
-  const setIsPaused = useTTSStore((state) => state.setIsPaused);
-  const resetTTS = useTTSStore((state) => state.resetTTS);
+  /* READ ALOUD (TTS) TEMPORARILY DISABLED */
+  // const isPlaying = useTTSStore((state) => state.isPlaying);
+  // const isPaused = useTTSStore((state) => state.isPaused);
+  // const currentParagraphIndex = useTTSStore((state) => state.currentParagraphIndex);
+  // const setIsPlaying = useTTSStore((state) => state.setIsPlaying);
+  // const setIsPaused = useTTSStore((state) => state.setIsPaused);
+  // const resetTTS = useTTSStore((state) => state.resetTTS);
+  const isPlaying = false;
+  const isPaused = false;
+  const currentParagraphIndex = -1;
 
   const [contentData, setContentData] = useState<ChapterContent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -174,12 +178,15 @@ export function ReaderScreen() {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
     loadChapter();
+    /* READ ALOUD (TTS) TEMPORARILY DISABLED: Removed global speechSynthesis.cancel() and resetTTS()
     resetTTS();
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
-  }, [chapterId, loadChapter, resetTTS]);
+    */
+  }, [chapterId, loadChapter]);
 
+  /* READ ALOUD (TTS) TEMPORARILY DISABLED: Logic commented out to prevent multi-tab audio interruption
   // Handle TTS Playback with smooth auto-scrolling
   const playTTSFromIndex = useCallback(
     (index: number) => {
@@ -261,6 +268,7 @@ export function ReaderScreen() {
     }
     resetTTS();
   }, [resetTTS]);
+  */
 
   // No-op double-click handler (Quick replacement popup removed, feature available in Settings)
   const handleDoubleClick = useCallback(() => {}, []);
@@ -338,9 +346,10 @@ export function ReaderScreen() {
           nextChapterId={navigation?.next?.chapterId}
           currentChapterNumber={chapter.chapterNumber}
           isVisible={showZenControls}
-          isTTSActive={isPlaying || isPaused}
-          isTTSPlaying={isPlaying}
-          currentParagraphIndex={currentParagraphIndex}
+          isTTSActive={false}
+          isTTSPlaying={false}
+          currentParagraphIndex={-1}
+          /* READ ALOUD (TTS) TEMPORARILY DISABLED
           onToggleTTS={handleToggleTTS}
           onTTSPlay={() => {
             if (isPaused) {
@@ -365,6 +374,7 @@ export function ReaderScreen() {
             const activeIdx = useTTSStore.getState().currentParagraphIndex >= 0 ? useTTSStore.getState().currentParagraphIndex : currentPIdxRef.current;
             playTTSFromIndex(activeIdx + 1);
           }}
+          */
           onOpenChapterSelect={handleOpenChapterSelect}
           onOpenTranslation={handleOpenTranslation}
         />

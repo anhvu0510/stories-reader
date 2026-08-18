@@ -216,7 +216,7 @@ export function ReaderQuickControl({
 
         {/* RIGHT GROUP: Speaker Toggle (Hidden when active), System Settings & AI Translation */}
         <div className="flex items-center gap-1 flex-shrink-0">
-          {/* Read Aloud TTS Toggle Button (Hidden when TTS is active to yield slot) */}
+          {/* READ ALOUD (TTS) TEMPORARILY DISABLED
           {onToggleTTS && !isTTSActive && (
             <button
               onClick={(e) => {
@@ -229,6 +229,7 @@ export function ReaderQuickControl({
               <Volume2 size={16} />
             </button>
           )}
+          */}
 
           {/* System Settings Button */}
           <button
