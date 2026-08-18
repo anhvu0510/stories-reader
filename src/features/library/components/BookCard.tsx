@@ -8,6 +8,7 @@ import { useAppStore } from '../../../stores/useAppStore';
 import { useToastStore } from '../../../stores/useToastStore';
 import { offlineDb } from '../../../lib/offlineDb';
 import { downloadManager } from '../../../lib/DownloadManager';
+import { BookRepository } from '../../../repositories/BookRepository';
 
 interface BookCardProps {
   key?: React.Key;
@@ -26,6 +27,7 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
   const [showTranslationSheet, setShowTranslationSheet] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isSwipedOpen, setIsSwipedOpen] = useState(false);
+  const [isSwipedOpenLeft, setIsSwipedOpenLeft] = useState(false);
   const [isSwiping, setIsSwiping] = useState(false);
 
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
@@ -40,17 +42,18 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
 
   // Auto-close open swipe menu when page is scrolled or when user moves vertically
   useEffect(() => {
-    if (!isSwipedOpen) return;
+    if (!isSwipedOpen && !isSwipedOpenLeft) return;
 
     const handleAutoClose = () => {
       setIsSwipedOpen(false);
+      setIsSwipedOpenLeft(false);
     };
 
     window.addEventListener('scroll', handleAutoClose, { passive: true, capture: true });
     return () => {
       window.removeEventListener('scroll', handleAutoClose, { capture: true });
     };
-  }, [isSwipedOpen]);
+  }, [isSwipedOpen, isSwipedOpenLeft]);
 
   // Listen for global event to close all other open swipe menus when another card is touched
   useEffect(() => {
@@ -58,6 +61,7 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
       const customEv = e as CustomEvent;
       if (customEv.detail?.exceptBookId !== book.bookId) {
         setIsSwipedOpen(false);
+        setIsSwipedOpenLeft(false);
       }
     };
 
@@ -100,8 +104,9 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
       if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 6) {
         isScrollingYRef.current = true;
         setIsSwiping(false);
-        if (isSwipedOpen) {
+        if (isSwipedOpen || isSwipedOpenLeft) {
           setIsSwipedOpen(false);
+          setIsSwipedOpenLeft(false);
         }
         return;
       }
@@ -111,15 +116,24 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
     }
 
     if (isDraggingRef.current && cardElementRef.current) {
-      const baseOffset = isSwipedOpen ? -actionTrayWidth : 0;
+      const baseOffset = isSwipedOpenLeft ? actionTrayLeftWidth : (isSwipedOpen ? -actionTrayWidth : 0);
       let newTranslateX = baseOffset + deltaX;
 
-      // Dampen over-drag
-      if (newTranslateX > 0) {
-        newTranslateX = newTranslateX * 0.2;
-      } else if (newTranslateX < -actionTrayWidth) {
-        const overflow = newTranslateX + actionTrayWidth;
-        newTranslateX = -actionTrayWidth + overflow * 0.2;
+      if (!isOfflineMode) {
+        if (newTranslateX > actionTrayLeftWidth) {
+          const overflow = newTranslateX - actionTrayLeftWidth;
+          newTranslateX = actionTrayLeftWidth + overflow * 0.2;
+        } else if (newTranslateX < -actionTrayWidth) {
+          const overflow = newTranslateX + actionTrayWidth;
+          newTranslateX = -actionTrayWidth + overflow * 0.2;
+        }
+      } else {
+        if (newTranslateX > 0) {
+          newTranslateX = newTranslateX * 0.2;
+        } else if (newTranslateX < -actionTrayWidth) {
+          const overflow = newTranslateX + actionTrayWidth;
+          newTranslateX = -actionTrayWidth + overflow * 0.2;
+        }
       }
 
       cardElementRef.current.style.transform = `translateX(${newTranslateX}px)`;
@@ -136,15 +150,22 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
       const touchEndX = e.changedTouches[0]?.clientX ?? touchStartXRef.current;
       const deltaX = touchEndX - touchStartXRef.current;
 
-      if (!isSwipedOpen && deltaX < -45) {
+      if (!isOfflineMode && !isSwipedOpenLeft && deltaX > 45) {
+        setIsSwipedOpenLeft(true);
+        setIsSwipedOpen(false);
+      } else if (!isSwipedOpen && deltaX < -45) {
         setIsSwipedOpen(true);
+        setIsSwipedOpenLeft(false);
+      } else if (isSwipedOpenLeft && deltaX < -25) {
+        setIsSwipedOpenLeft(false);
       } else if (isSwipedOpen && deltaX > 25) {
         setIsSwipedOpen(false);
       } else {
         if (cardElementRef.current) {
-          cardElementRef.current.style.transform = isSwipedOpen
-            ? `translateX(-${actionTrayWidth}px)`
-            : 'translateX(0px)';
+          const targetOffset = isSwipedOpenLeft
+            ? actionTrayLeftWidth
+            : (isSwipedOpen ? -actionTrayWidth : 0);
+          cardElementRef.current.style.transform = `translateX(${targetOffset}px)`;
         }
       }
     }
@@ -157,8 +178,9 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
 
   const handleCardClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isSwipedOpen) {
+    if (isSwipedOpen || isSwipedOpenLeft) {
       setIsSwipedOpen(false);
+      setIsSwipedOpenLeft(false);
       return;
     }
 
@@ -179,6 +201,7 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
   const handleOpenNewTab = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsSwipedOpen(false);
+    setIsSwipedOpenLeft(false);
     const url = book.lastReadChapter?.chapterId
       ? `#/book/${book.bookId}/chapter/${book.lastReadChapter.chapterId}`
       : `#/book/${book.bookId}`;
@@ -188,6 +211,7 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
   const handleDownloadBook = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsSwipedOpen(false);
+    setIsSwipedOpenLeft(false);
     downloadManager.addBook(book.bookId, book.bookName);
     showToast(`Đã thêm "${book.bookName}" vào hàng đợi tải xuống`, 'info');
   };
@@ -195,11 +219,26 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
   const handleDeleteOfflineBook = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsSwipedOpen(false);
+    setIsSwipedOpenLeft(false);
     if (window.confirm(`Bạn có chắc chắn muốn xóa "${book.bookName}" khỏi máy?`)) {
       await offlineDb.deleteBook(book.bookId);
       setIsDownloaded(false);
       showToast(`Đã xóa "${book.bookName}" khỏi máy`, 'success');
       window.dispatchEvent(new CustomEvent('app-refresh'));
+    }
+  };
+
+  const handleDeleteOnlineBook = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsSwipedOpenLeft(false);
+    if (window.confirm(`Bạn có chắc chắn muốn xóa bộ truyện "${book.bookName}" khỏi hệ thống?\n(Tất cả dữ liệu chương và thông tin liên quan sẽ bị xóa vĩnh viễn)`)) {
+      try {
+        await BookRepository.deleteBook(book.bookId);
+        showToast(`Đã xóa bộ truyện "${book.bookName}" khỏi hệ thống`, 'success');
+        window.dispatchEvent(new CustomEvent('app-refresh'));
+      } catch (err: any) {
+        showToast(`Lỗi khi xóa bộ truyện: ${err?.message || 'Không thể kết nối API'}`, 'error');
+      }
     }
   };
 
@@ -218,6 +257,7 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
   };
 
   const formattedDate = formatDate(book.updatedAt || (book as any).lastedReadAt);
+  const actionTrayLeftWidth = 60;
   const actionTrayWidth = isOfflineMode ? 120 : (isDownloaded ? 180 : 120);
 
   const progressPct = book.chapterCount > 0
@@ -227,7 +267,25 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
   return (
     <>
       <div className="relative overflow-hidden rounded-2xl w-full select-none">
-        {/* Background Native Mobile Swipe Action Tiles (Theme-Synced) */}
+        {/* Background Native Mobile Swipe Left Action Tiles (Online Delete Button) */}
+        {!isOfflineMode && (
+          <div
+            className={`absolute inset-y-0 left-0 z-0 flex items-center justify-start overflow-hidden rounded-l-2xl h-full transition-opacity duration-150 ${
+              isSwipedOpenLeft || isSwiping ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <button
+              onClick={handleDeleteOnlineBook}
+              className="w-[60px] h-full bg-rose-600 hover:bg-rose-700 text-white flex flex-col items-center justify-center font-mono text-[10px] font-black gap-0.5 active:scale-95 transition-all shadow-inner"
+              title="Xóa bộ truyện khỏi hệ thống"
+            >
+              <Trash2 size={18} />
+              <span className="leading-none mt-0.5">XÓA</span>
+            </button>
+          </div>
+        )}
+
+        {/* Background Native Mobile Swipe Right Action Tiles (Theme-Synced) */}
         <div
           className={`absolute inset-y-0 right-0 z-0 flex items-center justify-end overflow-hidden rounded-r-2xl h-full transition-opacity duration-150 ${
             isSwipedOpen || isSwiping ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -276,7 +334,9 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
           onTouchEnd={handleTouchEnd}
           onClick={handleCardClick}
           style={{
-            transform: isSwipedOpen ? `translateX(-${actionTrayWidth}px)` : 'translateX(0px)',
+            transform: isSwipedOpenLeft
+              ? `translateX(${actionTrayLeftWidth}px)`
+              : (isSwipedOpen ? `translateX(-${actionTrayWidth}px)` : 'translateX(0px)'),
           }}
           className={`group relative z-10 bg-surface-container rounded-2xl border border-outline-variant/25 p-3 transition-transform duration-200 ease-out cursor-pointer flex items-center gap-3 shadow-xs hover:shadow-sm hover:border-primary/40 overflow-hidden active:scale-[0.99] ${
             isSelected
