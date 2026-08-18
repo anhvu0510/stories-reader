@@ -29,6 +29,8 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
   const [isSwipedOpen, setIsSwipedOpen] = useState(false);
   const [isSwipedOpenLeft, setIsSwipedOpenLeft] = useState(false);
   const [isSwiping, setIsSwiping] = useState(false);
+  const [deleteConfirmType, setDeleteConfirmType] = useState<'ONLINE' | 'OFFLINE' | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
   const showToast = useToastStore((state) => state.showToast);
@@ -75,6 +77,7 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
   const touchStartYRef = useRef<number | null>(null);
   const isDraggingRef = useRef<boolean>(false);
   const isScrollingYRef = useRef<boolean>(false);
+  const swipeInitialStateRef = useRef<'CLOSED' | 'OPEN_LEFT' | 'OPEN_RIGHT'>('CLOSED');
   const cardElementRef = useRef<HTMLDivElement | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -84,6 +87,14 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
     isDraggingRef.current = false;
     isScrollingYRef.current = false;
     setIsSwiping(true);
+
+    if (isSwipedOpenLeft) {
+      swipeInitialStateRef.current = 'OPEN_LEFT';
+    } else if (isSwipedOpen) {
+      swipeInitialStateRef.current = 'OPEN_RIGHT';
+    } else {
+      swipeInitialStateRef.current = 'CLOSED';
+    }
 
     if (cardElementRef.current) {
       cardElementRef.current.style.transition = 'none';
@@ -116,27 +127,46 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
     }
 
     if (isDraggingRef.current && cardElementRef.current) {
-      const baseOffset = isSwipedOpenLeft ? actionTrayLeftWidth : (isSwipedOpen ? -actionTrayWidth : 0);
-      let newTranslateX = baseOffset + deltaX;
+      const initialState = swipeInitialStateRef.current;
 
-      if (!isOfflineMode) {
-        if (newTranslateX > actionTrayLeftWidth) {
+      if (initialState === 'OPEN_LEFT') {
+        let newTranslateX = actionTrayLeftWidth + deltaX;
+        if (newTranslateX < 0) {
+          newTranslateX = 0;
+        } else if (newTranslateX > actionTrayLeftWidth) {
           const overflow = newTranslateX - actionTrayLeftWidth;
           newTranslateX = actionTrayLeftWidth + overflow * 0.2;
-        } else if (newTranslateX < -actionTrayWidth) {
-          const overflow = newTranslateX + actionTrayWidth;
-          newTranslateX = -actionTrayWidth + overflow * 0.2;
         }
-      } else {
+        cardElementRef.current.style.transform = `translateX(${newTranslateX}px)`;
+      } else if (initialState === 'OPEN_RIGHT') {
+        let newTranslateX = -actionTrayWidth + deltaX;
         if (newTranslateX > 0) {
-          newTranslateX = newTranslateX * 0.2;
+          newTranslateX = 0;
         } else if (newTranslateX < -actionTrayWidth) {
           const overflow = newTranslateX + actionTrayWidth;
           newTranslateX = -actionTrayWidth + overflow * 0.2;
         }
+        cardElementRef.current.style.transform = `translateX(${newTranslateX}px)`;
+      } else {
+        let newTranslateX = deltaX;
+        if (!isOfflineMode) {
+          if (newTranslateX > actionTrayLeftWidth) {
+            const overflow = newTranslateX - actionTrayLeftWidth;
+            newTranslateX = actionTrayLeftWidth + overflow * 0.2;
+          } else if (newTranslateX < -actionTrayWidth) {
+            const overflow = newTranslateX + actionTrayWidth;
+            newTranslateX = -actionTrayWidth + overflow * 0.2;
+          }
+        } else {
+          if (newTranslateX > 0) {
+            newTranslateX = newTranslateX * 0.2;
+          } else if (newTranslateX < -actionTrayWidth) {
+            const overflow = newTranslateX + actionTrayWidth;
+            newTranslateX = -actionTrayWidth + overflow * 0.2;
+          }
+        }
+        cardElementRef.current.style.transform = `translateX(${newTranslateX}px)`;
       }
-
-      cardElementRef.current.style.transform = `translateX(${newTranslateX}px)`;
     }
   };
 
@@ -149,23 +179,41 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
     if (isDraggingRef.current && touchStartXRef.current !== null) {
       const touchEndX = e.changedTouches[0]?.clientX ?? touchStartXRef.current;
       const deltaX = touchEndX - touchStartXRef.current;
+      const initialState = swipeInitialStateRef.current;
 
-      if (!isOfflineMode && !isSwipedOpenLeft && deltaX > 45) {
-        setIsSwipedOpenLeft(true);
-        setIsSwipedOpen(false);
-      } else if (!isSwipedOpen && deltaX < -45) {
-        setIsSwipedOpen(true);
-        setIsSwipedOpenLeft(false);
-      } else if (isSwipedOpenLeft && deltaX < -25) {
-        setIsSwipedOpenLeft(false);
-      } else if (isSwipedOpen && deltaX > 25) {
-        setIsSwipedOpen(false);
+      if (initialState === 'OPEN_LEFT') {
+        if (deltaX < -20) {
+          setIsSwipedOpenLeft(false);
+          setIsSwipedOpen(false);
+          if (cardElementRef.current) cardElementRef.current.style.transform = 'translateX(0px)';
+        } else {
+          setIsSwipedOpenLeft(true);
+          setIsSwipedOpen(false);
+          if (cardElementRef.current) cardElementRef.current.style.transform = `translateX(${actionTrayLeftWidth}px)`;
+        }
+      } else if (initialState === 'OPEN_RIGHT') {
+        if (deltaX > 20) {
+          setIsSwipedOpen(false);
+          setIsSwipedOpenLeft(false);
+          if (cardElementRef.current) cardElementRef.current.style.transform = 'translateX(0px)';
+        } else {
+          setIsSwipedOpen(true);
+          setIsSwipedOpenLeft(false);
+          if (cardElementRef.current) cardElementRef.current.style.transform = `translateX(-${actionTrayWidth}px)`;
+        }
       } else {
-        if (cardElementRef.current) {
-          const targetOffset = isSwipedOpenLeft
-            ? actionTrayLeftWidth
-            : (isSwipedOpen ? -actionTrayWidth : 0);
-          cardElementRef.current.style.transform = `translateX(${targetOffset}px)`;
+        if (!isOfflineMode && deltaX > 45) {
+          setIsSwipedOpenLeft(true);
+          setIsSwipedOpen(false);
+          if (cardElementRef.current) cardElementRef.current.style.transform = `translateX(${actionTrayLeftWidth}px)`;
+        } else if (deltaX < -45) {
+          setIsSwipedOpen(true);
+          setIsSwipedOpenLeft(false);
+          if (cardElementRef.current) cardElementRef.current.style.transform = `translateX(-${actionTrayWidth}px)`;
+        } else {
+          setIsSwipedOpenLeft(false);
+          setIsSwipedOpen(false);
+          if (cardElementRef.current) cardElementRef.current.style.transform = 'translateX(0px)';
         }
       }
     }
@@ -216,29 +264,38 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
     showToast(`Đã thêm "${book.bookName}" vào hàng đợi tải xuống`, 'info');
   };
 
-  const handleDeleteOfflineBook = async (e: React.MouseEvent) => {
+  const handleOpenDeleteOfflineModal = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsSwipedOpen(false);
     setIsSwipedOpenLeft(false);
-    if (window.confirm(`Bạn có chắc chắn muốn xóa "${book.bookName}" khỏi máy?`)) {
-      await offlineDb.deleteBook(book.bookId);
-      setIsDownloaded(false);
-      showToast(`Đã xóa "${book.bookName}" khỏi máy`, 'success');
-      window.dispatchEvent(new CustomEvent('app-refresh'));
-    }
+    setDeleteConfirmType('OFFLINE');
   };
 
-  const handleDeleteOnlineBook = async (e: React.MouseEvent) => {
+  const handleOpenDeleteOnlineModal = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setIsSwipedOpen(false);
     setIsSwipedOpenLeft(false);
-    if (window.confirm(`Bạn có chắc chắn muốn xóa bộ truyện "${book.bookName}" khỏi hệ thống?\n(Tất cả dữ liệu chương và thông tin liên quan sẽ bị xóa vĩnh viễn)`)) {
-      try {
+    setDeleteConfirmType('ONLINE');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmType) return;
+    setIsDeleting(true);
+    try {
+      if (deleteConfirmType === 'ONLINE') {
         await BookRepository.deleteBook(book.bookId);
         showToast(`Đã xóa bộ truyện "${book.bookName}" khỏi hệ thống`, 'success');
-        window.dispatchEvent(new CustomEvent('app-refresh'));
-      } catch (err: any) {
-        showToast(`Lỗi khi xóa bộ truyện: ${err?.message || 'Không thể kết nối API'}`, 'error');
+      } else {
+        await offlineDb.deleteBook(book.bookId);
+        setIsDownloaded(false);
+        showToast(`Đã xóa "${book.bookName}" khỏi máy`, 'success');
       }
+      setDeleteConfirmType(null);
+      window.dispatchEvent(new CustomEvent('app-refresh'));
+    } catch (err: any) {
+      showToast(`Lỗi khi xóa bộ truyện: ${err?.message || 'Không thể xóa'}`, 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -275,7 +332,7 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
             }`}
           >
             <button
-              onClick={handleDeleteOnlineBook}
+              onClick={handleOpenDeleteOnlineModal}
               className="w-[60px] h-full bg-rose-600 hover:bg-rose-700 text-white flex flex-col items-center justify-center font-mono text-[10px] font-black gap-0.5 active:scale-95 transition-all shadow-inner"
               title="Xóa bộ truyện khỏi hệ thống"
             >
@@ -316,7 +373,7 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
           {/* Delete Offline Action Tile */}
           {(isOfflineMode || isDownloaded) && (
             <button
-              onClick={handleDeleteOfflineBook}
+              onClick={handleOpenDeleteOfflineModal}
               className="w-[60px] h-full bg-rose-600/90 hover:bg-rose-600 text-white flex flex-col items-center justify-center font-mono text-[10px] font-black gap-0.5 active:scale-95 transition-all shadow-inner"
               title="Xóa khỏi máy"
             >
@@ -459,6 +516,69 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
           disableCurrent={true}
           onClose={() => setShowTranslationSheet(false)}
         />
+      )}
+
+      {/* Confirmation Modal for Online/Offline Delete */}
+      {deleteConfirmType && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => !isDeleting && setDeleteConfirmType(null)}
+        >
+          <div
+            className="w-full max-w-sm bg-surface-container-high border border-outline-variant/30 rounded-3xl p-5 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 shrink-0">
+                <Trash2 size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-on-surface">
+                  {deleteConfirmType === 'ONLINE' ? 'Xóa truyện khỏi hệ thống?' : 'Xóa truyện khỏi máy?'}
+                </h3>
+                <p className="text-xs font-mono text-on-surface-variant/70">Xác nhận thao tác xóa</p>
+              </div>
+            </div>
+
+            {/* Target Details */}
+            <div className="p-3 rounded-2xl bg-surface-container-highest/60 border border-outline-variant/20 space-y-1">
+              <p className="text-xs font-bold text-primary line-clamp-1">{book.bookName}</p>
+              <p className="text-[11.5px] text-on-surface-variant leading-relaxed">
+                {deleteConfirmType === 'ONLINE'
+                  ? 'Tất cả các chương, bản dịch AI và dữ liệu liên quan sẽ bị xóa vĩnh viễn khỏi server và không thể khôi phục.'
+                  : 'Dữ liệu chương đã tải xuống trên thiết bị này sẽ bị xóa khỏi máy.'}
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteConfirmType(null)}
+                className="px-4 py-2 rounded-xl border border-outline-variant/30 text-on-surface hover:bg-surface-container-highest text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-rose-600/25 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                {isDeleting ? (
+                  <span>Đang xóa...</span>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    <span>{deleteConfirmType === 'ONLINE' ? 'Xóa vĩnh viễn' : 'Xóa khỏi máy'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
