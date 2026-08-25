@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Wifi, WifiOff, Settings, BookOpenCheck, X, Tag } from 'lucide-react';
+import { Search, Wifi, WifiOff, Settings, BookOpenCheck, X, Tag, ArrowUpDown } from 'lucide-react';
 import { useAppStore } from '../../../stores/useAppStore';
 
 interface LibraryHeaderProps {
@@ -9,6 +9,8 @@ interface LibraryHeaderProps {
   onSubmitSearch?: () => void;
   onOpenTagFilter?: () => void;
   activeTagsCount?: number;
+  onOpenSort?: () => void;
+  isCustomSortActive?: boolean;
 }
 
 export function LibraryHeader({
@@ -18,6 +20,8 @@ export function LibraryHeader({
   onSubmitSearch,
   onOpenTagFilter,
   activeTagsCount = 0,
+  onOpenSort,
+  isCustomSortActive = false,
 }: LibraryHeaderProps) {
   const { isOfflineMode, setOfflineMode } = useAppStore();
 
@@ -63,8 +67,8 @@ export function LibraryHeader({
         </div>
       </div>
 
-      {/* Search Input & Tag Filter Row */}
-      <div className="flex items-center gap-2">
+      {/* Search Input, Sort & Tag Filter Row */}
+      <div className="flex items-center gap-1.5">
         <div className="relative flex-1">
           <button
             type="button"
@@ -96,6 +100,25 @@ export function LibraryHeader({
             </button>
           )}
         </div>
+
+        {/* Sort Button with Active Highlight */}
+        <button
+          type="button"
+          onClick={onOpenSort}
+          className={`relative p-2 rounded-2xl border transition-all active:scale-95 flex items-center justify-center shrink-0 shadow-xs ${
+            isCustomSortActive
+              ? 'bg-primary/15 text-primary border-primary/50 shadow-sm'
+              : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-primary hover:border-primary/40'
+          }`}
+          title="Sắp xếp danh sách"
+          aria-label="Sắp xếp danh sách"
+          data-testid="sort-trigger-btn"
+        >
+          <ArrowUpDown size={15} />
+          {isCustomSortActive && (
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary border-2 border-surface" />
+          )}
+        </button>
 
         {/* Tag Filter Button with Active Badge */}
         <button

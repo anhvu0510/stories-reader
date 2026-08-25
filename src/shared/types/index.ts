@@ -19,6 +19,7 @@ export interface Book {
   tags?: string[];
   pointOfView?: string;
   isFavorite?: boolean;
+  lastedReadAt?: string;
 }
 
 export interface Chapter {

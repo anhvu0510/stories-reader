@@ -85,4 +85,31 @@ describe('BookRepository Favorite Server Management', () => {
     expect(res.books.length).toBe(1);
     expect(res.books[0].bookId).toBe('b-fav-offline');
   });
+
+  it('QC-5 [Online]: getBooks passes sortBy and sortOrder parameters to API', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      books: [],
+      pagination: { currentPage: 1, totalPages: 1, total: 0 },
+    });
+
+    await BookRepository.getBooks(1, 20, '', 'ALL', 'bookName', 'ASC');
+
+    expect(apiClient.get).toHaveBeenCalledWith(
+      expect.stringMatching(/sortBy=bookName.*sortOrder=ASC|sortOrder=ASC.*sortBy=bookName/)
+    );
+  });
+
+  it('QC-6 [Offline]: getBooks sorts offline books by Vietnamese alphabet (bookName ASC)', async () => {
+    useAppStore.getState().setOfflineMode(true);
+
+    vi.spyOn(offlineDb, 'getBooks').mockResolvedValueOnce([
+      { bookId: 'b-2', bookName: 'Đại Đạo', isFavorite: false, chapterCount: 10, totalTranslated: 10, totalPending: 0, createdAt: '', updatedAt: '', lastReadChapter: null as any },
+      { bookId: 'b-1', bookName: 'Áo Trắng', isFavorite: false, chapterCount: 10, totalTranslated: 10, totalPending: 0, createdAt: '', updatedAt: '', lastReadChapter: null as any },
+      { bookId: 'b-3', bookName: 'Bất Hủ', isFavorite: false, chapterCount: 10, totalTranslated: 10, totalPending: 0, createdAt: '', updatedAt: '', lastReadChapter: null as any },
+    ]);
+
+    const res = await BookRepository.getBooks(1, 20, '', 'ALL', 'bookName', 'ASC');
+
+    expect(res.books.map((b) => b.bookName)).toEqual(['Áo Trắng', 'Bất Hủ', 'Đại Đạo']);
+  });
 });

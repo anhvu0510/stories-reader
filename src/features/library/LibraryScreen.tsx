@@ -7,18 +7,28 @@ import { useAppStore } from '../../stores/useAppStore';
 import { BookCard } from './components/BookCard';
 import { LibraryHeader } from './components/LibraryHeader';
 import { TagFilterSheet } from './components/TagFilterSheet';
+import { SortSheet } from './components/SortSheet';
 import { BottomDock } from '../../components/BottomDock';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { OfflineManagerSheet } from '../../components/OfflineManagerSheet';
 import { BookOpen, Clock, Sparkles, Library, X, RotateCcw, Heart } from 'lucide-react';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-
-import { useLibraryStore } from '../../stores/useLibraryStore';
+import { useLibraryStore, SortByField, SortOrderDirection } from '../../stores/useLibraryStore';
 
 export function LibraryScreen() {
   useDocumentTitle();
-  const { savedPage, savedTab, savedSearch, savedTags, savedScrollY, setLibraryState } = useLibraryStore();
+  const {
+    savedPage,
+    savedTab,
+    savedSearch,
+    savedTags,
+    savedSortBy,
+    savedSortOrder,
+    savedScrollY,
+    setLibraryState,
+    setSort,
+  } = useLibraryStore();
 
   const [books, setBooks] = useState<Book[]>([]);
   const [page, setPage] = useState(savedPage);
@@ -29,7 +39,11 @@ export function LibraryScreen() {
   const [search, setSearch] = useState(savedSearch);
   const [tab, setTab] = useState<'ALL' | 'HISTORY' | 'FAVORITE' | 'AI'>(savedTab);
   const [selectedTags, setSelectedTags] = useState<string[]>(savedTags || []);
+  const [sortBy, setSortByState] = useState<SortByField>(savedSortBy || 'updatedAt');
+  const [sortOrder, setSortOrderState] = useState<SortOrderDirection>(savedSortOrder || 'DESC');
+
   const [isTagFilterOpen, setIsTagFilterOpen] = useState(false);
+  const [isSortSheetOpen, setIsSortSheetOpen] = useState(false);
 
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
   const showToast = useToastStore((state) => state.showToast);
@@ -39,27 +53,37 @@ export function LibraryScreen() {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isRestoredRef = useRef(false);
 
-  // Sync state to useLibraryStore whenever page, tab, search, or selectedTags changes
+  // Sync state to useLibraryStore whenever page, tab, search, selectedTags, sortBy, sortOrder changes
   useEffect(() => {
-    setLibraryState(page, tab, search, selectedTags);
-  }, [page, tab, search, selectedTags, setLibraryState]);
+    setLibraryState(page, tab, search, selectedTags, sortBy, sortOrder);
+  }, [page, tab, search, selectedTags, sortBy, sortOrder, setLibraryState]);
 
   // Track and save scroll position on main container scroll
   const handleMainScroll = () => {
     if (mainScrollRef.current) {
-      setLibraryState(page, tab, search, selectedTags, mainScrollRef.current.scrollTop);
+      setLibraryState(page, tab, search, selectedTags, sortBy, sortOrder, mainScrollRef.current.scrollTop);
     }
   };
 
-  // Fetch paginated books directly from backend API with tab and tags filter
+  // Fetch paginated books directly from backend API with tab, tags, and sort filter
   const fetchBooks = useCallback(
-    async (targetPage: number, querySearch?: string, activeTab?: string, filterTags?: string[]) => {
+    async (
+      targetPage: number,
+      querySearch?: string,
+      activeTab?: string,
+      filterTags?: string[],
+      currentSortBy?: SortByField,
+      currentSortOrder?: SortOrderDirection
+    ) => {
       setLoading(true);
       const q = querySearch !== undefined ? querySearch : search;
       const t = activeTab !== undefined ? activeTab : tab;
       const tg = filterTags !== undefined ? filterTags : selectedTags;
+      const sBy = currentSortBy !== undefined ? currentSortBy : sortBy;
+      const sOrder = currentSortOrder !== undefined ? currentSortOrder : sortOrder;
+
       try {
-        const res = await BookRepository.getBooks(targetPage, 20, q, t, 'updatedAt', 'DESC', tg);
+        const res = await BookRepository.getBooks(targetPage, 20, q, t, sBy, sOrder, tg);
         const fetchedBooks = res.books || [];
         const { currentPage, totalPages: pagesCount, total: totalCount } = res.pagination || {};
 
@@ -73,14 +97,14 @@ export function LibraryScreen() {
         setLoading(false);
       }
     },
-    [search, tab, selectedTags, showToast]
+    [search, tab, selectedTags, sortBy, sortOrder, showToast]
   );
 
   useEffect(() => {
-    fetchBooks(page, search, tab, selectedTags);
+    fetchBooks(page, search, tab, selectedTags, sortBy, sortOrder);
 
     const handleRefresh = () => {
-      fetchBooks(page, search, tab, selectedTags);
+      fetchBooks(page, search, tab, selectedTags, sortBy, sortOrder);
     };
 
     window.addEventListener('app-refresh', handleRefresh);
@@ -92,7 +116,7 @@ export function LibraryScreen() {
       window.removeEventListener('offline-mode-changed', handleRefresh);
       window.removeEventListener('favorites-updated', handleRefresh);
     };
-  }, [page, search, tab, selectedTags, isOfflineMode, fetchBooks]);
+  }, [page, search, tab, selectedTags, sortBy, sortOrder, isOfflineMode, fetchBooks]);
 
   // Restore scroll position after initial loading finishes
   useEffect(() => {
@@ -116,54 +140,70 @@ export function LibraryScreen() {
   // Page change handler
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-    setLibraryState(newPage, tab, search, selectedTags, 0);
+    setLibraryState(newPage, tab, search, selectedTags, sortBy, sortOrder, 0);
     if (mainScrollRef.current) {
       mainScrollRef.current.scrollTop = 0;
     }
-    fetchBooks(newPage, search, tab, selectedTags);
+    fetchBooks(newPage, search, tab, selectedTags, sortBy, sortOrder);
   };
 
   // Optimized Debounced search handler (650ms delay + immediate clear)
   const handleSearchChange = (val: string) => {
     setSearch(val);
     setPage(1);
-    setLibraryState(1, tab, val, selectedTags, 0);
+    setLibraryState(1, tab, val, selectedTags, sortBy, sortOrder, 0);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 
     if (val.trim() === '') {
-      fetchBooks(1, '', tab, selectedTags);
+      fetchBooks(1, '', tab, selectedTags, sortBy, sortOrder);
       return;
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      fetchBooks(1, val, tab, selectedTags);
+      fetchBooks(1, val, tab, selectedTags, sortBy, sortOrder);
     }, 650);
   };
 
   // Immediate search submit handler (e.g. Enter key or Search icon click)
   const handleSearchSubmit = () => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    fetchBooks(1, search, tab, selectedTags);
+    fetchBooks(1, search, tab, selectedTags, sortBy, sortOrder);
   };
 
   // Tab switch handler: resets page and passes new tab to API
   const handleTabChange = (newTab: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI') => {
     setTab(newTab);
     setPage(1);
-    setLibraryState(1, newTab, search, selectedTags, 0);
-    fetchBooks(1, search, newTab, selectedTags);
+    setLibraryState(1, newTab, search, selectedTags, sortBy, sortOrder, 0);
+    fetchBooks(1, search, newTab, selectedTags, sortBy, sortOrder);
   };
 
   // Tag filter apply handler
   const handleTagFilterApply = (newTags: string[]) => {
     setSelectedTags(newTags);
     setPage(1);
-    setLibraryState(1, tab, search, newTags, 0);
+    setLibraryState(1, tab, search, newTags, sortBy, sortOrder, 0);
     if (mainScrollRef.current) {
       mainScrollRef.current.scrollTop = 0;
     }
-    fetchBooks(1, search, tab, newTags);
+    fetchBooks(1, search, tab, newTags, sortBy, sortOrder);
   };
+
+  // Sort apply handler
+  const handleSortApply = (newSortBy: SortByField, newSortOrder: SortOrderDirection) => {
+    setSortByState(newSortBy);
+    setSortOrderState(newSortOrder);
+    setSort(newSortBy, newSortOrder);
+    setPage(1);
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTop = 0;
+    }
+    fetchBooks(1, search, tab, selectedTags, newSortBy, newSortOrder);
+  };
+
+  const defaultSortBy: SortByField = tab === 'HISTORY' ? 'lastedReadAt' : 'updatedAt';
+  const defaultSortOrder: SortOrderDirection = 'DESC';
+  const isCustomSortActive = sortBy !== defaultSortBy || sortOrder !== defaultSortOrder;
 
   return (
     <div className="h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-200">
@@ -176,6 +216,8 @@ export function LibraryScreen() {
           onOpenSettings={() => openSettings('reader')}
           onOpenTagFilter={() => setIsTagFilterOpen(true)}
           activeTagsCount={selectedTags.length}
+          onOpenSort={() => setIsSortSheetOpen(true)}
+          isCustomSortActive={isCustomSortActive}
         />
 
         {/* Active Tag Filter Pills Row */}
@@ -219,84 +261,97 @@ export function LibraryScreen() {
             ) : tab === 'AI' ? (
               <Sparkles size={13} className="text-emerald-400 shrink-0" />
             ) : (
-              <Library size={13} className="text-primary shrink-0" />
+              <BookOpen size={13} className="text-primary shrink-0" />
             )}
             <span className="truncate">
               {tab === 'HISTORY'
-                ? 'LỊCH SỬ ĐỌC TRUYỆN'
+                ? 'LỊCH SỬ ĐỌC'
                 : tab === 'FAVORITE'
                 ? 'TRUYỆN YÊU THÍCH'
                 : tab === 'AI'
-                ? 'TRUYỆN CHỜ DỊCH AI'
-                : 'DANH SÁCH TRUYỆN'}
+                ? 'DỊCH AI'
+                : 'TOÀN BỘ SÁCH'}
             </span>
           </h2>
 
-          {/* Action Icon Group: All, History, Favorite, Pending AI */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            {/* Quick Refresh Icon Button */}
             <button
-              onClick={() => handleTabChange('ALL')}
-              className={`p-1.5 rounded-xl border transition-all active:scale-95 ${
-                tab === 'ALL'
-                  ? 'bg-primary text-on-primary border-primary shadow-xs'
-                  : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
-              }`}
-              title="Tất cả truyện"
+              onClick={() => fetchBooks(page, search, tab, selectedTags, sortBy, sortOrder)}
+              className="p-1 rounded-md text-on-surface-variant/60 hover:text-primary hover:bg-surface-container transition-all active:rotate-180"
+              title="Làm mới danh sách"
             >
-              <BookOpen size={14} />
+              <RotateCcw size={12} />
             </button>
-
-            <button
-              onClick={() => handleTabChange(tab === 'HISTORY' ? 'ALL' : 'HISTORY')}
-              className={`p-1.5 rounded-xl border transition-all active:scale-95 ${
-                tab === 'HISTORY'
-                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-400 font-bold shadow-xs'
-                  : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
-              }`}
-              title="Lịch sử đọc truyện"
-            >
-              <Clock size={14} />
-            </button>
-
-            <button
-              onClick={() => handleTabChange(tab === 'FAVORITE' ? 'ALL' : 'FAVORITE')}
-              className={`p-1.5 rounded-xl border transition-all active:scale-95 ${
-                tab === 'FAVORITE'
-                  ? 'bg-rose-500/15 border-rose-500/40 text-rose-500 font-bold shadow-xs'
-                  : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
-              }`}
-              title="Truyện yêu thích"
-            >
-              <Heart size={14} className={tab === 'FAVORITE' ? 'fill-rose-500' : ''} />
-            </button>
-
-            {!isOfflineMode && (
-              <button
-                onClick={() => handleTabChange(tab === 'AI' ? 'ALL' : 'AI')}
-                className={`p-1.5 rounded-xl border transition-all active:scale-95 ${
-                  tab === 'AI'
-                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 font-bold shadow-xs'
-                    : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
-                }`}
-                title="Truyện chờ dịch AI"
-              >
-                <Sparkles size={14} />
-              </button>
-            )}
+            <span className="text-[10.5px] font-mono text-on-surface-variant/70 shrink-0">
+              {total} truyện
+            </span>
           </div>
+        </div>
+
+        {/* Navigation Tabs Header */}
+        <div className="flex border-t border-outline-variant/15 bg-surface-container-low/50">
+          <button
+            onClick={() => handleTabChange('ALL')}
+            className={`flex-1 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border-b-2 ${
+              tab === 'ALL'
+                ? 'border-primary text-primary bg-surface/80'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <Library size={13} />
+            <span>Tất cả</span>
+          </button>
+          <button
+            onClick={() => handleTabChange('HISTORY')}
+            className={`flex-1 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border-b-2 ${
+              tab === 'HISTORY'
+                ? 'border-amber-400 text-amber-400 bg-surface/80'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <Clock size={13} />
+            <span>Lịch sử</span>
+          </button>
+          <button
+            onClick={() => handleTabChange('FAVORITE')}
+            className={`flex-1 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border-b-2 ${
+              tab === 'FAVORITE'
+                ? 'border-rose-500 text-rose-500 bg-surface/80'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+            title="Truyện yêu thích"
+          >
+            <Heart size={13} className={tab === 'FAVORITE' ? 'fill-rose-500' : ''} />
+            <span>Yêu thích</span>
+          </button>
+          <button
+            onClick={() => handleTabChange('AI')}
+            className={`flex-1 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border-b-2 ${
+              tab === 'AI'
+                ? 'border-emerald-400 text-emerald-400 bg-surface/80'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <Sparkles size={13} />
+            <span>Dịch AI</span>
+          </button>
         </div>
       </div>
 
-      {/* Independently Scrollable Book List */}
+      {/* Main Content Area */}
       <main
         ref={mainScrollRef}
         onScroll={handleMainScroll}
-        className="flex-1 overflow-y-auto hide-scrollbar px-3.5 pt-3 pb-28 min-h-0"
+        className="flex-1 overflow-y-auto px-3.5 py-3 space-y-3 pb-24 relative"
       >
-        {loading ? (
-          <LoadingOverlay message="Đang kết nối thư viện..." />
-        ) : books.length === 0 ? (
-          <div className="py-16 text-center space-y-2">
+        <LoadingOverlay isLoading={loading && books.length === 0} message="Đang tải danh sách..." />
+
+        {books.length === 0 && !loading ? (
+          <div className="text-center py-16 space-y-3">
+            <div className="w-12 h-12 rounded-full bg-surface-container mx-auto flex items-center justify-center text-on-surface-variant">
+              {tab === 'FAVORITE' ? <Heart size={20} className="text-rose-500" /> : <BookOpen size={20} />}
+            </div>
             <p className="text-xs font-medium text-on-surface-variant/60">
               {selectedTags.length > 0
                 ? 'Không tìm thấy truyện nào phù hợp với bộ lọc tags'
@@ -340,6 +395,17 @@ export function LibraryScreen() {
         selectedTags={selectedTags}
         onApply={handleTagFilterApply}
         onClose={() => setIsTagFilterOpen(false)}
+      />
+
+      {/* Sort Options Bottom Sheet */}
+      <SortSheet
+        isOpen={isSortSheetOpen}
+        currentSortBy={sortBy}
+        currentSortOrder={sortOrder}
+        defaultSortBy={defaultSortBy}
+        defaultSortOrder={defaultSortOrder}
+        onApply={handleSortApply}
+        onClose={() => setIsSortSheetOpen(false)}
       />
 
       {/* Floating Paging Capsule Bottom Dock connected to Server-Side Tab API Pagination */}

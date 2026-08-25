@@ -90,6 +90,30 @@ export const BookRepository = {
       allBooks = allBooks.filter((b) => b.bookName.toLowerCase().includes(queryStr));
     }
 
+    // Offline / Client-side fallback sorting
+    const isAsc = sortOrder === 'ASC' || sortOrder === '1';
+    const direction = isAsc ? 1 : -1;
+
+    allBooks.sort((a, b) => {
+      if (sortBy === 'bookName') {
+        return direction * (a.bookName || '').localeCompare(b.bookName || '', 'vi', { sensitivity: 'base' });
+      }
+      if (sortBy === 'lastedReadAt') {
+        const timeA = a.lastedReadAt ? new Date(a.lastedReadAt).getTime() : 0;
+        const timeB = b.lastedReadAt ? new Date(b.lastedReadAt).getTime() : 0;
+        return direction * (timeA - timeB);
+      }
+      if (sortBy === 'createdAt') {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return direction * (timeA - timeB);
+      }
+      // default 'updatedAt'
+      const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+      return direction * (timeA - timeB);
+    });
+
     const total = allBooks.length;
     const totalPages = Math.ceil(total / limit) || 1;
     const paginated = allBooks.slice((page - 1) * limit, page * limit);
