@@ -34,7 +34,7 @@ export const useLibraryStore = create<LibraryState>()(
       savedTab: 'ALL',
       savedSearch: '',
       savedTags: [],
-      savedSortBy: 'updatedAt',
+      savedSortBy: 'createdAt',
       savedSortOrder: 'DESC',
       savedScrollY: 0,
 
@@ -64,7 +64,7 @@ export const useLibraryStore = create<LibraryState>()(
           savedTab: 'ALL',
           savedSearch: '',
           savedTags: [],
-          savedSortBy: 'updatedAt',
+          savedSortBy: 'createdAt',
           savedSortOrder: 'DESC',
           savedScrollY: 0,
         }),

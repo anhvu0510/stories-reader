@@ -14,7 +14,7 @@ describe('useLibraryStore', () => {
     expect(state.savedTab).toBe('ALL');
     expect(state.savedSearch).toBe('');
     expect(state.savedTags).toEqual([]);
-    expect(state.savedSortBy).toBe('updatedAt');
+    expect(state.savedSortBy).toBe('createdAt');
     expect(state.savedSortOrder).toBe('DESC');
     expect(state.savedScrollY).toBe(0);
   });

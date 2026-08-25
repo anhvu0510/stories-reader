@@ -19,7 +19,7 @@ export const BookRepository = {
     limit: number = 20,
     search?: string,
     tab?: string,
-    sortBy: string = 'updatedAt',
+    sortBy: string = 'createdAt',
     sortOrder: string = 'DESC',
     tags?: string[]
   ): Promise<GetBooksResult> {

@@ -77,7 +77,7 @@ describe('LibraryScreen FAVORITE Tab Integration', () => {
       20,
       '',
       'FAVORITE',
-      'updatedAt',
+      'createdAt',
       'DESC',
       []
     );

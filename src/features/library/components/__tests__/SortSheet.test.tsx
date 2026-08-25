@@ -76,7 +76,7 @@ describe('SortSheet Component Tests', () => {
         isOpen={true}
         currentSortBy="bookName"
         currentSortOrder="ASC"
-        defaultSortBy="updatedAt"
+        defaultSortBy="createdAt"
         defaultSortOrder="DESC"
         onApply={mockOnApply}
         onClose={mockOnClose}
@@ -89,6 +89,6 @@ describe('SortSheet Component Tests', () => {
     const applyButton = screen.getByText('Áp dụng');
     fireEvent.click(applyButton);
 
-    expect(mockOnApply).toHaveBeenCalledWith('updatedAt', 'DESC');
+    expect(mockOnApply).toHaveBeenCalledWith('createdAt', 'DESC');
   });
 });

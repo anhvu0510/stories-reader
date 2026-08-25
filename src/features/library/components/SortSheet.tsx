@@ -13,6 +13,14 @@ export interface SortOption {
 
 export const SORT_OPTIONS: SortOption[] = [
   {
+    id: 'createdAt-DESC',
+    sortBy: 'createdAt',
+    sortOrder: 'DESC',
+    label: 'Mới thêm vào thư viện',
+    description: 'Truyện mới được tạo / thêm gần đây',
+    icon: <Calendar size={16} />,
+  },
+  {
     id: 'updatedAt-DESC',
     sortBy: 'updatedAt',
     sortOrder: 'DESC',
@@ -52,14 +60,6 @@ export const SORT_OPTIONS: SortOption[] = [
     description: 'Truyện bạn vừa đọc gần đây nhất',
     icon: <BookOpen size={16} />,
   },
-  {
-    id: 'createdAt-DESC',
-    sortBy: 'createdAt',
-    sortOrder: 'DESC',
-    label: 'Mới thêm vào thư viện',
-    description: 'Truyện mới được tạo / thêm gần đây',
-    icon: <Calendar size={16} />,
-  },
 ];
 
 interface SortSheetProps {
@@ -76,7 +76,7 @@ export function SortSheet({
   isOpen,
   currentSortBy,
   currentSortOrder,
-  defaultSortBy = 'updatedAt',
+  defaultSortBy = 'createdAt',
   defaultSortOrder = 'DESC',
   onApply,
   onClose,
