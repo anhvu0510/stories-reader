@@ -68,7 +68,8 @@ describe('LibraryScreen FAVORITE Tab Integration', () => {
     fireEvent.click(favTabButton);
 
     await waitFor(() => {
-      expect(screen.getByText('TRUYỆN YÊU THÍCH')).toBeDefined();
+      expect(screen.getByText('Yêu thích')).toBeDefined();
+      expect(screen.getByText('2')).toBeDefined();
     });
 
     expect(BookRepository.getBooks).toHaveBeenCalledWith(

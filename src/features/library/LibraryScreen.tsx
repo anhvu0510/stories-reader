@@ -252,89 +252,100 @@ export function LibraryScreen() {
           </div>
         )}
 
-        <div className="flex items-center justify-between px-3.5 py-2.5 gap-2 border-t border-outline-variant/10">
-          <h2 className="text-[11px] font-mono font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-1.5 min-w-0 truncate">
-            {tab === 'HISTORY' ? (
-              <Clock size={13} className="text-amber-400 shrink-0" />
-            ) : tab === 'FAVORITE' ? (
-              <Heart size={13} className="text-rose-500 fill-rose-500 shrink-0" />
-            ) : tab === 'AI' ? (
-              <Sparkles size={13} className="text-emerald-400 shrink-0" />
-            ) : (
-              <BookOpen size={13} className="text-primary shrink-0" />
-            )}
-            <span className="truncate">
-              {tab === 'HISTORY'
-                ? 'LỊCH SỬ ĐỌC'
-                : tab === 'FAVORITE'
-                ? 'TRUYỆN YÊU THÍCH'
-                : tab === 'AI'
-                ? 'DỊCH AI'
-                : 'TOÀN BỘ SÁCH'}
-            </span>
-          </h2>
-
-          <div className="flex items-center gap-2">
-            {/* Quick Refresh Icon Button */}
-            <button
-              onClick={() => fetchBooks(page, search, tab, selectedTags, sortBy, sortOrder)}
-              className="p-1 rounded-md text-on-surface-variant/60 hover:text-primary hover:bg-surface-container transition-all active:rotate-180"
-              title="Làm mới danh sách"
-            >
-              <RotateCcw size={12} />
-            </button>
-            <span className="text-[10.5px] font-mono text-on-surface-variant/70 shrink-0">
-              {total} truyện
-            </span>
-          </div>
-        </div>
-
         {/* Navigation Tabs Header */}
-        <div className="flex border-t border-outline-variant/15 bg-surface-container-low/50">
+        <div className="flex border-t border-outline-variant/15 bg-surface-container-low/40 backdrop-blur-md px-1">
           <button
             onClick={() => handleTabChange('ALL')}
-            className={`flex-1 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border-b-2 ${
+            className={`flex-1 py-2.5 text-xs transition-all flex items-center justify-center relative group ${
               tab === 'ALL'
-                ? 'border-primary text-primary bg-surface/80'
-                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                ? 'text-primary font-bold bg-surface/50'
+                : 'text-on-surface-variant/75 font-medium hover:text-on-surface hover:bg-surface-container/30'
             }`}
           >
-            <Library size={13} />
-            <span>Tất cả</span>
+            <div className="flex items-center gap-1.5">
+              <Library size={13} className="shrink-0 transition-transform group-active:scale-90" />
+              <span className="tracking-tight">Tất cả</span>
+              {tab === 'ALL' && (
+                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-primary/15 text-primary border border-primary/25 shadow-2xs animate-in zoom-in-95 duration-150">
+                  {total}
+                </span>
+              )}
+            </div>
+            {tab === 'ALL' && (
+              <div className="absolute bottom-0 left-2 right-2 h-[2.5px] bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary-rgb),0.6)]" />
+            )}
           </button>
+
           <button
             onClick={() => handleTabChange('HISTORY')}
-            className={`flex-1 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border-b-2 ${
+            className={`flex-1 py-2.5 text-xs transition-all flex items-center justify-center relative group ${
               tab === 'HISTORY'
-                ? 'border-amber-400 text-amber-400 bg-surface/80'
-                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                ? 'text-amber-400 font-bold bg-surface/50'
+                : 'text-on-surface-variant/75 font-medium hover:text-on-surface hover:bg-surface-container/30'
             }`}
           >
-            <Clock size={13} />
-            <span>Lịch sử</span>
+            <div className="flex items-center gap-1.5">
+              <Clock size={13} className="shrink-0 transition-transform group-active:scale-90" />
+              <span className="tracking-tight">Lịch sử</span>
+              {tab === 'HISTORY' && (
+                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-amber-400/15 text-amber-400 border border-amber-400/25 shadow-2xs animate-in zoom-in-95 duration-150">
+                  {total}
+                </span>
+              )}
+            </div>
+            {tab === 'HISTORY' && (
+              <div className="absolute bottom-0 left-2 right-2 h-[2.5px] bg-amber-400 rounded-full shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
+            )}
           </button>
+
           <button
             onClick={() => handleTabChange('FAVORITE')}
-            className={`flex-1 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border-b-2 ${
+            className={`flex-1 py-2.5 text-xs transition-all flex items-center justify-center relative group ${
               tab === 'FAVORITE'
-                ? 'border-rose-500 text-rose-500 bg-surface/80'
-                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                ? 'text-rose-500 font-bold bg-surface/50'
+                : 'text-on-surface-variant/75 font-medium hover:text-on-surface hover:bg-surface-container/30'
             }`}
             title="Truyện yêu thích"
           >
-            <Heart size={13} className={tab === 'FAVORITE' ? 'fill-rose-500' : ''} />
-            <span>Yêu thích</span>
+            <div className="flex items-center gap-1.5">
+              <Heart
+                size={13}
+                className={`shrink-0 transition-transform group-active:scale-90 ${
+                  tab === 'FAVORITE' ? 'fill-rose-500' : ''
+                }`}
+              />
+              <span className="tracking-tight">Yêu thích</span>
+              {tab === 'FAVORITE' && (
+                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-rose-500/15 text-rose-500 border border-rose-500/25 shadow-2xs animate-in zoom-in-95 duration-150">
+                  {total}
+                </span>
+              )}
+            </div>
+            {tab === 'FAVORITE' && (
+              <div className="absolute bottom-0 left-2 right-2 h-[2.5px] bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+            )}
           </button>
+
           <button
             onClick={() => handleTabChange('AI')}
-            className={`flex-1 py-2 text-xs font-bold transition-all flex items-center justify-center gap-1.5 border-b-2 ${
+            className={`flex-1 py-2.5 text-xs transition-all flex items-center justify-center relative group ${
               tab === 'AI'
-                ? 'border-emerald-400 text-emerald-400 bg-surface/80'
-                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                ? 'text-emerald-400 font-bold bg-surface/50'
+                : 'text-on-surface-variant/75 font-medium hover:text-on-surface hover:bg-surface-container/30'
             }`}
           >
-            <Sparkles size={13} />
-            <span>Dịch AI</span>
+            <div className="flex items-center gap-1.5">
+              <Sparkles size={13} className="shrink-0 transition-transform group-active:scale-90" />
+              <span className="tracking-tight">Dịch AI</span>
+              {tab === 'AI' && (
+                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-emerald-400/15 text-emerald-400 border border-emerald-400/25 shadow-2xs animate-in zoom-in-95 duration-150">
+                  {total}
+                </span>
+              )}
+            </div>
+            {tab === 'AI' && (
+              <div className="absolute bottom-0 left-2 right-2 h-[2.5px] bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+            )}
           </button>
         </div>
       </div>
