@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Book } from '../../../shared/types';
-import { Sparkles, BookOpen, ExternalLink, Trash2, Clock, Download, AlertCircle } from 'lucide-react';
+import { Sparkles, BookOpen, ExternalLink, Trash2, Clock, Download, AlertCircle, Heart } from 'lucide-react';
 import { QuickBookSheet } from './QuickBookSheet';
 import { TranslationSheet } from '../../../components/TranslationSheet';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useToastStore } from '../../../stores/useToastStore';
+import { useFavoriteStore } from '../../../stores/useFavoriteStore';
 import { offlineDb } from '../../../lib/offlineDb';
 import { downloadManager } from '../../../lib/DownloadManager';
 import { BookRepository } from '../../../repositories/BookRepository';
@@ -13,7 +14,7 @@ import { BookRepository } from '../../../repositories/BookRepository';
 interface BookCardProps {
   key?: React.Key;
   book: Book;
-  activeTab?: 'ALL' | 'HISTORY' | 'AI';
+  activeTab?: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI';
   onSelect?: (bookId: string) => void;
   isSelected?: boolean;
   isSelectionMode?: boolean;
@@ -34,6 +35,22 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
 
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
   const showToast = useToastStore((state) => state.showToast);
+
+  const isFav = useFavoriteStore((state) => state.isFavorite(book.bookId)) || Boolean(book.isFavorite);
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const res = await BookRepository.toggleFavorite(book.bookId);
+      showToast(
+        res.isFavorite ? `Đã thêm "${book.bookName}" vào yêu thích` : `Đã bỏ "${book.bookName}" khỏi yêu thích`,
+        'success'
+      );
+      window.dispatchEvent(new CustomEvent('favorites-updated'));
+    } catch {
+      showToast('Không thể cập nhật trạng thái yêu thích', 'error');
+    }
+  };
 
   const readCount: number = Number(book.lastReadChapter?.chapterNumber || 0);
   const unTranslatedCount = Math.max(0, book.chapterCount - book.totalTranslated);
@@ -414,14 +431,31 @@ export function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMod
 
           {/* Right: Rich Content Details */}
           <div className="flex-1 min-w-0 space-y-1">
-            {/* Row 1: Title + Date */}
+            {/* Row 1: Title + Favorite Heart + Date */}
             <div className="flex items-start justify-between gap-2 min-w-0">
-              <h3 className="text-[13.5px] sm:text-sm font-bold text-on-surface leading-tight tracking-tight group-hover:text-primary transition-colors line-clamp-1 min-w-0">
+              <h3 className="text-[13.5px] sm:text-sm font-bold text-on-surface leading-tight tracking-tight group-hover:text-primary transition-colors line-clamp-1 min-w-0 flex-1">
                 {book.bookName}
               </h3>
-              <span className="text-[10px] font-mono text-on-surface-variant/60 shrink-0 whitespace-nowrap pt-0.5">
-                {formattedDate}
-              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleToggleFavorite}
+                  className={`p-1 rounded-full transition-all active:scale-90 cursor-pointer ${
+                    isFav
+                      ? 'text-rose-500 hover:text-rose-600'
+                      : 'text-on-surface-variant/40 hover:text-rose-400 hover:bg-rose-500/10'
+                  }`}
+                  title={isFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
+                >
+                  <Heart
+                    size={14}
+                    className={isFav ? 'fill-rose-500 text-rose-500' : ''}
+                  />
+                </button>
+                <span className="text-[10px] font-mono text-on-surface-variant/60 whitespace-nowrap pt-0.5">
+                  {formattedDate}
+                </span>
+              </div>
             </div>
 
             {/* Row 2: Reading Progress / Chapter Title */}

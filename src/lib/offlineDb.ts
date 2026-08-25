@@ -24,6 +24,9 @@ interface ReaderDBSchema extends DBSchema {
 let dbPromise: Promise<IDBPDatabase<ReaderDBSchema>> | null = null;
 
 export const initDB = () => {
+  if (typeof indexedDB === 'undefined') {
+    return Promise.reject(new Error('indexedDB is not available'));
+  }
   if (!dbPromise) {
     dbPromise = openDB<ReaderDBSchema>('reader-offline-db', 1, {
       upgrade(db) {
@@ -49,16 +52,24 @@ export const initDB = () => {
 export const offlineDb = {
   // Books
   async getBooks(): Promise<Book[]> {
-    const db = await initDB();
-    return await db.getAll('books');
+    try {
+      const db = await initDB();
+      return await db.getAll('books');
+    } catch {
+      return [];
+    }
   },
   async saveBook(book: Book) {
     const db = await initDB();
     await db.put('books', book);
   },
   async getBook(bookId: string): Promise<Book | undefined> {
-    const db = await initDB();
-    return await db.get('books', bookId);
+    try {
+      const db = await initDB();
+      return await db.get('books', bookId);
+    } catch {
+      return undefined;
+    }
   },
   async deleteBook(bookId: string) {
     const db = await initDB();

@@ -10,7 +10,8 @@ import { BottomDock } from '../../components/BottomDock';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import { ArrowLeft, Search, RefreshCw, Download } from 'lucide-react';
+import { useFavoriteStore } from '../../stores/useFavoriteStore';
+import { ArrowLeft, Search, RefreshCw, Download, Heart } from 'lucide-react';
 import { downloadManager } from '../../lib/DownloadManager';
 
 const PAGE_SIZE = 30;
@@ -21,6 +22,27 @@ export function ChapterListScreen() {
 
   const [book, setBook] = useState<Book | null>(null);
   useDocumentTitle(book?.bookName);
+
+  const isFav =
+    useFavoriteStore((state) => (bookId ? state.isFavorite(bookId) : false)) || Boolean(book?.isFavorite);
+
+  const handleToggleFavorite = async () => {
+    if (!bookId) return;
+    try {
+      const res = await BookRepository.toggleFavorite(bookId);
+      showToast(
+        res.isFavorite ? `Đã thêm "${book?.bookName || 'truyện'}" vào yêu thích` : `Đã bỏ "${book?.bookName || 'truyện'}" khỏi yêu thích`,
+        'success'
+      );
+      if (book) {
+        setBook({ ...book, isFavorite: res.isFavorite });
+      }
+      window.dispatchEvent(new CustomEvent('favorites-updated'));
+    } catch {
+      showToast('Không thể cập nhật trạng thái yêu thích', 'error');
+    }
+  };
+
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -161,16 +183,31 @@ export function ChapterListScreen() {
 
           <div className="flex items-center gap-1.5">
             {book && (
-              <button
-                onClick={() => {
-                  downloadManager.addBook(book.bookId, book.bookName);
-                  showToast(`Đã thêm "${book.bookName}" vào hàng đợi tải xuống`, 'info');
-                }}
-                className="p-2 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95"
-                title="Tải về bộ truyện"
-              >
-                <Download size={15} />
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleToggleFavorite}
+                  className={`p-2 rounded-full border transition-all active:scale-95 cursor-pointer ${
+                    isFav
+                      ? 'bg-rose-500/15 border-rose-500/40 text-rose-500 shadow-xs'
+                      : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-rose-400'
+                  }`}
+                  title={isFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
+                >
+                  <Heart size={15} className={isFav ? 'fill-rose-500 text-rose-500' : ''} />
+                </button>
+
+                <button
+                  onClick={() => {
+                    downloadManager.addBook(book.bookId, book.bookName);
+                    showToast(`Đã thêm "${book.bookName}" vào hàng đợi tải xuống`, 'info');
+                  }}
+                  className="p-2 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95"
+                  title="Tải về bộ truyện"
+                >
+                  <Download size={15} />
+                </button>
+              </>
             )}
 
             <button

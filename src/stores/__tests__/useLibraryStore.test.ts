@@ -36,6 +36,18 @@ describe('useLibraryStore', () => {
     expect(parsed.state.savedScrollY).toBeUndefined();
   });
 
+  it('should support and persist FAVORITE tab', () => {
+    useLibraryStore.getState().setLibraryState(1, 'FAVORITE', '', ['Tiên Hiệp']);
+
+    const state = useLibraryStore.getState();
+    expect(state.savedTab).toBe('FAVORITE');
+
+    const rawStored = localStorage.getItem('stories_library_state');
+    expect(rawStored).toBeTruthy();
+    const parsed = JSON.parse(rawStored!);
+    expect(parsed.state.savedTab).toBe('FAVORITE');
+  });
+
   it('should update tags without overwriting scrollY when scrollY is not passed', () => {
     useLibraryStore.getState().setLibraryState(1, 'ALL', '', ['Tiên Hiệp'], 100);
     useLibraryStore.getState().setLibraryState(1, 'ALL', '', ['Huyền Huyễn']);

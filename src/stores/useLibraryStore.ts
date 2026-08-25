@@ -3,12 +3,12 @@ import { persist } from 'zustand/middleware';
 
 interface LibraryState {
   savedPage: number;
-  savedTab: 'ALL' | 'HISTORY' | 'AI';
+  savedTab: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI';
   savedSearch: string;
   savedTags: string[];
   savedScrollY: number;
   
-  setLibraryState: (page: number, tab: 'ALL' | 'HISTORY' | 'AI', search: string, tags?: string[], scrollY?: number) => void;
+  setLibraryState: (page: number, tab: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI', search: string, tags?: string[], scrollY?: number) => void;
   setSavedScrollY: (scrollY: number) => void;
   resetLibraryState: () => void;
 }

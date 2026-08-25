@@ -18,6 +18,7 @@ export interface Book {
   source?: string;
   tags?: string[];
   pointOfView?: string;
+  isFavorite?: boolean;
 }
 
 export interface Chapter {

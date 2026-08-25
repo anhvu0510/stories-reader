@@ -11,7 +11,7 @@ import { BottomDock } from '../../components/BottomDock';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { OfflineManagerSheet } from '../../components/OfflineManagerSheet';
-import { BookOpen, Clock, Sparkles, Library, X, RotateCcw } from 'lucide-react';
+import { BookOpen, Clock, Sparkles, Library, X, RotateCcw, Heart } from 'lucide-react';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 import { useLibraryStore } from '../../stores/useLibraryStore';
@@ -27,7 +27,7 @@ export function LibraryScreen() {
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState(savedSearch);
-  const [tab, setTab] = useState<'ALL' | 'HISTORY' | 'AI'>(savedTab);
+  const [tab, setTab] = useState<'ALL' | 'HISTORY' | 'FAVORITE' | 'AI'>(savedTab);
   const [selectedTags, setSelectedTags] = useState<string[]>(savedTags || []);
   const [isTagFilterOpen, setIsTagFilterOpen] = useState(false);
 
@@ -85,12 +85,14 @@ export function LibraryScreen() {
 
     window.addEventListener('app-refresh', handleRefresh);
     window.addEventListener('offline-mode-changed', handleRefresh);
+    window.addEventListener('favorites-updated', handleRefresh);
 
     return () => {
       window.removeEventListener('app-refresh', handleRefresh);
       window.removeEventListener('offline-mode-changed', handleRefresh);
+      window.removeEventListener('favorites-updated', handleRefresh);
     };
-  }, [isOfflineMode]);
+  }, [page, search, tab, selectedTags, isOfflineMode, fetchBooks]);
 
   // Restore scroll position after initial loading finishes
   useEffect(() => {
@@ -145,7 +147,7 @@ export function LibraryScreen() {
   };
 
   // Tab switch handler: resets page and passes new tab to API
-  const handleTabChange = (newTab: 'ALL' | 'HISTORY' | 'AI') => {
+  const handleTabChange = (newTab: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI') => {
     setTab(newTab);
     setPage(1);
     setLibraryState(1, newTab, search, selectedTags, 0);
@@ -212,6 +214,8 @@ export function LibraryScreen() {
           <h2 className="text-[11px] font-mono font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-1.5 min-w-0 truncate">
             {tab === 'HISTORY' ? (
               <Clock size={13} className="text-amber-400 shrink-0" />
+            ) : tab === 'FAVORITE' ? (
+              <Heart size={13} className="text-rose-500 fill-rose-500 shrink-0" />
             ) : tab === 'AI' ? (
               <Sparkles size={13} className="text-emerald-400 shrink-0" />
             ) : (
@@ -220,13 +224,15 @@ export function LibraryScreen() {
             <span className="truncate">
               {tab === 'HISTORY'
                 ? 'LỊCH SỬ ĐỌC TRUYỆN'
+                : tab === 'FAVORITE'
+                ? 'TRUYỆN YÊU THÍCH'
                 : tab === 'AI'
                 ? 'TRUYỆN CHỜ DỊCH AI'
                 : 'DANH SÁCH TRUYỆN'}
             </span>
           </h2>
 
-          {/* Action Icon Group: All, History, Pending AI, Refresh */}
+          {/* Action Icon Group: All, History, Favorite, Pending AI */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               onClick={() => handleTabChange('ALL')}
@@ -250,6 +256,18 @@ export function LibraryScreen() {
               title="Lịch sử đọc truyện"
             >
               <Clock size={14} />
+            </button>
+
+            <button
+              onClick={() => handleTabChange(tab === 'FAVORITE' ? 'ALL' : 'FAVORITE')}
+              className={`p-1.5 rounded-xl border transition-all active:scale-95 ${
+                tab === 'FAVORITE'
+                  ? 'bg-rose-500/15 border-rose-500/40 text-rose-500 font-bold shadow-xs'
+                  : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
+              }`}
+              title="Truyện yêu thích"
+            >
+              <Heart size={14} className={tab === 'FAVORITE' ? 'fill-rose-500' : ''} />
             </button>
 
             {!isOfflineMode && (
@@ -284,6 +302,8 @@ export function LibraryScreen() {
                 ? 'Không tìm thấy truyện nào phù hợp với bộ lọc tags'
                 : tab === 'HISTORY'
                 ? 'Chưa có lịch sử đọc truyện nào'
+                : tab === 'FAVORITE'
+                ? 'Chưa có truyện nào trong danh sách yêu thích'
                 : tab === 'AI'
                 ? 'Không có truyện nào đang chờ dịch AI'
                 : 'Không tìm thấy truyện nào trong thư viện'}
