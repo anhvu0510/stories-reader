@@ -12,10 +12,12 @@ import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { OfflineManagerSheet } from '../../components/OfflineManagerSheet';
 import { BookOpen, Clock, Sparkles, Library, X, RotateCcw } from 'lucide-react';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 import { useLibraryStore } from '../../stores/useLibraryStore';
 
 export function LibraryScreen() {
+  useDocumentTitle();
   const { savedPage, savedTab, savedSearch, savedTags, savedScrollY, setLibraryState } = useLibraryStore();
 
   const [books, setBooks] = useState<Book[]>([]);

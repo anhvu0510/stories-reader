@@ -9,6 +9,7 @@ import { ChapterRangeSelector } from './components/ChapterRangeSelector';
 import { BottomDock } from '../../components/BottomDock';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { ArrowLeft, Search, RefreshCw, Download } from 'lucide-react';
 import { downloadManager } from '../../lib/DownloadManager';
 
@@ -19,6 +20,7 @@ export function ChapterListScreen() {
   const navigate = useNavigate();
 
   const [book, setBook] = useState<Book | null>(null);
+  useDocumentTitle(book?.bookName);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);

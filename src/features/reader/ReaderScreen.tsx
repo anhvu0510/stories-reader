@@ -16,6 +16,7 @@ import { QuickBookHistorySheet } from './components/QuickBookHistorySheet';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { TranslationSheet } from '../../components/TranslationSheet';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { AlertCircle } from 'lucide-react';
 
 interface ChapterContentSectionProps {
@@ -87,6 +88,9 @@ export function ReaderScreen() {
   const [contentData, setContentData] = useState<ChapterContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync document.title with the current reading story name
+  useDocumentTitle(contentData?.chapter?.bookName);
 
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [showTranslateSheet, setShowTranslateSheet] = useState(false);
