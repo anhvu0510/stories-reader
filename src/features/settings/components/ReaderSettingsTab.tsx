@@ -27,6 +27,7 @@ export function ReaderSettingsTab() {
     fontSize, setFontSize,
     lineHeight, setLineHeight,
     groupLines, setGroupLines,
+    batchChapterSize, setBatchChapterSize,
     isEnabledReplace, setIsEnabledReplace,
     bookLimit, setBookLimit,
     chapterLimit, setChapterLimit,
@@ -146,6 +147,42 @@ export function ReaderSettingsTab() {
               {g}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Batch Chapter Size */}
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <label className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
+            <Sliders size={14} className="text-primary" /> Số chương gộp mỗi lần tải ({batchChapterSize || 1} chương)
+          </label>
+          <span className="text-[10px] text-on-surface-variant font-mono">1 - 10 chương</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min="1"
+            max="10"
+            value={batchChapterSize || 1}
+            onChange={(e) => setBatchChapterSize(Number(e.target.value))}
+            className="w-20 px-3 py-1.5 rounded-lg bg-surface-container border border-outline-variant/30 text-xs text-on-surface font-semibold text-center focus:border-primary focus:outline-none"
+          />
+          <div className="flex-1 grid grid-cols-4 gap-1.5">
+            {[1, 2, 3, 5].map((size) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => setBatchChapterSize(size)}
+                className={`py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                  (batchChapterSize || 1) === size
+                    ? 'bg-primary/10 border-primary text-primary font-bold'
+                    : 'bg-surface-container border-outline-variant/20 text-on-surface hover:bg-surface-container-high'
+                }`}
+              >
+                {size} {size === 1 ? 'chương' : 'chương'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

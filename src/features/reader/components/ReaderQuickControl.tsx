@@ -20,6 +20,7 @@ interface ReaderQuickControlProps {
   prevChapterId?: string;
   nextChapterId?: string;
   currentChapterNumber?: number;
+  chapterDisplayLabel?: string;
   totalChapters?: number;
   isVisible?: boolean;
   isTTSActive?: boolean;
@@ -40,6 +41,7 @@ export function ReaderQuickControl({
   prevChapterId,
   nextChapterId,
   currentChapterNumber,
+  chapterDisplayLabel,
   totalChapters,
   isVisible = true,
   isTTSActive = false,
@@ -200,7 +202,7 @@ export function ReaderQuickControl({
             >
               <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary/75 font-mono">CHƯƠNG</span>
               <span className="text-xs font-black font-mono text-primary leading-none ml-0.5">
-                {currentChapterNumber !== undefined ? currentChapterNumber : '-'}
+                {chapterDisplayLabel || (currentChapterNumber !== undefined ? currentChapterNumber : '-')}
               </span>
               {totalChapters ? (
                 <span className="text-[10px] font-bold font-mono text-primary/60">

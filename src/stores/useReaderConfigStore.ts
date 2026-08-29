@@ -11,6 +11,7 @@ const defaultSettings: ReaderConfig = {
   fontSize: 20,
   lineHeight: 1.4,
   groupLines: 1,
+  batchChapterSize: 1,
   isEnabledReplace: true,
   voiceUri: '',
   speechRate: 1.0,
@@ -35,6 +36,7 @@ interface ReaderConfigStore extends ReaderConfig {
   setFontSize: (size: number) => void;
   setLineHeight: (lineHeight: number) => void;
   setGroupLines: (groupLines: number) => void;
+  setBatchChapterSize: (batchChapterSize: number) => void;
   setIsEnabledReplace: (enabled: boolean) => void;
   setVoiceUri: (voiceUri: string) => void;
   setSpeechRate: (speechRate: number) => void;
@@ -111,6 +113,14 @@ export const useReaderConfigStore = create<ReaderConfigStore>((set, get) => {
         const next = { ...state, groupLines };
         persist(next);
         return { groupLines };
+      });
+    },
+    setBatchChapterSize: (batchChapterSize) => {
+      const sanitized = Math.max(1, Math.min(20, Math.floor(batchChapterSize) || 1));
+      set((state) => {
+        const next = { ...state, batchChapterSize: sanitized };
+        persist(next);
+        return { batchChapterSize: sanitized };
       });
     },
     setIsEnabledReplace: (isEnabledReplace) => {

@@ -32,22 +32,31 @@ export interface Chapter {
 }
 
 export interface ChapterNavigation {
-  prev?: { chapterId: string | null };
-  next?: { chapterId: string | null; chapterNumber?: number; title?: string };
+  prev?: { chapterId: string | null; chapterNumber?: number; title?: string } | null;
+  next?: { chapterId: string | null; chapterNumber?: number; title?: string } | null;
+}
+
+export interface ChapterDetailItem {
+  chapterId: string;
+  chapterNumber: number;
+  title: string;
+  bookId?: string;
+  bookName?: string;
+  state?: string;
+  totalTokens?: number;
+  content: string[];
+  compressedContent?: Uint8Array;
+  rootTab?: string;
+  chapterPlan?: any;
+  qaReports?: any;
+  continuitySnapshot?: any;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ChapterContent {
-  chapter: {
-    chapterId: string;
-    chapterNumber: number;
-    title: string;
-    bookName: string;
-    state: string;
-    totalTokens: number;
-    content: string[];
-    compressedContent?: Uint8Array;
-    rootTab: string;
-  };
+  chapter: ChapterDetailItem;
+  chapters?: ChapterDetailItem[];
   navigation?: ChapterNavigation;
 }
 
@@ -133,6 +142,7 @@ export interface ReaderConfig {
   fontSize: number;
   lineHeight: number;
   groupLines: number;
+  batchChapterSize: number;
   isEnabledReplace: boolean;
   voiceUri: string;
   speechRate: number;

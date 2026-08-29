@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChapterRepository } from '../../repositories/ChapterRepository';
-import { ChapterContent } from '../../shared/types';
+import { ChapterContent, ChapterDetailItem } from '../../shared/types';
 import { useReaderConfigStore } from '../../stores/useReaderConfigStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { useToastStore } from '../../stores/useToastStore';
@@ -20,9 +20,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { AlertCircle } from 'lucide-react';
 
 interface ChapterContentSectionProps {
-  chapterNumber: number;
-  title: string;
-  paragraphs: string[];
+  chapters: ChapterDetailItem[];
   fontSize: number;
   lineHeight: number;
   isPlaying: boolean;
@@ -32,9 +30,9 @@ interface ChapterContentSectionProps {
   onClick?: (e: React.MouseEvent) => void;
 }
 
-// 100% Frozen & Memoized Chapter Content Section
+// 100% Frozen & Memoized Multi-Chapter Content Section
 const ChapterContentSection = memo(function ChapterContentSection({
-  paragraphs,
+  chapters,
   fontSize,
   lineHeight,
   isPlaying,
@@ -44,18 +42,49 @@ const ChapterContentSection = memo(function ChapterContentSection({
   onClick,
 }: ChapterContentSectionProps) {
   return (
-    <main id="main-story-content" onClick={onClick}>
-      <article className="px-4 pt-20 pb-5 space-y-3 select-text" style={{ fontSize: `${fontSize}px`, lineHeight }}>
-        {paragraphs.map((paragraphHtml, index) => (
-          <ParagraphView
-            key={index}
-            index={index}
-            content={paragraphHtml}
-            isTTSActive={(isPlaying || isPaused) && currentParagraphIndex === index}
-            onDoubleClick={onDoubleClick}
-          />
-        ))}
-      </article>
+    <main id="main-story-content" onClick={onClick} className="pt-20 pb-5">
+      {chapters.map((chap, chapIdx) => (
+        <section
+          key={chap.chapterId || chapIdx}
+          id={`chapter-section-${chap.chapterId}`}
+          data-chapter-id={chap.chapterId}
+          data-chapter-number={chap.chapterNumber}
+          data-chapter-title={chap.title}
+          className="chapter-block-section mb-10 last:mb-0"
+        >
+          {/* Chapter Divider between chapters in batch */}
+          {chapIdx > 0 && (
+            <div className="my-8 px-4">
+              <div className="h-[1px] bg-outline-variant/30" />
+            </div>
+          )}
+
+          {/* Chapter Section Title */}
+          <div className="px-4 mb-4 pt-2">
+            <h2 className="text-base font-bold text-on-surface leading-snug">
+              {chap.title?.toLowerCase().startsWith('chương')
+                ? chap.title
+                : `Chương ${chap.chapterNumber}: ${chap.title}`}
+            </h2>
+          </div>
+
+          {/* Chapter Paragraphs */}
+          <article
+            className="px-4 space-y-3 select-text"
+            style={{ fontSize: `${fontSize}px`, lineHeight }}
+          >
+            {chap.content.map((paragraphHtml, index) => (
+              <ParagraphView
+                key={`${chap.chapterId}-${index}`}
+                index={index}
+                content={paragraphHtml}
+                isTTSActive={(isPlaying || isPaused) && currentParagraphIndex === index}
+                onDoubleClick={onDoubleClick}
+              />
+            ))}
+          </article>
+        </section>
+      ))}
     </main>
   );
 });
@@ -72,15 +101,10 @@ export function ReaderScreen() {
   const fontSize = useReaderConfigStore((state) => state.fontSize);
   const lineHeight = useReaderConfigStore((state) => state.lineHeight);
   const groupLines = useReaderConfigStore((state) => state.groupLines);
+  const batchChapterSize = useReaderConfigStore((state) => state.batchChapterSize || 1);
   const isEnabledReplace = useReaderConfigStore((state) => state.isEnabledReplace);
 
   /* READ ALOUD (TTS) TEMPORARILY DISABLED */
-  // const isPlaying = useTTSStore((state) => state.isPlaying);
-  // const isPaused = useTTSStore((state) => state.isPaused);
-  // const currentParagraphIndex = useTTSStore((state) => state.currentParagraphIndex);
-  // const setIsPlaying = useTTSStore((state) => state.setIsPlaying);
-  // const setIsPaused = useTTSStore((state) => state.setIsPaused);
-  // const resetTTS = useTTSStore((state) => state.resetTTS);
   const isPlaying = false;
   const isPaused = false;
   const currentParagraphIndex = -1;
@@ -92,7 +116,6 @@ export function ReaderScreen() {
   // Sync document.title with the current reading story name
   useDocumentTitle(contentData?.chapter?.bookName);
 
-  const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [showTranslateSheet, setShowTranslateSheet] = useState(false);
   const [showTypographySheet, setShowTypographySheet] = useState(false);
   const [showChapterSelectSheet, setShowChapterSelectSheet] = useState(false);
@@ -104,8 +127,71 @@ export function ReaderScreen() {
   const lastScrollY = useRef(0);
   const scrollAnimRef = useRef<number | null>(null);
 
-  const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const currentPIdxRef = useRef(0);
+  // Normalized list of chapters to display
+  const displayChapters: ChapterDetailItem[] = useMemo(() => {
+    if (contentData?.chapters && contentData.chapters.length > 0) {
+      return contentData.chapters;
+    }
+    if (contentData?.chapter) {
+      return [contentData.chapter];
+    }
+    return [];
+  }, [contentData]);
+
+  // Active Chapter currently in viewport
+  const [activeChapter, setActiveChapter] = useState<{
+    chapterId: string;
+    chapterNumber: number;
+    title: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (displayChapters.length > 0) {
+      setActiveChapter({
+        chapterId: displayChapters[0].chapterId,
+        chapterNumber: displayChapters[0].chapterNumber,
+        title: displayChapters[0].title,
+      });
+    } else {
+      setActiveChapter(null);
+    }
+  }, [displayChapters]);
+
+  // Scroll Tracking & IntersectionObserver for multi-chapter in viewport
+  useEffect(() => {
+    if (displayChapters.length <= 1) return;
+    if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') return;
+
+    const handleIntersection: IntersectionObserverCallback = (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const chapId = entry.target.getAttribute('data-chapter-id');
+          const chapNum = Number(entry.target.getAttribute('data-chapter-number'));
+          const chapTitle = entry.target.getAttribute('data-chapter-title') || '';
+          if (chapId) {
+            setActiveChapter({
+              chapterId: chapId,
+              chapterNumber: chapNum,
+              title: chapTitle,
+            });
+          }
+        }
+      }
+    };
+
+    const observer = new IntersectionObserver(handleIntersection, {
+      rootMargin: '-10% 0px -70% 0px',
+      threshold: [0, 0.2, 0.5],
+    });
+
+    const chapterBlocks = document.querySelectorAll('.chapter-block-section');
+    chapterBlocks.forEach((el) => observer.observe(el));
+
+    return () => {
+      chapterBlocks.forEach((el) => observer.unobserve(el));
+      observer.disconnect();
+    };
+  }, [displayChapters]);
 
   // Throttled & Smooth scroll progress listener for Dock & Progress bar
   useEffect(() => {
@@ -152,15 +238,22 @@ export function ReaderScreen() {
     setShowZenControls((prev) => !prev);
   }, []);
 
-  // Fetch chapter data with guaranteed minimum loading delay for tactile feedback
+  // Fetch chapter data with smooth 200ms loading feedback
   const loadChapter = useCallback(async () => {
     if (!chapterId) return;
-    const MIN_LOADING_TIME = 400;
+    const MIN_LOADING_TIME = 200;
     const startTime = Date.now();
     setLoading(true);
     setError(null);
     try {
-      const res = await ChapterRepository.getChapterContent(chapterId, groupLines, isEnabledReplace);
+      const effectiveBatchSize = isOfflineMode ? 1 : batchChapterSize;
+      const res = await ChapterRepository.getChapterContent(
+        chapterId,
+        groupLines,
+        isEnabledReplace,
+        '',
+        effectiveBatchSize
+      );
       const elapsedTime = Date.now() - startTime;
       if (elapsedTime < MIN_LOADING_TIME) {
         await new Promise((resolve) => setTimeout(resolve, MIN_LOADING_TIME - elapsedTime));
@@ -175,106 +268,16 @@ export function ReaderScreen() {
     } finally {
       setLoading(false);
     }
-  }, [chapterId, groupLines, isEnabledReplace]);
+  }, [chapterId, groupLines, isEnabledReplace, batchChapterSize, isOfflineMode]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
     loadChapter();
-    /* READ ALOUD (TTS) TEMPORARILY DISABLED: Removed global speechSynthesis.cancel() and resetTTS()
-    resetTTS();
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    */
   }, [chapterId, loadChapter]);
 
-  /* READ ALOUD (TTS) TEMPORARILY DISABLED: Logic commented out to prevent multi-tab audio interruption
-  // Handle TTS Playback with smooth auto-scrolling
-  const playTTSFromIndex = useCallback(
-    (index: number) => {
-      if (typeof window === 'undefined' || !('speechSynthesis' in window) || !contentData?.chapter?.content) return;
-
-      const paragraphs = contentData.chapter.content;
-      if (index < 0 || index >= paragraphs.length) {
-        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-        }
-        resetTTS();
-        showToast('Đã đọc xong chương này', 'info');
-        return;
-      }
-
-      window.speechSynthesis.cancel();
-      currentPIdxRef.current = index;
-
-      const rawText = paragraphs[index].replace(/<[^>]*>/g, '').trim();
-      if (!rawText) {
-        playTTSFromIndex(index + 1);
-        return;
-      }
-
-      // Auto-scroll reading target paragraph smoothly into center of viewport
-      const pElement = document.querySelector(`[data-paragraph-index="${index}"]`);
-      if (pElement) {
-        pElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-
-      const utterance = new SpeechSynthesisUtterance(rawText);
-      utterance.lang = 'vi-VN';
-      utterance.rate = useReaderConfigStore.getState().speechRate || 1.0;
-
-      const voiceUri = useReaderConfigStore.getState().voiceUri;
-      if (voiceUri) {
-        const voices = window.speechSynthesis.getVoices();
-        const foundVoice = voices.find((v) => v.voiceURI === voiceUri);
-        if (foundVoice) utterance.voice = foundVoice;
-      }
-
-      utterance.onend = () => {
-        playTTSFromIndex(index + 1);
-      };
-
-      utterance.onerror = () => {
-        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-        }
-        resetTTS();
-      };
-
-      synthRef.current = utterance;
-      useTTSStore.getState().setTTSPosition(index, 0, 0);
-      setIsPlaying(true);
-      setIsPaused(false);
-      window.speechSynthesis.speak(utterance);
-    },
-    [contentData, resetTTS, setIsPlaying, setIsPaused, showToast]
-  );
-
-  const handleToggleTTS = useCallback(() => {
-    if (isPlaying) {
-      window.speechSynthesis.pause();
-      setIsPlaying(false);
-      setIsPaused(true);
-    } else if (isPaused) {
-      window.speechSynthesis.resume();
-      setIsPlaying(true);
-      setIsPaused(false);
-    } else {
-      playTTSFromIndex(0);
-    }
-  }, [isPlaying, isPaused, setIsPlaying, setIsPaused, playTTSFromIndex]);
-
-  const handleStopTTS = useCallback(() => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    resetTTS();
-  }, [resetTTS]);
-  */
-
-  // No-op double-click handler (Quick replacement popup removed, feature available in Settings)
+  // No-op double-click handler
   const handleDoubleClick = useCallback(() => {}, []);
 
   const handleOpenHistory = useCallback(() => setShowHistorySheet(true), []);
@@ -309,6 +312,13 @@ export function ReaderScreen() {
   }
 
   const { chapter, navigation } = contentData;
+  const currentViewingTitle = activeChapter?.title || chapter.title;
+  const currentViewingNumber = activeChapter?.chapterNumber ?? chapter.chapterNumber;
+
+  const chapterDisplayLabel =
+    displayChapters.length > 1
+      ? `${displayChapters[0].chapterNumber} - ${displayChapters[displayChapters.length - 1].chapterNumber}`
+      : undefined;
 
   return (
     <div
@@ -322,17 +332,17 @@ export function ReaderScreen() {
         <ReaderHeader
           bookId={bookId || ''}
           bookName={chapter.bookName}
-          chapterNumber={chapter.chapterNumber}
-          chapterTitle={chapter.title}
+          chapterNumber={currentViewingNumber}
+          chapterTitle={currentViewingTitle}
           progress={scrollProgress}
           isVisible={true}
           onOpenHistory={handleOpenHistory}
         />
       </div>
 
-      {/* Reader Content Article - Frozen Memoized Section with Tap-to-Toggle Dock */}
+      {/* Reader Content Article - Frozen Memoized Multi-Chapter Section with Tap-to-Toggle Dock */}
       <ChapterContentSection
-        paragraphs={chapter.content}
+        chapters={displayChapters}
         fontSize={fontSize}
         lineHeight={lineHeight}
         isPlaying={isPlaying}
@@ -346,39 +356,14 @@ export function ReaderScreen() {
       <div aria-hidden="true">
         <ReaderQuickControl
           bookId={bookId || ''}
-          prevChapterId={navigation?.prev?.chapterId}
-          nextChapterId={navigation?.next?.chapterId}
-          currentChapterNumber={chapter.chapterNumber}
+          prevChapterId={navigation?.prev?.chapterId || undefined}
+          nextChapterId={navigation?.next?.chapterId || undefined}
+          currentChapterNumber={currentViewingNumber}
+          chapterDisplayLabel={chapterDisplayLabel}
           isVisible={showZenControls}
           isTTSActive={false}
           isTTSPlaying={false}
           currentParagraphIndex={-1}
-          /* READ ALOUD (TTS) TEMPORARILY DISABLED
-          onToggleTTS={handleToggleTTS}
-          onTTSPlay={() => {
-            if (isPaused) {
-              window.speechSynthesis.resume();
-              setIsPlaying(true);
-              setIsPaused(false);
-            } else {
-              playTTSFromIndex(0);
-            }
-          }}
-          onTTSPause={() => {
-            window.speechSynthesis.pause();
-            setIsPlaying(false);
-            setIsPaused(true);
-          }}
-          onTTSStop={handleStopTTS}
-          onTTSPrev={() => {
-            const activeIdx = useTTSStore.getState().currentParagraphIndex >= 0 ? useTTSStore.getState().currentParagraphIndex : currentPIdxRef.current;
-            playTTSFromIndex(Math.max(0, activeIdx - 1));
-          }}
-          onTTSNext={() => {
-            const activeIdx = useTTSStore.getState().currentParagraphIndex >= 0 ? useTTSStore.getState().currentParagraphIndex : currentPIdxRef.current;
-            playTTSFromIndex(activeIdx + 1);
-          }}
-          */
           onOpenChapterSelect={handleOpenChapterSelect}
           onOpenTranslation={handleOpenTranslation}
         />

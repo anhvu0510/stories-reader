@@ -366,4 +366,9 @@ body,
   animation-play-state: paused;
 }
 
+.chapter-block-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 800px;
+}
+
 

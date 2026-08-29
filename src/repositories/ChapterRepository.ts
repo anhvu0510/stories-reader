@@ -105,7 +105,8 @@ export const ChapterRepository = {
     chapterId: string,
     groupLines: number = 1,
     isEnabledReplace: boolean = true,
-    rootTab = ''
+    rootTab = '',
+    batchSize: number = 1
   ): Promise<ChapterContent> {
     const isOffline = useAppStore.getState().isOfflineMode;
 
@@ -184,7 +185,7 @@ export const ChapterRepository = {
     }
 
     try {
-      const url = `/api/chapters/${chapterId}?groupLines=${groupLines}&isEnabledReplace=${isEnabledReplace}&rootTab=${rootTab}`;
+      const url = `/api/chapters/${chapterId}?groupLines=${groupLines}&isEnabledReplace=${isEnabledReplace}&rootTab=${rootTab}&batchSize=${batchSize}`;
       const res = await apiClient.get<any>(url);
       return res;
     } catch (e) {
