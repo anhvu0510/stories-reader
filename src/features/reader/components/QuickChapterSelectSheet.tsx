@@ -383,7 +383,10 @@ export function QuickChapterSelectSheet({
               </div>
 
               {chapters.map((c, idx) => {
-                const isActive = c.chapterId === currentChapterId;
+                const isActive = Boolean(
+                  (currentChapterId && c.chapterId === currentChapterId) ||
+                  (currentChapterNumber !== undefined && c.chapterNumber === currentChapterNumber)
+                );
                 return (
                   <div
                     key={c.chapterId || `chap-${c.chapterNumber || idx}-${idx}`}

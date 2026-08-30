@@ -191,7 +191,6 @@ export function ReaderQuickControl({
               </button>
             </div>
           ) : (
-            /* Premium Glassmorphism Chapter Counter Pill Badge */
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -200,7 +199,9 @@ export function ReaderQuickControl({
               className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 transition-all active:scale-95 shadow-xs cursor-pointer"
               title="Mở bảng chọn chương"
             >
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary/75 font-mono">CHƯƠNG</span>
+              {!chapterDisplayLabel && (
+                <span className="text-[9px] font-extrabold uppercase tracking-wider text-primary/75 font-mono">CHƯƠNG</span>
+              )}
               <span className="text-xs font-black font-mono text-primary leading-none ml-0.5">
                 {chapterDisplayLabel || (currentChapterNumber !== undefined ? currentChapterNumber : '-')}
               </span>

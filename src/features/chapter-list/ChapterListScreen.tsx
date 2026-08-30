@@ -299,9 +299,20 @@ export function ChapterListScreen() {
               <span>📚 Tất cả chương</span>
             </div>
 
-            {filteredChapters.map((chapter) => (
-              <ChapterItem key={chapter.chapterId} chapter={chapter} bookId={bookId || ''} />
-            ))}
+            {filteredChapters.map((chapter) => {
+              const isCurrentReading = Boolean(
+                chapter.chapterId === book?.lastReadChapter?.chapterId ||
+                chapter.chapterNumber === Number(book?.lastReadChapter?.chapterNumber)
+              );
+              return (
+                <ChapterItem
+                  key={chapter.chapterId}
+                  chapter={chapter}
+                  bookId={bookId || ''}
+                  isActive={isCurrentReading}
+                />
+              );
+            })}
 
             {/* Infinite Scroll Bottom Spinner Indicator */}
             {loadingMore && (

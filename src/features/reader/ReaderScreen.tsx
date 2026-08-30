@@ -17,6 +17,7 @@ import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { TranslationSheet } from '../../components/TranslationSheet';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { offlineDb } from '../../lib/offlineDb';
 import { AlertCircle } from 'lucide-react';
 
 interface ChapterContentSectionProps {
@@ -192,6 +193,22 @@ export function ReaderScreen() {
       observer.disconnect();
     };
   }, [displayChapters]);
+
+  // Sync active reading chapter to local book history
+  useEffect(() => {
+    if (!activeChapter || !bookId) return;
+    offlineDb.getBook(bookId).then((b) => {
+      if (b) {
+        b.lastReadChapter = {
+          chapterId: activeChapter.chapterId,
+          chapterNumber: activeChapter.chapterNumber,
+          title: activeChapter.title,
+        };
+        b.lastedReadAt = new Date().toISOString();
+        offlineDb.saveBook(b);
+      }
+    });
+  }, [activeChapter, bookId]);
 
   // Throttled & Smooth scroll progress listener for Dock & Progress bar
   useEffect(() => {
@@ -380,8 +397,8 @@ export function ReaderScreen() {
         {showChapterSelectSheet && (
           <QuickChapterSelectSheet
             bookId={bookId || ''}
-            currentChapterId={chapterId}
-            currentChapterNumber={chapter.chapterNumber}
+            currentChapterId={activeChapter?.chapterId || chapterId}
+            currentChapterNumber={activeChapter?.chapterNumber ?? chapter.chapterNumber}
             onClose={() => setShowChapterSelectSheet(false)}
           />
         )}
