@@ -43,7 +43,7 @@ const ChapterContentSection = memo(function ChapterContentSection({
   onClick,
 }: ChapterContentSectionProps) {
   return (
-    <main id="main-story-content" onClick={onClick} className="pt-20 pb-5">
+    <main id="main-story-content" onClick={onClick} className="pt-20 pb-20">
       {chapters.map((chap, chapIdx) => (
         <section
           key={chap.chapterId || chapIdx}
@@ -51,27 +51,32 @@ const ChapterContentSection = memo(function ChapterContentSection({
           data-chapter-id={chap.chapterId}
           data-chapter-number={chap.chapterNumber}
           data-chapter-title={chap.title}
-          className="chapter-block-section mb-10 last:mb-0"
+          className="chapter-block-section mb-0"
         >
-          {/* Chapter Divider between chapters in batch */}
+          {/* Subtle Aesthetic Divider between chapters in batch */}
           {chapIdx > 0 && (
-            <div className="my-8 px-4">
-              <div className="h-[1px] bg-outline-variant/30" />
+            <div className="mt-3 mb-2 px-4 flex items-center gap-3 select-none">
+              <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-outline-variant/40 to-transparent" />
+              <span className="w-1.5 h-1.5 rounded-full bg-primary/60" />
+              <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-outline-variant/40 to-transparent" />
             </div>
           )}
 
-          {/* Chapter Section Title */}
-          <div className="px-4 mb-4 pt-2">
-            <h2 className="text-base font-bold text-on-surface leading-snug">
-              {chap.title?.toLowerCase().startsWith('chương')
-                ? chap.title
-                : `Chương ${chap.chapterNumber}: ${chap.title}`}
+          {/* Chapter Section Title with Accent Indicator */}
+          <div className="px-4 mb-2 pt-0.5">
+            <h2 className="text-base sm:text-lg font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2">
+              <span className="w-1 h-4 rounded-full bg-primary inline-block shrink-0" />
+              <span>
+                {chap.title?.toLowerCase().startsWith('chương')
+                  ? chap.title
+                  : `Chương ${chap.chapterNumber}: ${chap.title}`}
+              </span>
             </h2>
           </div>
 
           {/* Chapter Paragraphs */}
           <article
-            className="px-4 space-y-3 select-text"
+            className="px-4 select-text"
             style={{ fontSize: `${fontSize}px`, lineHeight }}
           >
             {chap.content.map((paragraphHtml, index) => (
@@ -339,7 +344,7 @@ export function ReaderScreen() {
 
   return (
     <div
-      className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-16 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200 ${fontClass}`}
+      className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200 ${fontClass}`}
     >
       {/* Smooth Non-Destructive Chapter Switching Loading Overlay */}
       <LoadingOverlay isLoading={loading} message="Đang mở văn bản..." />
