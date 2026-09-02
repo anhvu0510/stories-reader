@@ -110,38 +110,80 @@ export const ChapterRepository = {
   ): Promise<ChapterContent> {
     const isOffline = useAppStore.getState().isOfflineMode;
 
-    const processOfflineContent = async (rawContent: ChapterContent): Promise<ChapterContent> => {
-      const content = JSON.parse(JSON.stringify(rawContent)) as ChapterContent;
-      try {
-        const chapMeta = await offlineDb.getChapterMeta(chapterId);
-        const bookId = chapMeta?.bookId || (content.chapter as any)?.bookId;
+    const processOfflineBatch = async (
+      startChapterId: string,
+      targetBatchSize: number
+    ): Promise<ChapterContent> => {
+      const chapMeta = await offlineDb.getChapterMeta(startChapterId);
+      const startContent = await offlineDb.getChapterContent(startChapterId);
+      if (!startContent) {
+        throw new Error('Chương này chưa được tải xuống để đọc offline');
+      }
 
-        // 1. Offline replacements
-        if (isEnabledReplace && content.chapter?.content && Array.isArray(content.chapter.content)) {
-          let reps = await offlineDb.getReplacements();
+      const bookId = chapMeta?.bookId || (startContent.chapter as any)?.bookId;
+      const rawChapterItems: ChapterContent[] = [startContent];
+      let allBookChapters: (Chapter & { bookId: string })[] = [];
+      let currentIdx = -1;
+
+      if (bookId) {
+        allBookChapters = await offlineDb.getChapters(bookId);
+        allBookChapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
+        currentIdx = allBookChapters.findIndex((c) => c.chapterId === startChapterId);
+
+        if (targetBatchSize > 1 && currentIdx !== -1) {
+          const maxLookahead = Math.min(allBookChapters.length, currentIdx + targetBatchSize);
+          for (let i = currentIdx + 1; i < maxLookahead; i++) {
+            const nextChap = allBookChapters[i];
+            const nextContent = await offlineDb.getChapterContent(nextChap.chapterId);
+            if (nextContent) {
+              rawChapterItems.push(nextContent);
+            } else {
+              // Contiguous batch stops if a chapter is not downloaded
+              break;
+            }
+          }
+        }
+      }
+
+      // Replacements setup
+      let reps: any[] = [];
+      if (isEnabledReplace) {
+        try {
+          reps = await offlineDb.getReplacements();
           if (bookId) {
-            reps = reps.filter((r) => r.scope === 'global' || r.bookId === bookId || r.chapterId === chapterId);
+            const chapterIds = new Set(rawChapterItems.map((c) => c.chapter?.chapterId));
+            reps = reps.filter(
+              (r) => r.scope === 'global' || r.bookId === bookId || (r.chapterId && chapterIds.has(r.chapterId))
+            );
           } else {
             reps = reps.filter((r) => r.scope === 'global');
           }
           reps.sort((a, b) => (b.match?.length || 0) - (a.match?.length || 0));
+        } catch {
+          reps = [];
+        }
+      }
 
-          if (reps.length > 0) {
-            content.chapter.content = content.chapter.content.map((line) => {
-              let res = line;
-              for (const r of reps) {
-                if (r.match) res = res.split(r.match).join(r.replacement);
-              }
-              return res;
-            });
-          }
+      // Process each chapter
+      const formattedChapters = rawChapterItems.map((item) => {
+        let lines = Array.isArray(item.chapter?.content) ? [...item.chapter.content] : [];
+
+        // 1. Replacements
+        if (isEnabledReplace && reps.length > 0 && lines.length > 0) {
+          lines = lines.map((line) => {
+            let res = line;
+            for (const r of reps) {
+              if (r.match) res = res.split(r.match).join(r.replacement);
+            }
+            return res;
+          });
         }
 
-        // 2. Offline groupLines
-        if (groupLines > 1 && content.chapter?.content && Array.isArray(content.chapter.content)) {
+        // 2. GroupLines
+        if (groupLines > 1 && lines.length > 0) {
           const grouped: string[] = [];
           let currentGroup: string[] = [];
-          for (const line of content.chapter.content) {
+          for (const line of lines) {
             if (!line.trim()) continue;
             currentGroup.push(line);
             if (currentGroup.length >= groupLines) {
@@ -150,38 +192,65 @@ export const ChapterRepository = {
             }
           }
           if (currentGroup.length > 0) grouped.push(currentGroup.join(' '));
-          content.chapter.content = grouped;
+          lines = grouped;
         }
 
-        // 3. Offline dynamic navigation (prev & next)
-        if (bookId) {
-          const chapters = await offlineDb.getChapters(bookId);
-          chapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
-          const idx = chapters.findIndex((c) => c.chapterId === chapterId);
-          if (idx !== -1) {
-            content.navigation = {
-              prev: idx > 0 ? { chapterId: chapters[idx - 1].chapterId } : { chapterId: null },
-              next:
-                idx < chapters.length - 1
-                  ? {
-                      chapterId: chapters[idx + 1].chapterId,
-                      chapterNumber: chapters[idx + 1].chapterNumber,
-                      title: chapters[idx + 1].title,
-                    }
-                  : { chapterId: null },
-            };
-          }
+        return {
+          chapterId: item.chapter?.chapterId || '',
+          bookId: item.chapter?.bookId,
+          bookName: item.chapter?.bookName,
+          chapterNumber: item.chapter?.chapterNumber || 0,
+          title: item.chapter?.title || (item.chapter as any)?.titleVN || (item.chapter as any)?.titleRaw || '',
+          createdAt: item.chapter?.createdAt,
+          updatedAt: item.chapter?.updatedAt,
+          content: lines,
+          state: item.chapter?.state,
+          chapterPlan: item.chapter?.chapterPlan,
+          qaReports: item.chapter?.qaReports,
+          continuitySnapshot: item.chapter?.continuitySnapshot,
+        };
+      });
+
+      // 3. Dynamic navigation calculation
+      let prevNav: { chapterId: string | null; chapterNumber?: number; title?: string } = { chapterId: null };
+      let nextNav: { chapterId: string | null; chapterNumber?: number; title?: string } = { chapterId: null };
+
+      if (currentIdx !== -1 && allBookChapters.length > 0) {
+        // Prev: jump back targetBatchSize chapters
+        if (currentIdx > 0) {
+          const targetPrevIdx = Math.max(0, currentIdx - targetBatchSize);
+          const prevChap = allBookChapters[targetPrevIdx];
+          prevNav = {
+            chapterId: prevChap.chapterId,
+            chapterNumber: prevChap.chapterNumber,
+            title: prevChap.title || (prevChap as any)?.titleVN || '',
+          };
         }
-      } catch (e) {
-        console.error('Failed to process offline chapter content', e);
+
+        // Next: chapter right after the batch
+        const nextIdx = currentIdx + rawChapterItems.length;
+        if (nextIdx < allBookChapters.length) {
+          const nextChap = allBookChapters[nextIdx];
+          nextNav = {
+            chapterId: nextChap.chapterId,
+            chapterNumber: nextChap.chapterNumber,
+            title: nextChap.title || (nextChap as any)?.titleVN || '',
+          };
+        }
       }
-      return content;
+
+      return {
+        chapter: formattedChapters[0],
+        chapters: formattedChapters,
+        navigation: {
+          prev: prevNav.chapterId ? prevNav : null,
+          next: nextNav.chapterId ? nextNav : null,
+        },
+      };
     };
 
     if (isOffline) {
-      const content = await offlineDb.getChapterContent(chapterId);
-      if (content) return await processOfflineContent(content);
-      throw new Error('Chương này chưa được tải xuống để đọc offline');
+      return await processOfflineBatch(chapterId, batchSize);
     }
 
     try {
@@ -189,9 +258,7 @@ export const ChapterRepository = {
       const res = await apiClient.get<any>(url);
       return res;
     } catch (e) {
-      const offline = await offlineDb.getChapterContent(chapterId);
-      if (offline) return await processOfflineContent(offline);
-      throw e;
+      return await processOfflineBatch(chapterId, batchSize);
     }
   },
 

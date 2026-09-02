@@ -96,28 +96,40 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
     expect(ChapterRepository.getChapterContent).toHaveBeenCalledWith('c1', 1, false, '', 3);
   });
 
-  it('QC-6 [Tier 3 - Offline Mode Fallback]: forces batchSize = 1 when offline mode is active', async () => {
+  it('QC-6 [Tier 3 - Offline Mode Support]: preserves batchChapterSize when offline mode is active', async () => {
     useAppStore.setState({ isOfflineMode: true });
     useReaderConfigStore.setState({ batchChapterSize: 5 });
 
-    const mockSingleData = {
+    const mockBatchOfflineData = {
       chapter: {
         chapterId: 'c1',
         chapterNumber: 1,
-        title: 'Chương Đơn Offline',
+        title: 'Chương 1 Offline',
         bookName: 'Truyện Đỉnh Cao',
         state: 'SUCCEEDED',
         totalTokens: 100,
-        content: ['Nội dung offline'],
+        content: ['Nội dung offline ch1'],
         rootTab: '',
       },
+      chapters: [
+        {
+          chapterId: 'c1',
+          chapterNumber: 1,
+          title: 'Chương 1 Offline',
+          bookName: 'Truyện Đỉnh Cao',
+          state: 'SUCCEEDED',
+          totalTokens: 100,
+          content: ['Nội dung offline ch1'],
+          rootTab: '',
+        },
+      ],
       navigation: {
         prev: null,
         next: null,
       },
     };
 
-    vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue(mockSingleData as any);
+    vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue(mockBatchOfflineData as any);
 
     render(
       <MemoryRouter initialEntries={['/book/b1/chapter/c1']}>
@@ -128,9 +140,9 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getAllByText('Chương Đơn Offline').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Chương 1 Offline').length).toBeGreaterThan(0);
     }, { timeout: 3000 });
 
-    expect(ChapterRepository.getChapterContent).toHaveBeenCalledWith('c1', 1, false, '', 1);
+    expect(ChapterRepository.getChapterContent).toHaveBeenCalledWith('c1', 1, false, '', 5);
   });
 });

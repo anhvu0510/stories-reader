@@ -268,7 +268,7 @@ export function ReaderScreen() {
     setLoading(true);
     setError(null);
     try {
-      const effectiveBatchSize = isOfflineMode ? 1 : batchChapterSize;
+      const effectiveBatchSize = batchChapterSize;
       const res = await ChapterRepository.getChapterContent(
         chapterId,
         groupLines,
