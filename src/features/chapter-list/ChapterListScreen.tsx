@@ -11,10 +11,9 @@ import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useFavoriteStore } from '../../stores/useFavoriteStore';
+import { useReaderConfigStore } from '../../stores/useReaderConfigStore';
 import { ArrowLeft, Search, RefreshCw, Download, Heart } from 'lucide-react';
 import { downloadManager } from '../../lib/DownloadManager';
-
-const PAGE_SIZE = 30;
 
 export function ChapterListScreen() {
   const { bookId } = useParams<{ bookId: string }>();
@@ -56,6 +55,7 @@ export function ChapterListScreen() {
   const [rangeBounds, setRangeBounds] = useState<{ start?: number; end?: number }>({});
 
   const showToast = useToastStore((state) => state.showToast);
+  const chapterLimit = useReaderConfigStore((state) => state.chapterLimit || 50);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch chapters with pagination, sorting & state filter
@@ -83,7 +83,7 @@ export function ChapterListScreen() {
         const res = await ChapterRepository.getChapters(
           bookId,
           targetPage,
-          PAGE_SIZE,
+          chapterLimit,
           'chapterNumber',
           targetSort,
           targetState,
@@ -112,13 +112,13 @@ export function ChapterListScreen() {
         setLoadingMore(false);
       }
     },
-    [bookId, book, showToast]
+    [bookId, book, chapterLimit, showToast]
   );
 
   // Initial load or sort/state filter change
   useEffect(() => {
     fetchChapters(1, search, filterState, sortOrder, false);
-  }, [bookId, filterState, sortOrder]);
+  }, [bookId, filterState, sortOrder, chapterLimit]);
 
   // Debounced Search API Call
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {

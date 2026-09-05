@@ -13,10 +13,12 @@ import { ReaderQuickControl } from './components/ReaderQuickControl';
 import { QuickTypographySheet } from './components/QuickTypographySheet';
 import { QuickChapterSelectSheet } from './components/QuickChapterSelectSheet';
 import { QuickBookHistorySheet } from './components/QuickBookHistorySheet';
+import { VerticalBatchChapterNav } from './components/VerticalBatchChapterNav';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { TranslationSheet } from '../../components/TranslationSheet';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { useReadingProgress } from '../../hooks/useReadingProgress';
 import { offlineDb } from '../../lib/offlineDb';
 import { AlertCircle } from 'lucide-react';
 
@@ -51,7 +53,7 @@ const ChapterContentSection = memo(function ChapterContentSection({
           data-chapter-id={chap.chapterId}
           data-chapter-number={chap.chapterNumber}
           data-chapter-title={chap.title}
-          className="chapter-block-section mb-0"
+          className="chapter-block-section scroll-mt-16 mb-0"
         >
           {/* Subtle Aesthetic Divider between chapters in batch */}
           {chapIdx > 0 && (
@@ -121,6 +123,10 @@ export function ReaderScreen() {
 
   // Sync document.title with the current reading story name
   useDocumentTitle(contentData?.chapter?.bookName);
+
+  // Clean Reading Progress & Scroll Restoration
+  const isContentReady = !loading && contentData !== null;
+  useReadingProgress(bookId, chapterId, isContentReady);
 
   const [showTranslateSheet, setShowTranslateSheet] = useState(false);
   const [showTypographySheet, setShowTypographySheet] = useState(false);
@@ -293,9 +299,6 @@ export function ReaderScreen() {
   }, [chapterId, groupLines, isEnabledReplace, batchChapterSize, isOfflineMode]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-    }
     loadChapter();
   }, [chapterId, loadChapter]);
 
@@ -361,6 +364,13 @@ export function ReaderScreen() {
           onOpenHistory={handleOpenHistory}
         />
       </div>
+
+      {/* Floating Vertical Chapter Circle Strip on Left Edge */}
+      <VerticalBatchChapterNav
+        chapters={displayChapters}
+        activeChapterId={activeChapter?.chapterId}
+        isVisible={showZenControls}
+      />
 
       {/* Reader Content Article - Frozen Memoized Multi-Chapter Section with Tap-to-Toggle Dock */}
       <ChapterContentSection

@@ -15,6 +15,7 @@ import { OfflineManagerSheet } from '../../components/OfflineManagerSheet';
 import { BookOpen, Clock, Sparkles, Library, X, RotateCcw, Heart } from 'lucide-react';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useLibraryStore, SortByField, SortOrderDirection } from '../../stores/useLibraryStore';
+import { useReaderConfigStore } from '../../stores/useReaderConfigStore';
 
 export function LibraryScreen() {
   useDocumentTitle();
@@ -31,12 +32,12 @@ export function LibraryScreen() {
   } = useLibraryStore();
 
   const [books, setBooks] = useState<Book[]>([]);
-  const [page, setPage] = useState(savedPage);
+  const [page, setPage] = useState(savedPage || 1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const [search, setSearch] = useState(savedSearch);
+  const [search, setSearch] = useState(savedSearch || '');
   const [tab, setTab] = useState<'ALL' | 'HISTORY' | 'FAVORITE' | 'AI'>(savedTab);
   const [selectedTags, setSelectedTags] = useState<string[]>(savedTags || []);
   const [sortBy, setSortByState] = useState<SortByField>(savedSortBy || 'updatedAt');
@@ -47,6 +48,7 @@ export function LibraryScreen() {
 
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
   const showToast = useToastStore((state) => state.showToast);
+  const bookLimit = useReaderConfigStore((state) => state.bookLimit || 20);
   const { openSettings, isOfflineManagerOpen, closeOfflineManager } = useModalStore();
 
   const mainScrollRef = useRef<HTMLDivElement | null>(null);
@@ -83,7 +85,7 @@ export function LibraryScreen() {
       const sOrder = currentSortOrder !== undefined ? currentSortOrder : sortOrder;
 
       try {
-        const res = await BookRepository.getBooks(targetPage, 20, q, t, sBy, sOrder, tg);
+        const res = await BookRepository.getBooks(targetPage, bookLimit, q, t, sBy, sOrder, tg);
         const fetchedBooks = res.books || [];
         const { currentPage, totalPages: pagesCount, total: totalCount } = res.pagination || {};
 
@@ -97,7 +99,7 @@ export function LibraryScreen() {
         setLoading(false);
       }
     },
-    [search, tab, selectedTags, sortBy, sortOrder, showToast]
+    [search, tab, selectedTags, sortBy, sortOrder, bookLimit, showToast]
   );
 
   useEffect(() => {
@@ -116,7 +118,7 @@ export function LibraryScreen() {
       window.removeEventListener('offline-mode-changed', handleRefresh);
       window.removeEventListener('favorites-updated', handleRefresh);
     };
-  }, [page, search, tab, selectedTags, sortBy, sortOrder, isOfflineMode, fetchBooks]);
+  }, [page, search, tab, selectedTags, sortBy, sortOrder, isOfflineMode, bookLimit, fetchBooks]);
 
   // Restore scroll position after initial loading finishes
   useEffect(() => {

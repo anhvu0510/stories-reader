@@ -217,23 +217,8 @@ export function ReaderQuickControl({
         {/* Vertical Divider */}
         <div className="w-[1px] h-4.5 bg-white/25 shadow-xs shrink-0 mx-0.5" />
 
-        {/* RIGHT GROUP: Speaker Toggle (Hidden when active), System Settings & AI Translation */}
+        {/* RIGHT GROUP: System Settings & AI Translation */}
         <div className="flex items-center gap-1 flex-shrink-0">
-          {/* READ ALOUD (TTS) TEMPORARILY DISABLED
-          {onToggleTTS && !isTTSActive && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleTTS();
-              }}
-              className="p-2.5 rounded-full border bg-surface-container-high border-outline-variant/30 text-on-surface-variant hover:text-primary hover:bg-surface transition-all active:scale-95"
-              title="Bật Đọc thành tiếng (Read Aloud)"
-            >
-              <Volume2 size={16} />
-            </button>
-          )}
-          */}
-
           {/* System Settings Button */}
           <button
             onClick={(e) => {
