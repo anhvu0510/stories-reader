@@ -54,7 +54,8 @@ describe('BookRepository Favorite Server Management', () => {
     const res = await BookRepository.getBooks(1, 20, '', 'FAVORITE');
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      expect.stringContaining('tab=FAVORITE')
+      expect.stringContaining('tab=FAVORITE'),
+      expect.anything()
     );
     expect(res.books.length).toBe(2);
     expect(useFavoriteStore.getState().isFavorite('b-1')).toBe(true);
@@ -95,7 +96,8 @@ describe('BookRepository Favorite Server Management', () => {
     await BookRepository.getBooks(1, 20, '', 'ALL', 'bookName', 'ASC');
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      expect.stringMatching(/sortBy=bookName.*sortOrder=ASC|sortOrder=ASC.*sortBy=bookName/)
+      expect.stringMatching(/sortBy=bookName.*sortOrder=ASC|sortOrder=ASC.*sortBy=bookName/),
+      expect.anything()
     );
   });
 

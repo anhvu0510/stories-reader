@@ -30,7 +30,7 @@ export const ChapterRepository = {
         if (fromChapterNumber !== undefined) query.append('fromChapterNumber', fromChapterNumber.toString());
         if (toChapterNumber !== undefined) query.append('toChapterNumber', toChapterNumber.toString());
 
-        const res = await apiClient.get<any>(`/api/books/${bookId}/chapters?${query.toString()}`);
+        const res = await apiClient.get<any>(`/api/books/${bookId}/chapters?${query.toString()}`, { timeout: 2500, retries: 0 });
         if (res) {
           const rawItems = res.chapters || res.data || res.items || (Array.isArray(res) ? res : []);
           const rawChapters: Chapter[] = rawItems.map((c: any, idx: number) => ({
@@ -254,8 +254,10 @@ export const ChapterRepository = {
     }
 
     try {
+      const hasOffline = await offlineDb.getChapterContent(chapterId);
+      const timeout = hasOffline ? 1200 : 3500;
       const url = `/api/chapters/${chapterId}?groupLines=${groupLines}&isEnabledReplace=${isEnabledReplace}&rootTab=${rootTab}&batchSize=${batchSize}`;
-      const res = await apiClient.get<any>(url);
+      const res = await apiClient.get<any>(url, { timeout, retries: 0 });
       return res;
     } catch (e) {
       return await processOfflineBatch(chapterId, batchSize);

@@ -7,21 +7,30 @@ export class ApiError extends Error {
   }
 }
 
+export interface RequestOptions extends RequestInit {
+  retries?: number;
+  timeout?: number;
+}
+
 export async function fetchWithRetry(
   path: string,
-  options: RequestInit = {},
-  retries = 2,
-  timeout = 15000
+  options: RequestOptions = {},
+  customRetries?: number,
+  customTimeout?: number
 ): Promise<Response> {
   const { activeDomain } = useAppStore.getState();
   if (!activeDomain || !activeDomain.url) {
     throw new ApiError('API_DOMAIN_NOT_SET');
   }
 
+  const { retries: optionRetries, timeout: optionTimeout, ...fetchOptions } = options;
+  const retries = customRetries ?? optionRetries ?? 0;
+  const timeout = customTimeout ?? optionTimeout ?? 4000;
+
   const headers = {
     'ngrok-skip-browser-warning': 'true',
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...fetchOptions.headers,
   };
 
   let attempts = 0;
@@ -34,7 +43,7 @@ export async function fetchWithRetry(
 
       const url = `${activeDomain.url.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
       const response = await fetch(url, {
-        ...options,
+        ...fetchOptions,
         headers,
         signal: controller.signal,
       });
@@ -45,7 +54,7 @@ export async function fetchWithRetry(
       lastError = err;
       attempts++;
       if (attempts <= retries) {
-        await new Promise((res) => setTimeout(res, 1000 * attempts));
+        await new Promise((res) => setTimeout(res, 300 * attempts));
       }
     }
   }
@@ -54,36 +63,52 @@ export async function fetchWithRetry(
 }
 
 export const apiClient = {
-  async get<T>(path: string): Promise<T> {
-    const res = await fetchWithRetry(path, { method: 'GET' });
+  async get<T>(path: string, options?: { retries?: number; timeout?: number }): Promise<T> {
+    const res = await fetchWithRetry(path, { method: 'GET' }, options?.retries, options?.timeout);
     if (!res.ok) throw new ApiError(`HTTP Error ${res.status}`, res.status);
     return await res.json();
   },
 
-  async post<T>(path: string, body?: any): Promise<T> {
-    const res = await fetchWithRetry(path, {
-      method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
-    });
+  async post<T>(path: string, body?: any, options?: { retries?: number; timeout?: number }): Promise<T> {
+    const res = await fetchWithRetry(
+      path,
+      {
+        method: 'POST',
+        body: body ? JSON.stringify(body) : undefined,
+      },
+      options?.retries,
+      options?.timeout
+    );
     if (!res.ok) throw new ApiError(`HTTP Error ${res.status}`, res.status);
     return await res.json();
   },
 
-  async put<T>(path: string, body?: any): Promise<T> {
-    const res = await fetchWithRetry(path, {
-      method: 'PUT',
-      body: body ? JSON.stringify(body) : undefined,
-    });
+  async put<T>(path: string, body?: any, options?: { retries?: number; timeout?: number }): Promise<T> {
+    const res = await fetchWithRetry(
+      path,
+      {
+        method: 'PUT',
+        body: body ? JSON.stringify(body) : undefined,
+      },
+      options?.retries,
+      options?.timeout
+    );
     if (!res.ok) throw new ApiError(`HTTP Error ${res.status}`, res.status);
     return await res.json();
   },
 
-  async delete<T>(path: string, body?: any): Promise<T> {
-    const res = await fetchWithRetry(path, {
-      method: 'DELETE',
-      body: body ? JSON.stringify(body) : undefined,
-    });
+  async delete<T>(path: string, body?: any, options?: { retries?: number; timeout?: number }): Promise<T> {
+    const res = await fetchWithRetry(
+      path,
+      {
+        method: 'DELETE',
+        body: body ? JSON.stringify(body) : undefined,
+      },
+      options?.retries,
+      options?.timeout
+    );
     if (!res.ok) throw new ApiError(`HTTP Error ${res.status}`, res.status);
     return await res.json();
   },
 };
+

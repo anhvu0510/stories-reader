@@ -45,7 +45,7 @@ export const BookRepository = {
           query.append('tags', tags.join(','));
         }
 
-        const res = await apiClient.get<any>(`/api/books?${query.toString()}`);
+        const res = await apiClient.get<any>(`/api/books?${query.toString()}`, { timeout: 2500, retries: 0 });
         if (res) {
           const books = res.books || res.data || (Array.isArray(res) ? res : []);
           const pag = res.pagination || {};
