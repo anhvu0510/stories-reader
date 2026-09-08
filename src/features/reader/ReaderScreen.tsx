@@ -20,7 +20,7 @@ import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useReadingProgress } from '../../hooks/useReadingProgress';
 import { offlineDb } from '../../lib/offlineDb';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RotateCcw, Home } from 'lucide-react';
 
 interface ChapterContentSectionProps {
   chapters: ChapterDetailItem[];
@@ -326,12 +326,24 @@ export function ReaderScreen() {
         <AlertCircle size={40} className="text-error mb-3" />
         <h2 className="text-sm font-bold text-on-surface mb-1">Không thể tải chương</h2>
         <p className="text-xs text-on-surface-variant max-w-xs mb-5">{error || 'Chương không tồn tại'}</p>
-        <button
-          onClick={() => navigate(`/book/${bookId}`)}
-          className="px-4 py-2 rounded-full bg-primary text-on-primary text-xs font-extrabold"
-        >
-          Quay lại danh sách chương
-        </button>
+
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={loadChapter}
+            className="px-4 py-2 rounded-full bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-sm"
+          >
+            <RotateCcw size={14} />
+            <span>Thử tải lại</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/')}
+            className="px-4 py-2 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface text-xs font-bold hover:bg-surface-container-high transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+          >
+            <Home size={14} />
+            <span>Về Trang chủ</span>
+          </button>
+        </div>
       </div>
     );
   }

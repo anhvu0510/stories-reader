@@ -376,12 +376,19 @@ export function LibraryScreen() {
                 ? 'Không có truyện nào đang chờ dịch AI'
                 : 'Không tìm thấy truyện nào trong thư viện'}
             </p>
-            {selectedTags.length > 0 && (
+            {selectedTags.length > 0 ? (
               <button
                 onClick={() => handleTagFilterApply([])}
                 className="text-xs font-bold text-primary hover:underline"
               >
                 Xóa bộ lọc tags
+              </button>
+            ) : (
+              <button
+                onClick={() => openSettings('servers')}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary/15 border border-primary/30 text-primary text-xs font-bold hover:bg-primary/20 transition-all active:scale-95 cursor-pointer mt-1"
+              >
+                <span>Cấu hình Máy chủ</span>
               </button>
             )}
           </div>

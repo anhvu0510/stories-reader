@@ -51,22 +51,14 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const res = await fetch(domain.url, {
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        await fetch(domain.url, {
           signal: controller.signal,
           headers: { 'ngrok-skip-browser-warning': 'true' },
-        });
+        }).catch(() => null);
         clearTimeout(timeoutId);
-
-        if (res.ok) {
-          setShowSettings(false);
-        } else {
-          useToastStore.getState().showToast('Máy chủ mặc định không phản hồi đúng định dạng.', 'error');
-          useModalStore.getState().openSettings('servers');
-        }
       } catch {
-        useToastStore.getState().showToast('Không thể kết nối với máy chủ.', 'error');
-        useModalStore.getState().openSettings('servers');
+        // Safe fallback without intrusive modal popup
       } finally {
         setIsInitializing(false);
       }
