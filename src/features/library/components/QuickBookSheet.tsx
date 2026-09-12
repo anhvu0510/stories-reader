@@ -309,7 +309,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
       <div className="fixed inset-0 z-[95000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden box-border">
         <div className="absolute inset-0" onClick={onClose} />
 
-        <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.5)] h-[82vh] max-h-[90dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
+        <div className="relative z-10 bg-surface/75 dark:bg-surface/75 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.4)] h-[82vh] max-h-[90dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
           {/* Ambient Top Glow Effect */}
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
 

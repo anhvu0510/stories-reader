@@ -737,7 +737,7 @@ export function TranslationSheet({
       <div className="absolute inset-0" onClick={onClose} />
       
       {/* Sheet Content */}
-      <div className="relative bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] min-h-[520px] max-h-[85dvh] flex flex-col z-10 overflow-hidden box-border transform-gpu overscroll-contain transition-all duration-200">
+      <div className="relative bg-surface/75 dark:bg-surface/75 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.4)] h-[78vh] min-h-[520px] max-h-[85dvh] flex flex-col z-10 overflow-hidden box-border transform-gpu overscroll-contain transition-all duration-200">
         {/* Ambient Top Glow Effect */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
         

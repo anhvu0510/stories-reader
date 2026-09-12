@@ -44,8 +44,8 @@ export const ChapterItem = forwardRef<HTMLDivElement, ChapterItemProps>(
         onClick={handleClick}
         className={`group relative rounded-2xl transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 p-3 active:scale-[0.985] ${
           isActive
-            ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary shadow-[0_4px_20px_rgba(0,0,0,0.25),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] text-primary'
-            : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.25),_0_4px_12px_rgba(0,0,0,0.3)] hover:border-primary/60 text-on-surface'
+            ? 'bg-primary/20 hover:bg-primary/25 border-2 border-primary/80 shadow-[0_4px_20px_rgba(245,158,11,0.25),_inset_0_1.5px_1.5px_rgba(255,255,255,0.5)] text-primary'
+            : 'bg-white/[0.04] dark:bg-white/[0.04] hover:bg-white/[0.08] dark:hover:bg-white/[0.08] border border-white/10 dark:border-white/10 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.15)] hover:border-primary/50 text-on-surface'
         }`}
       >
         {/* Left Side: Flex Pill CH Badge (Never overflows for 4-6 digit numbers) */}
