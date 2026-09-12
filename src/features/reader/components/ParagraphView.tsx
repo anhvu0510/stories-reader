@@ -16,9 +16,9 @@ export const ParagraphView = memo(function ParagraphView({
   return (
     <div
       data-paragraph-index={index}
-      className={`mb-4 last:mb-1 text-justify leading-relaxed tracking-normal max-w-prose mx-auto text-on-background/95 font-medium hyphens-auto break-words select-text cursor-text transition-all duration-200 ${
+      className={`mb-4 sm:mb-5 last:mb-2 text-justify leading-relaxed tracking-normal max-w-prose mx-auto text-on-background/95 font-medium hyphens-auto break-words select-text cursor-text selection:bg-primary/25 selection:text-primary transition-all duration-200 ${
         isTTSActive
-          ? 'ring-2 ring-primary/60 bg-primary/10 rounded-2xl p-3 shadow-md'
+          ? 'ring-2 ring-primary/60 bg-primary/10 rounded-2xl p-3 shadow-md backdrop-blur-[1px]'
           : ''
       }`}
       dangerouslySetInnerHTML={{ __html: content }}

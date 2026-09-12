@@ -30,6 +30,7 @@ interface ChapterContentSectionProps {
   isPaused: boolean;
   currentParagraphIndex: number;
   onDoubleClick: (e: React.MouseEvent) => void;
+  onTouchStart?: (e: React.TouchEvent) => void;
   onTouchEnd?: (e: React.TouchEvent) => void;
 }
 
@@ -42,14 +43,16 @@ const ChapterContentSection = memo(function ChapterContentSection({
   isPaused,
   currentParagraphIndex,
   onDoubleClick,
+  onTouchStart,
   onTouchEnd,
 }: ChapterContentSectionProps) {
   return (
     <main
       id="main-story-content"
       onDoubleClick={onDoubleClick}
+      onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      className="pt-20 pb-20 select-text"
+      className="pt-20 pb-20 select-text relative z-10"
     >
       {chapters.map((chap, chapIdx) => (
         <section
@@ -60,19 +63,19 @@ const ChapterContentSection = memo(function ChapterContentSection({
           data-chapter-title={chap.title}
           className="chapter-block-section scroll-mt-16 mb-0"
         >
-          {/* Subtle Aesthetic Divider between chapters in batch */}
+          {/* Subtle 3D Glowing Glass Divider between chapters in batch */}
           {chapIdx > 0 && (
-            <div className="mt-3 mb-2 px-4 flex items-center gap-3 select-none">
-              <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-outline-variant/40 to-transparent" />
-              <span className="w-1.5 h-1.5 rounded-full bg-primary/60" />
-              <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-outline-variant/40 to-transparent" />
+            <div className="mt-8 mb-6 px-6 flex items-center gap-3 select-none">
+              <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white/30 dark:via-white/20 to-transparent" />
+              <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(59,130,246,0.8)] border border-white/40" />
+              <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white/30 dark:via-white/20 to-transparent" />
             </div>
           )}
 
           {/* Chapter Section Title with Accent Indicator */}
-          <div className="px-4 mb-2 pt-0.5">
+          <div className="px-4 mb-3 pt-0.5">
             <h2 className="text-base sm:text-lg font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2">
-              <span className="w-1 h-4 rounded-full bg-primary inline-block shrink-0" />
+              <span className="w-1 h-4 rounded-full bg-primary inline-block shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
               <span>
                 {chap.title?.toLowerCase().startsWith('chương')
                   ? chap.title
@@ -263,6 +266,17 @@ export function ReaderScreen() {
 
   const lastTapTimeRef = useRef<number>(0);
   const lastToggleTimeRef = useRef<number>(0);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Record touch start coordinates to measure movement distance on touchEnd
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches && e.touches.length > 0) {
+      touchStartPosRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    }
+  }, []);
 
   // Single unified toggle with 400ms lock to eliminate duplicate touch + dblclick flickering
   const toggleZenControls = useCallback(() => {
@@ -280,6 +294,24 @@ export function ReaderScreen() {
 
   const handleTouchEnd = useCallback((e?: React.TouchEvent) => {
     const now = Date.now();
+    let isMoved = false;
+
+    if (e && e.changedTouches && e.changedTouches.length > 0 && touchStartPosRef.current) {
+      const deltaX = Math.abs(e.changedTouches[0].clientX - touchStartPosRef.current.x);
+      const deltaY = Math.abs(e.changedTouches[0].clientY - touchStartPosRef.current.y);
+      // If user moved more than 10px, treat as scroll gesture and DO NOT toggle zen controls
+      if (deltaX > 10 || deltaY > 10) {
+        isMoved = true;
+      }
+    }
+
+    touchStartPosRef.current = null;
+
+    if (isMoved) {
+      lastTapTimeRef.current = 0;
+      return;
+    }
+
     if (now - lastTapTimeRef.current < 350 && now - lastTapTimeRef.current > 40) {
       if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
       toggleZenControls();
@@ -408,8 +440,11 @@ export function ReaderScreen() {
 
   return (
     <div
-      className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200 ${fontClass}`}
+      className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200 selection:bg-primary/25 selection:text-primary ${fontClass}`}
     >
+      {/* Subtle Top Ambient Lighting Glow */}
+      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-96 bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent blur-3xl" />
+
       {/* Sticky Header - ALWAYS VISIBLE */}
       <div aria-hidden="true">
         <ReaderHeader
@@ -439,6 +474,7 @@ export function ReaderScreen() {
         isPaused={isPaused}
         currentParagraphIndex={currentParagraphIndex}
         onDoubleClick={handleDoubleClick}
+        onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       />
 
