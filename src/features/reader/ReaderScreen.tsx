@@ -30,7 +30,7 @@ interface ChapterContentSectionProps {
   isPaused: boolean;
   currentParagraphIndex: number;
   onDoubleClick: (e: React.MouseEvent) => void;
-  onClick?: (e: React.MouseEvent) => void;
+  onTouchEnd?: (e: React.TouchEvent) => void;
 }
 
 // 100% Frozen & Memoized Multi-Chapter Content Section
@@ -42,10 +42,15 @@ const ChapterContentSection = memo(function ChapterContentSection({
   isPaused,
   currentParagraphIndex,
   onDoubleClick,
-  onClick,
+  onTouchEnd,
 }: ChapterContentSectionProps) {
   return (
-    <main id="main-story-content" onDoubleClick={onDoubleClick} className="pt-20 pb-20">
+    <main
+      id="main-story-content"
+      onDoubleClick={onDoubleClick}
+      onTouchEnd={onTouchEnd}
+      className="pt-20 pb-20 select-text"
+    >
       {chapters.map((chap, chapIdx) => (
         <section
           key={chap.chapterId || chapIdx}
@@ -88,6 +93,7 @@ const ChapterContentSection = memo(function ChapterContentSection({
                 content={paragraphHtml}
                 isTTSActive={(isPlaying || isPaused) && currentParagraphIndex === index}
                 onDoubleClick={onDoubleClick}
+                onTouchEnd={onTouchEnd}
               />
             ))}
           </article>
@@ -251,11 +257,21 @@ export function ReaderScreen() {
     };
   }, []);
 
+  const lastTapTimeRef = useRef<number>(0);
+
   // Double click/tap reading screen to toggle bottom dock control bar
   const handleDoubleClick = useCallback(() => {
-    const sel = window.getSelection();
-    if (sel && sel.toString().trim().length > 0) return;
     setShowZenControls((prev) => !prev);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTapTimeRef.current < 350 && now - lastTapTimeRef.current > 30) {
+      setShowZenControls((prev) => !prev);
+      lastTapTimeRef.current = 0;
+    } else {
+      lastTapTimeRef.current = now;
+    }
   }, []);
 
   // Fetch chapter data with smooth 200ms loading feedback
@@ -382,6 +398,7 @@ export function ReaderScreen() {
         isPaused={isPaused}
         currentParagraphIndex={currentParagraphIndex}
         onDoubleClick={handleDoubleClick}
+        onTouchEnd={handleTouchEnd}
       />
 
       {/* Single Capsule Zen Mode Floating Control Bar */}
