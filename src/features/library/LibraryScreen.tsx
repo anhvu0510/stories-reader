@@ -300,15 +300,15 @@ export function LibraryScreen() {
 
           <button
             onClick={() => handleTabChange('ALL')}
-            className={`flex-1 py-2.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
+            className={`flex-1 py-2.5 px-0.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
               tab === 'ALL'
                 ? 'text-amber-400 font-extrabold'
                 : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
             }`}
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 min-w-0">
               <Library size={13} className="shrink-0 transition-transform group-active:scale-90" />
-              <span className="tracking-tight">Tất cả</span>
+              <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Tất cả</span>
               {tab === 'ALL' && (
                 <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 shrink-0 leading-none shadow-2xs">
                   {total}
@@ -319,15 +319,15 @@ export function LibraryScreen() {
 
           <button
             onClick={() => handleTabChange('HISTORY')}
-            className={`flex-1 py-2.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
+            className={`flex-1 py-2.5 px-0.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
               tab === 'HISTORY'
                 ? 'text-amber-400 font-extrabold'
                 : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
             }`}
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 min-w-0">
               <Clock size={13} className="shrink-0 transition-transform group-active:scale-90" />
-              <span className="tracking-tight">Lịch sử</span>
+              <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Lịch sử</span>
               {tab === 'HISTORY' && (
                 <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 shrink-0 leading-none shadow-2xs">
                   {total}
@@ -338,21 +338,21 @@ export function LibraryScreen() {
 
           <button
             onClick={() => handleTabChange('FAVORITE')}
-            className={`flex-1 py-2.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
+            className={`flex-1 py-2.5 px-0.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
               tab === 'FAVORITE'
                 ? 'text-rose-500 font-extrabold'
                 : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
             }`}
             title="Truyện yêu thích"
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 min-w-0">
               <Heart
                 size={13}
                 className={`shrink-0 transition-transform group-active:scale-90 ${
                   tab === 'FAVORITE' ? 'fill-rose-500' : ''
                 }`}
               />
-              <span className="tracking-tight">Yêu thích</span>
+              <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Yêu thích</span>
               {tab === 'FAVORITE' && (
                 <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 shrink-0 leading-none shadow-2xs">
                   {total}
@@ -363,15 +363,15 @@ export function LibraryScreen() {
 
           <button
             onClick={() => handleTabChange('AI')}
-            className={`flex-1 py-2.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
+            className={`flex-1 py-2.5 px-0.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
               tab === 'AI'
                 ? 'text-emerald-400 font-extrabold'
                 : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
             }`}
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 min-w-0">
               <Sparkles size={13} className="shrink-0 transition-transform group-active:scale-90" />
-              <span className="tracking-tight">Dịch AI</span>
+              <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Dịch AI</span>
               {tab === 'AI' && (
                 <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-emerald-400/15 text-emerald-300 border border-emerald-400/30 shrink-0 leading-none shadow-2xs">
                   {total}

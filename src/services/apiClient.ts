@@ -18,48 +18,53 @@ export async function fetchWithRetry(
   customRetries?: number,
   customTimeout?: number
 ): Promise<Response> {
-  const { activeDomain } = useAppStore.getState();
-  if (!activeDomain || !activeDomain.url) {
-    throw new ApiError('API_DOMAIN_NOT_SET');
-  }
+  useAppStore.getState().incrementApiLoading();
+  try {
+    const { activeDomain } = useAppStore.getState();
+    if (!activeDomain || !activeDomain.url) {
+      throw new ApiError('API_DOMAIN_NOT_SET');
+    }
 
-  const { retries: optionRetries, timeout: optionTimeout, ...fetchOptions } = options;
-  const retries = customRetries ?? optionRetries ?? 0;
-  const timeout = customTimeout ?? optionTimeout ?? 4000;
+    const { retries: optionRetries, timeout: optionTimeout, ...fetchOptions } = options;
+    const retries = customRetries ?? optionRetries ?? 0;
+    const timeout = customTimeout ?? optionTimeout ?? 4000;
 
-  const headers = {
-    'ngrok-skip-browser-warning': 'true',
-    'Content-Type': 'application/json',
-    ...fetchOptions.headers,
-  };
+    const headers = {
+      'ngrok-skip-browser-warning': 'true',
+      'Content-Type': 'application/json',
+      ...fetchOptions.headers,
+    };
 
-  let attempts = 0;
-  let lastError: any;
+    let attempts = 0;
+    let lastError: any;
 
-  while (attempts <= retries) {
-    try {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), timeout);
+    while (attempts <= retries) {
+      try {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
 
-      const url = `${activeDomain.url.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
-      const response = await fetch(url, {
-        ...fetchOptions,
-        headers,
-        signal: controller.signal,
-      });
+        const url = `${activeDomain.url.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
+        const response = await fetch(url, {
+          ...fetchOptions,
+          headers,
+          signal: controller.signal,
+        });
 
-      clearTimeout(id);
-      return response;
-    } catch (err: any) {
-      lastError = err;
-      attempts++;
-      if (attempts <= retries) {
-        await new Promise((res) => setTimeout(res, 300 * attempts));
+        clearTimeout(id);
+        return response;
+      } catch (err: any) {
+        lastError = err;
+        attempts++;
+        if (attempts <= retries) {
+          await new Promise((res) => setTimeout(res, 300 * attempts));
+        }
       }
     }
-  }
 
-  throw new ApiError(lastError?.message || 'FETCH_FAILED');
+    throw new ApiError(lastError?.message || 'FETCH_FAILED');
+  } finally {
+    useAppStore.getState().decrementApiLoading();
+  }
 }
 
 export const apiClient = {

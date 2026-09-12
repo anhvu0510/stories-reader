@@ -6,13 +6,16 @@ interface AppStore {
   domains: ApiDomain[];
   activeDomainId: string | null;
   activeDomain: ApiDomain | null;
-  
+  apiLoadingCount: number;
+
   setOfflineMode: (offline: boolean) => void;
   setDomains: (domains: ApiDomain[]) => void;
   setActiveDomainId: (id: string) => void;
   addDomain: (domain: ApiDomain) => void;
   removeDomain: (id: string) => void;
   loadAppConfig: () => void;
+  incrementApiLoading: () => void;
+  decrementApiLoading: () => void;
 }
 
 const STORAGE_KEY_DOMAINS = 'API_DOMAINS_CONFIG';
@@ -39,6 +42,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
   domains: getInitialDomains(),
   activeDomainId: localStorage.getItem(STORAGE_KEY_ACTIVE) || (getInitialDomains()[0]?.id ?? null),
   activeDomain: null,
+
+  apiLoadingCount: 0,
+
+  incrementApiLoading: () => set((state) => ({ apiLoadingCount: state.apiLoadingCount + 1 })),
+  decrementApiLoading: () => set((state) => ({ apiLoadingCount: Math.max(0, state.apiLoadingCount - 1) })),
 
   setOfflineMode: (offline: boolean) => {
     localStorage.setItem(STORAGE_KEY_OFFLINE, String(offline));

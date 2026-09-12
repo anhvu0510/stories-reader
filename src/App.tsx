@@ -5,6 +5,7 @@ import { ChapterListScreen } from './features/chapter-list/ChapterListScreen';
 import { ReaderScreen } from './features/reader/ReaderScreen';
 import { ToastContainer } from './components/Toast';
 import { GlobalDownloadProgress } from './components/GlobalDownloadProgress';
+import { GlobalApiLoading } from './components/GlobalApiLoading';
 import { useAppStore } from './stores/useAppStore';
 import { useModalStore } from './stores/useModalStore';
 import { useToastStore } from './stores/useToastStore';
@@ -195,6 +196,7 @@ export default function App() {
   return (
     <Router>
       <ApplicationGate>
+        <GlobalApiLoading />
         <AppContent />
         <GlobalDownloadProgress />
         <ToastContainer />
