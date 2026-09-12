@@ -513,7 +513,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
               {/* Right: Inline Micro Stats */}
               <div className="flex items-center gap-1 text-[9px] font-mono whitespace-nowrap shrink-0 ml-auto">
                 <span
-                  className="inline-flex items-center gap-0.5 px-1.5 py-0.25 rounded-md bg-emerald-500/15 text-emerald-300 font-bold"
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.25 rounded-md bg-primary/15 text-primary font-bold border border-primary/30"
                   title={`Đã đọc: ${readCount}/${book.chapterCount} (${progressPct}%)`}
                 >
                   <BookOpen size={9} />
@@ -521,7 +521,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
                 </span>
 
                 <span
-                  className="inline-flex items-center gap-0.5 px-1.5 py-0.25 rounded-md bg-primary/15 text-primary font-bold"
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.25 rounded-md bg-primary/15 text-primary font-bold border border-primary/30"
                   title={`Đã dịch: ${book.totalTranslated}/${book.chapterCount}`}
                 >
                   <Sparkles size={9} />

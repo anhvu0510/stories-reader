@@ -365,7 +365,7 @@ export function LibraryScreen() {
             onClick={() => handleTabChange('AI')}
             className={`flex-1 py-2.5 px-0.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
               tab === 'AI'
-                ? 'text-emerald-400 font-extrabold'
+                ? 'text-primary font-extrabold'
                 : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
             }`}
           >
@@ -373,7 +373,7 @@ export function LibraryScreen() {
               <Sparkles size={13} className="shrink-0 transition-transform group-active:scale-90" />
               <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Dịch AI</span>
               {tab === 'AI' && (
-                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-emerald-400/15 text-emerald-300 border border-emerald-400/30 shrink-0 leading-none shadow-2xs">
+                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-primary/15 text-primary border border-primary/30 shrink-0 leading-none shadow-2xs">
                   {total}
                 </span>
               )}
