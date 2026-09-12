@@ -162,8 +162,8 @@ describe('TranslationSheet Requirements', () => {
       />
     );
 
-    const syncBtn = screen.getByRole('button', { name: /Dịch Sync/i });
-    const asyncBtn = screen.getByRole('button', { name: /Dịch Queue/i });
+    const syncBtn = screen.getByRole('button', { name: /^Dịch \(/i });
+    const asyncBtn = screen.getByRole('button', { name: /Dịch Batch/i });
 
     expect(syncBtn).toBeDefined();
     expect(asyncBtn).toBeDefined();
