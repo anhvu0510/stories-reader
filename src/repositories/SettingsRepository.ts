@@ -29,7 +29,7 @@ export const SettingsRepository = {
 
     // 3. Fetch from original backend API endpoint `/api/stories/setting/${key}`
     try {
-      const res = await apiClient.get<any>(`/api/stories/setting/${key}`);
+      const res = await apiClient.get<any>(`/api/stories/setting/${key}`, { silent: true });
       if (res) {
         settingsCache[key] = { data: res, timestamp: now };
         try {
@@ -64,9 +64,9 @@ export const SettingsRepository = {
 
     const stringifiedValue = typeof value === 'string' ? value : JSON.stringify(value);
 
-    // Post to original backend API endpoint `/api/stories/setting`
+    // Post to original backend API endpoint `/api/stories/setting` silently (no loading overlay)
     try {
-      const res = await apiClient.post('/api/stories/setting', { key, value: stringifiedValue });
+      const res = await apiClient.post('/api/stories/setting', { key, value: stringifiedValue }, { silent: true });
       return res;
     } catch (e) {
       console.warn(`Failed to sync settings for key ${key} to API:`, e);

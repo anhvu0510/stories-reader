@@ -10,6 +10,7 @@ export class ApiError extends Error {
 export interface RequestOptions extends RequestInit {
   retries?: number;
   timeout?: number;
+  silent?: boolean;
 }
 
 export async function fetchWithRetry(
@@ -18,14 +19,17 @@ export async function fetchWithRetry(
   customRetries?: number,
   customTimeout?: number
 ): Promise<Response> {
-  useAppStore.getState().incrementApiLoading();
+  const isSilent = options.silent ?? false;
+  if (!isSilent) {
+    useAppStore.getState().incrementApiLoading();
+  }
   try {
     const { activeDomain } = useAppStore.getState();
     if (!activeDomain || !activeDomain.url) {
       throw new ApiError('API_DOMAIN_NOT_SET');
     }
 
-    const { retries: optionRetries, timeout: optionTimeout, ...fetchOptions } = options;
+    const { retries: optionRetries, timeout: optionTimeout, silent: _, ...fetchOptions } = options;
     const retries = customRetries ?? optionRetries ?? 0;
     const timeout = customTimeout ?? optionTimeout ?? 4000;
 
@@ -63,23 +67,26 @@ export async function fetchWithRetry(
 
     throw new ApiError(lastError?.message || 'FETCH_FAILED');
   } finally {
-    useAppStore.getState().decrementApiLoading();
+    if (!isSilent) {
+      useAppStore.getState().decrementApiLoading();
+    }
   }
 }
 
 export const apiClient = {
-  async get<T>(path: string, options?: { retries?: number; timeout?: number }): Promise<T> {
-    const res = await fetchWithRetry(path, { method: 'GET' }, options?.retries, options?.timeout);
+  async get<T>(path: string, options?: { retries?: number; timeout?: number; silent?: boolean }): Promise<T> {
+    const res = await fetchWithRetry(path, { method: 'GET', ...options }, options?.retries, options?.timeout);
     if (!res.ok) throw new ApiError(`HTTP Error ${res.status}`, res.status);
     return await res.json();
   },
 
-  async post<T>(path: string, body?: any, options?: { retries?: number; timeout?: number }): Promise<T> {
+  async post<T>(path: string, body?: any, options?: { retries?: number; timeout?: number; silent?: boolean }): Promise<T> {
     const res = await fetchWithRetry(
       path,
       {
         method: 'POST',
         body: body ? JSON.stringify(body) : undefined,
+        ...options,
       },
       options?.retries,
       options?.timeout
@@ -88,12 +95,13 @@ export const apiClient = {
     return await res.json();
   },
 
-  async put<T>(path: string, body?: any, options?: { retries?: number; timeout?: number }): Promise<T> {
+  async put<T>(path: string, body?: any, options?: { retries?: number; timeout?: number; silent?: boolean }): Promise<T> {
     const res = await fetchWithRetry(
       path,
       {
         method: 'PUT',
         body: body ? JSON.stringify(body) : undefined,
+        ...options,
       },
       options?.retries,
       options?.timeout
@@ -102,12 +110,13 @@ export const apiClient = {
     return await res.json();
   },
 
-  async delete<T>(path: string, body?: any, options?: { retries?: number; timeout?: number }): Promise<T> {
+  async delete<T>(path: string, body?: any, options?: { retries?: number; timeout?: number; silent?: boolean }): Promise<T> {
     const res = await fetchWithRetry(
       path,
       {
         method: 'DELETE',
         body: body ? JSON.stringify(body) : undefined,
+        ...options,
       },
       options?.retries,
       options?.timeout

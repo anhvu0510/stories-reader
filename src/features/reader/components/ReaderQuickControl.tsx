@@ -120,7 +120,7 @@ export function ReaderQuickControl({
       {/* Permanently Ultra-Translucent Pure Crystal Glass Dock Container */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative bg-black/5 dark:bg-black/10 backdrop-blur-[1.5px] border border-white/25 border-t-primary/80 dark:border-white/25 dark:border-t-primary/80 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1px_0_rgba(255,255,255,0.45),_inset_0_-1.5px_1px_0_rgba(0,0,0,0.4)] rounded-full px-3 py-1.5 flex items-center justify-between gap-2 pointer-events-auto transition-all duration-300"
+        className="relative bg-black/5 dark:bg-black/10 backdrop-blur-[1.5px] border border-white/25 dark:border-white/25 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1px_0_rgba(255,255,255,0.45),_inset_0_-1.5px_1px_0_rgba(0,0,0,0.4)] rounded-full px-3 py-1.5 flex items-center justify-between gap-2 pointer-events-auto transition-all duration-300"
       >
         {/* LEFT GROUP: macOS Control Center Joined Segment Capsule */}
         <div className="relative z-10 flex items-center gap-1.5 bg-black/5 dark:bg-black/10 backdrop-blur-[1.5px] p-1 rounded-full border border-primary/40 dark:border-primary/40 shadow-[0_4px_14px_rgba(0,0,0,0.35),_inset_0_1.5px_1px_0_rgba(255,255,255,0.4),_inset_0_-1px_1px_0_rgba(0,0,0,0.4)] shrink-0">
