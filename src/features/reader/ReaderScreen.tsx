@@ -45,7 +45,7 @@ const ChapterContentSection = memo(function ChapterContentSection({
   onClick,
 }: ChapterContentSectionProps) {
   return (
-    <main id="main-story-content" onClick={onClick} className="pt-20 pb-20">
+    <main id="main-story-content" onDoubleClick={onDoubleClick} className="pt-20 pb-20">
       {chapters.map((chap, chapIdx) => (
         <section
           key={chap.chapterId || chapIdx}
@@ -221,7 +221,14 @@ export function ReaderScreen() {
     });
   }, [activeChapter, bookId]);
 
-  // Throttled & Smooth scroll progress listener for Dock & Progress bar
+  // Restore dock visibility whenever user scrolls into a new chapter (Cuốn chương)
+  useEffect(() => {
+    if (activeChapter?.chapterId) {
+      setShowZenControls(true);
+    }
+  }, [activeChapter?.chapterId]);
+
+  // Throttled & Smooth scroll progress listener for Progress bar (Dock stays visible by default)
   useEffect(() => {
     const handleScroll = () => {
       if (scrollAnimRef.current !== null) return;
@@ -231,21 +238,6 @@ export function ReaderScreen() {
         if (totalHeight > 0) {
           const newProgress = (currentY / totalHeight) * 100;
           setScrollProgress((prev) => (Math.abs(prev - newProgress) > 0.5 ? newProgress : prev));
-
-          // Auto show controls when user reaches bottom of page
-          const isNearBottom = currentY >= totalHeight - 60 || newProgress >= 95;
-          if (isNearBottom) {
-            setShowZenControls(true);
-            lastScrollY.current = currentY;
-            scrollAnimRef.current = null;
-            return;
-          }
-        }
-
-        if (currentY > lastScrollY.current + 40 && currentY > 100) {
-          setShowZenControls(false);
-        } else if (currentY < lastScrollY.current - 20) {
-          setShowZenControls(true);
         }
         lastScrollY.current = currentY;
         scrollAnimRef.current = null;
@@ -259,8 +251,8 @@ export function ReaderScreen() {
     };
   }, []);
 
-  // Tap/Click reading screen to toggle bottom dock control bar
-  const handleArticleTap = useCallback(() => {
+  // Double click/tap reading screen to toggle bottom dock control bar
+  const handleDoubleClick = useCallback(() => {
     const sel = window.getSelection();
     if (sel && sel.toString().trim().length > 0) return;
     setShowZenControls((prev) => !prev);
@@ -301,9 +293,6 @@ export function ReaderScreen() {
   useEffect(() => {
     loadChapter();
   }, [chapterId, loadChapter]);
-
-  // No-op double-click handler
-  const handleDoubleClick = useCallback(() => {}, []);
 
   const handleOpenHistory = useCallback(() => setShowHistorySheet(true), []);
   const handleOpenChapterSelect = useCallback(() => setShowChapterSelectSheet(true), []);
@@ -393,7 +382,6 @@ export function ReaderScreen() {
         isPaused={isPaused}
         currentParagraphIndex={currentParagraphIndex}
         onDoubleClick={handleDoubleClick}
-        onClick={handleArticleTap}
       />
 
       {/* Single Capsule Zen Mode Floating Control Bar */}
