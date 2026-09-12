@@ -42,21 +42,13 @@ export const ReaderHeader = memo(function ReaderHeader({
           <p className="text-[10px] font-bold text-on-surface-variant/75 truncate tracking-tight text-center">
             {bookName || 'Đang tải...'}
           </p>
-          <div className="mt-0.5 overflow-hidden w-full mx-auto max-w-[200px] sm:max-w-[250px] [mask-image:linear-gradient(to_right,transparent,black_10px,black_calc(100%-10px),transparent)]">
-            {chapterTitle && chapterTitle.length > 22 ? (
-              <div className="animate-marquee-text">
-                <span className="text-xs font-extrabold text-on-surface tracking-tight pr-6">
-                  {chapterTitle}
-                </span>
-                <span className="text-xs font-extrabold text-on-surface tracking-tight pr-6">
-                  {chapterTitle}
-                </span>
-              </div>
-            ) : (
-              <span className="text-xs font-extrabold text-on-surface truncate block tracking-tight text-center">
-                {chapterTitle || ''}
-              </span>
-            )}
+          <div className="mt-0.5 overflow-hidden w-full mx-auto max-w-[200px] sm:max-w-[250px]">
+            <h2
+              className="text-xs font-extrabold text-on-surface truncate tracking-tight text-center"
+              title={chapterTitle}
+            >
+              {chapterTitle || ''}
+            </h2>
           </div>
         </div>
 
