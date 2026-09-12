@@ -52,7 +52,7 @@ export function BottomDock({
             className={`px-3 py-2 rounded-full flex items-center gap-1.5 transition-all text-xs font-extrabold shadow-sm active:scale-95 ${
               canPrev
                 ? 'bg-primary/20 hover:bg-primary/30 backdrop-blur-md border border-primary/60 text-primary shadow-[0_4px_16px_rgba(0,0,0,0.25),_inset_0_1px_1px_rgba(255,255,255,0.4)]'
-                : 'bg-white/5 text-white/20 border border-white/5 opacity-30 cursor-not-allowed pointer-events-none'
+                : 'bg-white/[0.06] backdrop-blur-md border border-white/40 text-on-surface-variant/50 shadow-[0_2px_10px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.35)] cursor-not-allowed opacity-80'
             }`}
             title="Trang trước"
           >
@@ -98,7 +98,7 @@ export function BottomDock({
             className={`px-3 py-2 rounded-full flex items-center gap-1.5 transition-all text-xs font-extrabold shadow-sm active:scale-95 ${
               canNext
                 ? 'bg-primary/20 hover:bg-primary/30 backdrop-blur-md border border-primary/60 text-primary shadow-[0_4px_16px_rgba(0,0,0,0.25),_inset_0_1px_1px_rgba(255,255,255,0.4)]'
-                : 'bg-white/5 text-white/20 border border-white/5 opacity-30 cursor-not-allowed pointer-events-none'
+                : 'bg-white/[0.06] backdrop-blur-md border border-white/40 text-on-surface-variant/50 shadow-[0_2px_10px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.35)] cursor-not-allowed opacity-80'
             }`}
             title="Trang sau"
           >

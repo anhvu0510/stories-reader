@@ -280,7 +280,17 @@ export function ChapterListScreen() {
       {/* Main Chapter List */}
       <main className="px-3.5 pt-3">
         {loading && chapters.length === 0 ? (
-          <LoadingOverlay message="Đang tải danh sách chương..." />
+          <div className="space-y-2 opacity-50 relative">
+            {[1, 2, 3, 4, 5, 6].map((idx) => (
+              <div
+                key={idx}
+                className="h-14 rounded-2xl bg-white/[0.03] border border-outline-variant/30 animate-pulse flex items-center px-4 justify-between"
+              >
+                <div className="h-4 w-40 bg-on-surface-variant/20 rounded" />
+                <div className="h-5 w-12 bg-primary/20 rounded-xl" />
+              </div>
+            ))}
+          </div>
         ) : filteredChapters.length === 0 ? (
           <div className="py-16 text-center text-xs text-on-surface-variant/60 font-medium">
             Không tìm thấy chương nào trong khoảng này
@@ -338,6 +348,9 @@ export function ChapterListScreen() {
           </div>
         )}
       </main>
+
+      {/* Crystal See-Through Glass Loading Overlay */}
+      <LoadingOverlay isLoading={loading} />
 
       <GlobalSettingsSheet currentBookId={bookId} />
       <BottomDock />

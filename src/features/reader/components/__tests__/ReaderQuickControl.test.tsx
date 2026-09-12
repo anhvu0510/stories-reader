@@ -31,8 +31,8 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
       </MemoryRouter>
     );
 
-    // Range button label
-    expect(screen.getByText('551 - 553')).toBeDefined();
+    // List menu button to open full chapter list sheet
+    expect(screen.getByTitle('Mở danh sách tất cả các chương')).toBeDefined();
 
     // Horizontal circular buttons for loaded chapters
     expect(screen.getByTitle('Chương 551')).toBeDefined();
@@ -72,7 +72,7 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
     document.body.removeChild(sectionEl);
   });
 
-  it('calls onOpenChapterSelect when clicking the range button 551 - 553 inside dock', () => {
+  it('calls onOpenChapterSelect when clicking the menu list button inside dock', () => {
     const mockOnOpenChapterSelect = vi.fn();
     render(
       <MemoryRouter>
@@ -87,8 +87,8 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
       </MemoryRouter>
     );
 
-    const rangeBtn = screen.getByText('551 - 553');
-    fireEvent.click(rangeBtn);
+    const listMenuBtn = screen.getByTitle('Mở danh sách tất cả các chương');
+    fireEvent.click(listMenuBtn);
 
     expect(mockOnOpenChapterSelect).toHaveBeenCalledTimes(1);
   });

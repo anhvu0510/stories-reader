@@ -85,8 +85,13 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
           <h3 className="font-bold text-xs text-on-surface-variant/80 uppercase tracking-wider mb-1">DANH SÁCH ĐÃ LƯU</h3>
           
           {isLoading ? (
-            <div className="py-20 flex justify-center text-on-surface-variant">
-              <RotateCw className="animate-spin text-primary" size={20} />
+            <div className="py-16 flex flex-col items-center justify-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-primary/50 flex items-center justify-center shadow-md">
+                <RotateCw size={22} className="animate-spin text-primary" />
+              </div>
+              <span className="text-xs font-mono text-on-surface-variant/80 font-medium animate-pulse">
+                Đang kiểm tra dữ liệu đã lưu...
+              </span>
             </div>
           ) : savedBooks.length === 0 ? (
             <div className="py-16 flex flex-col items-center justify-center text-center gap-4 border border-dashed border-outline-variant/30 rounded-3xl bg-white/5 p-6">

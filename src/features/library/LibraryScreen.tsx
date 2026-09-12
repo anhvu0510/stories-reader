@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion } from 'motion/react';
 import { BookRepository } from '../../repositories/BookRepository';
 import { Book } from '../../shared/types';
 import { useToastStore } from '../../stores/useToastStore';
@@ -285,100 +286,123 @@ export function LibraryScreen() {
           </div>
         )}
 
-        {/* Navigation Tabs Header */}
-        <div className="flex border-t border-outline-variant/15 bg-surface-container-low/40 backdrop-blur-md px-1 relative">
-          {/* Smooth Sliding Underline Indicator Bar */}
-          <div
-            className="absolute bottom-0 h-[2.5px] rounded-full transition-all duration-300 ease-out z-10"
-            style={{
-              width: '20%',
-              left: tab === 'ALL' ? '2.5%' : tab === 'HISTORY' ? '27.5%' : tab === 'FAVORITE' ? '52.5%' : '77.5%',
-              backgroundColor: tab === 'ALL' || tab === 'HISTORY' ? 'var(--primary)' : tab === 'FAVORITE' ? '#f43f5e' : '#34d399',
-              boxShadow: tab === 'ALL' || tab === 'HISTORY' ? '0 0 10px var(--primary)' : tab === 'FAVORITE' ? '0 0 10px rgba(244,63,94,0.7)' : '0 0 10px rgba(52,211,153,0.7)',
-            }}
-          />
-
-          <button
-            onClick={() => handleTabChange('ALL')}
-            className={`flex-1 py-2.5 px-0.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
-              tab === 'ALL'
-                ? 'text-primary font-extrabold'
-                : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
-            }`}
-          >
-            <div className="flex items-center gap-1 min-w-0">
-              <Library size={13} className="shrink-0 transition-transform group-active:scale-90" />
-              <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Tất cả</span>
+        {/* Navigation Tabs Header - 3D Pop-Out Glass Tabs */}
+        <div className="p-1.5 border-t border-white/10 bg-white/[0.03] dark:bg-white/[0.05] backdrop-blur-xl">
+          <div className="flex items-center gap-1 bg-black/15 dark:bg-black/30 p-1 rounded-lg border border-white/10 relative">
+            {/* Tab 1: Tất cả */}
+            <button
+              onClick={() => handleTabChange('ALL')}
+              className={`flex-1 py-2 px-1 text-xs transition-all flex items-center justify-center relative group cursor-pointer select-none rounded-md active:scale-[0.97] ${
+                tab === 'ALL'
+                  ? 'text-primary font-black drop-shadow-xs'
+                  : 'text-on-surface-variant/75 font-semibold hover:text-on-surface'
+              }`}
+            >
               {tab === 'ALL' && (
-                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-primary/15 text-primary border border-primary/30 shrink-0 leading-none shadow-2xs">
-                  {total}
-                </span>
+                <motion.div
+                  layoutId="active-liquid-tab-pill"
+                  transition={{ type: 'spring', stiffness: 480, damping: 36 }}
+                  className="absolute inset-0 rounded-md bg-white/[0.14] dark:bg-white/[0.14] backdrop-blur-xl border border-primary/60 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.5),_inset_0_-1px_1px_rgba(0,0,0,0.3),_0_4px_12px_rgba(0,0,0,0.4)] pointer-events-none"
+                />
               )}
-            </div>
-          </button>
+              <div className="flex items-center gap-1 min-w-0 relative z-10">
+                <Library size={13} className={`shrink-0 transition-transform group-active:scale-90 ${tab === 'ALL' ? 'text-primary' : ''}`} />
+                <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Tất cả</span>
+                {tab === 'ALL' && (
+                  <span className="text-[9px] font-mono font-black px-1.5 py-[1px] rounded-full bg-primary/20 text-primary border border-primary/40 shrink-0 leading-none shadow-2xs">
+                    {total}
+                  </span>
+                )}
+              </div>
+            </button>
 
-          <button
-            onClick={() => handleTabChange('HISTORY')}
-            className={`flex-1 py-2.5 px-0.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
-              tab === 'HISTORY'
-                ? 'text-primary font-extrabold'
-                : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
-            }`}
-          >
-            <div className="flex items-center gap-1 min-w-0">
-              <Clock size={13} className="shrink-0 transition-transform group-active:scale-90" />
-              <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Lịch sử</span>
+            {/* Tab 2: Lịch sử */}
+            <button
+              onClick={() => handleTabChange('HISTORY')}
+              className={`flex-1 py-2 px-1 text-xs transition-all flex items-center justify-center relative group cursor-pointer select-none rounded-md active:scale-[0.97] ${
+                tab === 'HISTORY'
+                  ? 'text-primary font-black drop-shadow-xs'
+                  : 'text-on-surface-variant/75 font-semibold hover:text-on-surface'
+              }`}
+            >
               {tab === 'HISTORY' && (
-                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-primary/15 text-primary border border-primary/30 shrink-0 leading-none shadow-2xs">
-                  {total}
-                </span>
+                <motion.div
+                  layoutId="active-liquid-tab-pill"
+                  transition={{ type: 'spring', stiffness: 480, damping: 36 }}
+                  className="absolute inset-0 rounded-md bg-white/[0.14] dark:bg-white/[0.14] backdrop-blur-xl border border-primary/60 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.5),_inset_0_-1px_1px_rgba(0,0,0,0.3),_0_4px_12px_rgba(0,0,0,0.4)] pointer-events-none"
+                />
               )}
-            </div>
-          </button>
+              <div className="flex items-center gap-1 min-w-0 relative z-10">
+                <Clock size={13} className={`shrink-0 transition-transform group-active:scale-90 ${tab === 'HISTORY' ? 'text-primary' : ''}`} />
+                <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Lịch sử</span>
+                {tab === 'HISTORY' && (
+                  <span className="text-[9px] font-mono font-black px-1.5 py-[1px] rounded-full bg-primary/20 text-primary border border-primary/40 shrink-0 leading-none shadow-2xs">
+                    {total}
+                  </span>
+                )}
+              </div>
+            </button>
 
-          <button
-            onClick={() => handleTabChange('FAVORITE')}
-            className={`flex-1 py-2.5 px-0.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
-              tab === 'FAVORITE'
-                ? 'text-rose-500 font-extrabold'
-                : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
-            }`}
-            title="Truyện yêu thích"
-          >
-            <div className="flex items-center gap-1 min-w-0">
-              <Heart
-                size={13}
-                className={`shrink-0 transition-transform group-active:scale-90 ${
-                  tab === 'FAVORITE' ? 'fill-rose-500' : ''
-                }`}
-              />
-              <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Yêu thích</span>
+            {/* Tab 3: Yêu thích */}
+            <button
+              onClick={() => handleTabChange('FAVORITE')}
+              className={`flex-1 py-2 px-1 text-xs transition-all flex items-center justify-center relative group cursor-pointer select-none rounded-md active:scale-[0.97] ${
+                tab === 'FAVORITE'
+                  ? 'text-rose-500 font-black drop-shadow-xs'
+                  : 'text-on-surface-variant/75 font-semibold hover:text-on-surface'
+              }`}
+              title="Truyện yêu thích"
+            >
               {tab === 'FAVORITE' && (
-                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 shrink-0 leading-none shadow-2xs">
-                  {total}
-                </span>
+                <motion.div
+                  layoutId="active-liquid-tab-pill"
+                  transition={{ type: 'spring', stiffness: 480, damping: 36 }}
+                  className="absolute inset-0 rounded-md bg-white/[0.14] dark:bg-white/[0.14] backdrop-blur-xl border border-rose-500/60 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.5),_inset_0_-1px_1px_rgba(0,0,0,0.3),_0_4px_12px_rgba(0,0,0,0.4)] pointer-events-none"
+                />
               )}
-            </div>
-          </button>
+              <div className="flex items-center gap-1 min-w-0 relative z-10">
+                <Heart
+                  size={13}
+                  className={`shrink-0 transition-transform group-active:scale-90 ${
+                    tab === 'FAVORITE' ? 'fill-rose-500 text-rose-500' : ''
+                  }`}
+                />
+                <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Yêu thích</span>
+                {tab === 'FAVORITE' && (
+                  <span className="text-[9px] font-mono font-black px-1.5 py-[1px] rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 shrink-0 leading-none shadow-2xs">
+                    {total}
+                  </span>
+                )}
+              </div>
+            </button>
 
-          <button
-            onClick={() => handleTabChange('AI')}
-            className={`flex-1 py-2.5 px-0.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
-              tab === 'AI'
-                ? 'text-primary font-extrabold'
-                : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
-            }`}
-          >
-            <div className="flex items-center gap-1 min-w-0">
-              <Sparkles size={13} className="shrink-0 transition-transform group-active:scale-90" />
-              <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Dịch AI</span>
+            {/* Tab 4: Dịch AI */}
+            <button
+              onClick={() => handleTabChange('AI')}
+              className={`flex-1 py-2 px-1 text-xs transition-all flex items-center justify-center relative group cursor-pointer select-none rounded-md active:scale-[0.97] ${
+                tab === 'AI'
+                  ? 'text-emerald-400 font-black drop-shadow-xs'
+                  : 'text-on-surface-variant/75 font-semibold hover:text-on-surface'
+              }`}
+            >
               {tab === 'AI' && (
-                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-primary/15 text-primary border border-primary/30 shrink-0 leading-none shadow-2xs">
-                  {total}
-                </span>
+                <motion.div
+                  layoutId="active-liquid-tab-pill"
+                  transition={{ type: 'spring', stiffness: 480, damping: 36 }}
+                  className="absolute inset-0 rounded-md bg-white/[0.14] dark:bg-white/[0.14] backdrop-blur-xl border border-emerald-400/60 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.5),_inset_0_-1px_1px_rgba(0,0,0,0.3),_0_4px_12px_rgba(0,0,0,0.4)] pointer-events-none"
+                />
               )}
-            </div>
-          </button>
+              <div className="flex items-center gap-1 min-w-0 relative z-10">
+                <Sparkles size={13} className={`shrink-0 transition-transform group-active:scale-90 ${tab === 'AI' ? 'text-emerald-400' : ''}`} />
+                <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Dịch AI</span>
+                {tab === 'AI' && (
+                  <span className="text-[9px] font-mono font-black px-1.5 py-[1px] rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-400/40 shrink-0 leading-none shadow-2xs">
+                    {total}
+                  </span>
+                )}
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -388,9 +412,23 @@ export function LibraryScreen() {
         onScroll={handleMainScroll}
         className="flex-1 overflow-y-auto hide-scrollbar no-scrollbar px-3.5 py-3 space-y-3 pb-24 relative"
       >
-        <LoadingOverlay isLoading={loading && books.length === 0} message="Đang tải danh sách..." />
-
-        {books.length === 0 && !loading ? (
+        {loading && books.length === 0 ? (
+          <div className="space-y-3 relative">
+            {[1, 2, 3, 4].map((idx) => (
+              <div
+                key={idx}
+                className="h-28 rounded-2xl bg-white/[0.03] border border-outline-variant/30 animate-pulse p-3 flex gap-3 opacity-60"
+              >
+                <div className="w-16 h-20 bg-on-surface-variant/20 rounded-xl shrink-0" />
+                <div className="flex-1 space-y-2 py-1">
+                  <div className="h-4 w-3/4 bg-on-surface-variant/20 rounded" />
+                  <div className="h-3 w-1/2 bg-on-surface-variant/20 rounded" />
+                  <div className="h-3 w-1/4 bg-primary/20 rounded pt-2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : books.length === 0 && !loading ? (
           <div className="text-center py-16 space-y-3">
             <div className="w-12 h-12 rounded-full bg-surface-container mx-auto flex items-center justify-center text-on-surface-variant">
               {tab === 'FAVORITE' ? <Heart size={20} className="text-rose-500" /> : <BookOpen size={20} />}
@@ -434,6 +472,9 @@ export function LibraryScreen() {
           </div>
         )}
       </main>
+
+      {/* Crystal See-Through Glass Loading Overlay */}
+      <LoadingOverlay isLoading={loading} />
 
       {/* Global Settings & Modals */}
       <GlobalSettingsSheet />

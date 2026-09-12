@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookRepository } from '../../../repositories/BookRepository';
 import { Book } from '../../../shared/types';
-import { X, Clock, BookOpen, Sparkles, RefreshCw, Layers, Search } from 'lucide-react';
+import { X, Clock, BookOpen, Sparkles, Layers, Search, RefreshCw } from 'lucide-react';
+import { useGlobalLoading } from '../../../hooks/useGlobalLoading';
 
 interface QuickBookHistorySheetProps {
   currentBookId?: string;
@@ -13,6 +14,7 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
   const navigate = useNavigate();
   const [historyBooks, setHistoryBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
+  useGlobalLoading(loading && historyBooks.length === 0);
   const [searchQuery, setSearchQuery] = useState('');
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -228,10 +230,7 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
         {/* Book List Area */}
         <div className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-3">
           {loading ? (
-            <div className="py-20 text-center space-y-2 text-on-surface-variant">
-              <RefreshCw size={20} className="animate-spin mx-auto text-primary" />
-              <p className="text-xs font-medium">Đang tải lịch sử đọc...</p>
-            </div>
+            <div className="py-16 text-center text-xs text-on-surface-variant/60 font-medium" />
           ) : historyBooks.length === 0 ? (
             <div className="py-16 text-center text-xs text-on-surface-variant/60 font-medium">
               {searchQuery

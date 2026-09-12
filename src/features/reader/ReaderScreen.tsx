@@ -14,11 +14,11 @@ import { QuickTypographySheet } from './components/QuickTypographySheet';
 import { QuickChapterSelectSheet } from './components/QuickChapterSelectSheet';
 import { QuickBookHistorySheet } from './components/QuickBookHistorySheet';
 import { VerticalBatchChapterNav } from './components/VerticalBatchChapterNav';
-import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { TranslationSheet } from '../../components/TranslationSheet';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useReadingProgress } from '../../hooks/useReadingProgress';
+import { useGlobalLoading } from '../../hooks/useGlobalLoading';
 import { offlineDb } from '../../lib/offlineDb';
 import { AlertCircle, RotateCcw, Home } from 'lucide-react';
 
@@ -126,6 +126,9 @@ export function ReaderScreen() {
   const [contentData, setContentData] = useState<ChapterContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Keep single global LoadingOverlay active until chapter data is rendered in React state
+  useGlobalLoading(loading);
 
   // Sync document.title with the current reading story name
   useDocumentTitle(contentData?.chapter?.bookName);
@@ -334,7 +337,36 @@ export function ReaderScreen() {
       : 'font-serif';
 
   if (loading && !contentData) {
-    return <LoadingOverlay isLoading={true} message="Đang mở văn bản..." />;
+    return (
+      <div className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden ${fontClass}`}>
+        {/* Header Skeleton */}
+        <div className="px-4 py-3.5 border-b border-outline-variant/20 flex items-center justify-between opacity-60">
+          <div className="h-4 w-36 bg-on-surface-variant/20 rounded-md animate-pulse" />
+          <div className="h-6 w-6 bg-on-surface-variant/20 rounded-full animate-pulse" />
+        </div>
+
+        {/* Paragraph Content Skeleton Lines */}
+        <div className="p-4 space-y-4 opacity-50">
+          <div className="h-5 w-52 bg-primary/30 rounded-md animate-pulse mb-6" />
+          <div className="space-y-2.5">
+            <div className="h-3.5 w-full bg-on-surface-variant/20 rounded animate-pulse" />
+            <div className="h-3.5 w-[94%] bg-on-surface-variant/20 rounded animate-pulse" />
+            <div className="h-3.5 w-[98%] bg-on-surface-variant/20 rounded animate-pulse" />
+            <div className="h-3.5 w-[88%] bg-on-surface-variant/20 rounded animate-pulse" />
+          </div>
+          <div className="space-y-2.5 pt-3">
+            <div className="h-3.5 w-[96%] bg-on-surface-variant/20 rounded animate-pulse" />
+            <div className="h-3.5 w-[92%] bg-on-surface-variant/20 rounded animate-pulse" />
+            <div className="h-3.5 w-[95%] bg-on-surface-variant/20 rounded animate-pulse" />
+            <div className="h-3.5 w-[85%] bg-on-surface-variant/20 rounded animate-pulse" />
+          </div>
+          <div className="space-y-2.5 pt-3">
+            <div className="h-3.5 w-[98%] bg-on-surface-variant/20 rounded animate-pulse" />
+            <div className="h-3.5 w-[90%] bg-on-surface-variant/20 rounded animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error || !contentData) {
@@ -378,9 +410,6 @@ export function ReaderScreen() {
     <div
       className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200 ${fontClass}`}
     >
-      {/* Smooth Non-Destructive Chapter Switching Loading Overlay */}
-      <LoadingOverlay isLoading={loading} message="Đang mở văn bản..." />
-
       {/* Sticky Header - ALWAYS VISIBLE */}
       <div aria-hidden="true">
         <ReaderHeader

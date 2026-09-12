@@ -7,6 +7,7 @@ import { ChapterItem } from '../../chapter-list/components/ChapterItem';
 import { downloadManager, DownloadTask } from '../../../lib/DownloadManager';
 import { offlineDb } from '../../../lib/offlineDb';
 import { useToastStore } from '../../../stores/useToastStore';
+import { useGlobalLoading } from '../../../hooks/useGlobalLoading';
 
 interface QuickChapterSelectSheetProps {
   bookId: string;
@@ -65,6 +66,7 @@ export function QuickChapterSelectSheet({
   };
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
+  useGlobalLoading(loading && chapters.length === 0);
   const [loadingBottom, setLoadingBottom] = useState(false);
   const [loadingTop, setLoadingTop] = useState(false);
 
@@ -374,10 +376,7 @@ export function QuickChapterSelectSheet({
           className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-2"
         >
           {loading && chapters.length === 0 ? (
-            <div className="py-20 text-center space-y-2 text-on-surface-variant">
-              <RefreshCw size={20} className="animate-spin mx-auto text-primary" />
-              <p className="text-xs font-medium">Đang tải danh sách chương...</p>
-            </div>
+            <div className="py-16 text-center text-xs text-on-surface-variant/60 font-medium" />
           ) : chapters.length === 0 ? (
             <div className="py-16 text-center text-xs text-on-surface-variant/60 font-medium">
               Không tìm thấy chương nào
