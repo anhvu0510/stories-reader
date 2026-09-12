@@ -106,6 +106,7 @@ export function QuickChapterSelectSheet({
   const activeItemRef = useRef<HTMLDivElement | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialScrollDoneRef = useRef(false);
+  const pendingPrependScrollRef = useRef<{ prevHeight: number; prevTop: number } | null>(null);
   const fetchIdRef = useRef(0);
 
   useEffect(() => {
@@ -178,7 +179,7 @@ export function QuickChapterSelectSheet({
 
   // Auto-backfill previous chapters if initial viewport has extra space and hasMoreTop is true
   useEffect(() => {
-    if (!loading && !loadingTop && hasMoreTop && scrollContainerRef.current) {
+    if (!loading && !loadingTop && hasMoreTop && isInitialScrollDoneRef.current && scrollContainerRef.current) {
       const { scrollHeight, clientHeight } = scrollContainerRef.current;
       if (scrollHeight > 0 && scrollHeight <= clientHeight + 50) {
         fetchPrevTopPage();
@@ -198,6 +199,16 @@ export function QuickChapterSelectSheet({
     }
   }, []);
 
+  // Synchronous scroll compensation after prepending items to top (Runs BEFORE browser paint)
+  useLayoutEffect(() => {
+    if (pendingPrependScrollRef.current && scrollContainerRef.current) {
+      const { prevHeight, prevTop } = pendingPrependScrollRef.current;
+      pendingPrependScrollRef.current = null;
+      const newHeight = scrollContainerRef.current.scrollHeight;
+      scrollContainerRef.current.scrollTop = prevTop + (newHeight - prevHeight);
+    }
+  }, [chapters]);
+
   useLayoutEffect(() => {
     if (!loading && chapters.length > 0 && !isInitialScrollDoneRef.current) {
       isInitialScrollDoneRef.current = true;
@@ -211,7 +222,7 @@ export function QuickChapterSelectSheet({
 
   // Fetch next bottom chapters starting from maxChapterNum + 1 (Scroll Down)
   const fetchNextBottomPage = async () => {
-    if (loadingBottom || !hasMoreBottom || search) return;
+    if (loadingBottom || !hasMoreBottom || search || !isInitialScrollDoneRef.current) return;
     setLoadingBottom(true);
     const targetFromChapter = maxChapterNum + 1;
 
@@ -250,7 +261,7 @@ export function QuickChapterSelectSheet({
 
   // Fetch previous top chapters before minChapterNum (Scroll Up)
   const fetchPrevTopPage = async () => {
-    if (loadingTop || !hasMoreTop || minChapterNum <= 1 || search) return;
+    if (loadingTop || !hasMoreTop || minChapterNum <= 1 || search || !isInitialScrollDoneRef.current) return;
     setLoadingTop(true);
 
     const container = scrollContainerRef.current;
@@ -275,6 +286,13 @@ export function QuickChapterSelectSheet({
       const newChapters = res.chapters || [];
 
       if (newChapters.length > 0) {
+        if (container) {
+          pendingPrependScrollRef.current = {
+            prevHeight: prevScrollHeight,
+            prevTop: prevScrollTop,
+          };
+        }
+
         setChapters((prev) => {
           const existingIds = new Set(prev.map((c) => c.chapterId));
           const uniqueNew = newChapters.filter((c) => !existingIds.has(c.chapterId));
@@ -284,14 +302,6 @@ export function QuickChapterSelectSheet({
         const newMin = Math.min(...newChapters.map((c) => c.chapterNumber));
         setMinChapterNum(newMin);
         setHasMoreTop(newMin > 1);
-
-        // Adjust scroll position after prepending
-        requestAnimationFrame(() => {
-          if (container) {
-            const newScrollHeight = container.scrollHeight;
-            container.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
-          }
-        });
       } else {
         setHasMoreTop(false);
       }
@@ -304,16 +314,16 @@ export function QuickChapterSelectSheet({
 
   // Scroll handler for 2-way Infinite Scroll (Top & Bottom)
   const handleScroll = () => {
-    if (!scrollContainerRef.current || loading) return;
+    if (!scrollContainerRef.current || loading || !isInitialScrollDoneRef.current) return;
     const { scrollTop, clientHeight, scrollHeight } = scrollContainerRef.current;
 
-    // Scroll Down -> Load More Bottom (Prefetch early at 400px threshold)
-    if (scrollTop + clientHeight >= scrollHeight - 400) {
+    // Scroll Down -> Load More Bottom (Prefetch early at 300px threshold)
+    if (scrollTop + clientHeight >= scrollHeight - 300) {
       fetchNextBottomPage();
     }
 
-    // Scroll Up -> Load More Top (Prefetch early at 300px threshold)
-    if (scrollTop <= 300) {
+    // Scroll Up -> Load More Top (Only when user actually scrolls near top <= 80px)
+    if (scrollTop <= 80) {
       fetchPrevTopPage();
     }
   };

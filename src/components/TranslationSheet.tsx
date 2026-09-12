@@ -278,6 +278,8 @@ export function TranslationSheet({
     return () => clearTimeout(t);
   }, [activeTab, currentBookId, searchBook, loadInitialChapters]);
 
+  const pendingPrependScrollRef = React.useRef<{ prevHeight: number; prevTop: number } | null>(null);
+
   const scrollToActive = React.useCallback(() => {
     if (activeItemRef.current && chapterListRef.current) {
       const container = chapterListRef.current;
@@ -288,6 +290,16 @@ export function TranslationSheet({
       container.scrollTop = Math.max(0, targetScrollTop);
     }
   }, []);
+
+  // Synchronous scroll compensation after prepending items to top (Runs BEFORE browser paint)
+  React.useLayoutEffect(() => {
+    if (pendingPrependScrollRef.current && chapterListRef.current) {
+      const { prevHeight, prevTop } = pendingPrependScrollRef.current;
+      pendingPrependScrollRef.current = null;
+      const newHeight = chapterListRef.current.scrollHeight;
+      chapterListRef.current.scrollTop = prevTop + (newHeight - prevHeight);
+    }
+  }, [chapters]);
 
   React.useLayoutEffect(() => {
     if (activeTab === 'batch_chapter' && !loading && chapters.length > 0 && !isInitialScrollDoneRef.current) {
@@ -303,7 +315,7 @@ export function TranslationSheet({
 
   // Auto-backfill previous chapters if initial viewport has extra space and hasMoreTop is true
   useEffect(() => {
-    if (activeTab === 'batch_chapter' && !loading && !loadingTop && hasMoreTop && chapterListRef.current) {
+    if (activeTab === 'batch_chapter' && !loading && !loadingTop && hasMoreTop && isInitialScrollDoneRef.current && chapterListRef.current) {
       const { scrollHeight, clientHeight } = chapterListRef.current;
       if (scrollHeight > 0 && scrollHeight <= clientHeight + 50) {
         fetchPrevTopPage();
@@ -312,7 +324,7 @@ export function TranslationSheet({
   }, [activeTab, loading, loadingTop, hasMoreTop, chapters.length]);
 
   const fetchNextBottomPage = async () => {
-    if (loadingBottom || !hasMoreBottom || !currentBookId) return;
+    if (loadingBottom || !hasMoreBottom || !currentBookId || !isInitialScrollDoneRef.current) return;
     setLoadingBottom(true);
     const targetFromChapter = maxChapterNum + 1;
 
@@ -349,7 +361,7 @@ export function TranslationSheet({
   };
 
   const fetchPrevTopPage = async () => {
-    if (loadingTop || !hasMoreTop || minChapterNum <= 1 || !currentBookId) return;
+    if (loadingTop || !hasMoreTop || minChapterNum <= 1 || !currentBookId || !isInitialScrollDoneRef.current) return;
     setLoadingTop(true);
 
     const container = chapterListRef.current;
@@ -373,6 +385,13 @@ export function TranslationSheet({
 
       const newChapters = res?.chapters || [];
       if (newChapters.length > 0) {
+        if (container) {
+          pendingPrependScrollRef.current = {
+            prevHeight: prevScrollHeight,
+            prevTop: prevScrollTop,
+          };
+        }
+
         setChapters((prev) => {
           const existingIds = new Set(prev.map((c) => c.chapterId));
           const uniqueNew = newChapters.filter((c) => !existingIds.has(c.chapterId));
@@ -382,13 +401,6 @@ export function TranslationSheet({
         const newMin = Math.min(...newChapters.map((c) => c.chapterNumber));
         setMinChapterNum(newMin);
         setHasMoreTop(newMin > 1);
-
-        requestAnimationFrame(() => {
-          if (container) {
-            const newScrollHeight = container.scrollHeight;
-            container.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
-          }
-        });
       } else {
         setHasMoreTop(false);
       }
@@ -400,13 +412,13 @@ export function TranslationSheet({
   };
 
   const handleScroll = () => {
-    if (!chapterListRef.current || loading || activeTab !== 'batch_chapter') return;
+    if (!chapterListRef.current || loading || activeTab !== 'batch_chapter' || !isInitialScrollDoneRef.current) return;
     const { scrollTop, clientHeight, scrollHeight } = chapterListRef.current;
 
-    if (scrollTop + clientHeight >= scrollHeight - 400) {
+    if (scrollTop + clientHeight >= scrollHeight - 300) {
       fetchNextBottomPage();
     }
-    if (scrollTop <= 300) {
+    if (scrollTop <= 80) {
       fetchPrevTopPage();
     }
   };
