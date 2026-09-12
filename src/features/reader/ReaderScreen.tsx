@@ -227,14 +227,7 @@ export function ReaderScreen() {
     });
   }, [activeChapter, bookId]);
 
-  // Restore dock visibility whenever user scrolls into a new chapter (Cuốn chương)
-  useEffect(() => {
-    if (activeChapter?.chapterId) {
-      setShowZenControls(true);
-    }
-  }, [activeChapter?.chapterId]);
-
-  // Throttled & Smooth scroll progress listener for Progress bar (Dock stays visible by default)
+  // Throttled & Smooth scroll progress listener for Progress bar & End of Batch auto-show dock
   useEffect(() => {
     const handleScroll = () => {
       if (scrollAnimRef.current !== null) return;
@@ -244,6 +237,12 @@ export function ReaderScreen() {
         if (totalHeight > 0) {
           const newProgress = (currentY / totalHeight) * 100;
           setScrollProgress((prev) => (Math.abs(prev - newProgress) > 0.5 ? newProgress : prev));
+
+          // Auto show dock when user reaches the very end of the batch / last chapter
+          const isNearBottom = currentY >= totalHeight - 80 || newProgress >= 95;
+          if (isNearBottom) {
+            setShowZenControls(true);
+          }
         }
         lastScrollY.current = currentY;
         scrollAnimRef.current = null;
