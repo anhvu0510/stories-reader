@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Languages, Settings2, Sparkles, CheckSquare, Square, Search, ChevronDown, ChevronUp, Loader, Check, KeyRound, Group } from 'lucide-react';
+import { X, Languages, Settings2, Sparkles, CheckSquare, Square, Search, ChevronDown, ChevronUp, Loader, Check, KeyRound, Group, Zap, Send } from 'lucide-react';
 import { Book, Chapter } from '../shared/types';
 import { BookRepository } from '../repositories/BookRepository';
 import { ChapterRepository } from '../repositories/ChapterRepository';
@@ -74,6 +74,7 @@ export function TranslationSheet({
   const [selectedBooks, setSelectedBooks] = useState<Set<string>>(new Set());
   const [searchBook, setSearchBook] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingType, setSubmittingType] = useState<'sync' | 'async' | null>(null);
   const isSubmittingRef = React.useRef(false);
 
   const [rangeStart, setRangeStart] = useState('');
@@ -409,23 +410,51 @@ export function TranslationSheet({
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (isSync: boolean = false) => {
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
+    setSubmittingType(isSync ? 'sync' : 'async');
     const platform = options.platform || 'VERTEX_API';
+
     try {
-      if (activeTab === 'current') {
-        const chapterIdToUse = initialSelectedChapters[0] || currentChapterId;
-        if (!chapterIdToUse) {
-          showToast('Không xác định được chương hiện tại', 'error');
-          setIsSubmitting(false);
-          isSubmittingRef.current = false;
-          return;
+      if (isSync) {
+        // --- SYNC MODE (Đợi kết quả và reload) ---
+        let chapterIds: string[] = [];
+        let bookIds: string[] = [];
+
+        if (activeTab === 'current') {
+          const chapterIdToUse = initialSelectedChapters[0] || currentChapterId;
+          if (!chapterIdToUse) {
+            showToast('Không xác định được chương hiện tại', 'error');
+            setIsSubmitting(false);
+            isSubmittingRef.current = false;
+            setSubmittingType(null);
+            return;
+          }
+          chapterIds = [chapterIdToUse];
+        } else if (activeTab === 'batch_chapter') {
+          if (selectedChapters.size === 0) {
+            showToast('Vui lòng chọn ít nhất 1 chương', 'error');
+            setIsSubmitting(false);
+            isSubmittingRef.current = false;
+            setSubmittingType(null);
+            return;
+          }
+          chapterIds = Array.from(selectedChapters);
+        } else if (activeTab === 'story') {
+          if (selectedBooks.size === 0) {
+            showToast('Vui lòng chọn ít nhất 1 truyện', 'error');
+            setIsSubmitting(false);
+            isSubmittingRef.current = false;
+            setSubmittingType(null);
+            return;
+          }
+          bookIds = Array.from(selectedBooks);
         }
 
-        showToast('Đang gửi yêu cầu dịch...', 'info');
-        await ChapterRepository.translate({
+        showToast('Đang dịch AI trực tiếp (vui lòng chờ)...', 'info');
+        const res = await ChapterRepository.translate({
           mode: 'current',
           model: options.model,
           platform: platform,
@@ -433,60 +462,95 @@ export function TranslationSheet({
           maxWords: options.maxWords,
           temperature: options.temperature,
           retryTranslate: options.forceRetranslate,
-          bookId: currentBookId,
-          chapterId: [chapterIdToUse],
-        });
-
-        showToast('Gửi yêu cầu dịch thành công!', 'success');
-        setTimeout(() => {
-          onClose();
-          if (onSuccess) onSuccess();
-        }, 1500);
-      } else if (activeTab === 'batch_chapter' && currentBookId) {
-        if (selectedChapters.size === 0) {
-          showToast('Vui lòng chọn ít nhất 1 chương', 'error');
-          setIsSubmitting(false);
-          isSubmittingRef.current = false;
-          return;
-        }
-
-        await ChapterRepository.translate({
-          mode: 'batch_chapter',
-          model: options.model,
-          platform: platform,
-          minWords: options.minWords,
-          maxWords: options.maxWords,
-          temperature: options.temperature,
-          retryTranslate: options.forceRetranslate,
           batchingGroup: options.batchingGroup,
-          bookId: currentBookId,
-          chapterId: Array.from(selectedChapters),
+          bookId: activeTab === 'story' ? bookIds : currentBookId,
+          chapterId: chapterIds.length > 0 ? chapterIds : undefined,
           currentChapterId: initialSelectedChapters[0] || currentChapterId,
         });
-        showToast(`Đã gửi yêu cầu dịch ${selectedChapters.size} chương`, 'success');
-        setTimeout(() => onClose(), 1500);
-      } else if (activeTab === 'story') {
-        if (selectedBooks.size === 0) {
-          showToast('Vui lòng chọn ít nhất 1 truyện', 'error');
-          setIsSubmitting(false);
-          isSubmittingRef.current = false;
-          return;
-        }
 
-        await ChapterRepository.translate({
-          mode: 'story',
-          model: options.model,
-          platform: platform,
-          minWords: options.minWords,
-          maxWords: options.maxWords,
-          temperature: options.temperature,
-          retryTranslate: options.forceRetranslate,
-          batchingGroup: options.batchingGroup,
-          bookId: Array.from(selectedBooks),
-          currentChapterId: initialSelectedChapters[0] || currentChapterId,
-        });
-        showToast(`Đã gửi yêu cầu dịch ${selectedBooks.size} truyện`, 'success');
-        setTimeout(() => onClose(), 1500);
+        const firstChapterId = chapterIds[0];
+        const totalTokens = res?.totalTokens || (firstChapterId && res?.resultTrans?.[firstChapterId]?.chapter?.totalTokens) || 0;
+        const formattedTokens = totalTokens > 0 ? `${totalTokens.toLocaleString('vi-VN')} tokens` : '';
+        const successMsg = formattedTokens
+          ? `🎉 Dịch thành công! Tokens: ${formattedTokens}`
+          : '🎉 Dịch thành công!';
+
+        showToast(successMsg, 'success');
+        onClose();
+        if (onSuccess) onSuccess();
+      } else {
+        // --- ASYNC MODE (Đẩy vào queue ngầm) ---
+        if (activeTab === 'current') {
+          const chapterIdToUse = initialSelectedChapters[0] || currentChapterId;
+          if (!chapterIdToUse) {
+            showToast('Không xác định được chương hiện tại', 'error');
+            setIsSubmitting(false);
+            isSubmittingRef.current = false;
+            setSubmittingType(null);
+            return;
+          }
+
+          await ChapterRepository.translate({
+            mode: 'batch_chapter',
+            model: options.model,
+            platform: platform,
+            minWords: options.minWords,
+            maxWords: options.maxWords,
+            temperature: options.temperature,
+            retryTranslate: options.forceRetranslate,
+            bookId: currentBookId,
+            chapterId: [chapterIdToUse],
+          });
+          showToast('Đã gửi yêu cầu dịch vào hàng đợi', 'success');
+          setTimeout(() => onClose(), 1500);
+        } else if (activeTab === 'batch_chapter') {
+          if (selectedChapters.size === 0) {
+            showToast('Vui lòng chọn ít nhất 1 chương', 'error');
+            setIsSubmitting(false);
+            isSubmittingRef.current = false;
+            setSubmittingType(null);
+            return;
+          }
+
+          await ChapterRepository.translate({
+            mode: 'batch_chapter',
+            model: options.model,
+            platform: platform,
+            minWords: options.minWords,
+            maxWords: options.maxWords,
+            temperature: options.temperature,
+            retryTranslate: options.forceRetranslate,
+            batchingGroup: options.batchingGroup,
+            bookId: currentBookId,
+            chapterId: Array.from(selectedChapters),
+            currentChapterId: initialSelectedChapters[0] || currentChapterId,
+          });
+          showToast(`Đã gửi yêu cầu dịch ${selectedChapters.size} chương`, 'success');
+          setTimeout(() => onClose(), 1500);
+        } else if (activeTab === 'story') {
+          if (selectedBooks.size === 0) {
+            showToast('Vui lòng chọn ít nhất 1 truyện', 'error');
+            setIsSubmitting(false);
+            isSubmittingRef.current = false;
+            setSubmittingType(null);
+            return;
+          }
+
+          await ChapterRepository.translate({
+            mode: 'story',
+            model: options.model,
+            platform: platform,
+            minWords: options.minWords,
+            maxWords: options.maxWords,
+            temperature: options.temperature,
+            retryTranslate: options.forceRetranslate,
+            batchingGroup: options.batchingGroup,
+            bookId: Array.from(selectedBooks),
+            currentChapterId: initialSelectedChapters[0] || currentChapterId,
+          });
+          showToast(`Đã gửi yêu cầu dịch ${selectedBooks.size} truyện`, 'success');
+          setTimeout(() => onClose(), 1500);
+        }
       }
     } catch (e: any) {
       console.error(e);
@@ -494,6 +558,7 @@ export function TranslationSheet({
     } finally {
       setIsSubmitting(false);
       isSubmittingRef.current = false;
+      setSubmittingType(null);
     }
   };
 
@@ -972,23 +1037,53 @@ export function TranslationSheet({
         </div>
 
         
-        {/* Action Button */}
+        {/* Action Buttons: Sync & Async */}
         <div className="flex-shrink-0 p-3 sm:p-4 border-t border-outline-variant/30 bg-surface-container pb-safe">
-          <button 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="w-full py-3 sm:py-4 bg-primary text-on-primary rounded-xl sm:rounded-2xl text-sm sm:text-base font-bold font-sans flex items-center justify-center gap-2 hover:bg-primary-fixed active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? (
-              <Loader size={16} className="animate-spin sm:w-5 sm:h-5 text-on-primary" />
-            ) : (
-              <Sparkles size={16} className="fill-black/50 sm:w-5 sm:h-5" />
-            )}
-            
-            {activeTab === 'current' ? (isSubmitting ? 'Đang Dịch...' : 'Dịch Ngay Chương Này') : 
-             activeTab === 'batch_chapter' ? `Dịch ${selectedChapters.size} Chương Đã Chọn` : 
-             `Dịch ${selectedBooks.size} Truyện Đã Chọn`}
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Sync Button */}
+            <button
+              onClick={() => handleSubmit(true)}
+              disabled={isSubmitting}
+              className="flex-1 py-3 sm:py-3.5 bg-primary text-on-primary rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold font-sans flex items-center justify-center gap-1.5 hover:bg-primary-fixed active:scale-[0.98] transition-all shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)] disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isSubmitting && submittingType === 'sync' ? (
+                <Loader size={16} className="animate-spin sm:w-4 sm:h-4 text-on-primary" />
+              ) : (
+                <Zap size={16} className="fill-current sm:w-4 sm:h-4 text-on-primary" />
+              )}
+              <span>
+                {isSubmitting && submittingType === 'sync'
+                  ? 'Đang Dịch...'
+                  : activeTab === 'current'
+                  ? 'Dịch'
+                  : activeTab === 'batch_chapter'
+                  ? `Dịch (${selectedChapters.size})`
+                  : `Dịch (${selectedBooks.size})`}
+              </span>
+            </button>
+
+            {/* Async Button */}
+            <button
+              onClick={() => handleSubmit(false)}
+              disabled={isSubmitting}
+              className="flex-1 py-3 sm:py-3.5 bg-surface-container-high border border-outline-variant/40 hover:bg-surface-container-highest text-on-surface rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold font-sans flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isSubmitting && submittingType === 'async' ? (
+                <Loader size={16} className="animate-spin sm:w-4 sm:h-4 text-on-surface" />
+              ) : (
+                <Send size={16} className="sm:w-4 sm:h-4 text-on-surface-variant" />
+              )}
+              <span>
+                {isSubmitting && submittingType === 'async'
+                  ? 'Đang Đẩy Queue...'
+                  : activeTab === 'current'
+                  ? 'Dịch Queue'
+                  : activeTab === 'batch_chapter'
+                  ? `Dịch Batch (${selectedChapters.size})`
+                  : `Dịch Batch (${selectedBooks.size})`}
+              </span>
+            </button>
+          </div>
         </div>
 
       </div>

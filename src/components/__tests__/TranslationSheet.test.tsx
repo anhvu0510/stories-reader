@@ -149,4 +149,50 @@ describe('TranslationSheet Requirements', () => {
       );
     });
   });
+
+  it('renders both Sync and Async translation buttons and triggers translate with correct mode on click', async () => {
+    const { fireEvent } = await import('@testing-library/react');
+    const onSuccessMock = vi.fn();
+    render(
+      <TranslationSheet
+        {...defaultProps}
+        initialSelectedChapters={['chap-15']}
+        onSuccess={onSuccessMock}
+        currentChapterNumber={15}
+      />
+    );
+
+    const syncBtn = screen.getByRole('button', { name: /Dịch Sync/i });
+    const asyncBtn = screen.getByRole('button', { name: /Dịch Queue/i });
+
+    expect(syncBtn).toBeDefined();
+    expect(asyncBtn).toBeDefined();
+
+    // Click Sync button
+    fireEvent.click(syncBtn);
+
+    await waitFor(() => {
+      expect(ChapterRepository.translate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: 'current',
+          bookId: 'book-123',
+        })
+      );
+      expect(onSuccessMock).toHaveBeenCalled();
+    });
+
+    vi.clearAllMocks();
+
+    // Click Async button
+    fireEvent.click(asyncBtn);
+
+    await waitFor(() => {
+      expect(ChapterRepository.translate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: 'batch_chapter',
+          bookId: 'book-123',
+        })
+      );
+    });
+  });
 });

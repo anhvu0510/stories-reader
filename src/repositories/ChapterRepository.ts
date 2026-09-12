@@ -270,7 +270,8 @@ export const ChapterRepository = {
   },
 
   async translate(data: any): Promise<any> {
-    return apiClient.post('/stories/gemini-ai/translate', data);
+    const timeout = 10 * 60 * 1000; // 10 minutes timeout for AI translation
+    return apiClient.post('/stories/gemini-ai/translate', data, { timeout, retries: 0 });
   },
 
   async getPoolStatus(model: string, platform?: string): Promise<any> {
