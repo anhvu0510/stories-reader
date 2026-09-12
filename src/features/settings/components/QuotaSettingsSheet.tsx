@@ -17,7 +17,7 @@ export function QuotaSettingsSheet({
   isEmbedded?: boolean;
 }) {
   const [quotas, setQuotas] = useState<AIQuota[]>(initialQuotas);
-  const [activeTab, setActiveTab] = useState<'VERTEX_API' | 'AI_STUDIO'>('VERTEX_API');
+  const [activeTab, setActiveTab] = useState<'VERTEX_API' | 'AI_STUDIO'>('AI_STUDIO');
   const [isLoading, setIsLoading] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);

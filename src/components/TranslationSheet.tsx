@@ -23,15 +23,18 @@ interface TranslationOptions {
   availableModels?: string[];
 }
 
+const DEFAULT_VERTEX_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-flash'];
+const DEFAULT_CLI_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-flash'];
+
 const defaultOptions: TranslationOptions = {
   model: 'gemini-2.5-flash-lite',
-  platform: 'VERTEX_API',
+  platform: 'AI_STUDIO',
   minWords: 100,
   maxWords: 500,
   temperature: 0.7,
   forceRetranslate: false,
   batchingGroup: false,
-  availableModels: ['gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-pro']
+  availableModels: DEFAULT_VERTEX_MODELS
 };
 
 interface TranslationSheetProps {
@@ -61,7 +64,6 @@ export function TranslationSheet({
 }: TranslationSheetProps) {
   const showToast = useToastStore((state) => state.showToast);
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
-  const [activeModelTab, setActiveModelTab] = useState<'VERTEX_API' | 'AI_STUDIO'>('VERTEX_API');
   const [options, setOptions] = useState<TranslationOptions>(defaultOptions);
   const [isOptionsLoaded, setIsOptionsLoaded] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
@@ -100,7 +102,7 @@ export function TranslationSheet({
   useEffect(() => {
     let active = true;
     if (options.model && isOptionsLoaded) {
-      const platform = options.platform || 'VERTEX_API';
+      const platform = options.platform || 'AI_STUDIO';
       ChapterRepository.getPoolStatus(options.model, platform)
         .then((res) => {
           if (active && res) {
@@ -127,6 +129,7 @@ export function TranslationSheet({
           try {
             const parsed = typeof savedSettings.value === 'string' ? JSON.parse(savedSettings.value) : savedSettings.value;
             if (parsed && typeof parsed === 'object') {
+              if (parsed.platform === 'VERTEX_API') parsed.platform = 'AI_STUDIO';
               setOptions((prev) => ({ ...prev, ...parsed }));
             }
           } catch (e) {}
@@ -144,18 +147,19 @@ export function TranslationSheet({
           const cfg = res.currentConfig || (res as any).config;
           if (cfg && typeof cfg === 'object') {
             let loadedPlatform = cfg.platform;
+            if (loadedPlatform === 'VERTEX_API' || !loadedPlatform) loadedPlatform = 'AI_STUDIO';
             setOptions((prev) => {
-              const newOptions = { ...prev, ...cfg };
-              const modelsList = (Array.isArray(rawQuotas) ? rawQuotas : []).map((m: any) => m.model || m);
-              if (modelsList.length > 0) {
-                newOptions.availableModels = modelsList;
+              const newOptions = { ...prev, ...cfg, platform: loadedPlatform };
+              const modelsList = (Array.isArray(rawQuotas) ? rawQuotas : [])
+                .map((m: any) => (typeof m === 'string' ? m : m.model || m))
+                .map((m: string) => m.replace(/\s*\([VA]\)$/i, '').trim())
+                .filter(Boolean);
+              const uniqueModels = [...new Set(modelsList)];
+              if (uniqueModels.length > 0) {
+                newOptions.availableModels = uniqueModels;
               }
               return newOptions;
             });
-
-            if (loadedPlatform) {
-              setActiveModelTab(loadedPlatform as any);
-            }
           }
         }
         setIsOptionsLoaded(true);
@@ -193,7 +197,7 @@ export function TranslationSheet({
       const t = setTimeout(() => {
         const payload = {
           model: options.model,
-          platform: options.platform || 'VERTEX_API',
+          platform: options.platform || 'AI_STUDIO',
           minWords: options.minWords,
           maxWords: options.maxWords,
           temperature: options.temperature,
@@ -849,57 +853,47 @@ export function TranslationSheet({
                    </div>
                 </div>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2 pt-1">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Mô hình AI:</span>
-                  {/* Platform tabs */}
-                  <div className="flex items-center gap-1 bg-black/30 p-0.5 rounded-lg border border-blue-500/20">
-                    {(['VERTEX_API', 'GEMINI_CLI'] as const).map((plt) => (
-                      <button
-                        key={plt}
-                        onClick={() => setActiveModelTab(plt)}
-                        className={cn(
-                          "px-2 py-0.5 text-[9px] font-bold rounded transition-all",
-                          activeModelTab === plt
-                            ? "bg-primary text-on-primary shadow-xs"
-                            : "text-on-surface-variant hover:text-on-surface"
-                        )}
-                      >
-                        {plt === 'VERTEX_API' ? 'API' : 'CLI'}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto hide-scrollbar p-0.5">
                   {(() => {
-                    const currentModels = activeModelTab === 'VERTEX_API'
-                      ? options.availableModels || DEFAULT_VERTEX_MODELS
-                      : DEFAULT_CLI_MODELS;
+                    const rawModels = options.availableModels || DEFAULT_VERTEX_MODELS;
 
-                    return currentModels.map((m) => {
-                      const isSelected = options.model === m && (options.platform || 'VERTEX_API') === activeModelTab;
+                    // Strip any legacy "(V)" or "(A)" string suffix and deduplicate
+                    const cleanModels = [...new Set(
+                      rawModels.map((m) => (typeof m === 'string' ? m.replace(/\s*\([VA]\)$/i, '').trim() : m))
+                    )];
+
+                    return cleanModels.map((m) => {
+                      const isSelected = options.model === m;
+                      const formattedName = m
+                        .replace(/^gemini-/, '')
+                        .replace(/-/g, ' ')
+                        .toUpperCase();
 
                       return (
                         <button
-                          key={`${activeModelTab}-${m}`}
+                          key={m}
                           onClick={() => {
-                            setOptions({ ...options, model: m, platform: activeModelTab });
+                            setOptions({ ...options, model: m, platform: 'AI_STUDIO' });
                             setPoolStatus(null);
                           }}
                           className={cn(
-                            'px-3 py-2 rounded-lg text-left border transition-all flex items-center justify-between',
+                            'px-3 py-2 rounded-xl text-left border transition-all flex items-center justify-between active:scale-95',
                             isSelected
-                              ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary font-extrabold shadow-[0_4px_16px_var(--primary),_inset_0_1px_1px_rgba(255,255,255,0.6)]'
-                              : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 text-on-surface font-medium'
+                              ? 'bg-primary/20 hover:bg-primary/25 border-2 border-primary text-primary font-black shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]'
+                              : 'bg-white/5 hover:bg-white/10 border border-white/10 text-on-surface font-medium'
                           )}
                         >
-                          <div className="min-w-0 pr-2">
-                            <div className={`font-bold text-xs truncate ${isSelected ? 'text-primary' : 'text-on-surface'}`}>
-                              {m.replace(/^gemini-/, '').replace(/-/g, ' ').toUpperCase() || m}
+                          <div className="min-w-0 pr-1 flex-1">
+                            <div className={`font-mono font-bold text-[11px] truncate ${isSelected ? 'text-primary font-black' : 'text-on-surface'}`}>
+                              {formattedName || m}
                             </div>
                           </div>
-                          {isSelected && <Check size={12} className="text-primary flex-shrink-0 font-bold" />}
+                          {isSelected && <Check size={13} className="text-primary shrink-0 font-bold ml-1" />}
                         </button>
                       );
                     });
