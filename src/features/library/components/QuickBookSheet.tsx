@@ -309,15 +309,15 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
       <div className="fixed inset-0 z-[95000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden box-border">
         <div className="absolute inset-0" onClick={onClose} />
 
-        <div className="relative z-10 bg-surface/75 dark:bg-surface/75 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.4)] h-[82vh] max-h-[90dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
+        <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.4)] h-[82vh] max-h-[90dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
           {/* Ambient Top Glow Effect */}
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
 
-          {/* Drag Handle */}
-          <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto my-2.5 flex-shrink-0 relative z-20" />
+          {/* Top Header & Compact Mobile Info Area (Includes Drag Handle for 100% seamless unified background) */}
+          <div className="pt-2.5 px-4 pb-2 border-b border-white/10 space-y-2 flex-shrink-0 bg-transparent relative z-20">
+            {/* Drag Handle */}
+            <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto mb-1.5 flex-shrink-0" />
 
-          {/* Top Header & Compact Mobile Info Area */}
-          <div className="px-4 pt-1.5 pb-2 border-b border-white/10 space-y-2 flex-shrink-0 bg-white/5">
             {/* Row 1: Title + Action Icon Buttons */}
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-base font-extrabold text-on-surface tracking-tight leading-snug truncate flex-1 min-w-0">
@@ -397,18 +397,16 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
                 ))}
               </div>
             )}
-          </div>
 
-          {/* Search Bar for Inline Chapter List */}
-          <div className="px-4 py-2 border-b border-white/10 flex-shrink-0 bg-white/5">
-            <div className="relative">
+            {/* Row 4: Search Bar for Inline Chapter List */}
+            <div className="relative pt-1">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
               <input
                 type="text"
                 placeholder="Tìm nhanh số hoặc tên chương..."
                 value={search}
                 onChange={handleSearchChange}
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 font-medium transition-all"
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white/10 border border-white/15 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 font-medium transition-all"
               />
             </div>
           </div>

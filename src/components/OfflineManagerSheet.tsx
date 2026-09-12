@@ -43,17 +43,18 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
   };
 
   const content = (
-    <div className={`relative bg-black/25 dark:bg-black/40 backdrop-blur-[4px] text-on-surface w-full flex flex-col transition-colors duration-200 ${!isEmbedded ? 'flex-1 overflow-hidden border-t sm:border border-outline-variant/30 shadow-[0_16px_36px_rgba(0,0,0,0.5),_inset_0_1px_0.5px_0_rgba(255,255,255,0.45),_inset_0_-1px_0.5px_0_rgba(0,0,0,0.4)] max-h-[85dvh] rounded-t-[28px] max-w-md mx-auto z-10 transform-gpu overscroll-contain' : 'h-full max-w-full'}`}>
+    <div className={`relative bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full flex flex-col transition-colors duration-200 ${!isEmbedded ? 'flex-1 overflow-hidden border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.4)] max-h-[85dvh] rounded-t-[32px] max-w-md mx-auto z-10 transform-gpu overscroll-contain' : 'h-full max-w-full'}`}>
       
-      {/* Header */}
-      <div className="flex-shrink-0 p-3 sm:p-5 border-b border-outline-variant/20 flex flex-col gap-3 bg-black/10 dark:bg-black/20">
+      {/* Header & Drag Handle */}
+      <div className="flex-shrink-0 pt-2.5 px-4 pb-3 border-b border-white/10 flex flex-col gap-2 bg-transparent">
+        {!isEmbedded && <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto mb-1 flex-shrink-0" />}
         <div className="flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-bold text-primary flex items-center gap-2">
             <Download size={18} /> Đọc ngoại tuyến
           </h2>
           <div className="flex items-center gap-1 sm:gap-2">
             {!isEmbedded && onClose && (
-             <button onClick={onClose} className="p-2 sm:p-2.5 bg-white/5 dark:bg-white/5 border border-outline-variant/30 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-full text-on-surface-variant hover:text-on-surface hover:bg-white/15 transition-all active:scale-95">
+             <button onClick={onClose} className="p-1.5 bg-white/10 dark:bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-full text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all active:scale-95">
                 <X size={14} />
               </button>
             )}

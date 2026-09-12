@@ -737,12 +737,12 @@ export function TranslationSheet({
       <div className="absolute inset-0" onClick={onClose} />
       
       {/* Sheet Content */}
-      <div className="relative bg-surface/75 dark:bg-surface/75 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.4)] h-[78vh] min-h-[520px] max-h-[85dvh] flex flex-col z-10 overflow-hidden box-border transform-gpu overscroll-contain transition-all duration-200">
+      <div className="relative bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.4)] h-[78vh] min-h-[520px] max-h-[85dvh] flex flex-col z-10 overflow-hidden box-border transform-gpu overscroll-contain transition-all duration-200">
         {/* Ambient Top Glow Effect */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
         
         {/* Drag Handle & Header */}
-        <div className="flex-shrink-0 pt-3 px-4 sm:px-5 pb-3 border-b border-white/10 bg-white/5 relative z-20">
+        <div className="flex-shrink-0 pt-3 px-4 sm:px-5 pb-3 border-b border-white/10 bg-transparent relative z-20">
           <div className="w-12 h-1.5 bg-white/25 dark:bg-white/20 rounded-full mx-auto mb-2 sm:mb-3"></div>
           <div className="flex justify-between items-center bg-white/5 p-1 rounded-xl border border-white/15">
              <div className="flex bg-white/10 p-1 rounded-lg flex-1 gap-1">
@@ -758,7 +758,7 @@ export function TranslationSheet({
 
 
         {/* Global Config (Stuck below header) */}
-        <div className="flex-shrink-0 bg-black/10 dark:bg-black/20 border-b border-blue-500/20 dark:border-blue-400/20">
+        <div className="flex-shrink-0 bg-white/[0.03] border-b border-white/10">
           <div 
             className="w-full flex items-center justify-between py-2 px-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest hover:bg-white/5 transition-colors cursor-pointer select-none"
             onClick={() => setShowConfig(!showConfig)}
@@ -962,8 +962,8 @@ export function TranslationSheet({
                         className={cn(
                           "group flex justify-between items-center px-3 py-2.5 cursor-pointer transition-all rounded-xl border relative shadow-xs", 
                           selectedChapters.has(chap.chapterId) 
-                            ? "bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary shadow-[0_4px_16px_var(--primary),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)]" 
-                            : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 text-on-surface'
+                            ? "bg-primary/20 hover:bg-primary/25 border border-primary/50 text-primary" 
+                            : 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-on-surface'
                         )}
                       >
                         <div className="flex items-center gap-3 overflow-hidden flex-1 pl-1">
@@ -1012,8 +1012,8 @@ export function TranslationSheet({
                         className={cn(
                           'group flex justify-between items-center px-3 py-2.5 cursor-pointer transition-all rounded-xl border relative shadow-xs',
                           selectedBooks.has(book.bookId) 
-                            ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary shadow-[0_4px_16px_var(--primary),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)]' 
-                            : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 text-on-surface'
+                            ? 'bg-primary/20 hover:bg-primary/25 border border-primary/50 text-primary' 
+                            : 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-on-surface'
                         )}
                       >
                         <div className="flex items-center gap-3 overflow-hidden pl-1">

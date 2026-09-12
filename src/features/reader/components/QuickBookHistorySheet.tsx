@@ -96,8 +96,8 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
         onClick={() => handleSwapBook(book)}
         className={`group relative z-10 rounded-xl p-2.5 transition-all duration-150 cursor-pointer flex items-center justify-between gap-2.5 shadow-xs hover:shadow-md overflow-hidden active:scale-[0.99] ${
           isPinned
-            ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary border-l-4 border-l-primary-fixed shadow-[0_4px_20px_var(--primary),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] text-primary'
-            : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 border-l-4 border-l-primary shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.35),_0_4px_12px_rgba(0,0,0,0.2)] text-on-surface'
+            ? 'bg-primary/20 hover:bg-primary/25 border border-primary/50 border-l-4 border-l-primary text-primary shadow-xs'
+            : 'bg-white/[0.04] dark:bg-white/[0.04] hover:bg-white/[0.08] dark:hover:bg-white/[0.08] border border-white/10 dark:border-white/10 border-l-4 border-l-primary shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.15)] hover:border-primary/50 text-on-surface'
         }`}
       >
         {/* Left Side: Ultra-Compact TỔNG Badge */}
@@ -175,25 +175,25 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
     <div className="fixed inset-0 z-[95000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden box-border">
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-outline-variant/30 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] max-h-[90dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
-        {/* Drag Handle */}
-        <div className="w-10 h-1 rounded-full bg-white/30 mx-auto my-2 flex-shrink-0" />
+      <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.4)] h-[78vh] max-h-[90dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
+        {/* Header & Search (100% unified top header) */}
+        <div className="pt-2.5 px-4 pb-2.5 border-b border-white/10 space-y-2 flex-shrink-0 bg-transparent">
+          {/* Drag Handle */}
+          <div className="w-10 h-1 rounded-full bg-white/30 mx-auto flex-shrink-0" />
 
-        {/* Header */}
-        <div className="px-4 py-2 border-b border-white/10 flex items-center justify-between flex-shrink-0 bg-white/5">
-          <h3 className="text-xs font-black text-on-surface tracking-tight flex items-center gap-1.5 uppercase">
-            <Clock size={15} className="text-primary" /> LỊCH SỬ ĐỌC TRUYỆN ({historyBooks.length})
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors"
-          >
-            <X size={15} />
-          </button>
-        </div>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-black text-on-surface tracking-tight flex items-center gap-1.5 uppercase">
+              <Clock size={15} className="text-primary" /> LỊCH SỬ ĐỌC TRUYỆN ({historyBooks.length})
+            </h3>
+            <button
+              onClick={onClose}
+              className="p-1 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors"
+            >
+              <X size={15} />
+            </button>
+          </div>
 
-        {/* Search Input Bar */}
-        <div className="px-3.5 pt-2.5 pb-1 flex-shrink-0">
+          {/* Search Input Bar */}
           <div className="relative">
             <button
               type="button"
@@ -213,7 +213,7 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
                   handleSearchSubmit();
                 }
               }}
-              className="w-full pl-8 pr-7 py-1.5 rounded-xl bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] transition-all"
+              className="w-full pl-8 pr-7 py-1.5 rounded-xl bg-white/10 dark:bg-white/10 border border-white/15 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] transition-all"
             />
             {searchQuery && (
               <button

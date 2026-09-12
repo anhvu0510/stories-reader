@@ -109,29 +109,29 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
 
   const content = (
     <div
-      className={`relative bg-surface text-on-surface w-full flex flex-col ${
+      className={`relative bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full flex flex-col ${
         !isEmbedded
-          ? 'flex-1 overflow-hidden border border-outline-variant/30 h-[85vh] sm:h-[80vh] rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-[600px] z-10'
-          : 'h-full max-w-full'
+          ? 'flex-1 overflow-hidden border border-white/20 h-[85vh] sm:h-[80vh] rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-[600px] z-10'
+          : 'h-full max-w-full bg-transparent'
       }`}
     >
       {/* Header */}
-      <div className="flex-shrink-0 p-3 sm:p-5 border-b border-outline-variant/10 flex flex-col gap-3 bg-surface-container-low">
+      <div className="flex-shrink-0 p-3 sm:p-4 border-b border-white/10 flex flex-col gap-3 bg-transparent rounded-2xl mb-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-base sm:text-lg font-bold font-serif text-primary">Quản lý API Token</h2>
+          <h2 className="text-base sm:text-lg font-extrabold text-primary">Quản lý API Token</h2>
           <div className="flex items-center gap-1 sm:gap-2">
             <button
               title="Thêm Token Mới"
               onClick={startCreate}
               disabled={editingId === 'new'}
-              className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors disabled:opacity-50"
+              className="p-1.5 sm:p-2 bg-white/10 border border-white/20 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all disabled:opacity-50"
             >
               <Plus size={14} />
             </button>
             <button
               title="Làm Mới"
               onClick={fetchTokens}
-              className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
+              className="p-1.5 sm:p-2 bg-white/10 border border-white/20 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all"
             >
               <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
             </button>
@@ -139,19 +139,19 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
               <button
                 title="Đóng"
                 onClick={onClose}
-                className="p-2 sm:p-2.5 bg-surface rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors"
+                className="p-1.5 sm:p-2 bg-white/10 border border-white/20 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all"
               >
                 <X size={14} />
               </button>
             )}
           </div>
         </div>
-        <div className="flex bg-surface-container-highest p-1 rounded-lg">
+        <div className="flex bg-white/10 p-1 rounded-xl border border-white/15">
           <button
             onClick={() => setActiveTab('VERTEX_API')}
-            className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
+            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
               activeTab === 'VERTEX_API'
-                ? 'bg-surface text-primary shadow-sm'
+                ? 'bg-primary/20 text-primary border border-primary/50 shadow-xs'
                 : 'text-on-surface-variant hover:text-on-surface'
             }`}
           >
@@ -159,9 +159,9 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
           </button>
           <button
             onClick={() => setActiveTab('AI_STUDIO')}
-            className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
+            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
               activeTab === 'AI_STUDIO'
-                ? 'bg-surface text-primary shadow-sm'
+                ? 'bg-primary/20 text-primary border border-primary/50 shadow-xs'
                 : 'text-on-surface-variant hover:text-on-surface'
             }`}
           >
@@ -171,8 +171,8 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto hide-scrollbar w-full bg-surface">
-        <div className="p-3 sm:p-5 flex flex-col gap-2.5 max-w-[600px] mx-auto w-full">
+      <div className="flex-1 overflow-y-auto hide-scrollbar w-full bg-transparent">
+        <div className="p-1 sm:p-2 flex flex-col gap-2.5 max-w-[600px] mx-auto w-full">
           {editingId === 'new' && (
             <TokenEditor
               formData={formData}
@@ -195,10 +195,10 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
                 />
               ) : (
                 <div
-                  className={`p-3.5 rounded-2xl border transition-all ${
+                  className={`p-3 rounded-2xl border transition-all ${
                     t.status === 'active'
-                      ? 'border-outline-variant/30 bg-surface-container-lowest hover:border-primary/30'
-                      : 'border-outline-variant/10 bg-surface-container-lowest/50 opacity-60'
+                      ? 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08]'
+                      : 'border-white/10 bg-white/[0.02] opacity-60'
                   }`}
                 >
                   <div className="flex justify-between gap-3">
@@ -287,7 +287,7 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
   );
 
   if (isEmbedded) {
-    return <div className="flex flex-col w-full h-full bg-surface">{content}</div>;
+    return <div className="flex flex-col w-full h-full bg-transparent">{content}</div>;
   }
 
   return (
@@ -323,7 +323,7 @@ function TokenEditor({
       : formData.configAI || {};
 
   return (
-    <div className="bg-surface-container-lowest p-3 rounded-xl border border-primary/40 shadow-sm space-y-3">
+    <div className="bg-white/10 p-3 rounded-2xl border border-white/20 shadow-xs space-y-3">
       <div className="grid grid-cols-1 gap-2">
         <input
           autoFocus={isNew}
@@ -331,7 +331,7 @@ function TokenEditor({
           value={formData.name || ''}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           placeholder="Tên gợi nhớ"
-          className="w-full bg-surface-container-low border border-outline-variant/30 px-2.5 py-1.5 rounded-lg text-sm font-bold focus:border-primary focus:outline-none"
+          className="w-full bg-white/10 border border-white/15 px-2.5 py-1.5 rounded-xl text-xs font-bold text-on-surface focus:border-primary/60 focus:outline-none shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]"
         />
       </div>
 
@@ -341,7 +341,7 @@ function TokenEditor({
           value={formData.email || ''}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           placeholder="Email tài khoản"
-          className="w-full bg-surface-container-low border border-outline-variant/30 px-2.5 py-1.5 rounded-lg text-sm font-medium focus:border-primary focus:outline-none"
+          className="w-full bg-white/10 border border-white/15 px-2.5 py-1.5 rounded-xl text-xs font-medium text-on-surface focus:border-primary/60 focus:outline-none shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]"
         />
       </div>
 

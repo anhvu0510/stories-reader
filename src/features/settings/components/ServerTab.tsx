@@ -133,7 +133,7 @@ export function ServerTab() {
           <button
             onClick={handleFetchDomains}
             disabled={isFetching}
-            className="p-1.5 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest transition-colors text-xs flex items-center gap-1"
+            className="p-1.5 rounded-xl bg-white/10 border border-white/15 text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all text-xs flex items-center gap-1 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]"
             title="Đồng bộ từ hệ thống"
           >
             <RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
@@ -146,7 +146,7 @@ export function ServerTab() {
               setDomainUrl('');
               setShowForm(true);
             }}
-            className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-xs flex items-center gap-1 font-medium"
+            className="p-1.5 rounded-xl bg-primary/20 border border-primary/50 text-primary hover:bg-primary/30 transition-all text-xs flex items-center gap-1 font-bold shadow-xs"
           >
             <Plus size={14} />
           </button>
@@ -154,8 +154,8 @@ export function ServerTab() {
       </div>
 
       {showForm && (
-        <div className="p-4 rounded-xl bg-surface-container border border-outline-variant/30 space-y-3 animate-in fade-in slide-in-from-top-2">
-          <div className="text-xs font-medium text-on-surface">
+        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3 animate-in fade-in slide-in-from-top-2">
+          <div className="text-xs font-bold text-on-surface">
             {editingId ? 'Chỉnh sửa Máy chủ' : 'Thêm Máy chủ mới'}
           </div>
           <input
@@ -163,25 +163,25 @@ export function ServerTab() {
             placeholder="Tên máy chủ (ví dụ: Server Ngrok)"
             value={domainName}
             onChange={(e) => setDomainName(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-surface border border-outline-variant/30 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/15 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] transition-all"
           />
           <input
             type="text"
             placeholder="URL (ví dụ: https://abcd.ngrok-free.app)"
             value={domainUrl}
             onChange={(e) => setDomainUrl(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-surface border border-outline-variant/30 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/15 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] transition-all"
           />
           <div className="flex justify-end gap-2 pt-1">
             <button
               onClick={() => setShowForm(false)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:bg-surface-container-high"
+              className="px-3.5 py-1.5 rounded-xl text-xs font-medium text-on-surface-variant hover:bg-white/10 transition-colors"
             >
               Hủy
             </button>
             <button
               onClick={handleSave}
-              className="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-medium hover:bg-primary/90"
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-b from-primary via-primary-fixed to-primary-fixed-dim text-on-primary text-xs font-extrabold border border-primary/70 shadow-xs hover:brightness-110 active:scale-95 transition-all"
             >
               Lưu Máy chủ
             </button>
@@ -197,10 +197,10 @@ export function ServerTab() {
           return (
             <div
               key={domain.id}
-              className={`p-3 rounded-xl border transition-all flex items-center justify-between ${
+              className={`p-3 rounded-2xl border transition-all flex items-center justify-between ${
                 isActive
-                  ? 'bg-primary/10 border-primary/40 text-on-surface'
-                  : 'bg-surface-container border-outline-variant/20 hover:bg-surface-container-high'
+                  ? 'bg-primary/20 border-primary/50 text-on-surface shadow-xs'
+                  : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-on-surface'
               }`}
             >
               <div className="flex-1 min-w-0 pr-3">

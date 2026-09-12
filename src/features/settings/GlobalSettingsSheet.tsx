@@ -37,34 +37,35 @@ export function GlobalSettingsSheet({
       <div className="absolute inset-0" onClick={closeSettings} />
 
       {/* STABLE THEME-SYNCHRONIZED BOTTOM SHEET */}
-      <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-outline-variant/30 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] h-[76vh] max-h-[88dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
+      <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.4)] h-[76vh] max-h-[88dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
         {/* Ambient Top Glow Effect */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
 
-        {/* Drag Handle */}
-        <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto my-2.5 flex-shrink-0 relative z-20" />
+        {/* Top Header & Tab Capsule (100% unified glass header) */}
+        <div className="pt-2.5 px-4 pb-2.5 border-b border-white/10 space-y-2.5 flex-shrink-0 bg-transparent relative z-20">
+          {/* Drag Handle */}
+          <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto flex-shrink-0" />
 
-        {/* Header */}
-        <div className="px-5 py-3 border-b border-blue-500/20 dark:border-blue-400/20 flex items-center justify-between bg-black/10 dark:bg-black/20 flex-shrink-0 relative z-20">
-          <div>
-            <h2 className="text-base font-black text-on-surface tracking-tight flex items-center gap-2">
-              Cấu hình Hệ thống
-            </h2>
-            <p className="text-[10px] font-mono text-on-surface-variant/70 uppercase tracking-wider">
-              Settings & Preferences
-            </p>
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-black text-on-surface tracking-tight flex items-center gap-2">
+                Cấu hình Hệ thống
+              </h2>
+              <p className="text-[10px] font-mono text-on-surface-variant/70 uppercase tracking-wider">
+                Settings & Preferences
+              </p>
+            </div>
+            <button
+              onClick={closeSettings}
+              className="p-1.5 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all active:scale-95"
+            >
+              <X size={16} />
+            </button>
           </div>
-          <button
-            onClick={closeSettings}
-            className="p-2 rounded-full bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] text-on-surface-variant hover:text-on-surface hover:bg-white/15 transition-all active:scale-95"
-          >
-            <X size={16} />
-          </button>
-        </div>
 
-        {/* Smooth Capsule Container: Active Tab = Icon + Text, Inactive Tabs = Icon Only */}
-        <div className="px-4 py-2.5 bg-black/10 dark:bg-black/20 border-b border-blue-500/20 dark:border-blue-400/20 flex-shrink-0 relative z-20">
-          <div className="flex items-center justify-between gap-1 p-1 bg-black/30 border border-blue-500/20 rounded-2xl w-full">
+          {/* Smooth Capsule Container */}
+          <div className="flex items-center justify-between gap-1 p-1 bg-white/10 border border-white/15 rounded-2xl w-full">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeSettingsTab === tab.id;

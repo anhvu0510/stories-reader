@@ -67,17 +67,31 @@ export function QuickReplacementModal({
           />
         </div>
 
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-medium text-on-surface-variant">Phạm vi:</label>
-          <select
-            value={scope}
-            onChange={(e) => setScope(e.target.value as any)}
-            className="px-2 py-1 rounded bg-surface-container border border-outline-variant/30 text-xs text-on-surface"
-          >
-            <option value="global">Toàn bộ truyện</option>
-            <option value="book">Chỉ cuốn sách này</option>
-            <option value="chapter">Chỉ chương này</option>
-          </select>
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-on-surface-variant/80 uppercase tracking-wider block">Phạm vi áp dụng:</label>
+          <div className="grid grid-cols-3 gap-1 bg-white/10 p-1 rounded-xl border border-white/15">
+            {[
+              { id: 'global', label: 'Global' },
+              { id: 'book', label: 'Book' },
+              { id: 'chapter', label: 'Chapter' },
+            ].map((item) => {
+              const isActive = scope === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setScope(item.id as any)}
+                  className={`py-1 px-2 rounded-lg text-xs font-bold transition-all text-center ${
+                    isActive
+                      ? 'bg-primary/20 border border-primary/60 text-primary shadow-xs'
+                      : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10 border border-transparent'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">

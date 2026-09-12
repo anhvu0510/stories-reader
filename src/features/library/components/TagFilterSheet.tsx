@@ -117,7 +117,7 @@ export function TagFilterSheet({
         </div>
 
         {/* Tag Search Box */}
-        <div className="p-3 border-b border-blue-500/20 dark:border-blue-400/20 bg-black/10 dark:bg-black/20">
+        <div className="p-3 border-b border-white/10 bg-transparent">
           <div className="relative">
             <Search
               size={13}
