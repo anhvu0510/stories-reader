@@ -28,38 +28,6 @@ export const SORT_OPTIONS: SortOption[] = [
     description: 'Ưu tiên truyện có chương dịch mới cập nhật',
     icon: <Clock size={16} />,
   },
-  {
-    id: 'updatedAt-ASC',
-    sortBy: 'updatedAt',
-    sortOrder: 'ASC',
-    label: 'Cập nhật cũ nhất',
-    description: 'Truyện cập nhật lâu nhất lên trước',
-    icon: <Calendar size={16} />,
-  },
-  {
-    id: 'bookName-ASC',
-    sortBy: 'bookName',
-    sortOrder: 'ASC',
-    label: 'Tên truyện (A → Z)',
-    description: 'Sắp xếp theo thứ tự bảng chữ cái tiếng Việt',
-    icon: <ArrowDownAZ size={16} />,
-  },
-  {
-    id: 'bookName-DESC',
-    sortBy: 'bookName',
-    sortOrder: 'DESC',
-    label: 'Tên truyện (Z → A)',
-    description: 'Sắp xếp ngược bảng chữ cái tiếng Việt',
-    icon: <ArrowUpAZ size={16} />,
-  },
-  {
-    id: 'lastedReadAt-DESC',
-    sortBy: 'lastedReadAt',
-    sortOrder: 'DESC',
-    label: 'Lần đọc gần nhất',
-    description: 'Truyện bạn vừa đọc gần đây nhất',
-    icon: <BookOpen size={16} />,
-  },
 ];
 
 interface SortSheetProps {

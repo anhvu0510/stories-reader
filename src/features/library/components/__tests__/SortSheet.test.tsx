@@ -29,10 +29,10 @@ describe('SortSheet Component Tests', () => {
     );
 
     expect(screen.getByText('Sắp xếp danh sách')).toBeDefined();
+    expect(screen.getByText('Mới thêm vào thư viện')).toBeDefined();
     expect(screen.getByText('Mới cập nhật gần nhất')).toBeDefined();
-    expect(screen.getByText('Tên truyện (A → Z)')).toBeDefined();
-    expect(screen.getByText('Tên truyện (Z → A)')).toBeDefined();
-    expect(screen.getByText('Lần đọc gần nhất')).toBeDefined();
+    expect(screen.queryByText('Tên truyện (A → Z)')).toBeNull();
+    expect(screen.queryByText('Lần đọc gần nhất')).toBeNull();
   });
 
   it('does not render when isOpen is false', () => {
@@ -53,20 +53,20 @@ describe('SortSheet Component Tests', () => {
     render(
       <SortSheet
         isOpen={true}
-        currentSortBy="updatedAt"
+        currentSortBy="createdAt"
         currentSortOrder="DESC"
         onApply={mockOnApply}
         onClose={mockOnClose}
       />
     );
 
-    const azOption = screen.getByText('Tên truyện (A → Z)');
-    fireEvent.click(azOption);
+    const updatedAtOption = screen.getByText('Mới cập nhật gần nhất');
+    fireEvent.click(updatedAtOption);
 
     const applyButton = screen.getByText('Áp dụng');
     fireEvent.click(applyButton);
 
-    expect(mockOnApply).toHaveBeenCalledWith('bookName', 'ASC');
+    expect(mockOnApply).toHaveBeenCalledWith('updatedAt', 'DESC');
     expect(mockOnClose).toHaveBeenCalled();
   });
 
@@ -74,8 +74,8 @@ describe('SortSheet Component Tests', () => {
     render(
       <SortSheet
         isOpen={true}
-        currentSortBy="bookName"
-        currentSortOrder="ASC"
+        currentSortBy="updatedAt"
+        currentSortOrder="DESC"
         defaultSortBy="createdAt"
         defaultSortOrder="DESC"
         onApply={mockOnApply}

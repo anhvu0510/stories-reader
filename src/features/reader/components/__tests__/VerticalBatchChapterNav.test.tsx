@@ -27,12 +27,20 @@ describe('VerticalBatchChapterNav Component', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('QC-1 & QC-2 [Instant Jump 0ms]: Render đủ nút số tròn mini và cuộn khi click', () => {
-    const mockScrollIntoView = vi.fn();
-    const sectionEl = document.createElement('div');
-    sectionEl.id = 'chapter-section-c2';
-    sectionEl.scrollIntoView = mockScrollIntoView;
-    document.body.appendChild(sectionEl);
+  it('QC-1 [Locate Button Render]: Ẩn mặc định khi không có class .msreadout-line-highlight, chỉ hiện khi có class highlight', () => {
+    const { container } = render(
+      <VerticalBatchChapterNav
+        chapters={mockChapters}
+        activeChapterId="c1"
+        isVisible={true}
+      />
+    );
+    expect(container.firstChild).toBeNull();
+
+    // Add highlight element to DOM
+    const highlightEl = document.createElement('span');
+    highlightEl.className = 'msreadout-line-highlight';
+    document.body.appendChild(highlightEl);
 
     render(
       <VerticalBatchChapterNav
@@ -42,36 +50,17 @@ describe('VerticalBatchChapterNav Component', () => {
       />
     );
 
-    const btn2 = screen.getByTitle('Chương 2: Đột phá');
-    expect(btn2).toBeDefined();
+    const locateBtn = screen.getByLabelText('Nhảy tới dòng đang đọc');
+    expect(locateBtn).toBeDefined();
 
-    fireEvent.click(btn2);
-
-    expect(mockScrollIntoView).toHaveBeenCalledWith({
-      behavior: 'smooth',
-      block: 'start',
-    });
-
-    document.body.removeChild(sectionEl);
-  });
-
-  it('QC-3 [Active Highlight]: Highlight đĩa tròn mini active', () => {
-    render(
-      <VerticalBatchChapterNav
-        chapters={mockChapters}
-        activeChapterId="c2"
-        isVisible={true}
-      />
-    );
-
-    const activeBtn = screen.getByTitle('Chương 2: Đột phá');
-    const inactiveBtn = screen.getByTitle('Chương 1: Khởi đầu');
-
-    expect(activeBtn.className).toContain('bg-primary');
-    expect(inactiveBtn.className).not.toContain('bg-primary text-on-primary');
+    document.body.removeChild(highlightEl);
   });
 
   it('QC-4 [Sync Dock Hide/Show]: Áp dụng class trượt ẩn khi isVisible === false', () => {
+    const highlightEl = document.createElement('span');
+    highlightEl.className = 'msreadout-line-highlight';
+    document.body.appendChild(highlightEl);
+
     const { container } = render(
       <VerticalBatchChapterNav
         chapters={mockChapters}
@@ -83,6 +72,8 @@ describe('VerticalBatchChapterNav Component', () => {
     const nav = container.firstChild as HTMLElement;
     expect(nav.className).toContain('-translate-x-12');
     expect(nav.className).toContain('opacity-0');
+
+    document.body.removeChild(highlightEl);
   });
 
   it('QC-6 [Highlight Line Jump]: Cuộn tới dòng có class .msreadout-line-highlight khi click nút LocateFixed', () => {

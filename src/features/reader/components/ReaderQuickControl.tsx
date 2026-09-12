@@ -10,10 +10,13 @@ import {
   Square,
   SkipBack,
   SkipForward,
+  LocateFixed,
+  ChevronDown,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useModalStore } from '../../../stores/useModalStore';
+import { ChapterDetailItem } from '../../../shared/types';
 
 interface ReaderQuickControlProps {
   bookId: string;
@@ -26,6 +29,8 @@ interface ReaderQuickControlProps {
   isTTSActive?: boolean;
   isTTSPlaying?: boolean;
   currentParagraphIndex?: number;
+  chapters?: ChapterDetailItem[];
+  activeChapterId?: string;
   onOpenChapterSelect: () => void;
   onOpenTranslation: () => void;
   onToggleTTS?: () => void;
@@ -46,6 +51,8 @@ export function ReaderQuickControl({
   isVisible = true,
   isTTSActive = false,
   isTTSPlaying = false,
+  chapters,
+  activeChapterId,
   onOpenChapterSelect,
   onOpenTranslation,
   onToggleTTS,
@@ -58,6 +65,28 @@ export function ReaderQuickControl({
   const navigate = useNavigate();
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
   const openSettings = useModalStore((state) => state.openSettings);
+
+  const handleJumpToChapter = (chapterId: string) => {
+    if (typeof document === 'undefined') return;
+    const targetEl = document.getElementById(`chapter-section-${chapterId}`);
+    if (targetEl && typeof targetEl.scrollIntoView === 'function') {
+      targetEl.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  };
+
+  const handleJumpToHighlight = () => {
+    if (typeof document === 'undefined') return;
+    const highlightEl = document.querySelector('.msreadout-line-highlight');
+    if (highlightEl && typeof highlightEl.scrollIntoView === 'function') {
+      highlightEl.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  };
 
   const hasPrev = Boolean(
     prevChapterId &&
@@ -81,7 +110,7 @@ export function ReaderQuickControl({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-surface-container/95 backdrop-blur-md border border-outline-variant/30 shadow-2xl rounded-full px-3.5 py-2.5 flex items-center justify-between gap-3 sm:gap-4 pointer-events-auto transition-colors duration-200"
+        className="bg-surface-container/95 backdrop-blur-md border border-outline-variant/30 shadow-2xl rounded-3xl px-3.5 py-2 flex items-center justify-between gap-2.5 pointer-events-auto transition-colors duration-200"
       >
         {/* LEFT GROUP: Pure Icon Prev & Next Buttons (Zero Text Labels) */}
         <div className="flex items-center gap-2 bg-surface-container-high p-1 rounded-full border border-outline-variant/20 flex-shrink-0">
@@ -126,7 +155,7 @@ export function ReaderQuickControl({
         <div className="w-[1px] h-4.5 bg-white/25 shadow-xs shrink-0 mx-0.5" />
 
         {/* CENTER: Dynamic Mode (Normal Chapter Text vs Inline Read Aloud Controls) */}
-        <div className="flex-1 flex items-center justify-center min-w-0 px-1">
+        <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-1 py-0.5">
           {isTTSActive ? (
             /* Inline TTS Read Aloud Control Suite */
             <div className="flex items-center gap-1.5 bg-surface-container-highest/90 px-2.5 py-1 rounded-full border border-primary/30 shadow-sm animate-in fade-in duration-200">
@@ -190,7 +219,58 @@ export function ReaderQuickControl({
                 <Square size={14} fill="currentColor" />
               </button>
             </div>
+          ) : chapters && chapters.length > 1 ? (
+            /* Multi-Chapter Batch Mode: Refined Mini chapter badges on top + Sleek Range pill on bottom */
+            <div className="flex flex-col items-center justify-center gap-1 max-w-full">
+              <div className="flex items-center justify-center gap-1.5 max-w-full overflow-x-auto no-scrollbar px-1 py-0.5">
+                {chapters.map((chap) => {
+                  const isActive = chap.chapterId === activeChapterId;
+                  return (
+                    <button
+                      key={chap.chapterId}
+                      data-nav-chapter-id={chap.chapterId}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleJumpToChapter(chap.chapterId);
+                      }}
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-tight inline-flex items-center justify-center transition-colors duration-150 shrink-0 cursor-pointer ${
+                        isActive
+                          ? 'bg-primary text-on-primary font-black shadow-xs'
+                          : 'bg-surface-container-high/60 text-on-surface-variant/80 border border-outline-variant/20 hover:text-on-surface hover:bg-surface-container-highest active:scale-95'
+                      }`}
+                      title={
+                        chap.title?.toLowerCase().startsWith('chương')
+                          ? chap.title
+                          : `Chương ${chap.chapterNumber}: ${chap.title}`
+                      }
+                    >
+                      <span>{chap.chapterNumber}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenChapterSelect();
+                }}
+                className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20 hover:border-primary/40 transition-all active:scale-95 shadow-2xs cursor-pointer"
+                title="Mở bảng chọn chương"
+              >
+                <span className="text-[10px] font-black font-mono text-primary leading-none tracking-tight">
+                  {chapterDisplayLabel || (currentChapterNumber !== undefined ? currentChapterNumber : '-')}
+                </span>
+                {totalChapters ? (
+                  <span className="text-[9px] font-bold font-mono text-primary/60">
+                    /{totalChapters}
+                  </span>
+                ) : null}
+                <ChevronDown size={11} className="text-primary/70 shrink-0 ml-0.5" />
+              </button>
+            </div>
           ) : (
+            /* Single Chapter Mode */
             <button
               onClick={(e) => {
                 e.stopPropagation();

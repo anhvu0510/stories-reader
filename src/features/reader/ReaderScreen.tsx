@@ -404,6 +404,8 @@ export function ReaderScreen() {
           nextChapterId={navigation?.next?.chapterId || undefined}
           currentChapterNumber={currentViewingNumber}
           chapterDisplayLabel={chapterDisplayLabel}
+          chapters={displayChapters}
+          activeChapterId={activeChapter?.chapterId}
           isVisible={showZenControls}
           isTTSActive={false}
           isTTSPlaying={false}

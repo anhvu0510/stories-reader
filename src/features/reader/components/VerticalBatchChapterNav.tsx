@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { LocateFixed } from 'lucide-react';
 import { ChapterDetailItem } from '../../../shared/types';
 
@@ -14,34 +14,40 @@ export function VerticalBatchChapterNav({
   isVisible = true,
 }: VerticalBatchChapterNavProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [hasHighlight, setHasHighlight] = useState(false);
 
-  // Auto scroll active circle button into view inside vertical strip
+  // Monitor DOM for presence of .msreadout-line-highlight element
   useEffect(() => {
-    if (!activeChapterId || !containerRef.current) return;
-    const activeEl = containerRef.current.querySelector(
-      `[data-nav-chapter-id="${activeChapterId}"]`
-    ) as HTMLElement | null;
+    if (typeof document === 'undefined') return;
 
-    if (activeEl && typeof activeEl.scrollIntoView === 'function') {
-      activeEl.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
+    const checkHighlight = () => {
+      if (typeof document === 'undefined') return;
+      const el = document.querySelector('.msreadout-line-highlight');
+      setHasHighlight(Boolean(el));
+    };
+
+    checkHighlight();
+
+    if (typeof MutationObserver !== 'undefined') {
+      const observer = new MutationObserver(() => {
+        checkHighlight();
       });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class'],
+      });
+
+      return () => {
+        observer.disconnect();
+      };
     }
-  }, [activeChapterId]);
+  }, []);
 
   if (!chapters || chapters.length <= 1) return null;
-
-  const handleJumpToChapter = (chapterId: string) => {
-    if (typeof document === 'undefined') return;
-    const targetEl = document.getElementById(`chapter-section-${chapterId}`);
-    if (targetEl && typeof targetEl.scrollIntoView === 'function') {
-      targetEl.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }
-  };
+  if (!hasHighlight) return null;
 
   const handleJumpToHighlight = () => {
     if (typeof document === 'undefined') return;
@@ -79,38 +85,6 @@ export function VerticalBatchChapterNav({
         >
           <LocateFixed size={15} />
         </button>
-
-        <div className="w-4 h-[1px] bg-outline-variant/40 shrink-0 my-0.5" />
-
-        {chapters.map((chap) => {
-          const isActive = chap.chapterId === activeChapterId;
-
-          return (
-            <button
-              key={chap.chapterId}
-              data-nav-chapter-id={chap.chapterId}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleJumpToChapter(chap.chapterId);
-              }}
-              className={`w-8 h-8 rounded-full text-xs font-mono font-black tracking-tight flex items-center justify-center transition-all duration-200 shrink-0 cursor-pointer relative ${
-                isActive
-                  ? 'bg-primary text-on-primary shadow-md shadow-primary/30 scale-105 border border-primary/50'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/60 active:scale-95'
-              }`}
-              title={
-                chap.title?.toLowerCase().startsWith('chương')
-                  ? chap.title
-                  : `Chương ${chap.chapterNumber}: ${chap.title}`
-              }
-            >
-              <span>{chap.chapterNumber}</span>
-              {isActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-on-primary absolute top-0.5 right-0.5 animate-pulse shadow-xs" />
-              )}
-            </button>
-          );
-        })}
       </div>
     </div>
   );

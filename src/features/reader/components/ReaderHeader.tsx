@@ -25,7 +25,6 @@ export const ReaderHeader = memo(function ReaderHeader({
 
   return (
     <header
-      aria-hidden="true"
       className="fixed top-0 left-0 right-0 z-40 bg-surface/90 backdrop-blur-xl border-b border-outline-variant/30 px-3.5 py-2.5 w-full max-w-md mx-auto shadow-md overflow-x-hidden box-border transition-all duration-300 transform-gpu"
     >
       <div className="flex items-center justify-between gap-2">

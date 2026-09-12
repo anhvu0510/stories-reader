@@ -19,12 +19,12 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
   const fetchHistoryBooks = useCallback(async (querySearch: string = '') => {
     setLoading(true);
     try {
-      const res = await BookRepository.getBooks(1, 9999, querySearch, 'HISTORY');
+      const res = await BookRepository.getBooks(1, 9999, querySearch, 'HISTORY', 'lastedReadAt', 'DESC');
       const allBooks = res.books || [];
       setHistoryBooks(allBooks);
     } catch {
       try {
-        const res = await BookRepository.getBooks(1, 9999, querySearch);
+        const res = await BookRepository.getBooks(1, 9999, querySearch, 'ALL', 'lastedReadAt', 'DESC');
         const allBooks = res.books || [];
         setHistoryBooks(allBooks.filter((b) => b.lastReadChapter || b.totalTranslated > 0));
       } catch {}
@@ -67,9 +67,10 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
 
   const currentBook = historyBooks.find((b) => b.bookId === currentBookId);
   const otherBooks = historyBooks.filter((b) => b.bookId !== currentBookId);
+  const displayBooks = searchQuery.trim() ? historyBooks : otherBooks;
 
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '23-07-2026';
+    if (!dateStr) return '--';
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;
@@ -83,7 +84,8 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
   };
 
   const renderBookCard = (book: Book, isPinned: boolean) => {
-    const formattedDate = formatDate(book.updatedAt || (book as any).lastedReadAt);
+    const rawDate = book.lastedReadAt || book.updatedAt || book.createdAt;
+    const formattedDate = formatDate(rawDate);
     const readCount = book.lastReadChapter?.chapterNumber || (book.totalTranslated > 0 ? 1 : 0);
 
     return (
@@ -220,8 +222,8 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
             </div>
           ) : (
             <>
-              {/* Permanently Pinned Current Book Section */}
-              {currentBook && !searchQuery && (
+              {/* Permanently Pinned Current Book Section (Only when not searching) */}
+              {currentBook && !searchQuery.trim() && (
                 <div className="space-y-1.5 pb-1">
                   {renderBookCard(currentBook, true)}
                   {otherBooks.length > 0 && (
@@ -230,19 +232,19 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
                 </div>
               )}
 
-              {/* History List Section */}
-              {otherBooks.length > 0 ? (
+              {/* History List / Search Results Section */}
+              {displayBooks.length > 0 ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-[10px] font-mono font-extrabold text-on-surface-variant/70 uppercase tracking-widest px-1">
-                    <span>DANH SÁCH LỊCH SỬ</span>
-                    <span>{otherBooks.length} truyện</span>
+                    <span>{searchQuery.trim() ? 'KẾT QUẢ TÌM KIẾM' : 'DANH SÁCH LỊCH SỬ'}</span>
+                    <span>{displayBooks.length} truyện</span>
                   </div>
                   <div className="space-y-3">
-                    {otherBooks.map((b) => renderBookCard(b, false))}
+                    {displayBooks.map((b) => renderBookCard(b, false))}
                   </div>
                 </div>
               ) : (
-                searchQuery && (
+                searchQuery.trim() && (
                   <div className="py-10 text-center text-xs text-on-surface-variant/60 font-medium">
                     Không tìm thấy truyện phù hợp với "{searchQuery}"
                   </div>

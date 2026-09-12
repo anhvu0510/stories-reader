@@ -40,7 +40,8 @@ export function LibraryScreen() {
   const [search, setSearch] = useState(savedSearch || '');
   const [tab, setTab] = useState<'ALL' | 'HISTORY' | 'FAVORITE' | 'AI'>(savedTab);
   const [selectedTags, setSelectedTags] = useState<string[]>(savedTags || []);
-  const [sortBy, setSortByState] = useState<SortByField>(savedSortBy || 'updatedAt');
+  const initialSortBy: SortByField = savedSortBy === 'updatedAt' ? 'updatedAt' : 'createdAt';
+  const [sortBy, setSortByState] = useState<SortByField>(initialSortBy);
   const [sortOrder, setSortOrderState] = useState<SortOrderDirection>(savedSortOrder || 'DESC');
 
   const [isTagFilterOpen, setIsTagFilterOpen] = useState(false);
@@ -81,8 +82,19 @@ export function LibraryScreen() {
       const q = querySearch !== undefined ? querySearch : search;
       const t = activeTab !== undefined ? activeTab : tab;
       const tg = filterTags !== undefined ? filterTags : selectedTags;
-      const sBy = currentSortBy !== undefined ? currentSortBy : sortBy;
-      const sOrder = currentSortOrder !== undefined ? currentSortOrder : sortOrder;
+
+      let sBy: SortByField;
+      let sOrder: SortOrderDirection = 'DESC';
+
+      if (t === 'HISTORY') {
+        sBy = 'lastedReadAt';
+      } else if (t === 'ALL') {
+        const rawSortBy = currentSortBy !== undefined ? currentSortBy : sortBy;
+        sBy = rawSortBy === 'updatedAt' ? 'updatedAt' : 'createdAt';
+        sOrder = currentSortOrder !== undefined ? currentSortOrder : sortOrder;
+      } else {
+        sBy = 'createdAt';
+      }
 
       try {
         const res = await BookRepository.getBooks(targetPage, bookLimit, q, t, sBy, sOrder, tg);
@@ -203,9 +215,9 @@ export function LibraryScreen() {
     fetchBooks(1, search, tab, selectedTags, newSortBy, newSortOrder);
   };
 
-  const defaultSortBy: SortByField = tab === 'HISTORY' ? 'lastedReadAt' : 'updatedAt';
+  const defaultSortBy: SortByField = 'createdAt';
   const defaultSortOrder: SortOrderDirection = 'DESC';
-  const isCustomSortActive = sortBy !== defaultSortBy || sortOrder !== defaultSortOrder;
+  const isCustomSortActive = tab === 'ALL' && (sortBy !== defaultSortBy || sortOrder !== defaultSortOrder);
 
   return (
     <div className="h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-200">
@@ -218,7 +230,7 @@ export function LibraryScreen() {
           onOpenSettings={() => openSettings('reader')}
           onOpenTagFilter={() => setIsTagFilterOpen(true)}
           activeTagsCount={selectedTags.length}
-          onOpenSort={() => setIsSortSheetOpen(true)}
+          onOpenSort={tab === 'ALL' ? () => setIsSortSheetOpen(true) : undefined}
           isCustomSortActive={isCustomSortActive}
         />
 
