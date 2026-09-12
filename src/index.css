@@ -327,6 +327,7 @@ body {
   @apply bg-background text-on-background font-sans text-sm antialiased;
 }
 
+*::-webkit-scrollbar,
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
 .hide-scrollbar::-webkit-scrollbar,
@@ -336,6 +337,7 @@ body::-webkit-scrollbar,
   height: 0px;
 }
 
+*,
 html,
 body,
 .hide-scrollbar,

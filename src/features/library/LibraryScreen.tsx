@@ -386,7 +386,7 @@ export function LibraryScreen() {
       <main
         ref={mainScrollRef}
         onScroll={handleMainScroll}
-        className="flex-1 overflow-y-auto px-3.5 py-3 space-y-3 pb-24 relative"
+        className="flex-1 overflow-y-auto hide-scrollbar no-scrollbar px-3.5 py-3 space-y-3 pb-24 relative"
       >
         <LoadingOverlay isLoading={loading && books.length === 0} message="Đang tải danh sách..." />
 
