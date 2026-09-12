@@ -13,7 +13,7 @@ import { BottomDock } from '../../components/BottomDock';
 import { LoadingOverlay } from '../../components/LoadingOverlay';
 import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { OfflineManagerSheet } from '../../components/OfflineManagerSheet';
-import { BookOpen, Clock, Sparkles, Library, X, RotateCcw, Heart } from 'lucide-react';
+import { BookOpen, Clock, Sparkles, Library, X, RotateCcw, Heart, Search, Tag, ArrowUpDown } from 'lucide-react';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useLibraryStore, SortByField, SortOrderDirection } from '../../stores/useLibraryStore';
 import { useReaderConfigStore } from '../../stores/useReaderConfigStore';
@@ -286,122 +286,101 @@ export function LibraryScreen() {
           </div>
         )}
 
-        {/* Navigation Tabs Header - 3D Pop-Out Glass Tabs */}
+        {/* Navigation Tabs + Filters Horizontal Row */}
         <div className="p-1.5 border-t border-white/10 bg-white/[0.03] dark:bg-white/[0.05] backdrop-blur-xl">
-          <div className="flex items-center gap-1 bg-black/15 dark:bg-black/30 p-1 rounded-lg border border-white/10 relative">
-            {/* Tab 1: Tất cả */}
-            <button
-              onClick={() => handleTabChange('ALL')}
-              className={`flex-1 py-2 px-1 text-xs transition-all flex items-center justify-center relative group cursor-pointer select-none rounded-md active:scale-[0.97] ${
-                tab === 'ALL'
-                  ? 'text-primary font-black drop-shadow-xs'
-                  : 'text-on-surface-variant/75 font-semibold hover:text-on-surface'
-              }`}
-            >
+          <div className="flex items-center justify-between gap-1.5 w-full">
+            {/* Sliding Capsule Glass Tabs (Scrollable fallback to prevent icon clipping) */}
+            <div className="h-9 flex items-center gap-0.5 p-1 bg-gradient-to-b from-white/10 via-slate-900/60 to-slate-950/80 border border-white/20 rounded-[16px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),_0_2px_8px_rgba(0,0,0,0.3)] overflow-x-auto hide-scrollbar shrink min-w-0 box-border">
+              {[
+                { id: 'ALL', label: 'Tất cả', title: 'Tất cả', Icon: Library, activeText: 'text-primary font-bold', activePill: 'bg-gradient-to-b from-primary/30 to-primary/10 border-primary/50 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]', activeBadge: 'bg-primary/20 text-primary border-primary/30' },
+                { id: 'HISTORY', label: 'Lịch sử', title: 'Lịch sử', Icon: Clock, activeText: 'text-primary font-bold', activePill: 'bg-gradient-to-b from-primary/30 to-primary/10 border-primary/50 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]', activeBadge: 'bg-primary/20 text-primary border-primary/30' },
+                { id: 'FAVORITE', label: 'Yêu thích', title: 'Truyện yêu thích', Icon: Heart, activeText: 'text-rose-400 font-bold', activePill: 'bg-gradient-to-b from-rose-500/30 to-rose-500/10 border-rose-500/50 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]', activeBadge: 'bg-rose-500/20 text-rose-400 border-rose-500/30' },
+                { id: 'AI', label: 'Dịch AI', title: 'Dịch AI', Icon: Sparkles, activeText: 'text-emerald-400 font-bold', activePill: 'bg-gradient-to-b from-emerald-500/30 to-emerald-500/10 border-emerald-400/50 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]', activeBadge: 'bg-emerald-500/20 text-emerald-400 border-emerald-400/30' },
+              ].map((t) => {
+                const isActive = tab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => handleTabChange(t.id as any)}
+                    title={t.title}
+                    className={`relative h-7 flex items-center justify-center gap-1 px-1.5 rounded-[11px] transition-colors duration-200 active:scale-95 shrink-0 ${
+                      isActive ? `${t.activeText} font-bold` : 'text-on-surface-variant/75 hover:text-on-surface'
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="active-tab-glass-pill"
+                        transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+                        className={`absolute inset-0 rounded-[11px] border ${t.activePill}`}
+                      />
+                    )}
+                    <t.Icon
+                      size={13}
+                      className={`shrink-0 relative z-10 ${
+                        t.id === 'FAVORITE' && isActive
+                          ? 'fill-rose-500 text-rose-500'
+                          : isActive
+                          ? t.activeText
+                          : 'text-on-surface-variant/60'
+                      }`}
+                    />
+                    <span className="text-[10.5px] tracking-tight font-bold relative z-10 whitespace-nowrap">
+                      {t.label}
+                    </span>
+                    {isActive && (
+                      <span className={`text-[8.5px] font-mono font-bold px-1.5 py-[0.5px] rounded-full border shrink-0 leading-none relative z-10 ${t.activeBadge}`}>
+                        {total}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Sort & Tag Filter Action Buttons (Guaranteed 100% visible) */}
+            <div className="flex items-center gap-1.5 shrink-0 h-9 ml-auto">
+              {/* Sort Button */}
               {tab === 'ALL' && (
-                <motion.div
-                  layoutId="active-liquid-tab-pill"
-                  transition={{ type: 'spring', stiffness: 480, damping: 36 }}
-                  className="absolute inset-0 rounded-md bg-white/[0.14] dark:bg-white/[0.14] backdrop-blur-xl border border-primary/60 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.5),_inset_0_-1px_1px_rgba(0,0,0,0.3),_0_4px_12px_rgba(0,0,0,0.4)] pointer-events-none"
-                />
-              )}
-              <div className="flex items-center gap-1 min-w-0 relative z-10">
-                <Library size={13} className={`shrink-0 transition-transform group-active:scale-90 ${tab === 'ALL' ? 'text-primary' : ''}`} />
-                <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Tất cả</span>
-                {tab === 'ALL' && (
-                  <span className="text-[9px] font-mono font-black px-1.5 py-[1px] rounded-full bg-primary/20 text-primary border border-primary/40 shrink-0 leading-none shadow-2xs">
-                    {total}
-                  </span>
-                )}
-              </div>
-            </button>
-
-            {/* Tab 2: Lịch sử */}
-            <button
-              onClick={() => handleTabChange('HISTORY')}
-              className={`flex-1 py-2 px-1 text-xs transition-all flex items-center justify-center relative group cursor-pointer select-none rounded-md active:scale-[0.97] ${
-                tab === 'HISTORY'
-                  ? 'text-primary font-black drop-shadow-xs'
-                  : 'text-on-surface-variant/75 font-semibold hover:text-on-surface'
-              }`}
-            >
-              {tab === 'HISTORY' && (
-                <motion.div
-                  layoutId="active-liquid-tab-pill"
-                  transition={{ type: 'spring', stiffness: 480, damping: 36 }}
-                  className="absolute inset-0 rounded-md bg-white/[0.14] dark:bg-white/[0.14] backdrop-blur-xl border border-primary/60 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.5),_inset_0_-1px_1px_rgba(0,0,0,0.3),_0_4px_12px_rgba(0,0,0,0.4)] pointer-events-none"
-                />
-              )}
-              <div className="flex items-center gap-1 min-w-0 relative z-10">
-                <Clock size={13} className={`shrink-0 transition-transform group-active:scale-90 ${tab === 'HISTORY' ? 'text-primary' : ''}`} />
-                <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Lịch sử</span>
-                {tab === 'HISTORY' && (
-                  <span className="text-[9px] font-mono font-black px-1.5 py-[1px] rounded-full bg-primary/20 text-primary border border-primary/40 shrink-0 leading-none shadow-2xs">
-                    {total}
-                  </span>
-                )}
-              </div>
-            </button>
-
-            {/* Tab 3: Yêu thích */}
-            <button
-              onClick={() => handleTabChange('FAVORITE')}
-              className={`flex-1 py-2 px-1 text-xs transition-all flex items-center justify-center relative group cursor-pointer select-none rounded-md active:scale-[0.97] ${
-                tab === 'FAVORITE'
-                  ? 'text-rose-500 font-black drop-shadow-xs'
-                  : 'text-on-surface-variant/75 font-semibold hover:text-on-surface'
-              }`}
-              title="Truyện yêu thích"
-            >
-              {tab === 'FAVORITE' && (
-                <motion.div
-                  layoutId="active-liquid-tab-pill"
-                  transition={{ type: 'spring', stiffness: 480, damping: 36 }}
-                  className="absolute inset-0 rounded-md bg-white/[0.14] dark:bg-white/[0.14] backdrop-blur-xl border border-rose-500/60 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.5),_inset_0_-1px_1px_rgba(0,0,0,0.3),_0_4px_12px_rgba(0,0,0,0.4)] pointer-events-none"
-                />
-              )}
-              <div className="flex items-center gap-1 min-w-0 relative z-10">
-                <Heart
-                  size={13}
-                  className={`shrink-0 transition-transform group-active:scale-90 ${
-                    tab === 'FAVORITE' ? 'fill-rose-500 text-rose-500' : ''
+                <button
+                  type="button"
+                  onClick={() => setIsSortSheetOpen(true)}
+                  className={`relative h-9 w-9 rounded-[14px] border transition-all active:scale-95 flex items-center justify-center shrink-0 box-border ${
+                    isCustomSortActive
+                      ? 'bg-gradient-to-b from-primary/30 via-slate-900/80 to-slate-950 border-primary/60 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),_0_4px_12px_rgba(245,158,11,0.25)]'
+                      : 'bg-gradient-to-b from-white/10 via-slate-900/60 to-slate-950/80 border-white/20 text-on-surface-variant hover:text-primary hover:border-primary/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),_0_2px_6px_rgba(0,0,0,0.3)]'
                   }`}
-                />
-                <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Yêu thích</span>
-                {tab === 'FAVORITE' && (
-                  <span className="text-[9px] font-mono font-black px-1.5 py-[1px] rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 shrink-0 leading-none shadow-2xs">
-                    {total}
-                  </span>
-                )}
-              </div>
-            </button>
-
-            {/* Tab 4: Dịch AI */}
-            <button
-              onClick={() => handleTabChange('AI')}
-              className={`flex-1 py-2 px-1 text-xs transition-all flex items-center justify-center relative group cursor-pointer select-none rounded-md active:scale-[0.97] ${
-                tab === 'AI'
-                  ? 'text-emerald-400 font-black drop-shadow-xs'
-                  : 'text-on-surface-variant/75 font-semibold hover:text-on-surface'
-              }`}
-            >
-              {tab === 'AI' && (
-                <motion.div
-                  layoutId="active-liquid-tab-pill"
-                  transition={{ type: 'spring', stiffness: 480, damping: 36 }}
-                  className="absolute inset-0 rounded-md bg-white/[0.14] dark:bg-white/[0.14] backdrop-blur-xl border border-emerald-400/60 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.5),_inset_0_-1px_1px_rgba(0,0,0,0.3),_0_4px_12px_rgba(0,0,0,0.4)] pointer-events-none"
-                />
+                  title="Sắp xếp danh sách"
+                  aria-label="Sắp xếp danh sách"
+                  data-testid="sort-trigger-btn"
+                >
+                  <ArrowUpDown size={14} />
+                  {isCustomSortActive && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary border-2 border-surface" />
+                  )}
+                </button>
               )}
-              <div className="flex items-center gap-1 min-w-0 relative z-10">
-                <Sparkles size={13} className={`shrink-0 transition-transform group-active:scale-90 ${tab === 'AI' ? 'text-emerald-400' : ''}`} />
-                <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Dịch AI</span>
-                {tab === 'AI' && (
-                  <span className="text-[9px] font-mono font-black px-1.5 py-[1px] rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-400/40 shrink-0 leading-none shadow-2xs">
-                    {total}
+
+              {/* Tag Filter Button */}
+              <button
+                type="button"
+                onClick={() => setIsTagFilterOpen(true)}
+                className={`relative h-9 w-9 rounded-[14px] border transition-all active:scale-95 flex items-center justify-center shrink-0 box-border ${
+                  selectedTags.length > 0
+                    ? 'bg-gradient-to-b from-primary via-primary/90 to-primary/80 border-primary text-on-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),_0_4px_12px_rgba(245,158,11,0.3)]'
+                    : 'bg-gradient-to-b from-white/10 via-slate-900/60 to-slate-950/80 border-white/20 text-on-surface-variant hover:text-primary hover:border-primary/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.25),_0_2px_6px_rgba(0,0,0,0.3)]'
+                }`}
+                title="Lọc theo Thể loại & Tags"
+                aria-label="Lọc theo Thể loại & Tags"
+                data-testid="tag-filter-trigger-btn"
+              >
+                <Tag size={14} />
+                {selectedTags.length > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1 py-0.2 min-w-3.5 h-3.5 rounded-full bg-error text-on-error text-[8.5px] font-bold font-mono flex items-center justify-center border border-surface">
+                    {selectedTags.length}
                   </span>
                 )}
-              </div>
-            </button>
+              </button>
+            </div>
           </div>
         </div>
       </div>

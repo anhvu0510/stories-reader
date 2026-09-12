@@ -7,6 +7,7 @@ import { AIRepository } from '../repositories/AIRepository';
 import { SettingsRepository } from '../repositories/SettingsRepository';
 import { useToastStore } from '../stores/useToastStore';
 import { useReaderConfigStore } from '../stores/useReaderConfigStore';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { cn } from '../lib/utils';
 
 type Tab = 'current' | 'batch_chapter' | 'story';
@@ -731,10 +732,12 @@ export function TranslationSheet({
     setSelectedBooks(next);
   };
 
+  useBodyScrollLock(true);
+
   return (
-    <div className="fixed inset-0 z-[99999] flex items-end justify-center p-0 bg-black/35 backdrop-blur-[2px] overflow-x-hidden box-border">
+    <div className="fixed inset-0 z-[99000] flex items-end justify-center p-0 bg-black/35 backdrop-blur-[2px] overflow-x-hidden overscroll-none box-border">
       {/* Backdrop */}
-      <div className="absolute inset-0" onClick={onClose} />
+      <div className="absolute inset-0" onClick={onClose} onTouchMove={(e) => e.preventDefault()} />
       
       {/* Sheet Content */}
       <div className="relative bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.4)] h-[78vh] min-h-[520px] max-h-[85dvh] flex flex-col z-10 overflow-hidden box-border transform-gpu overscroll-contain transition-all duration-200">

@@ -4,8 +4,10 @@ import { Book } from '../shared/types';
 import { offlineDb } from '../lib/offlineDb';
 import { useAppStore } from '../stores/useAppStore';
 import { useToastStore } from '../stores/useToastStore';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?: () => void, isEmbedded?: boolean }) {
+  useBodyScrollLock(!isEmbedded);
   const isOffline = useAppStore((state) => state.isOfflineMode);
   const setOfflineMode = useAppStore((state) => state.setOfflineMode);
   const showToast = useToastStore((state) => state.showToast);
@@ -60,62 +62,61 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
             )}
           </div>
         </div>
-        
-        {/* Toggle Mode */}
-        <div className="flex items-center justify-between p-3 sm:p-4 rounded-2xl bg-white/5 border border-outline-variant/30 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]">
-          <div>
-            <h3 className="font-bold text-sm sm:text-base">Chế độ ngoại tuyến</h3>
-            <p className="text-[11px] sm:text-xs text-on-surface-variant">
-              Tạm ngừng truy cập API, chỉ hiển thị dữ liệu đã lưu
-            </p>
-          </div>
-          <button 
-            onClick={() => toggleOfflineMode(!isOffline)}
-            className={`relative w-12 h-6 sm:w-14 sm:h-7 rounded-full transition-colors flex-shrink-0 focus:outline-none ${isOffline ? 'bg-primary' : 'bg-white/10'}`}
-            role="switch"
-            aria-checked={isOffline}
-          >
-            <span className={`absolute left-1 top-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-on-primary transition-transform ${isOffline ? 'translate-x-6 sm:translate-x-7' : 'translate-x-0'}`} />
-          </button>
-        </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto hide-scrollbar w-full">
-        <div className="p-3 sm:p-5 flex flex-col gap-3 max-w-[600px] mx-auto w-full">
-          <h3 className="font-bold text-xs text-on-surface-variant/80 uppercase tracking-wider mb-1">DANH SÁCH ĐÃ LƯU</h3>
-          
+      {/* Content body */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Toggle Mode Offline Card */}
+        <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between shadow-xs">
+          <div className="space-y-0.5">
+            <div className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+              <Wifi size={14} className={isOffline ? 'text-emerald-400' : 'text-on-surface-variant/60'} />
+              <span>Chế độ đọc ngoại tuyến</span>
+            </div>
+            <p className="text-[10px] text-on-surface-variant/70">Chỉ tải dữ liệu đã lưu trong máy</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isOffline}
+              onChange={(e) => toggleOfflineMode(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+          </label>
+        </div>
+
+        {/* Saved Books List */}
+        <div className="space-y-2">
+          <div className="text-xs font-bold text-on-surface flex items-center justify-between">
+            <span>Truyện đã lưu ({savedBooks.length})</span>
+          </div>
+
           {isLoading ? (
-            <div className="py-16 flex flex-col items-center justify-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-primary/50 flex items-center justify-center shadow-md">
-                <RotateCw size={22} className="animate-spin text-primary" />
-              </div>
-              <span className="text-xs font-mono text-on-surface-variant/80 font-medium animate-pulse">
-                Đang kiểm tra dữ liệu đã lưu...
-              </span>
+            <div className="py-6 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2">
+              <RotateCw size={14} className="animate-spin text-primary" /> Đang tải dữ liệu...
             </div>
           ) : savedBooks.length === 0 ? (
-            <div className="py-16 flex flex-col items-center justify-center text-center gap-4 border border-dashed border-outline-variant/30 rounded-3xl bg-white/5 p-6">
-              <p className="text-on-surface-variant text-xs max-w-[280px]">
-                Chưa có truyện nào được tải xuống. Hãy vào danh sách chương và chọn "Tải xuống" để lưu trữ đọc offline.
-              </p>
+            <div className="py-6 text-center text-xs text-on-surface-variant/60 border border-dashed border-white/10 rounded-2xl">
+              Chưa có truyện nào được lưu ngoại tuyến
             </div>
           ) : (
-            savedBooks.map(book => (
-              <div key={book.bookId} className="flex flex-col gap-3 p-4 bg-white/5 dark:bg-white/5 rounded-2xl border border-outline-variant/30 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]">
-                <div className="flex justify-between items-start gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-sm sm:text-base text-on-surface truncate">
-                      {book.bookName}
-                    </h4>
-                    <p className="text-xs text-on-surface-variant mt-1">
-                      {book.totalTranslated}/{book.chapterCount} chương
-                    </p>
-                  </div>
-                  <button 
+            savedBooks.map((book) => (
+              <div
+                key={book.bookId}
+                className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-between text-xs"
+              >
+                <div className="space-y-0.5 min-w-0 flex-1 pr-2">
+                  <h4 className="font-bold text-on-surface truncate">{book.bookName}</h4>
+                  <p className="text-[10px] text-on-surface-variant/70">
+                    Đã tải {book.totalTranslated} chương
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
                     onClick={() => handleDeleteParams(book.bookId)}
-                    className="p-2 text-rose-400 hover:bg-rose-500/10 rounded-full transition-colors flex-shrink-0"
-                    title="Xoá khỏi máy"
+                    className="p-1.5 rounded-xl text-rose-400 hover:bg-rose-500/20 transition-colors"
+                    title="Xóa truyện khỏi máy"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -133,8 +134,8 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
   }
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-x-hidden box-border">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
+    <div className="fixed inset-0 z-[99000] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-x-hidden box-border overscroll-none">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} onTouchMove={(e) => e.preventDefault()} />
       {content}
     </div>
   );

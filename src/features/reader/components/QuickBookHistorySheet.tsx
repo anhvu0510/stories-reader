@@ -172,8 +172,8 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
   };
 
   return (
-    <div className="fixed inset-0 z-[95000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden box-border">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-[99000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden overscroll-none box-border">
+      <div className="absolute inset-0" onClick={onClose} onTouchMove={(e) => e.preventDefault()} />
 
       <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.4)] h-[78vh] max-h-[90dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
         {/* Header & Search (100% unified top header) */}

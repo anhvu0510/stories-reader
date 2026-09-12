@@ -3,6 +3,7 @@ import { X, Plus, Edit2, Trash2, Check, RefreshCw } from 'lucide-react';
 import { AIRepository } from '../../../repositories/AIRepository';
 import { AIQuota } from '../../../shared/types';
 import { useToastStore } from '../../../stores/useToastStore';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export function QuotaSettingsSheet({
   onClose,
@@ -243,13 +244,15 @@ export function QuotaSettingsSheet({
     </div>
   );
 
+  useBodyScrollLock(!isEmbedded);
+
   if (isEmbedded) {
     return <div className="flex flex-col w-full h-full bg-transparent">{content}</div>;
   }
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={onClose} />
+    <div className="fixed inset-0 z-[99000] flex items-end sm:items-center justify-center p-0 sm:p-4 overscroll-none">
+      <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={onClose} onTouchMove={(e) => e.preventDefault()} />
       {content}
     </div>
   );

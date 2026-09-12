@@ -26,7 +26,7 @@ Tài liệu này mô tả chi tiết toàn bộ chức năng, cấu trúc giao d
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Mặc định** | `default` | Tông tối xám than sang trọng, độ tương phản dịu mắt | `#1e1e1e` | `#e3e3e3` | Vàng đồng `#cda052` |
 | **Modern VN** | `modern-vn` | Tông xanh Navy sẫm kết hợp với sắc cam ấm áp | `#0b1326` | `#dae2fd` | Cam ấm `#f39c12` |
-| **AMOLED** | `amoled` | Màu đen tuyệt đối giúp tiết kiệm pin tối đa cho màn hình OLED | `#000000` | `#ececec` | Xám bạc `#a1a1aa` |
+| **Amoled** | `Amoled` | Màu đen tuyệt đối giúp tiết kiệm pin tối đa cho màn hình OLED | `#000000` | `#ececec` | Xám bạc `#a1a1aa` |
 | **Midnight** | `midnight` | Xanh đêm sâu thẳm, mang cảm giác yên bình | `#0f172a` | `#cbd5e1` | Xanh dương `#3b82f6` |
 | **Obsidian** | `obsidian` | Màu đen thạch anh huyền bí kết hợp ánh tím nhạt | `#0d0d12` | `#a1a1aa` | Tím thạch anh `#8b5cf6` |
 | **Coffee** | `coffee` | Tông nâu cà phê hoài cổ, ấm cúng và cổ điển | `#1c1814` | `#d7c4b4` | Nâu đất sét `#b47a18` |

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check, ArrowUpDown, RotateCcw, Clock, ArrowDownAZ, ArrowUpAZ, Calendar, BookOpen } from 'lucide-react';
 import { SortByField, SortOrderDirection } from '../../../stores/useLibraryStore';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 export interface SortOption {
   id: string;
@@ -49,6 +50,7 @@ export function SortSheet({
   onApply,
   onClose,
 }: SortSheetProps) {
+  useBodyScrollLock(isOpen);
   const [draftSortBy, setDraftSortBy] = useState<SortByField>(currentSortBy);
   const [draftSortOrder, setDraftSortOrder] = useState<SortOrderDirection>(currentSortOrder);
 
@@ -83,8 +85,9 @@ export function SortSheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby="sort-sheet-title"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 backdrop-blur-[2px] animate-in fade-in duration-200"
+      className="fixed inset-0 z-[99000] flex items-end justify-center bg-black/35 backdrop-blur-[2px] animate-in fade-in duration-200 overscroll-none"
       onClick={onClose}
+      onTouchMove={(e) => e.preventDefault()}
     >
       <div
         className="relative w-full max-w-md bg-surface/50 dark:bg-surface/50 backdrop-blur-xl border-t sm:border border-white/20 dark:border-white/20 rounded-t-[32px] shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.5)] flex flex-col max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300"

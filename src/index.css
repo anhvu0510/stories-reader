@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Newsreader:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+/* 1. MẶC ĐỊNH (Dark Zinc & Amber Accent) */
 :root, [data-theme="default"] {
   color-scheme: dark;
   --bg: #09090b;
@@ -37,186 +38,7 @@
   --error: #ef4444;
 }
 
-[data-theme="amoled"] {
-  color-scheme: dark;
-  --bg: #000000;
-  --on-bg: #f4f4f7;
-  --surface: #000000;
-  --surface-dim: #000000;
-  --surface-bright: #121212;
-  --surface-container-lowest: #000000;
-  --surface-container-low: #050505;
-  --surface-container: #0c0c0c;
-  --surface-container-high: #141414;
-  --surface-container-highest: #1c1c1c;
-  --surface-variant: #141414;
-  --glass: rgba(0,0,0,0.92);
-  --on-surface: #f4f4f7;
-  --on-surface-variant: #9e9e9e;
-  --primary: #f59e0b;
-  --on-primary: #000000;
-  --primary-container: #78350f;
-  --on-primary-container: #fde68a;
-  --primary-fixed: #fcd34d;
-  --primary-fixed-dim: #fbbf24;
-  --on-primary-fixed: #451a03;
-  --on-primary-fixed-variant: #78350f;
-  --secondary: #a1a1aa;
-  --on-secondary: #000000;
-  --secondary-container: #3f3f46;
-  --on-secondary-container: #e4e4e7;
-  --outline: #383838;
-  --outline-variant: #222222;
-  --warning: #f59e0b;
-  --warning-on-container: #451a03;
-  --warning-bg: rgba(245, 158, 11, 0.15);
-  --error: #ef4444;
-}
-
-[data-theme="midnight"] {
-  color-scheme: dark;
-  --bg: #0b1120;
-  --on-bg: #f1f5f9;
-  --surface: #0b1120;
-  --surface-dim: #060a14;
-  --surface-bright: #1e293b;
-  --surface-container-lowest: #040810;
-  --surface-container-low: #0e1628;
-  --surface-container: #131d33;
-  --surface-container-high: #192642;
-  --surface-container-highest: #203052;
-  --surface-variant: #192642;
-  --glass: rgba(11,17,32,0.92);
-  --on-surface: #f1f5f9;
-  --on-surface-variant: #94a3b8;
-  --primary: #38bdf8;
-  --on-primary: #000000;
-  --primary-container: #0369a1;
-  --on-primary-container: #e0f2fe;
-  --primary-fixed: #bae6fd;
-  --primary-fixed-dim: #7dd3fc;
-  --on-primary-fixed: #082f49;
-  --on-primary-fixed-variant: #0369a1;
-  --secondary: #94a3b8;
-  --on-secondary: #0b1120;
-  --secondary-container: #334155;
-  --on-secondary-container: #e2e8f0;
-  --outline: #475569;
-  --outline-variant: #1e293b;
-  --warning: #f59e0b;
-  --warning-on-container: #451a03;
-  --warning-bg: rgba(245, 158, 11, 0.15);
-  --error: #ef4444;
-}
-
-[data-theme="obsidian"] {
-  color-scheme: dark;
-  --bg: #0c0a14;
-  --on-bg: #f3e8ff;
-  --surface: #0c0a14;
-  --surface-dim: #06050b;
-  --surface-bright: #1c172b;
-  --surface-container-lowest: #030206;
-  --surface-container-low: #100d1c;
-  --surface-container: #151124;
-  --surface-container-high: #1c1730;
-  --surface-container-highest: #251f3e;
-  --surface-variant: #1c1730;
-  --glass: rgba(12,10,20,0.92);
-  --on-surface: #f3e8ff;
-  --on-surface-variant: #c084fc;
-  --primary: #c084fc;
-  --on-primary: #000000;
-  --primary-container: #581c87;
-  --on-primary-container: #e9d5ff;
-  --primary-fixed: #d8b4fe;
-  --primary-fixed-dim: #c084fc;
-  --on-primary-fixed: #3b0764;
-  --on-primary-fixed-variant: #581c87;
-  --secondary: #a1a1aa;
-  --on-secondary: #0c0a14;
-  --secondary-container: #2e1065;
-  --on-secondary-container: #f3e8ff;
-  --outline: #581c87;
-  --outline-variant: #2e1065;
-  --warning: #f59e0b;
-  --warning-on-container: #451a03;
-  --warning-bg: rgba(245, 158, 11, 0.15);
-  --error: #ef4444;
-}
-
-[data-theme="coffee"] {
-  color-scheme: dark;
-  --bg: #171310;
-  --on-bg: #f5e6d3;
-  --surface: #171310;
-  --surface-dim: #0f0c0a;
-  --surface-bright: #26201b;
-  --surface-container-lowest: #080605;
-  --surface-container-low: #1c1714;
-  --surface-container: #231c18;
-  --surface-container-high: #2b231e;
-  --surface-container-highest: #362c26;
-  --surface-variant: #2b231e;
-  --glass: rgba(23,19,16,0.92);
-  --on-surface: #f5e6d3;
-  --on-surface-variant: #b8a28e;
-  --primary: #f59e0b;
-  --on-primary: #000000;
-  --primary-container: #78350f;
-  --on-primary-container: #fde68a;
-  --primary-fixed: #fcd34d;
-  --primary-fixed-dim: #fbbf24;
-  --on-primary-fixed: #451a03;
-  --on-primary-fixed-variant: #78350f;
-  --secondary: #b09e97;
-  --on-secondary: #171310;
-  --secondary-container: #3c302c;
-  --on-secondary-container: #e1cfc6;
-  --outline: #5c4738;
-  --outline-variant: #33271f;
-  --warning: #f59e0b;
-  --warning-on-container: #451a03;
-  --warning-bg: rgba(245, 158, 11, 0.15);
-  --error: #ef4444;
-}
-
-[data-theme="modern-vn"] {
-  color-scheme: dark;
-  --bg: #040e2b;
-  --on-bg: #e2e8f0;
-  --surface: #060e24;
-  --surface-dim: #020612;
-  --surface-bright: #101c3d;
-  --surface-container-lowest: #01040a;
-  --surface-container-low: #081430;
-  --surface-container: #0c1c40;
-  --surface-container-high: #122450;
-  --surface-container-highest: #182c60;
-  --surface-variant: #122450;
-  --glass: rgba(6,14,36,0.92);
-  --on-surface: #e2e8f0;
-  --on-surface-variant: #94a3b8;
-  --primary: #ffcf56;
-  --on-primary: #472a00;
-  --primary-container: #b45309;
-  --on-primary-container: #fef3c7;
-  --primary-fixed: #ffddb8;
-  --primary-fixed-dim: #ffb95f;
-  --on-primary-fixed: #2a1700;
-  --on-primary-fixed-variant: #653e00;
-  --secondary: #c5d3ec;
-  --on-secondary: #060e24;
-  --secondary-container: #122450;
-  --on-secondary-container: #e2e8f0;
-  --outline: #223860;
-  --outline-variant: #142444;
-  --warning: #f59e0b;
-  --warning-on-container: #451a03;
-  --warning-bg: rgba(245, 158, 11, 0.15);
-  --error: #ef4444;
-}
-
+/* 2. SEPIA VÀNG (Warm Sepia Vintage Paper) */
 [data-theme="sepia"] {
   color-scheme: light;
   --bg: #fbf0d9;
@@ -253,6 +75,116 @@
   --error: #ef4444;
 }
 
+/* 3. ROYAL VN (Deep Royal Navy & Imperial Gold) */
+[data-theme="royal-vn"], [data-theme="modern-vn"] {
+  color-scheme: dark;
+  --bg: #040e2b;
+  --on-bg: #e2e8f0;
+  --surface: #060e24;
+  --surface-dim: #020612;
+  --surface-bright: #101c3d;
+  --surface-container-lowest: #01040a;
+  --surface-container-low: #081430;
+  --surface-container: #0c1c40;
+  --surface-container-high: #122450;
+  --surface-container-highest: #182c60;
+  --surface-variant: #122450;
+  --glass: rgba(6,14,36,0.92);
+  --on-surface: #e2e8f0;
+  --on-surface-variant: #94a3b8;
+  --primary: #ffcf56;
+  --on-primary: #472a00;
+  --primary-container: #b45309;
+  --on-primary-container: #fef3c7;
+  --primary-fixed: #ffddb8;
+  --primary-fixed-dim: #ffb95f;
+  --on-primary-fixed: #2a1700;
+  --on-primary-fixed-variant: #653e00;
+  --secondary: #c5d3ec;
+  --on-secondary: #060e24;
+  --secondary-container: #122450;
+  --on-secondary-container: #e2e8f0;
+  --outline: #223860;
+  --outline-variant: #142444;
+  --warning: #f59e0b;
+  --warning-on-container: #451a03;
+  --warning-bg: rgba(245, 158, 11, 0.15);
+  --error: #ef4444;
+}
+
+/* 4. OBSIDIAN (Deep Purple Void & Lavender Spark) */
+[data-theme="obsidian"] {
+  color-scheme: dark;
+  --bg: #0c0a14;
+  --on-bg: #f3e8ff;
+  --surface: #0c0a14;
+  --surface-dim: #06050b;
+  --surface-bright: #1c172b;
+  --surface-container-lowest: #030206;
+  --surface-container-low: #100d1c;
+  --surface-container: #151124;
+  --surface-container-high: #1c1730;
+  --surface-container-highest: #251f3e;
+  --surface-variant: #1c1730;
+  --glass: rgba(12,10,20,0.92);
+  --on-surface: #f3e8ff;
+  --on-surface-variant: #c084fc;
+  --primary: #c084fc;
+  --on-primary: #000000;
+  --primary-container: #581c87;
+  --on-primary-container: #e9d5ff;
+  --primary-fixed: #d8b4fe;
+  --primary-fixed-dim: #c084fc;
+  --on-primary-fixed: #3b0764;
+  --on-primary-fixed-variant: #581c87;
+  --secondary: #a1a1aa;
+  --on-secondary: #0c0a14;
+  --secondary-container: #2e1065;
+  --on-secondary-container: #f3e8ff;
+  --outline: #581c87;
+  --outline-variant: #2e1065;
+  --warning: #f59e0b;
+  --warning-on-container: #451a03;
+  --error: #ef4444;
+}
+
+/* 5. MIDNIGHT (Deep Slate Midnight & Sky Accent) */
+[data-theme="midnight"] {
+  color-scheme: dark;
+  --bg: #0f172a;
+  --on-bg: #f8fafc;
+  --surface: #0f172a;
+  --surface-dim: #090e17;
+  --surface-bright: #1e293b;
+  --surface-container-lowest: #020617;
+  --surface-container-low: #0f172a;
+  --surface-container: #1e293b;
+  --surface-container-high: #334155;
+  --surface-container-highest: #475569;
+  --surface-variant: #1e293b;
+  --glass: rgba(15, 23, 42, 0.92);
+  --on-surface: #f8fafc;
+  --on-surface-variant: #94a3b8;
+  --primary: #38bdf8;
+  --on-primary: #0f172a;
+  --primary-container: #0369a1;
+  --on-primary-container: #e0f2fe;
+  --primary-fixed: #7dd3fc;
+  --primary-fixed-dim: #38bdf8;
+  --on-primary-fixed: #0c4a6e;
+  --on-primary-fixed-variant: #0369a1;
+  --secondary: #94a3b8;
+  --on-secondary: #0f172a;
+  --secondary-container: #1e293b;
+  --on-secondary-container: #f1f5f9;
+  --outline: #334155;
+  --outline-variant: #1e293b;
+  --warning: #f59e0b;
+  --warning-on-container: #451a03;
+  --warning-bg: rgba(245, 158, 11, 0.15);
+  --error: #ef4444;
+}
+
 @theme {
   --color-background: var(--bg);
   --color-on-background: var(--on-bg);
@@ -267,8 +199,6 @@
   --color-surface-container-highest: var(--surface-container-highest);
   --color-surface-variant: var(--surface-variant);
   
-  --color-glass: var(--glass);
-  
   --color-on-surface: var(--on-surface);
   --color-on-surface-variant: var(--on-surface-variant);
   
@@ -280,7 +210,7 @@
   --color-primary-fixed-dim: var(--primary-fixed-dim);
   --color-on-primary-fixed: var(--on-primary-fixed);
   --color-on-primary-fixed-variant: var(--on-primary-fixed-variant);
-
+  
   --color-secondary: var(--secondary);
   --color-on-secondary: var(--on-secondary);
   --color-secondary-container: var(--secondary-container);
@@ -288,91 +218,38 @@
   
   --color-outline: var(--outline);
   --color-outline-variant: var(--outline-variant);
-
+  --color-glass: var(--glass);
+  
   --color-warning: var(--warning);
   --color-warning-on-container: var(--warning-on-container);
   --color-warning-bg: var(--warning-bg);
   --color-error: var(--error);
-  
-  --font-sans: 'Be Vietnam Pro', sans-serif;
-  --font-serif: 'Newsreader', serif;
-  
-  --spacing-container: 16px;
-  --spacing-unit: 8px;
-  --spacing-gutter: 16px;
-  --spacing-reading-max: 680px;
-
-  --radius-sm: 0.25rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
+@layer base {
+  body {
+    background-color: var(--bg);
+    color: var(--on-bg);
+    font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
 }
 
-html, body, #root {
-  overflow-x: hidden !important;
-  width: 100% !important;
-  max-width: 100vw !important;
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  touch-action: manipulation;
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  @apply bg-background text-on-background font-sans text-sm antialiased;
-}
-
-*::-webkit-scrollbar,
-html::-webkit-scrollbar,
-body::-webkit-scrollbar,
-.hide-scrollbar::-webkit-scrollbar,
-.no-scrollbar::-webkit-scrollbar {
+/* Custom Utilities */
+.hide-scrollbar::-webkit-scrollbar {
   display: none;
-  width: 0px;
-  height: 0px;
 }
-
-*,
-html,
-body,
-.hide-scrollbar,
-.no-scrollbar {
+.hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-.nav-bg-fill {
-  fill: var(--surface);
-  transition: fill 0.3s ease;
+.font-serif {
+  font-family: 'Newsreader', Georgia, serif;
 }
 
-@keyframes marquee-text {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
+.font-cursive {
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+  font-style: italic;
 }
-
-.animate-marquee-text {
-  display: inline-flex;
-  white-space: nowrap;
-  animation: marquee-text 12s linear infinite;
-}
-
-.animate-marquee-text:hover {
-  animation-play-state: paused;
-}
-
-.chapter-block-section {
-  content-visibility: auto;
-  contain-intrinsic-size: 1px 800px;
-}
-
-

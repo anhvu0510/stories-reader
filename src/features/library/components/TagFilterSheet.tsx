@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, Search, Check, Tag, RotateCcw } from 'lucide-react';
 import { TagCategory } from '../../../shared/constants/tags';
 import { TagRepository } from '../../../repositories/TagRepository';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 interface TagFilterSheetProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export function TagFilterSheet({
   onApply,
   onClose,
 }: TagFilterSheetProps) {
+  useBodyScrollLock(isOpen);
   const [categories, setCategories] = useState<TagCategory[]>([]);
   const [draftTags, setDraftTags] = useState<string[]>(selectedTags);
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,9 +63,8 @@ export function TagFilterSheet({
 
   // Filter categories and tags based on search query
   const filteredCategories = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return categories;
-
+    if (!searchQuery.trim()) return categories;
+    const q = searchQuery.toLowerCase();
     return categories
       .map((category) => ({
         ...category,
@@ -75,11 +76,12 @@ export function TagFilterSheet({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/35 backdrop-blur-[2px] transition-opacity duration-200">
+    <div className="fixed inset-0 z-[99000] flex items-end sm:items-center justify-center bg-black/35 backdrop-blur-[2px] transition-opacity duration-200 overscroll-none">
       {/* Click outside backdrop */}
       <div
         className="absolute inset-0"
         onClick={onClose}
+        onTouchMove={(e) => e.preventDefault()}
         data-testid="tag-filter-backdrop"
       />
 

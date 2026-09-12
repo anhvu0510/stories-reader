@@ -8,6 +8,7 @@ import { downloadManager, DownloadTask } from '../../../lib/DownloadManager';
 import { offlineDb } from '../../../lib/offlineDb';
 import { useToastStore } from '../../../stores/useToastStore';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 function ChapterSkeletonItem() {
   return (
@@ -345,7 +346,7 @@ export function QuickChapterSelectSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-[95000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden overscroll-none box-border">
+    <div className="fixed inset-0 z-[99000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden overscroll-none box-border">
       <div
         className="absolute inset-0"
         onClick={onClose}

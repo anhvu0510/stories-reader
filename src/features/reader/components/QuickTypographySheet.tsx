@@ -2,12 +2,14 @@ import React from 'react';
 import { X, Type, Minus, Plus, Palette, AlignJustify, Layers, Sliders, Check } from 'lucide-react';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { FontType, ThemeType } from '../../../shared/types';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 interface QuickTypographySheetProps {
   onClose: () => void;
 }
 
 export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
+  useBodyScrollLock(true);
   const {
     fontSize, setFontSize,
     lineHeight, setLineHeight,
@@ -18,13 +20,10 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
   } = useReaderConfigStore();
 
   const themes: { id: ThemeType; name: string; bg: string; text: string }[] = [
-    { id: 'default', name: 'Tối', bg: '#09090b', text: '#f4f4f5' },
-    { id: 'sepia', name: 'Sepia', bg: '#fbf0d9', text: '#3b2314' },
-    { id: 'amoled', name: 'Đen', bg: '#000000', text: '#f4f4f7' },
-    { id: 'midnight', name: 'Đêm', bg: '#0b1120', text: '#f1f5f9' },
-    { id: 'coffee', name: 'Cà phê', bg: '#171310', text: '#f5e6d3' },
-    { id: 'obsidian', name: 'Đá núi', bg: '#0c0a14', text: '#f3e8ff' },
-    { id: 'modern-vn', name: 'Royal VN', bg: '#060e24', text: '#e2e8f0' },
+    { id: 'royal-vn', name: 'Royal VN', bg: '#040e2b', text: '#e2e8f0' },
+    { id: 'default', name: 'Amoled', bg: '#000000', text: '#f4f4f5' },
+    { id: 'midnight', name: 'Midnight', bg: '#0f172a', text: '#f8fafc' },
+    { id: 'obsidian', name: 'Obsidian', bg: '#0c0a14', text: '#f3e8ff' },
   ];
 
   const fonts: { id: FontType; name: string }[] = [
@@ -53,9 +52,9 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
   const currentThemeObj = themes.find((t) => t.id === theme) || themes[0];
 
   return (
-    <div className="fixed inset-0 z-[95000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden box-border">
+    <div className="fixed inset-0 z-[99000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden overscroll-none box-border">
       {/* Backdrop */}
-      <div className="absolute inset-0" onClick={onClose} />
+      <div className="absolute inset-0" onClick={onClose} onTouchMove={(e) => e.preventDefault()} />
 
       {/* Ultra-Compact Mobile Bottom Sheet (~340px Max Height) */}
       <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.4)] flex flex-col overflow-hidden transition-all duration-200 box-border">
@@ -164,55 +163,59 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
           })}
         </div>
 
-        {/* Row 3: Line Height (Left) & Group Lines (Right) */}
+        {/* Row 3: Line Height (Left) & Group Lines (Right) Steppers */}
         <div className="grid grid-cols-2 gap-2">
-          {/* Line Height */}
-          <div className="bg-white/5 p-1.5 rounded-xl border border-white/10 space-y-1">
-            <span className="text-[9px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider block px-1 flex items-center gap-1">
-              <AlignJustify size={10} className="text-primary" /> GIÃN DÒNG
+          {/* Line Height Stepper */}
+          <div className="bg-white/5 p-2 rounded-xl border border-white/10 flex items-center justify-between gap-1">
+            <span className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider flex items-center gap-1">
+              <AlignJustify size={11} className="text-primary" /> DÒNG: <span className="text-primary font-black">{lineHeight}</span>
             </span>
-            <div className="grid grid-cols-4 gap-1">
-              {lineHeights.map((lh) => {
-                const isSelected = Math.abs(lineHeight - lh.val) < 0.05;
-                return (
-                  <button
-                    key={lh.val}
-                    onClick={() => setLineHeight(lh.val)}
-                    className={`py-1 rounded-lg border text-[10px] font-bold text-center transition-all active:scale-95 ${
-                      isSelected
-                        ? 'bg-gradient-to-b from-primary via-primary-fixed to-primary-fixed-dim text-on-primary border-primary/70 font-black shadow-[0_2px_8px_var(--primary)]'
-                        : 'bg-white/10 border-white/20 text-on-surface-variant hover:bg-white/20'
-                    }`}
-                  >
-                    {lh.val}
-                  </button>
-                );
-              })}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setLineHeight(Math.max(1.0, Number((lineHeight - 0.1).toFixed(1))))}
+                disabled={lineHeight <= 1.0}
+                className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 disabled:opacity-30 text-on-surface font-bold text-xs flex items-center justify-center transition-all"
+                title="Giảm khoảng cách dòng"
+              >
+                <Minus size={11} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setLineHeight(Math.min(2.4, Number((lineHeight + 0.1).toFixed(1))))}
+                disabled={lineHeight >= 2.4}
+                className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 disabled:opacity-30 text-on-surface font-bold text-xs flex items-center justify-center transition-all"
+                title="Tăng khoảng cách dòng"
+              >
+                <Plus size={11} />
+              </button>
             </div>
           </div>
 
-          {/* Group Lines */}
-          <div className="bg-white/5 p-1.5 rounded-xl border border-white/10 space-y-1">
-            <span className="text-[9px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider block px-1 flex items-center gap-1">
-              <Layers size={10} className="text-primary" /> GỘP ĐOẠN
+          {/* Group Lines Stepper */}
+          <div className="bg-white/5 p-2 rounded-xl border border-white/10 flex items-center justify-between gap-1">
+            <span className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider flex items-center gap-1">
+              <Layers size={11} className="text-primary" /> GỘP: <span className="text-primary font-black">{groupLines}</span>
             </span>
-            <div className="grid grid-cols-3 gap-1">
-              {lineGroups.map((lg) => {
-                const isSelected = groupLines === lg.val;
-                return (
-                  <button
-                    key={lg.val}
-                    onClick={() => setGroupLines(lg.val)}
-                    className={`py-1 rounded-lg border text-[10px] font-bold text-center transition-all active:scale-95 ${
-                      isSelected
-                        ? 'bg-gradient-to-b from-primary via-primary-fixed to-primary-fixed-dim text-on-primary border-primary/70 font-black shadow-[0_2px_8px_var(--primary)]'
-                        : 'bg-white/10 border-white/20 text-on-surface-variant hover:bg-white/20'
-                    }`}
-                  >
-                    {lg.label}
-                  </button>
-                );
-              })}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setGroupLines(Math.max(1, groupLines - 1))}
+                disabled={groupLines <= 1}
+                className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 disabled:opacity-30 text-on-surface font-bold text-xs flex items-center justify-center transition-all"
+                title="Giảm gộp dòng"
+              >
+                <Minus size={11} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setGroupLines(Math.min(10, groupLines + 1))}
+                disabled={groupLines >= 10}
+                className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 disabled:opacity-30 text-on-surface font-bold text-xs flex items-center justify-center transition-all"
+                title="Tăng gộp dòng"
+              >
+                <Plus size={11} />
+              </button>
             </div>
           </div>
         </div>

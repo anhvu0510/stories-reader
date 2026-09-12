@@ -133,7 +133,7 @@ export interface ApiDomain {
   url: string;
 }
 
-export type ThemeType = 'default' | 'sepia' | 'amoled' | 'midnight' | 'obsidian' | 'coffee' | 'modern-vn';
+export type ThemeType = 'default' | 'sepia' | 'royal-vn' | 'obsidian' | 'modern-vn' | 'midnight' | 'Amoled';
 export type FontType = 'default' | 'palatino' | 'bookerly' | 'font_viet_tay' | 'merriweather' | 'lora' | 'charter';
 
 export interface ReaderConfig {

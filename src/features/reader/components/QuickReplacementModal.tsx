@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Save, ArrowRight } from 'lucide-react';
 import { ReplacementRepository } from '../../../repositories/ReplacementRepository';
 import { useToastStore } from '../../../stores/useToastStore';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
 
 interface QuickReplacementModalProps {
   matchText: string;
@@ -18,6 +19,7 @@ export function QuickReplacementModal({
   onClose,
   onSuccess,
 }: QuickReplacementModalProps) {
+  useBodyScrollLock(true);
   const showToast = useToastStore((state) => state.showToast);
   const [replacement, setReplacement] = useState('');
   const [scope, setScope] = useState<'global' | 'book' | 'chapter'>('global');
@@ -45,7 +47,7 @@ export function QuickReplacementModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[99990] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overscroll-none" onTouchMove={(e) => e.preventDefault()}>
       <div className="bg-surface-container-lowest w-full max-w-sm rounded-2xl border border-outline-variant/30 p-5 shadow-2xl space-y-4 animate-in zoom-in-95">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-on-surface">Thay thế Từ Nhanh</h3>
