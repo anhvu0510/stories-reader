@@ -6,6 +6,7 @@ import { ChapterRepository } from '../repositories/ChapterRepository';
 import { AIRepository } from '../repositories/AIRepository';
 import { SettingsRepository } from '../repositories/SettingsRepository';
 import { useToastStore } from '../stores/useToastStore';
+import { useReaderConfigStore } from '../stores/useReaderConfigStore';
 import { cn } from '../lib/utils';
 
 type Tab = 'current' | 'batch_chapter' | 'story';
@@ -83,7 +84,7 @@ export function TranslationSheet({
   const activeItemRef = React.useRef<HTMLDivElement>(null);
   const isInitialScrollDoneRef = React.useRef(false);
 
-  const PAGE_SIZE = 20;
+  const configChapterLimit = useReaderConfigStore((state) => state.chapterLimit || 50);
   const [loading, setLoading] = useState(false);
   const [loadingTop, setLoadingTop] = useState(false);
   const [loadingBottom, setLoadingBottom] = useState(false);
@@ -214,14 +215,14 @@ export function TranslationSheet({
       ? Math.max(1, currentChapterNumber - 5)
       : 1;
     const endChapterNumber = currentChapterNumber
-      ? currentChapterNumber + 20
+      ? currentChapterNumber + configChapterLimit
       : undefined;
 
     try {
       const res = await ChapterRepository.getChapters(
         currentBookId,
         1,
-        26,
+        configChapterLimit,
         'chapterNumber',
         'ASC',
         'all',
@@ -239,7 +240,7 @@ export function TranslationSheet({
         setMinChapterNum(minNum);
         setMaxChapterNum(maxNum);
         setHasMoreTop(minNum > 1);
-        setHasMoreBottom(newChapters.length >= 20);
+        setHasMoreBottom(newChapters.length >= configChapterLimit);
       } else {
         setHasMoreTop(false);
         setHasMoreBottom(false);
@@ -249,7 +250,7 @@ export function TranslationSheet({
     } finally {
       setLoading(false);
     }
-  }, [activeTab, currentBookId, currentChapterNumber]);
+  }, [activeTab, currentBookId, currentChapterNumber, configChapterLimit]);
 
   useEffect(() => {
     let t: NodeJS.Timeout;
@@ -319,7 +320,7 @@ export function TranslationSheet({
       const res = await ChapterRepository.getChapters(
         currentBookId,
         1,
-        PAGE_SIZE,
+        configChapterLimit,
         'chapterNumber',
         'ASC',
         'all',
@@ -336,7 +337,7 @@ export function TranslationSheet({
         });
         const newMax = Math.max(...newChapters.map((c) => c.chapterNumber));
         setMaxChapterNum(newMax);
-        setHasMoreBottom(newChapters.length >= PAGE_SIZE);
+        setHasMoreBottom(newChapters.length >= configChapterLimit);
       } else {
         setHasMoreBottom(false);
       }
@@ -355,13 +356,13 @@ export function TranslationSheet({
     const prevScrollHeight = container ? container.scrollHeight : 0;
     const prevScrollTop = container ? container.scrollTop : 0;
     const targetToChapter = minChapterNum - 1;
-    const targetFromChapter = Math.max(1, minChapterNum - PAGE_SIZE);
+    const targetFromChapter = Math.max(1, minChapterNum - configChapterLimit);
 
     try {
       const res = await ChapterRepository.getChapters(
         currentBookId,
         1,
-        PAGE_SIZE,
+        configChapterLimit,
         'chapterNumber',
         'ASC',
         'all',
@@ -402,10 +403,10 @@ export function TranslationSheet({
     if (!chapterListRef.current || loading || activeTab !== 'batch_chapter') return;
     const { scrollTop, clientHeight, scrollHeight } = chapterListRef.current;
 
-    if (scrollTop + clientHeight >= scrollHeight - 80) {
+    if (scrollTop + clientHeight >= scrollHeight - 400) {
       fetchNextBottomPage();
     }
-    if (scrollTop <= 50) {
+    if (scrollTop <= 300) {
       fetchPrevTopPage();
     }
   };

@@ -30,7 +30,7 @@ export const ChapterRepository = {
         if (fromChapterNumber !== undefined) query.append('fromChapterNumber', fromChapterNumber.toString());
         if (toChapterNumber !== undefined) query.append('toChapterNumber', toChapterNumber.toString());
 
-        const res = await apiClient.get<any>(`/api/books/${bookId}/chapters?${query.toString()}`, { timeout: 2500, retries: 0 });
+        const res = await apiClient.get<any>(`/api/books/${bookId}/chapters?${query.toString()}`, { timeout: 2500, retries: 0, silent: true });
         if (res) {
           const rawItems = res.chapters || res.data || res.items || (Array.isArray(res) ? res : []);
           const rawChapters: Chapter[] = rawItems.map((c: any, idx: number) => ({

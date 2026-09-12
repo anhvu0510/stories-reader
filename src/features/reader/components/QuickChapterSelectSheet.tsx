@@ -7,6 +7,7 @@ import { ChapterItem } from '../../chapter-list/components/ChapterItem';
 import { downloadManager, DownloadTask } from '../../../lib/DownloadManager';
 import { offlineDb } from '../../../lib/offlineDb';
 import { useToastStore } from '../../../stores/useToastStore';
+import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 
 function ChapterSkeletonItem() {
   return (
@@ -29,8 +30,6 @@ interface QuickChapterSelectSheetProps {
   onClose: () => void;
 }
 
-const PAGE_SIZE = 20;
-
 export function QuickChapterSelectSheet({
   bookId,
   currentChapterId,
@@ -39,16 +38,22 @@ export function QuickChapterSelectSheet({
 }: QuickChapterSelectSheetProps) {
   const navigate = useNavigate();
   const showToast = useToastStore((state) => state.showToast);
+  const configChapterLimit = useReaderConfigStore((state) => state.chapterLimit || 50);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [downloadTask, setDownloadTask] = useState<DownloadTask | undefined>(() => downloadManager.getTask(bookId));
 
-  // Lock body scroll while modal sheet is open to prevent background reader screen from scrolling
+  // 100% Lock body & html scroll while modal sheet is open to prevent background reader screen from scrolling
   useEffect(() => {
     if (typeof document === 'undefined') return;
-    const originalOverflow = document.body.style.overflow;
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+
     document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
     return () => {
-      document.body.style.overflow = originalOverflow;
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
     };
   }, []);
 
@@ -109,7 +114,7 @@ export function QuickChapterSelectSheet({
     };
   }, []);
 
-  // Primary single API fetch handler starting from (currentChapterNumber - 5) to (currentChapterNumber + 20)
+  // Primary single API fetch handler starting from (currentChapterNumber - 5) to (currentChapterNumber + configChapterLimit)
   const loadInitialChapters = useCallback(
     async (searchQuery: string = '') => {
       const fetchId = ++fetchIdRef.current;
@@ -123,14 +128,14 @@ export function QuickChapterSelectSheet({
       const endChapterNumber = searchQuery
         ? undefined
         : currentChapterNumber
-        ? currentChapterNumber + 20
+        ? currentChapterNumber + configChapterLimit
         : undefined;
 
       try {
         const res = await ChapterRepository.getChapters(
           bookId,
           1,
-          26,
+          configChapterLimit,
           'chapterNumber',
           'ASC',
           'all',
@@ -150,7 +155,7 @@ export function QuickChapterSelectSheet({
           setMinChapterNum(minNum);
           setMaxChapterNum(maxNum);
           setHasMoreTop(!searchQuery && minNum > 1);
-          setHasMoreBottom(newChapters.length >= 20);
+          setHasMoreBottom(newChapters.length >= configChapterLimit);
         } else {
           setHasMoreTop(false);
           setHasMoreBottom(false);
@@ -163,7 +168,7 @@ export function QuickChapterSelectSheet({
         }
       }
     },
-    [bookId, currentChapterNumber]
+    [bookId, currentChapterNumber, configChapterLimit]
   );
 
   // Initial mount - Calls API EXACTLY ONCE
@@ -181,14 +186,14 @@ export function QuickChapterSelectSheet({
     }
   }, [loading, loadingTop, hasMoreTop, chapters.length]);
 
-  // Auto-scroll positioning active chapter directly below search input
+  // Auto-scroll positioning active chapter comfortably in middle of viewport
   const scrollToActive = useCallback(() => {
     if (activeItemRef.current && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
       const activeEl = activeItemRef.current;
       const containerRect = container.getBoundingClientRect();
       const activeRect = activeEl.getBoundingClientRect();
-      const targetScrollTop = container.scrollTop + (activeRect.top - containerRect.top) - 40;
+      const targetScrollTop = container.scrollTop + (activeRect.top - containerRect.top) - (containerRect.height / 3);
       container.scrollTop = Math.max(0, targetScrollTop);
     }
   }, []);
@@ -214,7 +219,7 @@ export function QuickChapterSelectSheet({
       const res = await ChapterRepository.getChapters(
         bookId,
         1,
-        PAGE_SIZE,
+        configChapterLimit,
         'chapterNumber',
         'ASC',
         'all',
@@ -232,7 +237,7 @@ export function QuickChapterSelectSheet({
         });
         const newMax = Math.max(...newChapters.map((c) => c.chapterNumber));
         setMaxChapterNum(newMax);
-        setHasMoreBottom(newChapters.length >= PAGE_SIZE);
+        setHasMoreBottom(newChapters.length >= configChapterLimit);
       } else {
         setHasMoreBottom(false);
       }
@@ -252,13 +257,13 @@ export function QuickChapterSelectSheet({
     const prevScrollHeight = container ? container.scrollHeight : 0;
     const prevScrollTop = container ? container.scrollTop : 0;
     const targetToChapter = minChapterNum - 1;
-    const targetFromChapter = Math.max(1, minChapterNum - PAGE_SIZE);
+    const targetFromChapter = Math.max(1, minChapterNum - configChapterLimit);
 
     try {
       const res = await ChapterRepository.getChapters(
         bookId,
         1,
-        PAGE_SIZE,
+        configChapterLimit,
         'chapterNumber',
         'ASC',
         'all',
@@ -302,13 +307,13 @@ export function QuickChapterSelectSheet({
     if (!scrollContainerRef.current || loading) return;
     const { scrollTop, clientHeight, scrollHeight } = scrollContainerRef.current;
 
-    // Scroll Down -> Load More Bottom
-    if (scrollTop + clientHeight >= scrollHeight - 80) {
+    // Scroll Down -> Load More Bottom (Prefetch early at 400px threshold)
+    if (scrollTop + clientHeight >= scrollHeight - 400) {
       fetchNextBottomPage();
     }
 
-    // Scroll Up -> Load More Top
-    if (scrollTop <= 50) {
+    // Scroll Up -> Load More Top (Prefetch early at 300px threshold)
+    if (scrollTop <= 300) {
       fetchPrevTopPage();
     }
   };
@@ -337,15 +342,15 @@ export function QuickChapterSelectSheet({
         onTouchMove={(e) => e.preventDefault()}
       />
 
-      <div className="relative z-1000 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] max-h-[85dvh] flex flex-col overflow-hidden box-border transition-colors duration-200">
+      <div className="relative z-[1000] bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] max-h-[85dvh] flex flex-col overflow-hidden box-border transition-colors duration-200">
         {/* Ambient Top Glow Effect */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
 
         {/* Drag Handle */}
         <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto my-2.5 flex-shrink-0 relative z-20" />
 
-        {/* Header & Search */}
-        <div className="px-4 py-2 mb-1 border-b border-outline-variant/20 space-y-2.5 flex-shrink-0 bg-white/[0.03] dark:bg-white/[0.03]">
+        {/* Header & Search (Solid opaque background z-20 to block items scrolling underneath) */}
+        <div className="px-4 py-2 mb-1 border-b border-outline-variant/20 space-y-2.5 flex-shrink-0 bg-surface/90 dark:bg-surface/95 backdrop-blur-md relative z-20 shadow-xs">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-extrabold text-on-surface tracking-tight">Danh Sách Chương</h3>
             <div className="flex items-center gap-1">
@@ -398,13 +403,9 @@ export function QuickChapterSelectSheet({
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
+          onTouchMove={(e) => e.stopPropagation()}
           className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-2 relative"
         >
-          {/* Top Thin Progress Bar when searching */}
-          {loading && chapters.length > 0 && (
-            <div className="h-0.5 bg-gradient-to-r from-primary/30 via-primary to-primary/30 animate-pulse rounded-full mb-2" />
-          )}
-
           {loading && chapters.length === 0 ? (
             /* Initial Load Skeleton Cards */
             <div className="space-y-2 py-1">
@@ -421,15 +422,18 @@ export function QuickChapterSelectSheet({
               {/* Top Loading Skeleton Cards when Scrolling Up */}
               {loadingTop && (
                 <div className="space-y-2 mb-2">
-                  <ChapterSkeletonItem key="sk-top-1" />
-                  <ChapterSkeletonItem key="sk-top-2" />
+                  {[1, 2, 3, 4, 5].map((idx) => (
+                    <ChapterSkeletonItem key={`sk-top-${idx}`} />
+                  ))}
                 </div>
               )}
 
               {/* Section 2: All Chapters Header */}
-              <div className="text-[11px] font-mono font-black text-on-surface-variant/70 uppercase tracking-wider flex items-center justify-between px-1 pt-1 pb-0.5">
-                <span>📚 Danh sách chương ({chapters.length})</span>
-              </div>
+              {chapters.length > 0 && (
+                <div className="text-[11px] font-mono font-black text-on-surface-variant/70 uppercase tracking-wider flex items-center justify-between px-1 pt-1 pb-0.5">
+                  <span>📚 Danh sách chương ({chapters.length})</span>
+                </div>
+              )}
 
               {chapters.map((c, idx) => {
                 const isActive = Boolean(
@@ -454,8 +458,9 @@ export function QuickChapterSelectSheet({
               {/* Bottom Loading Skeleton Cards when Scrolling Down */}
               {loadingBottom && (
                 <div className="space-y-2 mt-2">
-                  <ChapterSkeletonItem key="sk-bottom-1" />
-                  <ChapterSkeletonItem key="sk-bottom-2" />
+                  {[1, 2, 3, 4, 5].map((idx) => (
+                    <ChapterSkeletonItem key={`sk-bottom-${idx}`} />
+                  ))}
                 </div>
               )}
             </>

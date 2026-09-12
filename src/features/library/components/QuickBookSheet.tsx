@@ -9,18 +9,18 @@ import { useToastStore } from '../../../stores/useToastStore';
 import { useAppStore } from '../../../stores/useAppStore';
 import { offlineDb } from '../../../lib/offlineDb';
 import { TranslationSheet } from '../../../components/TranslationSheet';
+import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 
 interface QuickBookSheetProps {
   book: Book;
   onClose: () => void;
 }
 
-const PAGE_SIZE = 25;
-
 export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
   const navigate = useNavigate();
   const showToast = useToastStore((state) => state.showToast);
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
+  const configChapterLimit = useReaderConfigStore((state) => state.chapterLimit || 50);
 
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [isDownloaded, setIsDownloaded] = useState(false);
@@ -84,7 +84,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
       // Smart windowing: If targetChapter is near the end, backfill before it to always load enough chapters
       const totalChapters = book.chapterCount || 0;
       const remainingAhead = totalChapters > 0 ? Math.max(0, totalChapters - targetChapter) : 0;
-      const neededBehind = Math.max(5, PAGE_SIZE - remainingAhead);
+      const neededBehind = Math.max(5, configChapterLimit - remainingAhead);
 
       const startChapterNumber = searchQuery
         ? undefined
@@ -92,13 +92,13 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 
       const endChapterNumber = searchQuery
         ? undefined
-        : targetChapter + PAGE_SIZE;
+        : targetChapter + configChapterLimit;
 
       try {
         const res = await ChapterRepository.getChapters(
           book.bookId,
           1,
-          PAGE_SIZE + 10,
+          configChapterLimit + 10,
           'chapterNumber',
           'ASC',
           'all',
@@ -118,7 +118,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
           setMinChapterNum(minNum);
           setMaxChapterNum(maxNum);
           setHasMoreTop(!searchQuery && minNum > 1);
-          setHasMoreBottom(maxNum < (book.chapterCount || 999999) && newChapters.length >= PAGE_SIZE);
+          setHasMoreBottom(maxNum < (book.chapterCount || 999999) && newChapters.length >= configChapterLimit);
         } else {
           setHasMoreTop(false);
           setHasMoreBottom(false);
@@ -131,7 +131,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
         }
       }
     },
-    [book.bookId, book.lastReadChapter, book.chapterCount]
+    [book.bookId, book.lastReadChapter, book.chapterCount, configChapterLimit]
   );
 
   useEffect(() => {
@@ -179,7 +179,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
       const res = await ChapterRepository.getChapters(
         book.bookId,
         1,
-        PAGE_SIZE,
+        configChapterLimit,
         'chapterNumber',
         'ASC',
         'all',
@@ -197,7 +197,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
         });
         const newMax = Math.max(...newChapters.map((c) => c.chapterNumber));
         setMaxChapterNum(newMax);
-        setHasMoreBottom(newChapters.length >= PAGE_SIZE);
+        setHasMoreBottom(newChapters.length >= configChapterLimit);
       } else {
         setHasMoreBottom(false);
       }
@@ -217,13 +217,13 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
     const prevScrollHeight = container ? container.scrollHeight : 0;
     const prevScrollTop = container ? container.scrollTop : 0;
     const targetToChapter = minChapterNum - 1;
-    const targetFromChapter = Math.max(1, minChapterNum - PAGE_SIZE);
+    const targetFromChapter = Math.max(1, minChapterNum - configChapterLimit);
 
     try {
       const res = await ChapterRepository.getChapters(
         book.bookId,
         1,
-        PAGE_SIZE,
+        configChapterLimit,
         'chapterNumber',
         'ASC',
         'all',
@@ -266,13 +266,13 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
     if (!scrollContainerRef.current || loading) return;
     const { scrollTop, clientHeight, scrollHeight } = scrollContainerRef.current;
 
-    // Scroll Down -> Load More Bottom
-    if (scrollTop + clientHeight >= scrollHeight - 80) {
+    // Scroll Down -> Load More Bottom (Prefetch early at 400px threshold)
+    if (scrollTop + clientHeight >= scrollHeight - 400) {
       fetchNextBottomPage();
     }
 
-    // Scroll Up -> Load More Top
-    if (scrollTop <= 50) {
+    // Scroll Up -> Load More Top (Prefetch early at 300px threshold)
+    if (scrollTop <= 300) {
       fetchPrevTopPage();
     }
   };
@@ -410,9 +410,13 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
           >
             {/* Scroll Up Top Loading Indicator */}
             {loadingTop && (
-              <div className="py-2 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2 font-mono">
-                <RefreshCw size={14} className="animate-spin text-primary" />
-                <span>Đang tải các chương trước...</span>
+              <div className="space-y-1.5 mb-2">
+                {[1, 2, 3, 4, 5].map((idx) => (
+                  <div key={`sk-top-${idx}`} className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 animate-pulse flex items-center justify-between">
+                    <div className="h-4 w-36 bg-on-surface-variant/20 rounded" />
+                    <div className="h-4 w-12 bg-primary/20 rounded-lg" />
+                  </div>
+                ))}
               </div>
             )}
 
@@ -443,9 +447,13 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 
                 {/* Scroll Down Bottom Loading Indicator */}
                 {loadingBottom && (
-                  <div className="py-3 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2 font-mono">
-                    <RefreshCw size={14} className="animate-spin text-primary" />
-                    <span>Đang tải thêm chương tiếp theo...</span>
+                  <div className="space-y-1.5 mt-2">
+                    {[1, 2, 3, 4, 5].map((idx) => (
+                      <div key={`sk-bottom-${idx}`} className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 animate-pulse flex items-center justify-between">
+                        <div className="h-4 w-36 bg-on-surface-variant/20 rounded" />
+                        <div className="h-4 w-12 bg-primary/20 rounded-lg" />
+                      </div>
+                    ))}
                   </div>
                 )}
               </>

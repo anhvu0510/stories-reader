@@ -83,13 +83,13 @@ describe('TranslationSheet Requirements', () => {
       expect(ChapterRepository.getChapters).toHaveBeenCalledWith(
         'book-123',
         1,
-        26,
+        50,
         'chapterNumber',
         'ASC',
         'all',
         '',
         10, // 15 - 5 = 10
-        35  // 15 + 20 = 35
+        65  // 15 + 50 = 65
       );
     });
   });

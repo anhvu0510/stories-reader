@@ -150,7 +150,7 @@ export function ChapterListScreen() {
     const handleScroll = () => {
       if (loading || loadingMore || !hasMore) return;
       const scrollPosition = window.innerHeight + window.scrollY;
-      const scrollThreshold = document.documentElement.scrollHeight - 300;
+      const scrollThreshold = document.documentElement.scrollHeight - 450;
 
       if (scrollPosition >= scrollThreshold) {
         fetchChapters(page + 1, search, filterState, sortOrder, true);
