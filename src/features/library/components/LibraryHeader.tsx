@@ -26,7 +26,7 @@ export function LibraryHeader({
   const { isOfflineMode, setOfflineMode } = useAppStore();
 
   return (
-    <header className="sticky top-0 z-30 bg-black/10 dark:bg-black/15 backdrop-blur-[2px] border-b border-blue-500/30 dark:border-blue-400/25 shadow-[0_8px_24px_rgba(0,0,0,0.4),_inset_0_-1px_0.5px_0_rgba(0,0,0,0.4)] px-3.5 py-2.5 space-y-2 w-full max-w-md mx-auto overflow-x-hidden box-border transition-colors duration-200">
+    <header className="px-3.5 py-2.5 space-y-2.5 w-full max-w-md mx-auto overflow-x-hidden box-border transition-colors duration-200">
       {/* Top Title Bar & Essential Shortcut Buttons Row */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
@@ -91,7 +91,7 @@ export function LibraryHeader({
               onSubmitSearch?.();
             }
           }}
-          className="w-full pl-9 pr-8 py-2 rounded-xl bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium transition-all shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] box-border"
+          className="w-full pl-9 pr-8 py-2 rounded-xl bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/15 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] box-border"
         />
         {searchQuery && (
           <button
