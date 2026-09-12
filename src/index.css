@@ -4,7 +4,7 @@
 /* 1. MẶC ĐỊNH (Dark Zinc & Amber Accent) */
 :root, [data-theme="default"] {
   color-scheme: dark;
-  --bg: #09090b;
+  --bg: #000000;
   --on-bg: #f4f4f5;
   --surface: #09090b;
   --surface-dim: #050507;

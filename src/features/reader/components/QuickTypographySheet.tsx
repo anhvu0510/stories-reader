@@ -120,7 +120,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
             </span>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {themes.map((t) => {
               const isSelected = theme === t.id;
               return (
