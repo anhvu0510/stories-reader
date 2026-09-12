@@ -87,13 +87,15 @@ export function SortSheet({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-xl border-t sm:border border-white/20 dark:border-white/20 rounded-t-3xl shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] flex flex-col max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300"
+        className="relative w-full max-w-md bg-surface/50 dark:bg-surface/50 backdrop-blur-xl border-t sm:border border-white/20 dark:border-white/20 rounded-t-[32px] shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.5)] flex flex-col max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Ambient Top Glow Effect */}
+        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-amber-400/15 border border-amber-400/30 text-amber-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center">
               <ArrowUpDown size={16} />
             </div>
             <div>
@@ -108,7 +110,7 @@ export function SortSheet({
             <button
               type="button"
               onClick={handleReset}
-              className="px-2.5 py-1 text-xs font-semibold text-amber-400 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1"
+              className="px-2.5 py-1 text-xs font-semibold text-primary hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1"
               title="Đặt lại mặc định"
             >
               <RotateCcw size={12} />
@@ -138,25 +140,25 @@ export function SortSheet({
                 onClick={() => handleSelect(opt.sortBy, opt.sortOrder)}
                 className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all active:scale-[0.99] text-left ${
                   isSelected
-                    ? 'bg-amber-400/20 hover:bg-amber-400/25 backdrop-blur-md border-2 border-amber-400 text-amber-300 shadow-[0_4px_20px_rgba(245,158,11,0.35),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)]'
-                    : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-amber-400/80 text-on-surface'
+                    ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary shadow-[0_4px_20px_var(--primary),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)]'
+                    : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 text-on-surface'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                       isSelected
-                        ? 'bg-amber-400/30 border border-amber-400/70 text-amber-300 font-extrabold'
-                        : 'bg-amber-400/10 border border-amber-400/30 text-amber-400'
+                        ? 'bg-primary/30 border border-primary/70 text-primary font-extrabold'
+                        : 'bg-primary/10 border border-primary/30 text-primary'
                     }`}
                   >
                     {opt.icon}
                   </div>
                   <div>
-                    <div className={`text-xs font-extrabold leading-snug ${isSelected ? 'text-amber-300 drop-shadow-xs' : 'text-on-surface'}`}>{opt.label}</div>
+                    <div className={`text-xs font-extrabold leading-snug ${isSelected ? 'text-primary drop-shadow-xs' : 'text-on-surface'}`}>{opt.label}</div>
                     <div
                       className={`text-[10px] mt-0.5 ${
-                        isSelected ? 'text-amber-200/90 font-medium' : 'text-on-surface-variant/70'
+                        isSelected ? 'text-primary/90 font-medium' : 'text-on-surface-variant/70'
                       }`}
                     >
                       {opt.description}
@@ -166,7 +168,7 @@ export function SortSheet({
 
                 <div
                   className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                    isSelected ? 'bg-amber-400/30 border border-amber-400/70 text-amber-300 font-bold' : 'border border-white/30'
+                    isSelected ? 'bg-primary/30 border border-primary/70 text-primary font-bold' : 'border border-white/30'
                   }`}
                 >
                   {isSelected && <Check size={12} strokeWidth={3} />}
@@ -177,18 +179,18 @@ export function SortSheet({
         </div>
 
         {/* Footer Action */}
-        <div className="p-3.5 border-t border-white/10 bg-white/5 backdrop-blur-xs flex items-center gap-2">
+        <div className="p-3.5 border-t border-outline-variant/20 bg-white/[0.03] dark:bg-white/[0.03] backdrop-blur-md flex items-center gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-white/20 text-xs font-bold text-on-surface-variant hover:bg-white/10 active:scale-95 transition-all"
+            className="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 backdrop-blur-md border-2 border-outline-variant/60 text-on-surface text-xs font-bold shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1.5px_rgba(255,255,255,0.4)] active:scale-95 transition-all"
           >
             Hủy
           </button>
           <button
             type="button"
             onClick={handleApply}
-            className="flex-1 py-2.5 rounded-xl bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black text-xs font-extrabold border border-amber-300/70 shadow-[0_4px_16px_rgba(245,158,11,0.5)] hover:brightness-110 active:scale-95 transition-all"
+            className="flex-1 py-2.5 rounded-xl bg-primary/25 hover:bg-primary/35 backdrop-blur-md border-2 border-primary/70 text-primary text-xs font-extrabold shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] active:scale-95 transition-all"
           >
             Áp dụng
           </button>

@@ -310,12 +310,15 @@ export function QuickChapterSelectSheet({
     <div className="fixed inset-0 z-[95000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden box-border">
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="relative z-10 bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] max-h-[85dvh] flex flex-col overflow-hidden box-border transition-colors duration-200">
+      <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] max-h-[85dvh] flex flex-col overflow-hidden box-border transition-colors duration-200">
+        {/* Ambient Top Glow Effect */}
+        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
+
         {/* Drag Handle */}
-        <div className="w-10 h-1 rounded-full bg-white/30 mx-auto my-2.5 flex-shrink-0" />
+        <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto my-2.5 flex-shrink-0 relative z-20" />
 
         {/* Header & Search */}
-        <div className="px-4 py-2 mb-1 border-b border-white/10 space-y-2.5 flex-shrink-0 bg-white/5 backdrop-blur-sm">
+        <div className="px-4 py-2 mb-1 border-b border-outline-variant/20 space-y-2.5 flex-shrink-0 bg-white/[0.03] dark:bg-white/[0.03]">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-extrabold text-on-surface tracking-tight">Danh Sách Chương</h3>
             <div className="flex items-center gap-1">
@@ -328,12 +331,12 @@ export function QuickChapterSelectSheet({
                   isDownloaded
                     ? "text-rose-500 bg-rose-500/10 hover:bg-rose-500/20"
                     : downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting')
-                    ? "text-amber-400 bg-amber-400/10"
+                    ? "text-primary bg-primary/10"
                     : "text-on-surface-variant hover:text-on-surface hover:bg-white/10"
                 }`}
               >
                 {downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting') ? (
-                  <RefreshCw size={16} className="animate-spin text-amber-400" />
+                  <RefreshCw size={16} className="animate-spin text-primary" />
                 ) : isDownloaded ? (
                   <Trash2 size={16} />
                 ) : (
@@ -359,7 +362,7 @@ export function QuickChapterSelectSheet({
               placeholder="Tìm số hoặc tên chương..."
               value={search}
               onChange={handleSearchChange}
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white/10 border border-white/20 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-amber-400/60 font-medium shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] transition-all"
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white/5 dark:bg-white/5 border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 font-medium transition-all"
             />
           </div>
         </div>
@@ -429,7 +432,7 @@ export function QuickChapterSelectSheet({
       {/* Mobile Delete Confirm Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-[96000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-surface-container text-on-surface w-full max-w-xs sm:max-w-sm rounded-3xl p-5 border border-outline-variant/30 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-surface/90 dark:bg-surface/90 backdrop-blur-2xl text-on-surface w-full max-w-xs sm:max-w-sm rounded-3xl p-5 border border-outline-variant/30 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto">
               <Trash2 size={24} />
             </div>

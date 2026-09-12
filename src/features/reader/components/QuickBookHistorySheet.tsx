@@ -94,28 +94,28 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
         onClick={() => handleSwapBook(book)}
         className={`group relative z-10 rounded-xl p-2.5 transition-all duration-150 cursor-pointer flex items-center justify-between gap-2.5 shadow-xs hover:shadow-md overflow-hidden active:scale-[0.99] ${
           isPinned
-            ? 'bg-amber-400/20 hover:bg-amber-400/25 backdrop-blur-md border-2 border-amber-400 border-l-4 border-l-amber-300 shadow-[0_4px_20px_rgba(245,158,11,0.35),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] text-amber-300'
-            : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-amber-400/80 border-l-4 border-l-amber-400 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.35),_0_4px_12px_rgba(0,0,0,0.2)] text-on-surface'
+            ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary border-l-4 border-l-primary-fixed shadow-[0_4px_20px_var(--primary),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] text-primary'
+            : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 border-l-4 border-l-primary shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.35),_0_4px_12px_rgba(0,0,0,0.2)] text-on-surface'
         }`}
       >
         {/* Left Side: Ultra-Compact TỔNG Badge */}
         <div
           className={`w-9 h-9 rounded-lg flex flex-col items-center justify-center flex-shrink-0 font-mono shadow-2xs ${
             isPinned
-              ? 'bg-amber-400/30 border border-amber-400/70 text-amber-300 font-extrabold shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.5)]'
-              : 'bg-amber-400/10 border border-amber-400/30 text-amber-400/90 font-bold'
+              ? 'bg-primary/30 border border-primary/70 text-primary font-extrabold shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.5)]'
+              : 'bg-primary/10 border border-primary/30 text-primary/90 font-bold'
           }`}
         >
-          <span className={`text-[7px] font-extrabold uppercase tracking-wider leading-none flex items-center gap-0.5 ${isPinned ? 'text-amber-300/80' : 'text-amber-400/80'}`}>
+          <span className={`text-[7px] font-extrabold uppercase tracking-wider leading-none flex items-center gap-0.5 ${isPinned ? 'text-primary/80' : 'text-primary/80'}`}>
             <Layers size={8} /> TỔNG
           </span>
-          <span className={`text-xs font-black leading-none mt-0.5 ${isPinned ? 'text-amber-300' : 'text-amber-300'}`}>{book.chapterCount}</span>
+          <span className={`text-xs font-black leading-none mt-0.5 ${isPinned ? 'text-primary' : 'text-primary'}`}>{book.chapterCount}</span>
         </div>
 
         {/* Middle Content Section */}
         <div className="flex-1 min-w-0 space-y-1">
           {/* Title */}
-          <h4 className={`text-xs font-extrabold leading-tight tracking-tight transition-colors truncate ${isPinned ? 'text-amber-300 font-black drop-shadow-xs' : 'text-on-surface group-hover:text-amber-400'}`}>
+          <h4 className={`text-xs font-extrabold leading-tight tracking-tight transition-colors truncate ${isPinned ? 'text-primary font-black drop-shadow-xs' : 'text-on-surface group-hover:text-primary'}`}>
             {book.bookName}
           </h4>
 
@@ -124,14 +124,14 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
             <div className="flex items-center gap-1.5 text-xs min-w-0 overflow-hidden">
               <span className={`px-1.5 py-0.5 min-w-[28px] h-5 rounded-md font-mono font-extrabold text-[9.5px] whitespace-nowrap flex items-center justify-center shrink-0 shadow-2xs ${
                 isPinned
-                  ? 'bg-amber-400/25 border border-amber-400/50 text-amber-300'
+                  ? 'bg-primary/25 border border-primary/50 text-primary'
                   : 'bg-emerald-500/15 border border-emerald-400/30 text-emerald-400 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]'
               }`}>
                 Ch.{book.lastReadChapter.chapterNumber}
               </span>
               {book.lastReadChapter.title && (
                 <div className="flex-1 min-w-0 overflow-hidden">
-                  <span className={`truncate block text-[10.5px] font-medium ${isPinned ? 'text-amber-200/90' : 'text-on-surface-variant/90'}`}>
+                  <span className={`truncate block text-[10.5px] font-medium ${isPinned ? 'text-primary/90' : 'text-on-surface-variant/90'}`}>
                     {book.lastReadChapter.title}
                   </span>
                 </div>
@@ -141,8 +141,8 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
 
           {/* Bottom Row: Date + Icon Badges */}
           <div className="flex items-center gap-1.5 text-[9.5px] font-mono whitespace-nowrap flex-nowrap shrink-0 overflow-hidden pt-0.5">
-            <div className={`flex items-center gap-1 shrink-0 ${isPinned ? 'text-amber-200/80 font-medium' : 'text-on-surface-variant/70'}`}>
-              <Clock size={10} className={isPinned ? 'text-amber-300/70' : 'text-on-surface-variant/60'} />
+            <div className={`flex items-center gap-1 shrink-0 ${isPinned ? 'text-primary/80 font-medium' : 'text-on-surface-variant/70'}`}>
+              <Clock size={10} className={isPinned ? 'text-primary/70' : 'text-on-surface-variant/60'} />
               <span>{formattedDate}</span>
             </div>
 
@@ -157,10 +157,10 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
 
             <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md font-bold shrink-0 ${
               isPinned
-                ? 'border border-amber-400/40 bg-amber-400/20 text-amber-300'
-                : 'border border-amber-400/30 bg-amber-400/10 text-amber-400'
+                ? 'border border-primary/40 bg-primary/20 text-primary'
+                : 'border border-primary/30 bg-primary/10 text-primary'
             }`}>
-              <Sparkles size={10} className={isPinned ? 'text-amber-300' : 'text-amber-400'} />
+              <Sparkles size={10} className={isPinned ? 'text-primary' : 'text-primary'} />
               <span>{book.totalTranslated}</span>
             </span>
           </div>
@@ -173,14 +173,14 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
     <div className="fixed inset-0 z-[95000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden box-border">
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="relative z-10 bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] max-h-[90dvh] flex flex-col overflow-hidden box-border transition-colors duration-200">
+      <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-outline-variant/30 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] max-h-[90dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
         {/* Drag Handle */}
         <div className="w-10 h-1 rounded-full bg-white/30 mx-auto my-2 flex-shrink-0" />
 
         {/* Header */}
         <div className="px-4 py-2 border-b border-white/10 flex items-center justify-between flex-shrink-0 bg-white/5">
           <h3 className="text-xs font-black text-on-surface tracking-tight flex items-center gap-1.5 uppercase">
-            <Clock size={15} className="text-amber-400" /> LỊCH SỬ ĐỌC TRUYỆN ({historyBooks.length})
+            <Clock size={15} className="text-primary" /> LỊCH SỬ ĐỌC TRUYỆN ({historyBooks.length})
           </h3>
           <button
             onClick={onClose}

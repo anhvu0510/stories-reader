@@ -31,7 +31,7 @@ export function LibraryHeader({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           {/* Sleek 3D Squircle Icon Container */}
-          <div className="w-9 h-9 rounded-[14px] bg-gradient-to-b from-amber-400/20 via-slate-900 to-slate-950 border border-amber-400/40 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),_0_4px_12px_rgba(0,0,0,0.4)] flex items-center justify-center text-amber-400 shrink-0">
+          <div className="w-9 h-9 rounded-[14px] bg-gradient-to-b from-primary/20 via-slate-900 to-slate-950 border border-primary/40 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),_0_4px_12px_rgba(0,0,0,0.4)] flex items-center justify-center text-primary shrink-0">
             <BookOpenCheck size={19} className="drop-shadow-[0_2px_4px_rgba(245,158,11,0.5)]" />
           </div>
 
@@ -52,8 +52,8 @@ export function LibraryHeader({
             onClick={() => setOfflineMode(!isOfflineMode)}
             className={`p-2 rounded-full border transition-all active:scale-95 shadow-sm ${
               isOfflineMode
-                ? 'bg-amber-500/15 border-amber-500/30 text-amber-500'
-                : 'bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 text-on-surface-variant hover:text-on-surface hover:bg-white/10 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.25)]'
+                ? 'bg-primary/20 border-primary/50 text-primary'
+                : 'bg-white/5 dark:bg-white/5 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-white/10 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.25)]'
             }`}
             title={isOfflineMode ? 'Đang ở chế độ Ngoại tuyến (Bấm để chuyển Online)' : 'Đang ở chế độ Trực tuyến (Bấm để chuyển Offline)'}
           >

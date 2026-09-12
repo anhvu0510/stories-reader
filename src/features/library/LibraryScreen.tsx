@@ -293,8 +293,8 @@ export function LibraryScreen() {
             style={{
               width: '20%',
               left: tab === 'ALL' ? '2.5%' : tab === 'HISTORY' ? '27.5%' : tab === 'FAVORITE' ? '52.5%' : '77.5%',
-              backgroundColor: tab === 'ALL' ? '#f59e0b' : tab === 'HISTORY' ? '#f59e0b' : tab === 'FAVORITE' ? '#f43f5e' : '#34d399',
-              boxShadow: tab === 'ALL' ? '0 0 10px rgba(245,158,11,0.7)' : tab === 'HISTORY' ? '0 0 10px rgba(245,158,11,0.7)' : tab === 'FAVORITE' ? '0 0 10px rgba(244,63,94,0.7)' : '0 0 10px rgba(52,211,153,0.7)',
+              backgroundColor: tab === 'ALL' || tab === 'HISTORY' ? 'var(--primary)' : tab === 'FAVORITE' ? '#f43f5e' : '#34d399',
+              boxShadow: tab === 'ALL' || tab === 'HISTORY' ? '0 0 10px var(--primary)' : tab === 'FAVORITE' ? '0 0 10px rgba(244,63,94,0.7)' : '0 0 10px rgba(52,211,153,0.7)',
             }}
           />
 
@@ -302,7 +302,7 @@ export function LibraryScreen() {
             onClick={() => handleTabChange('ALL')}
             className={`flex-1 py-2.5 px-0.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
               tab === 'ALL'
-                ? 'text-amber-400 font-extrabold'
+                ? 'text-primary font-extrabold'
                 : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
             }`}
           >
@@ -310,7 +310,7 @@ export function LibraryScreen() {
               <Library size={13} className="shrink-0 transition-transform group-active:scale-90" />
               <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Tất cả</span>
               {tab === 'ALL' && (
-                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 shrink-0 leading-none shadow-2xs">
+                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-primary/15 text-primary border border-primary/30 shrink-0 leading-none shadow-2xs">
                   {total}
                 </span>
               )}
@@ -321,7 +321,7 @@ export function LibraryScreen() {
             onClick={() => handleTabChange('HISTORY')}
             className={`flex-1 py-2.5 px-0.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
               tab === 'HISTORY'
-                ? 'text-amber-400 font-extrabold'
+                ? 'text-primary font-extrabold'
                 : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
             }`}
           >
@@ -329,7 +329,7 @@ export function LibraryScreen() {
               <Clock size={13} className="shrink-0 transition-transform group-active:scale-90" />
               <span className="tracking-tight whitespace-nowrap text-[11.5px] sm:text-xs">Lịch sử</span>
               {tab === 'HISTORY' && (
-                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 shrink-0 leading-none shadow-2xs">
+                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-primary/15 text-primary border border-primary/30 shrink-0 leading-none shadow-2xs">
                   {total}
                 </span>
               )}

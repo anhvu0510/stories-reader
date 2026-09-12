@@ -414,14 +414,14 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
           }}
           className={`group relative z-10 rounded-2xl border p-2 sm:p-2.5 transition-all duration-200 ease-out cursor-pointer flex items-center gap-2.5 overflow-hidden active:scale-[0.99] ${
             isSelected
-              ? 'bg-amber-400/20 hover:bg-amber-400/25 backdrop-blur-md border-2 border-amber-400 shadow-[0_4px_20px_rgba(245,158,11,0.35),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] text-amber-300'
-              : 'bg-surface-container/35 hover:bg-surface-container/60 backdrop-blur-md border-2 border-outline-variant/60 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.25),_0_8px_24px_rgba(0,0,0,0.35)] hover:border-amber-400/80 hover:shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.5),_0_12px_32px_rgba(245,158,11,0.25)] text-on-surface'
+              ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary shadow-[0_4px_20px_rgba(245,158,11,0.35),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] text-primary'
+              : 'bg-surface-container/35 hover:bg-surface-container/60 backdrop-blur-md border-2 border-outline-variant/60 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.25),_0_8px_24px_rgba(0,0,0,0.35)] hover:border-primary/80 hover:shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.5),_0_12px_32px_rgba(245,158,11,0.2)] text-on-surface'
           }`}
         >
           {/* Left: Compact Square Book Icon Badge (3D Glass Mold) */}
-          <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-b from-amber-400/30 via-amber-500/20 to-amber-600/10 border-2 border-amber-400/70 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.6),_0_4px_14px_rgba(245,158,11,0.3)] flex flex-col items-center justify-center p-0.5 shrink-0 overflow-hidden group-hover:border-amber-400 group-hover:scale-105 transition-all">
-            <BookOpen size={16} className="text-amber-300 shrink-0 drop-shadow-xs" />
-            <span className="text-[7.5px] font-mono font-black text-amber-300 leading-tight whitespace-nowrap px-0.5 text-center mt-0.5">
+          <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-b from-primary/30 via-primary/20 to-primary/10 border-2 border-primary/70 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.6),_0_4px_14px_rgba(245,158,11,0.2)] flex flex-col items-center justify-center p-0.5 shrink-0 overflow-hidden group-hover:border-primary group-hover:scale-105 transition-all">
+            <BookOpen size={16} className="text-primary shrink-0 drop-shadow-xs" />
+            <span className="text-[7.5px] font-mono font-black text-primary leading-tight whitespace-nowrap px-0.5 text-center mt-0.5">
               {book.chapterCount > 9999 ? `${(book.chapterCount / 1000).toFixed(1)}k` : book.chapterCount} ch
             </span>
             {isDownloaded && (
@@ -433,7 +433,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
           <div className="flex-1 min-w-0 space-y-1">
             {/* Row 1: Title + Favorite Heart + Date */}
             <div className="flex items-start justify-between gap-1.5 min-w-0">
-              <h3 className="text-[13px] font-bold text-on-surface leading-snug tracking-tight group-hover:text-amber-400 transition-colors line-clamp-2 min-w-0 flex-1">
+              <h3 className="text-[13px] font-bold text-on-surface leading-snug tracking-tight group-hover:text-primary transition-colors line-clamp-2 min-w-0 flex-1">
                 {book.bookName}
               </h3>
               <div className="flex items-center gap-1 shrink-0 pt-0.5">
@@ -480,7 +480,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
               {readCount > 0 && (
                 <div className="w-full bg-black/40 border border-white/10 h-1 rounded-full overflow-hidden p-[1px] shadow-[inset_0_1px_1px_rgba(0,0,0,0.6)]">
                   <div
-                    className="bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 h-full rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(245,158,11,0.8)]"
+                    className="bg-gradient-to-r from-primary via-primary-fixed to-primary-fixed-dim h-full rounded-full transition-all duration-300 shadow-[0_0_8px_var(--primary)]"
                     style={{ width: `${progressPct}%` }}
                   />
                 </div>
@@ -496,7 +496,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
                     {book.tags.slice(0, 2).map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center px-1.5 py-0.25 rounded-md text-[8.5px] font-bold bg-amber-400/15 text-amber-300 truncate max-w-[65px] border border-amber-400/30"
+                        className="inline-flex items-center px-1.5 py-0.25 rounded-md text-[8.5px] font-bold bg-primary/15 text-primary truncate max-w-[65px] border border-primary/30"
                       >
                         #{tag}
                       </span>
@@ -521,7 +521,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
                 </span>
 
                 <span
-                  className="inline-flex items-center gap-0.5 px-1.5 py-0.25 rounded-md bg-amber-400/15 text-amber-300 font-bold"
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.25 rounded-md bg-primary/15 text-primary font-bold"
                   title={`Đã dịch: ${book.totalTranslated}/${book.chapterCount}`}
                 >
                   <Sparkles size={9} />
@@ -581,8 +581,8 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
             </div>
 
             {/* Target Details */}
-            <div className="p-3 rounded-2xl bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] space-y-1">
-              <p className="text-xs font-bold text-amber-400 line-clamp-1">{book.bookName}</p>
+            <div className="p-3 rounded-2xl bg-white/5 border border-outline-variant/30 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] space-y-1">
+              <p className="text-xs font-bold text-primary line-clamp-1">{book.bookName}</p>
               <p className="text-[11.5px] text-on-surface-variant leading-relaxed">
                 {deleteConfirmType === 'ONLINE'
                   ? 'Tất cả các chương, bản dịch AI và dữ liệu liên quan sẽ bị xóa vĩnh viễn khỏi server và không thể khôi phục.'

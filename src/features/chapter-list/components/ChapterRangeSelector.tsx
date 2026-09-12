@@ -29,7 +29,7 @@ export function ChapterRangeSelector({ totalChapters, activeRange, onRangeSelect
         onClick={() => onRangeSelect('all')}
         className={`px-3 py-1 rounded-xl text-xs font-mono font-bold transition-all flex-shrink-0 active:scale-95 ${
           activeRange === 'all'
-            ? 'bg-amber-500 text-black font-extrabold shadow-sm'
+            ? 'bg-primary text-on-primary font-extrabold shadow-sm'
             : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200'
         }`}
       >
@@ -42,7 +42,7 @@ export function ChapterRangeSelector({ totalChapters, activeRange, onRangeSelect
           onClick={() => onRangeSelect(r.value, r.start, r.end)}
           className={`px-3 py-1 rounded-xl text-xs font-mono font-bold transition-all flex-shrink-0 active:scale-95 ${
             activeRange === r.value
-              ? 'bg-amber-500 text-black font-extrabold shadow-sm'
+              ? 'bg-primary text-on-primary font-extrabold shadow-sm'
               : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200'
           }`}
         >

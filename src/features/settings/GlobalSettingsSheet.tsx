@@ -37,9 +37,9 @@ export function GlobalSettingsSheet({
       <div className="absolute inset-0" onClick={closeSettings} />
 
       {/* STABLE THEME-SYNCHRONIZED BOTTOM SHEET */}
-      <div className="relative z-10 bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] h-[76vh] max-h-[88dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
+      <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-outline-variant/30 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] h-[76vh] max-h-[88dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
         {/* Ambient Top Glow Effect */}
-        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-amber-400/10 blur-3xl pointer-events-none rounded-full" />
+        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
 
         {/* Drag Handle */}
         <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto my-2.5 flex-shrink-0 relative z-20" />
@@ -75,11 +75,11 @@ export function GlobalSettingsSheet({
                   title={tab.label}
                   className={`transition-all duration-300 flex items-center justify-center active:scale-95 ${
                     isActive
-                      ? 'px-3.5 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 backdrop-blur-md border border-amber-400/60 text-amber-300 font-black shadow-[0_2px_8px_rgba(245,158,11,0.35)] gap-1.5 flex-1'
+                      ? 'px-3.5 py-1.5 rounded-xl bg-primary/20 hover:bg-primary/30 backdrop-blur-md border border-primary/60 text-primary font-black shadow-[0_2px_8px_var(--primary)] gap-1.5 flex-1'
                       : 'p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-white/[0.06]'
                   }`}
                 >
-                  <Icon size={16} className={isActive ? 'text-amber-300' : 'text-amber-400/70'} />
+                  <Icon size={16} className={isActive ? 'text-primary' : 'text-primary/70'} />
                   {isActive && (
                     <span className="text-xs tracking-tight font-black whitespace-nowrap animate-in fade-in duration-200">
                       {tab.label}

@@ -6,7 +6,7 @@ import { ThemeType, FontType } from '../../../shared/types';
 const THEMES: { id: ThemeType; label: string; bg: string; color: string }[] = [
   { id: 'default', label: 'Mặc định', bg: '#09090b', color: '#f4f4f5' },
   { id: 'sepia', label: 'Sepia Vàng', bg: '#fbf0d9', color: '#3b2314' },
-  { id: 'modern-vn', label: 'Royal VN', bg: '#080e1e', color: '#e2e8f0' },
+  { id: 'modern-vn', label: 'Royal VN', bg: '#060e24', color: '#e2e8f0' },
   { id: 'amoled', label: 'AMOLED', bg: '#000000', color: '#f4f4f7' },
   { id: 'midnight', label: 'Midnight', bg: '#0b1120', color: '#f1f5f9' },
   { id: 'obsidian', label: 'Obsidian', bg: '#0c0a14', color: '#f3e8ff' },
@@ -37,7 +37,7 @@ export function ReaderSettingsTab() {
     <div className="space-y-6">
       {/* Theme selection */}
       <div>
-        <label className="text-xs font-semibold text-on-surface flex items-center justify-between mb-2">
+        <label className="text-xs font-semibold text-on-surface flex items-center justify-between mb-2.5">
           <span className="flex items-center gap-1.5">
             <Palette size={14} className="text-primary" /> Chủ đề Giao diện (Theme)
           </span>
@@ -45,22 +45,27 @@ export function ReaderSettingsTab() {
             {THEMES.find((t) => t.id === theme)?.label}
           </span>
         </label>
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar py-1 px-0.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {THEMES.map((item) => {
             const isSelected = theme === item.id;
             return (
               <button
                 key={item.id}
+                type="button"
                 onClick={() => setTheme(item.id)}
-                className={`px-3 py-1.5 rounded-full border flex items-center gap-2 transition-all text-xs shrink-0 active:scale-95 ${
+                className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all text-xs active:scale-[0.985] ${
                   isSelected
-                    ? 'border-primary ring-2 ring-primary/30 font-bold shadow-xs'
-                    : 'border-outline-variant/30 hover:border-outline-variant/60'
+                    ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary font-extrabold shadow-[0_4px_16px_rgba(0,0,0,0.25),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)]'
+                    : 'bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-md border border-outline-variant/60 text-on-surface hover:border-outline-variant/90'
                 }`}
-                style={{ backgroundColor: item.bg, color: item.color }}
               >
-                <div className="w-3.5 h-3.5 rounded-full border border-black/20 shrink-0" style={{ backgroundColor: item.bg }} />
-                <span className="text-xs truncate">{item.label}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <div
+                    className="w-4 h-4 rounded-full border border-white/30 shrink-0 shadow-xs flex items-center justify-center"
+                    style={{ backgroundColor: item.bg }}
+                  />
+                  <span className="text-xs font-bold truncate">{item.label}</span>
+                </div>
               </button>
             );
           })}
@@ -70,7 +75,7 @@ export function ReaderSettingsTab() {
       {/* Font Selection */}
       <div>
         <label className="text-xs font-semibold text-on-surface flex items-center gap-1.5 mb-2.5">
-          <Type size={14} className="text-amber-400" /> Phông chữ Reading
+          <Type size={14} className="text-primary" /> Phông chữ Reading
         </label>
         <div className="grid grid-cols-2 gap-2">
           {FONTS.map((item) => (
@@ -79,7 +84,7 @@ export function ReaderSettingsTab() {
               onClick={() => setFont(item.id)}
               className={`p-2.5 rounded-xl border text-xs font-medium transition-all active:scale-95 ${
                 font === item.id
-                  ? 'bg-amber-400/20 hover:bg-amber-400/30 backdrop-blur-md border border-amber-400/60 text-amber-300 font-extrabold shadow-[0_2px_8px_rgba(245,158,11,0.35)]'
+                  ? 'bg-primary/20 hover:bg-primary/30 backdrop-blur-md border border-primary/60 text-primary font-extrabold shadow-[0_2px_8px_var(--primary)]'
                   : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border border-outline-variant/60 text-on-surface'
               }`}
             >
@@ -93,7 +98,7 @@ export function ReaderSettingsTab() {
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
-            <Sliders size={14} className="text-amber-400" /> Cỡ chữ ({fontSize}px)
+            <Sliders size={14} className="text-primary" /> Cỡ chữ ({fontSize}px)
           </label>
         </div>
         <input
@@ -102,14 +107,14 @@ export function ReaderSettingsTab() {
           max="32"
           value={fontSize}
           onChange={(e) => setFontSize(Number(e.target.value))}
-          className="w-full accent-amber-400 cursor-pointer"
+          className="w-full accent-primary cursor-pointer"
         />
       </div>
 
       {/* Line Height */}
       <div>
         <label className="text-xs font-semibold text-on-surface flex items-center gap-1.5 mb-2">
-          <Sliders size={14} className="text-amber-400" /> Khoảng cách dòng ({lineHeight})
+          <Sliders size={14} className="text-primary" /> Khoảng cách dòng ({lineHeight})
         </label>
         <div className="grid grid-cols-4 gap-2">
           {[1.2, 1.4, 1.6, 1.8].map((lh) => (
@@ -118,7 +123,7 @@ export function ReaderSettingsTab() {
               onClick={() => setLineHeight(lh)}
               className={`py-1.5 rounded-lg border text-xs font-medium transition-all active:scale-95 ${
                 lineHeight === lh
-                  ? 'bg-amber-400/20 hover:bg-amber-400/30 backdrop-blur-md border border-amber-400/60 text-amber-300 font-extrabold shadow-[0_2px_8px_rgba(245,158,11,0.35)]'
+                  ? 'bg-primary/20 hover:bg-primary/30 backdrop-blur-md border border-primary/60 text-primary font-extrabold shadow-[0_2px_8px_var(--primary)]'
                   : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border border-outline-variant/60 text-on-surface'
               }`}
             >
@@ -131,7 +136,7 @@ export function ReaderSettingsTab() {
       {/* Group Lines */}
       <div>
         <label className="text-xs font-semibold text-on-surface flex items-center gap-1.5 mb-2">
-          <Layers size={14} className="text-amber-400" /> Gộp dòng ({groupLines} dòng/đoạn)
+          <Layers size={14} className="text-primary" /> Gộp dòng ({groupLines} dòng/đoạn)
         </label>
         <div className="grid grid-cols-5 gap-1.5">
           {[1, 2, 3, 4, 5].map((g) => (
@@ -140,7 +145,7 @@ export function ReaderSettingsTab() {
               onClick={() => setGroupLines(g)}
               className={`py-1.5 rounded-lg border text-xs font-medium transition-all active:scale-95 ${
                 groupLines === g
-                  ? 'bg-amber-400/20 hover:bg-amber-400/30 backdrop-blur-md border border-amber-400/60 text-amber-300 font-extrabold shadow-[0_2px_8px_rgba(245,158,11,0.35)]'
+                  ? 'bg-primary/20 hover:bg-primary/30 backdrop-blur-md border border-primary/60 text-primary font-extrabold shadow-[0_2px_8px_var(--primary)]'
                   : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border border-outline-variant/60 text-on-surface'
               }`}
             >
@@ -154,7 +159,7 @@ export function ReaderSettingsTab() {
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
-            <Sliders size={14} className="text-amber-400" /> Số chương gộp mỗi lần tải ({batchChapterSize || 1} chương)
+            <Sliders size={14} className="text-primary" /> Số chương gộp mỗi lần tải ({batchChapterSize || 1} chương)
           </label>
           <span className="text-[10px] text-on-surface-variant font-mono">1 - 10 chương</span>
         </div>
@@ -165,7 +170,7 @@ export function ReaderSettingsTab() {
             max="10"
             value={batchChapterSize || 1}
             onChange={(e) => setBatchChapterSize(Number(e.target.value))}
-            className="w-20 px-3 py-1.5 rounded-lg bg-black/30 border border-blue-500/30 shadow-[inset_0_1px_0.5px_rgba(0,0,0,0.5)] text-xs text-amber-300 font-mono font-bold text-center focus:border-amber-400/60 focus:outline-none transition-all"
+            className="w-20 px-3 py-1.5 rounded-lg bg-black/30 border border-blue-500/30 shadow-[inset_0_1px_0.5px_rgba(0,0,0,0.5)] text-xs text-primary font-mono font-bold text-center focus:border-primary/60 focus:outline-none transition-all"
           />
           <div className="flex-1 grid grid-cols-4 gap-1.5">
             {[1, 2, 3, 5].map((size) => (
@@ -175,7 +180,7 @@ export function ReaderSettingsTab() {
                 onClick={() => setBatchChapterSize(size)}
                 className={`py-1.5 rounded-lg border text-xs font-medium transition-all active:scale-95 ${
                   (batchChapterSize || 1) === size
-                    ? 'bg-amber-400/20 hover:bg-amber-400/30 backdrop-blur-md border border-amber-400/60 text-amber-300 font-extrabold shadow-[0_2px_8px_rgba(245,158,11,0.35)]'
+                    ? 'bg-primary/20 hover:bg-primary/30 backdrop-blur-md border border-primary/60 text-primary font-extrabold shadow-[0_2px_8px_var(--primary)]'
                     : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border border-outline-variant/60 text-on-surface'
                 }`}
               >
@@ -197,7 +202,7 @@ export function ReaderSettingsTab() {
             type="checkbox"
             checked={isEnabledReplace}
             onChange={(e) => setIsEnabledReplace(e.target.checked)}
-            className="w-4 h-4 accent-amber-400 rounded cursor-pointer"
+            className="w-4 h-4 accent-primary rounded cursor-pointer"
           />
         </div>
 
@@ -208,7 +213,7 @@ export function ReaderSettingsTab() {
               type="number"
               value={bookLimit}
               onChange={(e) => setBookLimit(Number(e.target.value))}
-              className="w-full px-3 py-1.5 rounded-lg bg-black/30 border border-blue-500/30 shadow-[inset_0_1px_0.5px_rgba(0,0,0,0.5)] text-xs text-amber-300 font-mono font-bold focus:border-amber-400/60 focus:outline-none transition-all"
+              className="w-full px-3 py-1.5 rounded-lg bg-black/30 border border-blue-500/30 shadow-[inset_0_1px_0.5px_rgba(0,0,0,0.5)] text-xs text-primary font-mono font-bold focus:border-primary/60 focus:outline-none transition-all"
             />
           </div>
           <div>
@@ -217,7 +222,7 @@ export function ReaderSettingsTab() {
               type="number"
               value={chapterLimit}
               onChange={(e) => setChapterLimit(Number(e.target.value))}
-              className="w-full px-3 py-1.5 rounded-lg bg-black/30 border border-blue-500/30 shadow-[inset_0_1px_0.5px_rgba(0,0,0,0.5)] text-xs text-amber-300 font-mono font-bold focus:border-amber-400/60 focus:outline-none transition-all"
+              className="w-full px-3 py-1.5 rounded-lg bg-black/30 border border-blue-500/30 shadow-[inset_0_1px_0.5px_rgba(0,0,0,0.5)] text-xs text-primary font-mono font-bold focus:border-primary/60 focus:outline-none transition-all"
             />
           </div>
         </div>

@@ -39,7 +39,7 @@ export function BottomDock({
   return (
     <>
       <nav className="fixed bottom-4 left-0 right-0 z-40 w-full max-w-md mx-auto px-4 pointer-events-none box-border overflow-x-hidden transition-colors duration-200">
-        <div className="bg-black/10 dark:bg-black/15 backdrop-blur-[2px] border border-blue-500/30 dark:border-blue-400/25 shadow-[0_16px_36px_rgba(0,0,0,0.5),_inset_0_1px_0.5px_0_rgba(255,255,255,0.45),_inset_0_-1px_0.5px_0_rgba(0,0,0,0.4)] rounded-full px-2.5 py-1.5 flex items-center justify-between pointer-events-auto transition-all duration-200 gap-2">
+        <div className="bg-black/10 dark:bg-black/15 backdrop-blur-[2px] border border-outline-variant/40 shadow-[0_16px_36px_rgba(0,0,0,0.5),_inset_0_1px_0.5px_0_rgba(255,255,255,0.45),_inset_0_-1px_0.5px_0_rgba(0,0,0,0.4)] rounded-full px-2.5 py-1.5 flex items-center justify-between pointer-events-auto transition-all duration-200 gap-2">
           {/* Prev Page Button (Rich "Trang X" format) */}
           <button
             onClick={() => {
@@ -51,7 +51,7 @@ export function BottomDock({
             disabled={!canPrev}
             className={`px-3 py-2 rounded-full flex items-center gap-1.5 transition-all text-xs font-extrabold shadow-sm active:scale-95 ${
               canPrev
-                ? 'bg-amber-400/20 hover:bg-amber-400/30 backdrop-blur-md border border-amber-400/60 text-amber-300 shadow-[0_4px_16px_rgba(245,158,11,0.35),_inset_0_1px_1px_rgba(255,255,255,0.4)]'
+                ? 'bg-primary/20 hover:bg-primary/30 backdrop-blur-md border border-primary/60 text-primary shadow-[0_4px_16px_rgba(0,0,0,0.25),_inset_0_1px_1px_rgba(255,255,255,0.4)]'
                 : 'bg-white/5 text-white/20 border border-white/5 opacity-30 cursor-not-allowed pointer-events-none'
             }`}
             title="Trang trước"
@@ -61,7 +61,7 @@ export function BottomDock({
           </button>
 
           {/* Vertical Divider */}
-          <div className="w-[1px] h-4.5 bg-blue-400/25 shadow-xs shrink-0" />
+          <div className="w-[1px] h-4.5 bg-outline-variant/30 shadow-xs shrink-0" />
 
           {/* Center Interactive Page Indicator Pill */}
           <button
@@ -69,7 +69,7 @@ export function BottomDock({
               setTargetPage(page);
               setShowPagePicker(true);
             }}
-            className="flex-1 min-w-0 px-2 py-1 rounded-2xl bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.25)] hover:border-primary/50 text-center flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 group"
+            className="flex-1 min-w-0 px-2 py-1 rounded-2xl bg-white/5 dark:bg-white/5 border border-outline-variant/30 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.25)] hover:border-primary/50 text-center flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 group"
             title="Nhấp để chọn trang"
           >
             <div className="flex items-center justify-center gap-1 text-xs font-mono font-black text-primary truncate">
@@ -84,7 +84,7 @@ export function BottomDock({
           </button>
 
           {/* Vertical Divider */}
-          <div className="w-[1px] h-4.5 bg-blue-400/25 shadow-xs shrink-0" />
+          <div className="w-[1px] h-4.5 bg-outline-variant/30 shadow-xs shrink-0" />
 
           {/* Next Page Button (Rich "Trang X" format) */}
           <button
@@ -97,7 +97,7 @@ export function BottomDock({
             disabled={!canNext}
             className={`px-3 py-2 rounded-full flex items-center gap-1.5 transition-all text-xs font-extrabold shadow-sm active:scale-95 ${
               canNext
-                ? 'bg-amber-400/20 hover:bg-amber-400/30 backdrop-blur-md border border-amber-400/60 text-amber-300 shadow-[0_4px_16px_rgba(245,158,11,0.35),_inset_0_1px_1px_rgba(255,255,255,0.4)]'
+                ? 'bg-primary/20 hover:bg-primary/30 backdrop-blur-md border border-primary/60 text-primary shadow-[0_4px_16px_rgba(0,0,0,0.25),_inset_0_1px_1px_rgba(255,255,255,0.4)]'
                 : 'bg-white/5 text-white/20 border border-white/5 opacity-30 cursor-not-allowed pointer-events-none'
             }`}
             title="Trang sau"
@@ -115,7 +115,7 @@ export function BottomDock({
           <div className="absolute inset-0" onClick={() => setShowPagePicker(false)} />
 
           {/* Touch Bottom Sheet */}
-          <div className="relative z-10 bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] p-4 sm:p-5 space-y-3.5 max-h-[85dvh] overflow-y-auto hide-scrollbar transition-all duration-200 box-border">
+          <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-outline-variant/30 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] p-4 sm:p-5 space-y-3.5 max-h-[85dvh] overflow-y-auto hide-scrollbar transition-all duration-200 box-border">
             {/* Drag Handle & Header */}
             <div>
               <div className="w-10 h-1 rounded-full bg-white/30 mx-auto mb-2.5" />
@@ -147,7 +147,7 @@ export function BottomDock({
                       setTargetPage(Math.max(1, Math.min(totalPages, val)));
                     }
                   }}
-                  className="w-20 text-center text-xl font-mono font-black text-amber-300 bg-white/10 border-2 border-amber-400/50 rounded-xl px-2 py-1 focus:border-amber-400 focus:bg-amber-400/20 outline-none transition-all shadow-inner"
+                  className="w-20 text-center text-xl font-mono font-black text-primary bg-white/10 border-2 border-primary/50 rounded-xl px-2 py-1 focus:border-primary focus:bg-primary/20 outline-none transition-all shadow-inner"
                 />
                 <span className="text-xs font-mono text-on-surface-variant font-medium">/ {totalPages}</span>
               </div>
@@ -173,7 +173,7 @@ export function BottomDock({
                 max={totalPages}
                 value={targetPage}
                 onChange={(e) => setTargetPage(Number(e.target.value))}
-                className="flex-1 accent-amber-400 h-2 bg-white/10 rounded-lg cursor-pointer transition-all"
+                className="flex-1 accent-primary h-2 bg-white/10 rounded-lg cursor-pointer transition-all"
               />
 
               <button
@@ -217,7 +217,7 @@ export function BottomDock({
                           onClick={() => setTargetPage(presetNum)}
                           className={`py-2 px-1 rounded-xl text-[10px] font-mono font-extrabold border transition-all active:scale-95 text-center truncate cursor-pointer ${
                             isSelected
-                              ? 'bg-amber-400/25 border-2 border-amber-400 text-amber-300 shadow-[0_2px_10px_rgba(245,158,11,0.35)]'
+                              ? 'bg-primary/25 border-2 border-primary text-primary shadow-[0_2px_10px_rgba(0,0,0,0.2)]'
                               : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border border-outline-variant/60 text-on-surface-variant hover:text-on-surface'
                           }`}
                         >
@@ -233,7 +233,7 @@ export function BottomDock({
             {/* Primary Action Button */}
             <button
               onClick={() => handleGoToPage(targetPage)}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black text-xs font-extrabold border border-amber-300/70 shadow-[0_4px_16px_rgba(245,158,11,0.5),_inset_0_1px_1px_rgba(255,255,255,0.6)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-1.5 uppercase tracking-wider cursor-pointer mt-1"
+              className="w-full py-3.5 rounded-xl bg-primary text-on-primary text-xs font-extrabold border border-primary/70 shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1px_1px_rgba(255,255,255,0.4)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-1.5 uppercase tracking-wider cursor-pointer mt-1"
             >
               <Check size={16} strokeWidth={3} />
               <span>Chuyển Tới Trang {targetPage}</span>

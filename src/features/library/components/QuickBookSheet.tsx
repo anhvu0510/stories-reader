@@ -298,9 +298,12 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
       <div className="fixed inset-0 z-[95000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden box-border">
         <div className="absolute inset-0" onClick={onClose} />
 
-        <div className="relative z-10 bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] h-[82vh] max-h-[90dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
+        <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.5)] h-[82vh] max-h-[90dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
+          {/* Ambient Top Glow Effect */}
+          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
+
           {/* Drag Handle */}
-          <div className="w-10 h-1 rounded-full bg-white/30 mx-auto my-2.5 flex-shrink-0" />
+          <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto my-2.5 flex-shrink-0 relative z-20" />
 
           {/* Top Header & Compact Mobile Info Area */}
           <div className="px-4 pt-1.5 pb-2 border-b border-white/10 space-y-2 flex-shrink-0 bg-white/5">
@@ -317,12 +320,12 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
                   <button
                     type="button"
                     onClick={() => setShowTranslationSheet(true)}
-                    className="relative p-1.5 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-amber-400 hover:bg-white/20 transition-all flex items-center justify-center active:scale-95"
+                    className="relative p-1.5 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-primary hover:bg-white/20 transition-all flex items-center justify-center active:scale-95"
                     title={pendingCount > 0 ? `Chờ dịch: ${pendingCount} chương (Mở Dịch AI)` : 'Mở Dịch AI'}
                   >
-                    <Sparkles size={17} className={pendingCount > 0 ? 'text-amber-400 animate-pulse' : ''} />
+                    <Sparkles size={17} className={pendingCount > 0 ? 'text-primary animate-pulse' : ''} />
                     {pendingCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-amber-400 text-black font-mono font-black text-[8px] flex items-center justify-center leading-none shadow-xs">
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-primary text-on-primary font-mono font-black text-[8px] flex items-center justify-center leading-none shadow-xs">
                         {pendingCount > 99 ? '99+' : pendingCount}
                       </span>
                     )}
@@ -364,7 +367,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
               <span>Đã dịch: <b className="text-on-surface">{book.totalTranslated}/{book.chapterCount}</b> ch ({percent}%)</span>
               <div className="w-24 bg-white/10 border border-white/15 h-1 rounded-full overflow-hidden ml-2">
                 <div
-                  className="bg-amber-400 h-full rounded-full transition-all duration-300"
+                  className="bg-primary h-full rounded-full transition-all duration-300"
                   style={{ width: `${percent}%` }}
                 />
               </div>
@@ -394,7 +397,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
                 placeholder="Tìm nhanh số hoặc tên chương..."
                 value={search}
                 onChange={handleSearchChange}
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-amber-400/60 font-medium transition-all"
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 font-medium transition-all"
               />
             </div>
           </div>

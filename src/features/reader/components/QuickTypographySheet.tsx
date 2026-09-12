@@ -24,7 +24,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
     { id: 'midnight', name: 'Đêm', bg: '#0b1120', text: '#f1f5f9' },
     { id: 'coffee', name: 'Cà phê', bg: '#171310', text: '#f5e6d3' },
     { id: 'obsidian', name: 'Đá núi', bg: '#0c0a14', text: '#f3e8ff' },
-    { id: 'modern-vn', name: 'Royal VN', bg: '#080e1e', text: '#e2e8f0' },
+    { id: 'modern-vn', name: 'Royal VN', bg: '#060e24', text: '#e2e8f0' },
   ];
 
   const fonts: { id: FontType; name: string }[] = [
@@ -58,11 +58,11 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
       <div className="absolute inset-0" onClick={onClose} />
 
       {/* Ultra-Compact Mobile Bottom Sheet (~340px Max Height) */}
-      <div className="relative z-10 bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[24px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] p-3.5 sm:p-4 space-y-3 max-h-[50dvh] overflow-y-auto hide-scrollbar transition-all duration-200 box-border">
+      <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[24px] border-t sm:border border-outline-variant/30 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] p-3.5 sm:p-4 space-y-3 max-h-[50dvh] overflow-y-auto hide-scrollbar transition-all duration-200 box-border">
         {/* Header & Drag Handle */}
         <div className="flex items-center justify-between pb-1 border-b border-white/10">
           <div className="flex items-center gap-1.5">
-            <Type size={15} className="text-amber-400" />
+            <Type size={15} className="text-primary" />
             <h3 className="text-xs font-black tracking-tight text-on-surface uppercase font-mono">
               Giao Diện Đọc ({fontSize}px)
             </h3>
@@ -78,7 +78,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
         {/* Row 1: Font Size Controls */}
         <div className="flex items-center justify-between gap-2 bg-white/10 p-2 px-3 rounded-xl border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]">
           <span className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider flex items-center gap-1">
-            <Type size={11} className="text-amber-400" /> CỠ CHỮ: <span className="text-amber-400 font-black">{fontSize}px</span>
+            <Type size={11} className="text-primary" /> CỠ CHỮ: <span className="text-primary font-black">{fontSize}px</span>
           </span>
           <div className="flex items-center gap-1.5 shrink-0">
             <button
@@ -94,7 +94,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
               max="32"
               value={fontSize}
               onChange={(e) => setFontSize(Number(e.target.value))}
-              className="w-20 accent-amber-400 bg-white/10 h-1.5 rounded-lg cursor-pointer"
+              className="w-20 accent-primary bg-white/10 h-1.5 rounded-lg cursor-pointer"
             />
             <button
               onClick={() => setFontSize(Math.min(36, fontSize + 1))}
@@ -109,13 +109,13 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
         {/* Row 2: Super-Slim Color Swatches */}
         <div className="flex items-center justify-between gap-2 bg-white/5 p-1.5 px-3 rounded-xl border border-white/10">
           <div className="flex items-center gap-1 shrink-0">
-            <Palette size={11} className="text-amber-400" />
+            <Palette size={11} className="text-primary" />
             <span className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider">
-              MÀU NỀN: <span className="text-amber-400 font-black">{currentThemeObj.name}</span>
+              MÀU NỀN: <span className="text-primary font-black">{currentThemeObj.name}</span>
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-0.5 px-1">
+          <div className="grid grid-cols-7 gap-1 shrink-0">
             {themes.map((t) => {
               const isSelected = theme === t.id;
               return (
@@ -123,9 +123,9 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
                   key={t.id}
                   onClick={() => setTheme(t.id)}
                   title={t.name}
-                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border border-black/20 transition-all active:scale-90 relative ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border border-white/30 transition-all active:scale-90 relative ${
                     isSelected
-                      ? 'ring-2 ring-amber-400 ring-offset-1 ring-offset-slate-900 scale-110 shadow-xs'
+                      ? 'ring-2 ring-primary ring-offset-1 ring-offset-slate-900 scale-110 shadow-xs'
                       : 'opacity-70 hover:opacity-100'
                   }`}
                   style={{ backgroundColor: t.bg, color: t.text }}
@@ -147,7 +147,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
                 onClick={() => setFont(f.id)}
                 className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold shrink-0 transition-all active:scale-95 flex items-center gap-1 ${
                   isSelected
-                    ? 'bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black border-amber-300/70 shadow-[0_2px_8px_rgba(245,158,11,0.4)] font-black'
+                    ? 'bg-gradient-to-b from-primary via-primary-fixed to-primary-fixed-dim text-on-primary border-primary/70 shadow-[0_2px_8px_var(--primary)] font-black'
                     : 'bg-white/10 border-white/20 text-on-surface-variant hover:text-on-surface hover:bg-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]'
                 }`}
               >
@@ -163,7 +163,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
           {/* Line Height */}
           <div className="bg-white/5 p-1.5 rounded-xl border border-white/10 space-y-1">
             <span className="text-[9px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider block px-1 flex items-center gap-1">
-              <AlignJustify size={10} className="text-amber-400" /> GIÃN DÒNG
+              <AlignJustify size={10} className="text-primary" /> GIÃN DÒNG
             </span>
             <div className="grid grid-cols-4 gap-1">
               {lineHeights.map((lh) => {
@@ -174,7 +174,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
                     onClick={() => setLineHeight(lh.val)}
                     className={`py-1 rounded-lg border text-[10px] font-bold text-center transition-all active:scale-95 ${
                       isSelected
-                        ? 'bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black border-amber-300/70 font-black shadow-[0_2px_8px_rgba(245,158,11,0.4)]'
+                        ? 'bg-gradient-to-b from-primary via-primary-fixed to-primary-fixed-dim text-on-primary border-primary/70 font-black shadow-[0_2px_8px_var(--primary)]'
                         : 'bg-white/10 border-white/20 text-on-surface-variant hover:bg-white/20'
                     }`}
                   >
@@ -188,7 +188,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
           {/* Group Lines */}
           <div className="bg-white/5 p-1.5 rounded-xl border border-white/10 space-y-1">
             <span className="text-[9px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider block px-1 flex items-center gap-1">
-              <Layers size={10} className="text-amber-400" /> GỘP ĐOẠN
+              <Layers size={10} className="text-primary" /> GỘP ĐOẠN
             </span>
             <div className="grid grid-cols-3 gap-1">
               {lineGroups.map((lg) => {
@@ -199,7 +199,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
                     onClick={() => setGroupLines(lg.val)}
                     className={`py-1 rounded-lg border text-[10px] font-bold text-center transition-all active:scale-95 ${
                       isSelected
-                        ? 'bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black border-amber-300/70 font-black shadow-[0_2px_8px_rgba(245,158,11,0.4)]'
+                        ? 'bg-gradient-to-b from-primary via-primary-fixed to-primary-fixed-dim text-on-primary border-primary/70 font-black shadow-[0_2px_8px_var(--primary)]'
                         : 'bg-white/10 border-white/20 text-on-surface-variant hover:bg-white/20'
                     }`}
                   >
@@ -214,14 +214,14 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
         {/* Row 4: Utility Toggle Switch (Word Replacement) */}
         <div className="bg-white/5 p-2 px-3 rounded-xl border border-white/10 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
-            <Sliders size={13} className="text-amber-400 shrink-0" />
+            <Sliders size={13} className="text-primary shrink-0" />
             <span className="text-xs font-bold text-on-surface">Bộ Thay Thế Từ Ngữ</span>
           </div>
 
           <button
             onClick={() => setIsEnabledReplace(!isEnabledReplace)}
             className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ease-in-out shrink-0 ${
-              isEnabledReplace ? 'bg-gradient-to-b from-amber-400 to-amber-500' : 'bg-white/10 border border-white/20'
+              isEnabledReplace ? 'bg-gradient-to-b from-primary to-primary-fixed' : 'bg-white/10 border border-white/20'
             }`}
           >
             <div

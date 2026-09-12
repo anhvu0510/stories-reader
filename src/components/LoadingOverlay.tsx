@@ -30,7 +30,7 @@ export function LoadingOverlay({ isLoading = true }: LoadingOverlayProps) {
               transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
               className="absolute w-36 h-36 rounded-full pointer-events-none"
               style={{
-                background: 'radial-gradient(circle, rgba(245, 158, 11, 0.22) 0%, rgba(52, 211, 153, 0.08) 50%, transparent 70%)',
+                background: 'radial-gradient(circle, var(--primary) 0%, rgba(52, 211, 153, 0.08) 50%, transparent 70%)',
               }}
             />
 
@@ -43,9 +43,9 @@ export function LoadingOverlay({ isLoading = true }: LoadingOverlayProps) {
               <svg className="w-full h-full overflow-visible transform-gpu" viewBox="0 0 100 100">
                 <defs>
                   <linearGradient id="spinner-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#f59e0b" stopOpacity="1" />
+                    <stop offset="0%" stopColor="var(--primary)" stopOpacity="1" />
                     <stop offset="50%" stopColor="#34d399" stopOpacity="0.8" />
-                    <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
+                    <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
                   </linearGradient>
                 </defs>
                 {/* Background Guide Ring */}
@@ -84,7 +84,8 @@ export function LoadingOverlay({ isLoading = true }: LoadingOverlayProps) {
                   cy="50"
                   r="40"
                   fill="none"
-                  stroke="rgba(245, 158, 11, 0.45)"
+                  stroke="var(--primary)"
+                  strokeOpacity="0.45"
                   strokeWidth="4"
                   strokeDasharray="180"
                   strokeDashoffset="110"
@@ -99,8 +100,8 @@ export function LoadingOverlay({ isLoading = true }: LoadingOverlayProps) {
               animate={{ scale: [0.92, 1.1, 0.92] }}
               transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
             >
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-900/80 border border-amber-400/60 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),_0_0_14px_rgba(245,158,11,0.5)]">
-                <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 drop-shadow-[0_2px_4px_rgba(245,158,11,0.8)]" />
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-900/80 border border-primary/60 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),_0_0_14px_var(--primary)]">
+                <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-primary drop-shadow-[0_2px_4px_var(--primary)]" />
               </div>
             </motion.div>
           </motion.div>

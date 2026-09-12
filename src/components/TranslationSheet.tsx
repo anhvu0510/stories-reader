@@ -724,11 +724,13 @@ export function TranslationSheet({
       <div className="absolute inset-0" onClick={onClose} />
       
       {/* Sheet Content */}
-      <div className="relative bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] min-h-[520px] max-h-[85dvh] flex flex-col z-10 overflow-hidden box-border transform-gpu overscroll-contain transition-all duration-200">
+      <div className="relative bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] min-h-[520px] max-h-[85dvh] flex flex-col z-10 overflow-hidden box-border transform-gpu overscroll-contain transition-all duration-200">
+        {/* Ambient Top Glow Effect */}
+        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
         
         {/* Drag Handle & Header */}
-        <div className="flex-shrink-0 pt-3 px-4 sm:px-5 pb-3 border-b border-white/10 bg-white/5">
-          <div className="w-12 h-1.5 bg-white/30 rounded-full mx-auto mb-2 sm:mb-3"></div>
+        <div className="flex-shrink-0 pt-3 px-4 sm:px-5 pb-3 border-b border-white/10 bg-white/5 relative z-20">
+          <div className="w-12 h-1.5 bg-white/25 dark:bg-white/20 rounded-full mx-auto mb-2 sm:mb-3"></div>
           <div className="flex justify-between items-center bg-white/5 p-1 rounded-xl border border-white/15">
              <div className="flex bg-white/10 p-1 rounded-lg flex-1 gap-1">
                <TabButton active={activeTab === 'current'} onClick={() => setActiveTab('current')} disabled={disableCurrent}>Hiện tại</TabButton>
@@ -753,8 +755,8 @@ export function TranslationSheet({
               <span>Cấu hình AI</span>
               {poolStatus && poolStatus.model === options.model && (
                 <span className="ml-2 text-[9px] font-bold text-on-surface-variant bg-white/10 px-1.5 py-0.5 rounded border border-blue-500/20 flex items-center gap-1">
-                   <div className={`w-1 h-1 rounded-full ${poolStatus.remain > 0 ? 'bg-amber-400 animate-pulse' : 'bg-rose-500'}`}></div>
-                   RPD: <span className={poolStatus.remain > 0 ? 'text-amber-400' : 'text-rose-400'}>{poolStatus.remain.toLocaleString()}</span>/{poolStatus.total > 0 ? poolStatus.total.toLocaleString() : '∞'}
+                   <div className={`w-1 h-1 rounded-full ${poolStatus.remain > 0 ? 'bg-primary animate-pulse' : 'bg-rose-500'}`}></div>
+                   RPD: <span className={poolStatus.remain > 0 ? 'text-primary' : 'text-rose-400'}>{poolStatus.remain.toLocaleString()}</span>/{poolStatus.total > 0 ? poolStatus.total.toLocaleString() : '∞'}
                 </span>
               )}
             </div>
@@ -768,7 +770,7 @@ export function TranslationSheet({
                   className={cn(
                     "p-1.5 rounded-lg transition-all active:scale-95 border",
                     options.batchingGroup 
-                      ? "bg-amber-400 text-black border-amber-300/70 shadow-xs" 
+                      ? "bg-primary text-on-primary border-primary/70 shadow-xs" 
                       : "bg-white/5 border-blue-500/20 text-on-surface-variant/50"
                   )}
                   title="Gộp chung văn cảnh"
@@ -784,7 +786,7 @@ export function TranslationSheet({
                 className={cn(
                   "p-1.5 rounded-lg transition-all active:scale-95 border",
                   options.forceRetranslate 
-                    ? "bg-amber-400 text-black border-amber-300/70 shadow-xs" 
+                    ? "bg-primary text-on-primary border-primary/70 shadow-xs" 
                     : "bg-white/5 border-blue-500/20 text-on-surface-variant/50"
                 )}
                 title="Dịch lại toàn bộ"
@@ -831,42 +833,35 @@ export function TranslationSheet({
                    </div>
                 </div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between px-0.5">
-                  <label className="text-[9px] font-bold text-on-surface-variant/70 uppercase">MODEL</label>
-                  <div className="flex bg-surface-container-high p-0.5 rounded-lg">
-                    <button 
-                      onClick={() => {
-                         setActiveModelTab('VERTEX_API');
-                         setPoolStatus(null);
-                      }}
-                      className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", activeModelTab === 'VERTEX_API' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface')}
-                    >VERTEX API</button>
-                    <button 
-                      onClick={() => {
-                         setActiveModelTab('AI_STUDIO');
-                         setPoolStatus(null);
-                      }}
-                      className={cn("px-3 py-1 text-[10px] font-bold rounded-md transition-all", activeModelTab === 'AI_STUDIO' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface')}
-                    >AI STUDIO</button>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Mô hình AI:</span>
+                  {/* Platform tabs */}
+                  <div className="flex items-center gap-1 bg-black/30 p-0.5 rounded-lg border border-blue-500/20">
+                    {(['VERTEX_API', 'GEMINI_CLI'] as const).map((plt) => (
+                      <button
+                        key={plt}
+                        onClick={() => setActiveModelTab(plt)}
+                        className={cn(
+                          "px-2 py-0.5 text-[9px] font-bold rounded transition-all",
+                          activeModelTab === plt
+                            ? "bg-primary text-on-primary shadow-xs"
+                            : "text-on-surface-variant hover:text-on-surface"
+                        )}
+                      >
+                        {plt === 'VERTEX_API' ? 'API' : 'CLI'}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-1.5">
+
+                <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto hide-scrollbar p-0.5">
                   {(() => {
-                    const filteredQuotas = quotas.filter((q) => {
-                      const isPlatformMatch = (q.platform || 'VERTEX_API') === activeModelTab;
-                      const isActive = q.isActive !== false;
-                      return isPlatformMatch && isActive;
-                    });
+                    const currentModels = activeModelTab === 'VERTEX_API'
+                      ? options.availableModels || DEFAULT_VERTEX_MODELS
+                      : DEFAULT_CLI_MODELS;
 
-                    const modelsToRender =
-                      filteredQuotas.length > 0
-                        ? filteredQuotas.map((q) => q.model)
-                        : (options.availableModels && options.availableModels.length > 0
-                            ? options.availableModels
-                            : defaultOptions.availableModels!);
-
-                    return modelsToRender.map((m) => {
+                    return currentModels.map((m) => {
                       const isSelected = options.model === m && (options.platform || 'VERTEX_API') === activeModelTab;
 
                       return (
@@ -879,16 +874,16 @@ export function TranslationSheet({
                           className={cn(
                             'px-3 py-2 rounded-lg text-left border transition-all flex items-center justify-between',
                             isSelected
-                              ? 'bg-amber-400/20 hover:bg-amber-400/25 backdrop-blur-md border-2 border-amber-400 text-amber-300 font-extrabold shadow-[0_4px_16px_rgba(245,158,11,0.35),_inset_0_1px_1px_rgba(255,255,255,0.6)]'
-                              : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-amber-400/80 text-on-surface font-medium'
+                              ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary font-extrabold shadow-[0_4px_16px_var(--primary),_inset_0_1px_1px_rgba(255,255,255,0.6)]'
+                              : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 text-on-surface font-medium'
                           )}
                         >
                           <div className="min-w-0 pr-2">
-                            <div className={`font-bold text-xs truncate ${isSelected ? 'text-amber-300' : 'text-on-surface'}`}>
+                            <div className={`font-bold text-xs truncate ${isSelected ? 'text-primary' : 'text-on-surface'}`}>
                               {m.replace(/^gemini-/, '').replace(/-/g, ' ').toUpperCase() || m}
                             </div>
                           </div>
-                          {isSelected && <Check size={12} className="text-amber-300 flex-shrink-0 font-bold" />}
+                          {isSelected && <Check size={12} className="text-primary flex-shrink-0 font-bold" />}
                         </button>
                       );
                     });
@@ -926,17 +921,17 @@ export function TranslationSheet({
                     </label>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button onClick={handleSelectAll} className="px-2.5 py-1 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-lg text-[11px] font-bold text-amber-400 hover:bg-white/15 active:scale-95 transition-all">Tất cả</button>
-                    <button onClick={handleSelectPending} className="px-2.5 py-1 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-lg text-[11px] font-bold text-amber-400 hover:bg-white/15 active:scale-95 transition-all">Chưa dịch</button>
+                    <button onClick={handleSelectAll} className="px-2.5 py-1 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-lg text-[11px] font-bold text-primary hover:bg-white/15 active:scale-95 transition-all">Tất cả</button>
+                    <button onClick={handleSelectPending} className="px-2.5 py-1 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-lg text-[11px] font-bold text-primary hover:bg-white/15 active:scale-95 transition-all">Chưa dịch</button>
                     <button onClick={() => setSelectedChapters(new Set())} className="px-2.5 py-1 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-lg text-[11px] font-bold text-rose-400 hover:bg-white/15 active:scale-95 transition-all">Bỏ chọn</button>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 bg-black/20 p-2 rounded-xl border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]">
                   <span className="text-[11px] text-on-surface-variant font-medium whitespace-nowrap">Từ chương:</span>
-                  <input type="number" placeholder="..." value={rangeStart} onChange={e => setRangeStart(e.target.value)} className="w-12 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(0,0,0,0.5)] px-1.5 py-1 rounded-lg text-xs font-mono text-amber-300 text-center outline-none focus:border-amber-400/60 transition-all" />
+                  <input type="number" placeholder="..." value={rangeStart} onChange={e => setRangeStart(e.target.value)} className="w-12 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(0,0,0,0.5)] px-1.5 py-1 rounded-lg text-xs font-mono text-primary text-center outline-none focus:border-primary/60 transition-all" />
                   <span className="text-xs text-on-surface-variant">-</span>
-                  <input type="number" placeholder="..." value={rangeEnd} onChange={e => setRangeEnd(e.target.value)} className="w-12 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(0,0,0,0.5)] px-1.5 py-1 rounded-lg text-xs font-mono text-amber-300 text-center outline-none focus:border-amber-400/60 transition-all" />
-                  <button onClick={handleSelectRange} className="text-[11px] ml-auto bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black border border-amber-300/70 shadow-[0_2px_8px_rgba(245,158,11,0.4)] px-3.5 py-1 rounded-lg font-extrabold hover:brightness-110 active:scale-95 transition-all">Chọn</button>
+                  <input type="number" placeholder="..." value={rangeEnd} onChange={e => setRangeEnd(e.target.value)} className="w-12 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(0,0,0,0.5)] px-1.5 py-1 rounded-lg text-xs font-mono text-primary text-center outline-none focus:border-primary/60 transition-all" />
+                  <button onClick={handleSelectRange} className="text-[11px] ml-auto bg-gradient-to-b from-primary via-primary-fixed to-primary-fixed-dim text-on-primary border border-primary/70 shadow-[0_2px_8px_var(--primary)] px-3.5 py-1 rounded-lg font-extrabold hover:brightness-110 active:scale-95 transition-all">Chọn</button>
                 </div>
               </div>
               <div ref={chapterListRef} onScroll={handleScroll} className="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-1.5 p-1 min-h-[30vh]">
@@ -954,22 +949,22 @@ export function TranslationSheet({
                         className={cn(
                           "group flex justify-between items-center px-3 py-2.5 cursor-pointer transition-all rounded-xl border relative shadow-xs", 
                           selectedChapters.has(chap.chapterId) 
-                            ? "bg-amber-400/20 hover:bg-amber-400/25 backdrop-blur-md border-2 border-amber-400 text-amber-300 shadow-[0_4px_16px_rgba(245,158,11,0.35),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)]" 
-                            : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-amber-400/80 text-on-surface'
+                            ? "bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary shadow-[0_4px_16px_var(--primary),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)]" 
+                            : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 text-on-surface'
                         )}
                       >
                         <div className="flex items-center gap-3 overflow-hidden flex-1 pl-1">
-                          <div className={cn("shrink-0 w-8 h-8 rounded-xl flex flex-col items-center justify-center font-bold tracking-tight border transition-colors shadow-2xs", selectedChapters.has(chap.chapterId) ? "bg-amber-400/30 border-amber-400/70 text-amber-300 font-extrabold" : chap.state === 'SUCCEEDED' ? 'bg-amber-400/15 text-amber-300 border-amber-400/30' : chap.state === 'PENDING' ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : 'bg-white/10 text-on-surface-variant border-white/20')}>
+                          <div className={cn("shrink-0 w-8 h-8 rounded-xl flex flex-col items-center justify-center font-bold tracking-tight border transition-colors shadow-2xs", selectedChapters.has(chap.chapterId) ? "bg-primary/30 border-primary/70 text-primary font-extrabold" : chap.state === 'SUCCEEDED' ? 'bg-primary/15 text-primary border-primary/30' : chap.state === 'PENDING' ? 'bg-primary/20 text-primary border-primary/40' : 'bg-white/10 text-on-surface-variant border-white/20')}>
                             <span className="text-[7px] leading-none opacity-80 mt-[1px]">CH</span>
                             <span className="text-[11px] leading-none mt-[1px] font-mono">{chap.chapterNumber}</span>
                           </div>
                           
                           <div className="flex flex-col flex-1 truncate pr-2">
-                            <span className={cn("text-[12px] sm:text-[13px] truncate font-medium transition-colors", selectedChapters.has(chap.chapterId) ? "text-amber-300 font-black drop-shadow-xs" : "text-on-surface")}>{chap.title || `Chương ${chap.chapterNumber}`}</span>
-                            {(chap.state === 'FAILED' || chap.state === 'PENDING') && <span className={cn("text-[9px] font-semibold mt-0.5", selectedChapters.has(chap.chapterId) ? "text-amber-200/80" : "text-amber-400/70")}>Chưa được dịch</span>}
+                            <span className={cn("text-[12px] sm:text-[13px] truncate font-medium transition-colors", selectedChapters.has(chap.chapterId) ? "text-primary font-black drop-shadow-xs" : "text-on-surface")}>{chap.title || `Chương ${chap.chapterNumber}`}</span>
+                            {(chap.state === 'FAILED' || chap.state === 'PENDING') && <span className={cn("text-[9px] font-semibold mt-0.5", selectedChapters.has(chap.chapterId) ? "text-primary/80" : "text-primary/70")}>Chưa được dịch</span>}
                           </div>
                         </div>
-                        {selectedChapters.has(chap.chapterId) ? <Check size={14} className="text-amber-300 flex-shrink-0 drop-shadow-sm mr-1 font-bold" /> : <Square size={14} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />}
+                        {selectedChapters.has(chap.chapterId) ? <Check size={14} className="text-primary flex-shrink-0 drop-shadow-sm mr-1 font-bold" /> : <Square size={14} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />}
                       </div>
                     );
                   })}
@@ -986,7 +981,7 @@ export function TranslationSheet({
                   placeholder="Tìm truyện..." 
                   value={searchBook}
                   onChange={(e) => setSearchBook(e.target.value)}
-                  className="w-full bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-xl py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-xs sm:text-sm text-on-surface focus:outline-none focus:border-amber-400/60 transition-all placeholder:text-on-surface-variant/70"
+                  className="w-full bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-xl py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-xs sm:text-sm text-on-surface focus:outline-none focus:border-primary/60 transition-all placeholder:text-on-surface-variant/70"
                 />
               </div>
               <div className="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-1.5 p-1 min-h-[30vh]">
@@ -1004,8 +999,8 @@ export function TranslationSheet({
                         className={cn(
                           'group flex justify-between items-center px-3 py-2.5 cursor-pointer transition-all rounded-xl border relative shadow-xs',
                           selectedBooks.has(book.bookId) 
-                            ? 'bg-amber-400/20 hover:bg-amber-400/25 backdrop-blur-md border-2 border-amber-400 text-amber-300 shadow-[0_4px_16px_rgba(245,158,11,0.35),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)]' 
-                            : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-amber-400/80 text-on-surface'
+                            ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary shadow-[0_4px_16px_var(--primary),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)]' 
+                            : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 text-on-surface'
                         )}
                       >
                         <div className="flex items-center gap-3 overflow-hidden pl-1">
@@ -1013,8 +1008,8 @@ export function TranslationSheet({
                             className={cn(
                               'flex flex-col items-center justify-center w-8 h-8 rounded-lg shrink-0 border transition-colors shadow-2xs',
                               selectedBooks.has(book.bookId)
-                                ? 'bg-amber-400/30 border-amber-400/70 text-amber-300 font-extrabold'
-                                : 'bg-amber-400/10 border-amber-400/30 text-amber-400'
+                                ? 'bg-primary/30 border-primary/70 text-primary font-extrabold'
+                                : 'bg-primary/10 border-primary/30 text-primary'
                             )}
                           >
                             <Languages size={12} />
@@ -1022,14 +1017,14 @@ export function TranslationSheet({
                           <span
                             className={cn(
                               'text-[12px] sm:text-[13px] truncate font-medium transition-colors',
-                              selectedBooks.has(book.bookId) ? 'text-amber-300 font-black drop-shadow-xs' : 'text-on-surface'
+                              selectedBooks.has(book.bookId) ? 'text-primary font-black drop-shadow-xs' : 'text-on-surface'
                             )}
                           >
                             {book.bookName}
                           </span>
                         </div>
                         {selectedBooks.has(book.bookId) ? (
-                          <Check size={14} className="text-amber-300 flex-shrink-0 drop-shadow-sm mr-1 font-bold" />
+                          <Check size={14} className="text-primary flex-shrink-0 drop-shadow-sm mr-1 font-bold" />
                         ) : (
                           <Square size={14} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />
                         )}
@@ -1043,18 +1038,18 @@ export function TranslationSheet({
 
         
         {/* Action Buttons: Sync & Async */}
-        <div className="flex-shrink-0 p-3 sm:p-4 border-t border-outline-variant/30 bg-surface-container pb-safe">
+        <div className="flex-shrink-0 p-3 sm:p-4 border-t border-outline-variant/20 bg-white/[0.03] dark:bg-white/[0.03] backdrop-blur-md pb-safe">
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Sync Button */}
             <button
               onClick={() => handleSubmit(true)}
               disabled={isSubmitting}
-              className="flex-1 py-3 sm:py-3.5 bg-primary text-on-primary rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold font-sans flex items-center justify-center gap-1.5 hover:bg-primary-fixed active:scale-[0.98] transition-all shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)] disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex-1 py-3 sm:py-3.5 bg-primary/25 hover:bg-primary/35 backdrop-blur-md border-2 border-primary/70 text-primary rounded-xl sm:rounded-2xl text-xs sm:text-sm font-extrabold font-sans flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting && submittingType === 'sync' ? (
-                <Loader size={16} className="animate-spin sm:w-4 sm:h-4 text-on-primary" />
+                <Loader size={16} className="animate-spin sm:w-4 sm:h-4 text-primary" />
               ) : (
-                <Zap size={16} className="fill-current sm:w-4 sm:h-4 text-on-primary" />
+                <Zap size={16} className="fill-primary text-primary sm:w-4 sm:h-4" />
               )}
               <span>
                 {isSubmitting && submittingType === 'sync'
@@ -1071,7 +1066,7 @@ export function TranslationSheet({
             <button
               onClick={() => handleSubmit(false)}
               disabled={isSubmitting}
-              className="flex-1 py-3 sm:py-3.5 bg-surface-container-high border border-outline-variant/40 hover:bg-surface-container-highest text-on-surface rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold font-sans flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex-1 py-3 sm:py-3.5 bg-white/10 hover:bg-white/15 backdrop-blur-md border-2 border-outline-variant/60 text-on-surface rounded-xl sm:rounded-2xl text-xs sm:text-sm font-extrabold font-sans flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1.5px_rgba(255,255,255,0.4)] disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting && submittingType === 'async' ? (
                 <Loader size={16} className="animate-spin sm:w-4 sm:h-4 text-on-surface" />
@@ -1105,7 +1100,7 @@ function TabButton({ active, children, onClick, disabled }: { active: boolean, c
         disabled 
           ? 'opacity-30 cursor-not-allowed bg-transparent text-on-surface-variant' 
           : active 
-            ? 'bg-surface text-primary shadow-sm border border-outline-variant/10' 
+            ? 'bg-primary/20 backdrop-blur-md text-primary font-black border border-primary/60 shadow-[0_2px_8px_var(--primary),_inset_0_1px_1px_rgba(255,255,255,0.4)]' 
             : 'text-on-surface-variant hover:text-on-surface border border-transparent cursor-pointer'
       }`}
     >
