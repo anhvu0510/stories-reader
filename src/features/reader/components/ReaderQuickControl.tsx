@@ -222,7 +222,10 @@ export function ReaderQuickControl({
           ) : chapters && chapters.length > 1 ? (
             /* Multi-Chapter Batch Mode: Refined Mini chapter badges on top + Sleek Range pill on bottom */
             <div className="flex flex-col items-center justify-center gap-1 max-w-full">
-              <div className="flex items-center justify-center gap-1.5 max-w-full overflow-x-auto no-scrollbar px-1 py-0.5">
+              <div
+                className="flex items-center justify-center gap-1.5 max-w-full overflow-x-auto hide-scrollbar no-scrollbar px-1 py-0.5"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
                 {chapters.map((chap) => {
                   const isActive = chap.chapterId === activeChapterId;
                   return (
