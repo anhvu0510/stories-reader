@@ -238,8 +238,10 @@ export function ReaderScreen() {
           const newProgress = (currentY / totalHeight) * 100;
           setScrollProgress((prev) => (Math.abs(prev - newProgress) > 0.5 ? newProgress : prev));
 
-          // Case 1: Auto show dock when user reaches the very end of the batch / last chapter (reading completed)
-          const isNearBottom = currentY >= totalHeight - 80 || newProgress >= 95;
+          // Auto show dock ONLY when user reaches the very end of the ENTIRE group of chapters
+          const lastChap = displayChapters[displayChapters.length - 1];
+          const isLastChapterActive = !lastChap || !activeChapter || activeChapter.chapterId === lastChap.chapterId;
+          const isNearBottom = isLastChapterActive && (currentY >= totalHeight - 40 || newProgress >= 98);
           if (isNearBottom) {
             setShowZenControls(true);
           }
@@ -254,7 +256,7 @@ export function ReaderScreen() {
       window.removeEventListener('scroll', handleScroll);
       if (scrollAnimRef.current !== null) cancelAnimationFrame(scrollAnimRef.current);
     };
-  }, []);
+  }, [displayChapters, activeChapter]);
 
   const lastTapTimeRef = useRef<number>(0);
   const lastToggleTimeRef = useRef<number>(0);
