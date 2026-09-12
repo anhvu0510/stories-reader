@@ -19,11 +19,12 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
 
   const themes: { id: ThemeType; name: string; bg: string; text: string }[] = [
     { id: 'default', name: 'Tối', bg: '#09090b', text: '#f4f4f5' },
-    { id: 'sepia', name: 'Sepia', bg: '#fef3c7', text: '#78350f' },
-    { id: 'amoled', name: 'Đen', bg: '#000000', text: '#8a8a8e' },
-    { id: 'midnight', name: 'Đêm', bg: '#0f172a', text: '#cbd5e1' },
-    { id: 'coffee', name: 'Cà phê', bg: '#1c1814', text: '#d7c4b4' },
-    { id: 'obsidian', name: 'Đá núi', bg: '#121316', text: '#e2e8f0' },
+    { id: 'sepia', name: 'Sepia', bg: '#fbf0d9', text: '#3b2314' },
+    { id: 'amoled', name: 'Đen', bg: '#000000', text: '#f4f4f7' },
+    { id: 'midnight', name: 'Đêm', bg: '#0b1120', text: '#f1f5f9' },
+    { id: 'coffee', name: 'Cà phê', bg: '#171310', text: '#f5e6d3' },
+    { id: 'obsidian', name: 'Đá núi', bg: '#0c0a14', text: '#f3e8ff' },
+    { id: 'modern-vn', name: 'Royal VN', bg: '#080e1e', text: '#e2e8f0' },
   ];
 
   const fonts: { id: FontType; name: string }[] = [

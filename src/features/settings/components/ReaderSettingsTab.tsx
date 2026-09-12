@@ -4,13 +4,13 @@ import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { ThemeType, FontType } from '../../../shared/types';
 
 const THEMES: { id: ThemeType; label: string; bg: string; color: string }[] = [
-  { id: 'default', label: 'Mặc định', bg: '#1e1e1e', color: '#e3e3e3' },
-  { id: 'sepia', label: 'Sepia Vàng', bg: '#fef3c7', color: '#78350f' },
-  { id: 'modern-vn', label: 'Modern VN', bg: '#0b1326', color: '#dae2fd' },
-  { id: 'amoled', label: 'AMOLED', bg: '#000000', color: '#ececec' },
-  { id: 'midnight', label: 'Midnight', bg: '#0f172a', color: '#cbd5e1' },
-  { id: 'obsidian', label: 'Obsidian', bg: '#0d0d12', color: '#a1a1aa' },
-  { id: 'coffee', label: 'Coffee', bg: '#1c1814', color: '#d7c4b4' },
+  { id: 'default', label: 'Mặc định', bg: '#09090b', color: '#f4f4f5' },
+  { id: 'sepia', label: 'Sepia Vàng', bg: '#fbf0d9', color: '#3b2314' },
+  { id: 'modern-vn', label: 'Royal VN', bg: '#080e1e', color: '#e2e8f0' },
+  { id: 'amoled', label: 'AMOLED', bg: '#000000', color: '#f4f4f7' },
+  { id: 'midnight', label: 'Midnight', bg: '#0b1120', color: '#f1f5f9' },
+  { id: 'obsidian', label: 'Obsidian', bg: '#0c0a14', color: '#f3e8ff' },
+  { id: 'coffee', label: 'Coffee', bg: '#171310', color: '#f5e6d3' },
 ];
 
 const FONTS: { id: FontType; label: string }[] = [
