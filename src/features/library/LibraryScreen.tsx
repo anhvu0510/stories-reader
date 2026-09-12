@@ -38,6 +38,7 @@ export function LibraryScreen() {
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState(savedSearch || '');
+  const [appliedSearch, setAppliedSearch] = useState(savedSearch || '');
   const [tab, setTab] = useState<'ALL' | 'HISTORY' | 'FAVORITE' | 'AI'>(savedTab);
   const [selectedTags, setSelectedTags] = useState<string[]>(savedTags || []);
   const initialSortBy: SortByField = savedSortBy === 'updatedAt' ? 'updatedAt' : 'createdAt';
@@ -55,11 +56,19 @@ export function LibraryScreen() {
   const mainScrollRef = useRef<HTMLDivElement | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isRestoredRef = useRef(false);
+  const fetchIdRef = useRef(0);
 
   // Sync state to useLibraryStore whenever page, tab, search, selectedTags, sortBy, sortOrder changes
   useEffect(() => {
     setLibraryState(page, tab, search, selectedTags, sortBy, sortOrder);
   }, [page, tab, search, selectedTags, sortBy, sortOrder, setLibraryState]);
+
+  // Clean up search timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, []);
 
   // Track and save scroll position on main container scroll
   const handleMainScroll = () => {
@@ -78,8 +87,9 @@ export function LibraryScreen() {
       currentSortBy?: SortByField,
       currentSortOrder?: SortOrderDirection
     ) => {
+      const fetchId = ++fetchIdRef.current;
       setLoading(true);
-      const q = querySearch !== undefined ? querySearch : search;
+      const q = querySearch !== undefined ? querySearch : appliedSearch;
       const t = activeTab !== undefined ? activeTab : tab;
       const tg = filterTags !== undefined ? filterTags : selectedTags;
 
@@ -98,6 +108,7 @@ export function LibraryScreen() {
 
       try {
         const res = await BookRepository.getBooks(targetPage, bookLimit, q, t, sBy, sOrder, tg);
+        if (fetchId !== fetchIdRef.current) return;
         const fetchedBooks = res.books || [];
         const { currentPage, totalPages: pagesCount, total: totalCount } = res.pagination || {};
 
@@ -106,19 +117,23 @@ export function LibraryScreen() {
         setTotalPages(pagesCount || 1);
         setTotal(totalCount || fetchedBooks.length);
       } catch {
-        showToast('Không thể tải danh sách truyện', 'error');
+        if (fetchId === fetchIdRef.current) {
+          showToast('Không thể tải danh sách truyện', 'error');
+        }
       } finally {
-        setLoading(false);
+        if (fetchId === fetchIdRef.current) {
+          setLoading(false);
+        }
       }
     },
-    [search, tab, selectedTags, sortBy, sortOrder, bookLimit, showToast]
+    [appliedSearch, tab, selectedTags, sortBy, sortOrder, bookLimit, showToast]
   );
 
   useEffect(() => {
-    fetchBooks(page, search, tab, selectedTags, sortBy, sortOrder);
+    fetchBooks(page, appliedSearch, tab, selectedTags, sortBy, sortOrder);
 
     const handleRefresh = () => {
-      fetchBooks(page, search, tab, selectedTags, sortBy, sortOrder);
+      fetchBooks(page, appliedSearch, tab, selectedTags, sortBy, sortOrder);
     };
 
     window.addEventListener('app-refresh', handleRefresh);
@@ -130,7 +145,7 @@ export function LibraryScreen() {
       window.removeEventListener('offline-mode-changed', handleRefresh);
       window.removeEventListener('favorites-updated', handleRefresh);
     };
-  }, [page, search, tab, selectedTags, sortBy, sortOrder, isOfflineMode, bookLimit, fetchBooks]);
+  }, [page, appliedSearch, tab, selectedTags, sortBy, sortOrder, isOfflineMode, bookLimit, fetchBooks]);
 
   // Restore scroll position after initial loading finishes
   useEffect(() => {
@@ -158,38 +173,44 @@ export function LibraryScreen() {
     if (mainScrollRef.current) {
       mainScrollRef.current.scrollTop = 0;
     }
-    fetchBooks(newPage, search, tab, selectedTags, sortBy, sortOrder);
   };
 
-  // Optimized Debounced search handler (650ms delay + immediate clear)
+  // Optimized Debounced search handler (400ms delay + immediate clear)
   const handleSearchChange = (val: string) => {
     setSearch(val);
-    setPage(1);
-    setLibraryState(1, tab, val, selectedTags, sortBy, sortOrder, 0);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 
     if (val.trim() === '') {
-      fetchBooks(1, '', tab, selectedTags, sortBy, sortOrder);
+      setPage(1);
+      setAppliedSearch('');
+      setLibraryState(1, tab, '', selectedTags, sortBy, sortOrder, 0);
       return;
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      fetchBooks(1, val, tab, selectedTags, sortBy, sortOrder);
-    }, 650);
+      setPage(1);
+      setAppliedSearch(val);
+      setLibraryState(1, tab, val, selectedTags, sortBy, sortOrder, 0);
+    }, 400);
   };
 
   // Immediate search submit handler (e.g. Enter key or Search icon click)
   const handleSearchSubmit = () => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    fetchBooks(1, search, tab, selectedTags, sortBy, sortOrder);
+    setPage(1);
+    setAppliedSearch(search);
+    setLibraryState(1, tab, search, selectedTags, sortBy, sortOrder, 0);
   };
 
   // Tab switch handler: resets page and passes new tab to API
   const handleTabChange = (newTab: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI') => {
+    if (newTab === tab) return;
     setTab(newTab);
     setPage(1);
     setLibraryState(1, newTab, search, selectedTags, sortBy, sortOrder, 0);
-    fetchBooks(1, search, newTab, selectedTags, sortBy, sortOrder);
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTop = 0;
+    }
   };
 
   // Tag filter apply handler
@@ -200,7 +221,6 @@ export function LibraryScreen() {
     if (mainScrollRef.current) {
       mainScrollRef.current.scrollTop = 0;
     }
-    fetchBooks(1, search, tab, newTags, sortBy, sortOrder);
   };
 
   // Sort apply handler
@@ -212,7 +232,6 @@ export function LibraryScreen() {
     if (mainScrollRef.current) {
       mainScrollRef.current.scrollTop = 0;
     }
-    fetchBooks(1, search, tab, selectedTags, newSortBy, newSortOrder);
   };
 
   const defaultSortBy: SortByField = 'createdAt';
@@ -267,57 +286,62 @@ export function LibraryScreen() {
         )}
 
         {/* Navigation Tabs Header */}
-        <div className="flex border-t border-outline-variant/15 bg-surface-container-low/40 backdrop-blur-md px-1">
+        <div className="flex border-t border-outline-variant/15 bg-surface-container-low/40 backdrop-blur-md px-1 relative">
+          {/* Smooth Sliding Underline Indicator Bar */}
+          <div
+            className="absolute bottom-0 h-[2.5px] rounded-full transition-all duration-300 ease-out z-10"
+            style={{
+              width: '20%',
+              left: tab === 'ALL' ? '2.5%' : tab === 'HISTORY' ? '27.5%' : tab === 'FAVORITE' ? '52.5%' : '77.5%',
+              backgroundColor: tab === 'ALL' ? '#f59e0b' : tab === 'HISTORY' ? '#f59e0b' : tab === 'FAVORITE' ? '#f43f5e' : '#34d399',
+              boxShadow: tab === 'ALL' ? '0 0 10px rgba(245,158,11,0.7)' : tab === 'HISTORY' ? '0 0 10px rgba(245,158,11,0.7)' : tab === 'FAVORITE' ? '0 0 10px rgba(244,63,94,0.7)' : '0 0 10px rgba(52,211,153,0.7)',
+            }}
+          />
+
           <button
             onClick={() => handleTabChange('ALL')}
-            className={`flex-1 py-2.5 text-xs transition-all flex items-center justify-center relative group ${
+            className={`flex-1 py-2.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
               tab === 'ALL'
-                ? 'text-primary font-bold bg-surface/50'
-                : 'text-on-surface-variant/75 font-medium hover:text-on-surface hover:bg-surface-container/30'
+                ? 'text-amber-400 font-extrabold'
+                : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
             }`}
           >
             <div className="flex items-center gap-1.5">
               <Library size={13} className="shrink-0 transition-transform group-active:scale-90" />
               <span className="tracking-tight">Tất cả</span>
               {tab === 'ALL' && (
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-primary/15 text-primary border border-primary/25 shadow-2xs animate-in zoom-in-95 duration-150">
+                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 shrink-0 leading-none shadow-2xs">
                   {total}
                 </span>
               )}
             </div>
-            {tab === 'ALL' && (
-              <div className="absolute bottom-0 left-2 right-2 h-[2.5px] bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary-rgb),0.6)]" />
-            )}
           </button>
 
           <button
             onClick={() => handleTabChange('HISTORY')}
-            className={`flex-1 py-2.5 text-xs transition-all flex items-center justify-center relative group ${
+            className={`flex-1 py-2.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
               tab === 'HISTORY'
-                ? 'text-amber-400 font-bold bg-surface/50'
-                : 'text-on-surface-variant/75 font-medium hover:text-on-surface hover:bg-surface-container/30'
+                ? 'text-amber-400 font-extrabold'
+                : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
             }`}
           >
             <div className="flex items-center gap-1.5">
               <Clock size={13} className="shrink-0 transition-transform group-active:scale-90" />
               <span className="tracking-tight">Lịch sử</span>
               {tab === 'HISTORY' && (
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-amber-400/15 text-amber-400 border border-amber-400/25 shadow-2xs animate-in zoom-in-95 duration-150">
+                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 shrink-0 leading-none shadow-2xs">
                   {total}
                 </span>
               )}
             </div>
-            {tab === 'HISTORY' && (
-              <div className="absolute bottom-0 left-2 right-2 h-[2.5px] bg-amber-400 rounded-full shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
-            )}
           </button>
 
           <button
             onClick={() => handleTabChange('FAVORITE')}
-            className={`flex-1 py-2.5 text-xs transition-all flex items-center justify-center relative group ${
+            className={`flex-1 py-2.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
               tab === 'FAVORITE'
-                ? 'text-rose-500 font-bold bg-surface/50'
-                : 'text-on-surface-variant/75 font-medium hover:text-on-surface hover:bg-surface-container/30'
+                ? 'text-rose-500 font-extrabold'
+                : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
             }`}
             title="Truyện yêu thích"
           >
@@ -330,36 +354,30 @@ export function LibraryScreen() {
               />
               <span className="tracking-tight">Yêu thích</span>
               {tab === 'FAVORITE' && (
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-rose-500/15 text-rose-500 border border-rose-500/25 shadow-2xs animate-in zoom-in-95 duration-150">
+                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 shrink-0 leading-none shadow-2xs">
                   {total}
                 </span>
               )}
             </div>
-            {tab === 'FAVORITE' && (
-              <div className="absolute bottom-0 left-2 right-2 h-[2.5px] bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
-            )}
           </button>
 
           <button
             onClick={() => handleTabChange('AI')}
-            className={`flex-1 py-2.5 text-xs transition-all flex items-center justify-center relative group ${
+            className={`flex-1 py-2.5 text-xs transition-colors flex items-center justify-center relative group cursor-pointer ${
               tab === 'AI'
-                ? 'text-emerald-400 font-bold bg-surface/50'
-                : 'text-on-surface-variant/75 font-medium hover:text-on-surface hover:bg-surface-container/30'
+                ? 'text-emerald-400 font-extrabold'
+                : 'text-on-surface-variant/75 font-medium hover:text-on-surface'
             }`}
           >
             <div className="flex items-center gap-1.5">
               <Sparkles size={13} className="shrink-0 transition-transform group-active:scale-90" />
               <span className="tracking-tight">Dịch AI</span>
               {tab === 'AI' && (
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-emerald-400/15 text-emerald-400 border border-emerald-400/25 shadow-2xs animate-in zoom-in-95 duration-150">
+                <span className="text-[9px] font-mono font-extrabold px-1 py-[1px] rounded-full bg-emerald-400/15 text-emerald-300 border border-emerald-400/30 shrink-0 leading-none shadow-2xs">
                   {total}
                 </span>
               )}
             </div>
-            {tab === 'AI' && (
-              <div className="absolute bottom-0 left-2 right-2 h-[2.5px] bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
-            )}
           </button>
         </div>
       </div>

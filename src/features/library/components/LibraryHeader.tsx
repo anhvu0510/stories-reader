@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Wifi, WifiOff, Settings, BookOpenCheck, X, Tag, ArrowUpDown } from 'lucide-react';
+import { Search, Wifi, WifiOff, Settings, BookOpenCheck, X, Tag, ArrowUpDown, Sparkles } from 'lucide-react';
 import { useAppStore } from '../../../stores/useAppStore';
 
 interface LibraryHeaderProps {
@@ -26,18 +26,22 @@ export function LibraryHeader({
   const { isOfflineMode, setOfflineMode } = useAppStore();
 
   return (
-    <header className="sticky top-0 z-30 bg-surface/95 backdrop-blur-md border-b border-outline-variant/20 px-3.5 py-3 space-y-2.5 w-full max-w-md mx-auto overflow-x-hidden box-border transition-colors duration-200">
+    <header className="sticky top-0 z-30 bg-black/10 dark:bg-black/15 backdrop-blur-[2px] border-b border-blue-500/30 dark:border-blue-400/25 shadow-[0_8px_24px_rgba(0,0,0,0.4),_inset_0_-1px_0.5px_0_rgba(0,0,0,0.4)] px-3.5 py-3 space-y-2.5 w-full max-w-md mx-auto overflow-x-hidden box-border transition-colors duration-200">
       {/* Top Title Bar & Essential Shortcut Buttons Row */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center text-primary shadow-xs shrink-0">
-            <BookOpenCheck size={18} />
+        <div className="flex items-center gap-2.5">
+          {/* Sleek 3D Squircle Icon Container */}
+          <div className="w-9 h-9 rounded-[14px] bg-gradient-to-b from-amber-400/20 via-slate-900 to-slate-950 border border-amber-400/40 shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),_0_4px_12px_rgba(0,0,0,0.4)] flex items-center justify-center text-amber-400 shrink-0">
+            <BookOpenCheck size={19} className="drop-shadow-[0_2px_4px_rgba(245,158,11,0.5)]" />
           </div>
-          <div>
-            <h1 className="text-base font-black text-on-surface tracking-tight flex items-center gap-1.5 leading-none">
+
+          <div className="leading-none space-y-0.5">
+            <h1 className="text-base font-black text-on-surface tracking-tight">
               Stories Reader
             </h1>
-            <p className="text-[9.5px] font-mono text-on-surface-variant/70 uppercase tracking-wider mt-0.5">Mobile Edition</p>
+            <p className="text-[9.5px] font-mono font-semibold text-on-surface-variant/60 uppercase tracking-widest">
+              Mobile Edition
+            </p>
           </div>
         </div>
 
@@ -49,7 +53,7 @@ export function LibraryHeader({
             className={`p-2 rounded-full border transition-all active:scale-95 shadow-sm ${
               isOfflineMode
                 ? 'bg-amber-500/15 border-amber-500/30 text-amber-500'
-                : 'bg-surface-container-high border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-surface'
+                : 'bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 text-on-surface-variant hover:text-on-surface hover:bg-white/10 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.25)]'
             }`}
             title={isOfflineMode ? 'Đang ở chế độ Ngoại tuyến (Bấm để chuyển Online)' : 'Đang ở chế độ Trực tuyến (Bấm để chuyển Offline)'}
           >
@@ -59,7 +63,7 @@ export function LibraryHeader({
           {/* Global System Settings Icon */}
           <button
             onClick={onOpenSettings}
-            className="p-2 rounded-full bg-surface-container-high border border-outline-variant/30 text-on-surface-variant hover:text-primary hover:bg-surface transition-all active:scale-95 shadow-sm"
+            className="p-2 rounded-full bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 text-on-surface-variant hover:text-primary hover:bg-white/10 transition-all active:scale-95 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.25)]"
             title="Cài đặt Hệ thống"
           >
             <Settings size={15} />
@@ -88,7 +92,7 @@ export function LibraryHeader({
                 onSubmitSearch();
               }
             }}
-            className="w-full pl-9 pr-8 py-2 rounded-2xl bg-surface-container border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium transition-all"
+            className="w-full pl-9 pr-8 py-2 rounded-2xl bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium transition-all shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.25)]"
           />
           {searchQuery && (
             <button
@@ -109,7 +113,7 @@ export function LibraryHeader({
             className={`relative p-2 rounded-2xl border transition-all active:scale-95 flex items-center justify-center shrink-0 shadow-xs ${
               isCustomSortActive
                 ? 'bg-primary/15 text-primary border-primary/50 shadow-sm'
-                : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-primary hover:border-primary/40'
+                : 'bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.25)]'
             }`}
             title="Sắp xếp danh sách"
             aria-label="Sắp xếp danh sách"
@@ -129,7 +133,7 @@ export function LibraryHeader({
           className={`relative p-2 rounded-2xl border transition-all active:scale-95 flex items-center justify-center shrink-0 shadow-xs ${
             activeTagsCount > 0
               ? 'bg-primary text-on-primary border-primary shadow-sm'
-              : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-primary hover:border-primary/40'
+              : 'bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.25)]'
           }`}
           title="Lọc theo Thể loại & Tags"
           aria-label="Lọc theo Thể loại & Tags"

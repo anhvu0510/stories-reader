@@ -75,7 +75,7 @@ export function TagFilterSheet({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs transition-opacity duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/35 backdrop-blur-[2px] transition-opacity duration-200">
       {/* Click outside backdrop */}
       <div
         className="absolute inset-0"
@@ -84,16 +84,16 @@ export function TagFilterSheet({
       />
 
       {/* Sheet Modal Container */}
-      <div className="relative w-full max-w-md bg-surface text-on-surface rounded-t-3xl sm:rounded-3xl border-t sm:border border-outline-variant/30 shadow-2xl flex flex-col max-h-[85vh] z-10 overflow-hidden animate-in slide-in-from-bottom duration-200">
+      <div className="relative w-full max-w-md bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-xl text-on-surface rounded-t-3xl sm:rounded-3xl border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] flex flex-col max-h-[85vh] z-10 overflow-hidden animate-in slide-in-from-bottom duration-200">
         {/* Handle Bar on Mobile */}
         <div className="flex justify-center pt-2.5 pb-1">
-          <div className="w-10 h-1 rounded-full bg-outline-variant/40" />
+          <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/20" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-outline-variant/20">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-blue-500/20 dark:border-blue-400/20">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
+            <div className="p-1.5 rounded-lg bg-amber-400/15 text-amber-400 border border-amber-400/30 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]">
               <Tag size={16} />
             </div>
             <div>
@@ -106,7 +106,7 @@ export function TagFilterSheet({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container active:scale-95 transition-all"
+            className="p-1.5 rounded-full bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] text-on-surface-variant hover:text-on-surface hover:bg-white/15 active:scale-95 transition-all"
             aria-label="Đóng bộ lọc"
             data-testid="tag-filter-close-btn"
           >
@@ -115,7 +115,7 @@ export function TagFilterSheet({
         </div>
 
         {/* Tag Search Box */}
-        <div className="p-3 border-b border-outline-variant/15 bg-surface-container/30">
+        <div className="p-3 border-b border-blue-500/20 dark:border-blue-400/20 bg-black/10 dark:bg-black/20">
           <div className="relative">
             <Search
               size={13}
@@ -126,7 +126,7 @@ export function TagFilterSheet({
               placeholder="Tìm nhanh tag..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-surface-container border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 transition-all"
+              className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3),_inset_0_-1px_0.5px_rgba(0,0,0,0.3)] text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-amber-400/60 transition-all"
               data-testid="tag-search-input"
             />
             {searchQuery && (
@@ -142,15 +142,15 @@ export function TagFilterSheet({
 
         {/* Selected Tags Preview Bar */}
         {draftTags.length > 0 && (
-          <div className="px-3.5 py-2 border-b border-outline-variant/15 bg-primary/5 flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar">
+          <div className="px-3.5 py-2 border-b border-blue-500/20 dark:border-blue-400/20 bg-amber-400/10 flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar">
             <div className="flex items-center gap-1.5 flex-nowrap">
-              <span className="text-[11px] font-semibold text-primary shrink-0">
+              <span className="text-[11px] font-semibold text-amber-400 shrink-0">
                 Đã chọn ({draftTags.length}):
               </span>
               {draftTags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-medium bg-primary text-on-primary shrink-0 shadow-xs"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-bold bg-amber-400 text-black border border-amber-300/70 shrink-0 shadow-xs"
                 >
                   {tag}
                   <button
@@ -166,7 +166,7 @@ export function TagFilterSheet({
 
             <button
               onClick={handleClearAll}
-              className="text-[10.5px] font-bold text-error hover:underline shrink-0 flex items-center gap-0.5 ml-1"
+              className="text-[10.5px] font-bold text-rose-400 hover:underline shrink-0 flex items-center gap-0.5 ml-1"
             >
               <RotateCcw size={10} />
               Xóa hết
@@ -204,10 +204,10 @@ export function TagFilterSheet({
                         key={tag}
                         type="button"
                         onClick={() => toggleTag(tag)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium border transition-all active:scale-95 ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs border transition-all active:scale-95 ${
                           isSelected
-                            ? 'bg-primary text-on-primary border-primary shadow-xs font-semibold'
-                            : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:border-outline-variant/60'
+                            ? 'bg-amber-400/20 hover:bg-amber-400/25 backdrop-blur-md border-2 border-amber-400 text-amber-300 shadow-[0_4px_16px_rgba(245,158,11,0.35),_inset_0_1px_1px_rgba(255,255,255,0.6)] font-extrabold'
+                            : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-amber-400/80 text-on-surface font-medium'
                         }`}
                         data-testid={`tag-chip-${tag}`}
                       >
@@ -223,12 +223,12 @@ export function TagFilterSheet({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-3 border-t border-outline-variant/20 bg-surface/95 backdrop-blur-xs flex items-center justify-between gap-3">
+        <div className="p-3 border-t border-blue-500/20 dark:border-blue-400/20 bg-black/20 dark:bg-black/30 flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={handleClearAll}
             disabled={draftTags.length === 0}
-            className="px-3.5 py-2 rounded-xl border border-outline-variant/30 text-xs font-semibold text-on-surface-variant hover:text-on-surface disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95"
+            className="px-3.5 py-2 rounded-xl bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-white/15 disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95"
             data-testid="tag-filter-reset-btn"
           >
             Đặt lại
@@ -237,12 +237,12 @@ export function TagFilterSheet({
           <button
             type="button"
             onClick={handleApply}
-            className="flex-1 py-2 px-4 rounded-xl bg-primary text-on-primary text-xs font-bold shadow-md hover:bg-primary/90 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+            className="flex-1 py-2 px-4 rounded-xl bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black text-xs font-bold border border-amber-300/70 shadow-[0_4px_16px_rgba(245,158,11,0.5),_inset_0_1px_1px_rgba(255,255,255,0.6)] hover:brightness-110 transition-all active:scale-95 flex items-center justify-center gap-1.5"
             data-testid="tag-filter-apply-btn"
           >
             <span>Áp dụng bộ lọc</span>
             {draftTags.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-on-primary/20 text-[10px] font-mono">
+              <span className="px-1.5 py-0.2 rounded-full bg-black/30 text-amber-200 text-[10px] font-mono">
                 {draftTags.length}
               </span>
             )}

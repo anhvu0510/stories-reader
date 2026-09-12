@@ -52,37 +52,37 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
   const currentThemeObj = themes.find((t) => t.id === theme) || themes[0];
 
   return (
-    <div className="fixed inset-0 z-[95000] bg-black/70 flex justify-center items-end p-0 overflow-x-hidden box-border">
+    <div className="fixed inset-0 z-[95000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden box-border">
       {/* Backdrop */}
       <div className="absolute inset-0" onClick={onClose} />
 
       {/* Ultra-Compact Mobile Bottom Sheet (~340px Max Height) */}
-      <div className="relative z-10 bg-surface-container/95 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[24px] border-t border-outline-variant/30 shadow-2xl p-3.5 sm:p-4 space-y-3 max-h-[50dvh] overflow-y-auto hide-scrollbar transform-gpu transition-all duration-200 box-border">
+      <div className="relative z-10 bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[24px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] p-3.5 sm:p-4 space-y-3 max-h-[50dvh] overflow-y-auto hide-scrollbar transition-all duration-200 box-border">
         {/* Header & Drag Handle */}
-        <div className="flex items-center justify-between pb-1 border-b border-outline-variant/20">
+        <div className="flex items-center justify-between pb-1 border-b border-white/10">
           <div className="flex items-center gap-1.5">
-            <Type size={15} className="text-primary" />
+            <Type size={15} className="text-amber-400" />
             <h3 className="text-xs font-black tracking-tight text-on-surface uppercase font-mono">
               Giao Diện Đọc ({fontSize}px)
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-full bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-colors active:scale-95"
+            className="p-1 rounded-full bg-white/10 hover:bg-white/20 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95 border border-white/20"
           >
             <X size={15} />
           </button>
         </div>
 
         {/* Row 1: Font Size Controls */}
-        <div className="flex items-center justify-between gap-2 bg-surface-container-low p-2 px-3 rounded-xl border border-outline-variant/20">
-          <span className="text-[10px] font-mono font-bold text-on-surface-variant/70 uppercase tracking-wider flex items-center gap-1">
-            <Type size={11} className="text-primary" /> CỠ CHỮ: <span className="text-primary font-black">{fontSize}px</span>
+        <div className="flex items-center justify-between gap-2 bg-white/10 p-2 px-3 rounded-xl border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]">
+          <span className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider flex items-center gap-1">
+            <Type size={11} className="text-amber-400" /> CỠ CHỮ: <span className="text-amber-400 font-black">{fontSize}px</span>
           </span>
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setFontSize(Math.max(12, fontSize - 1))}
-              className="px-2 py-1 rounded-lg bg-surface-container-high border border-outline-variant/30 text-on-surface font-bold text-xs active:scale-95 shadow-xs"
+              className="px-2 py-1 rounded-lg bg-white/10 border border-white/20 text-on-surface font-bold text-xs active:scale-95 shadow-xs hover:bg-white/20 transition-all"
               title="Giảm cỡ chữ"
             >
               <Minus size={12} /> A-
@@ -93,11 +93,11 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
               max="32"
               value={fontSize}
               onChange={(e) => setFontSize(Number(e.target.value))}
-              className="w-20 accent-primary bg-surface-container-highest h-1.5 rounded-lg cursor-pointer"
+              className="w-20 accent-amber-400 bg-white/10 h-1.5 rounded-lg cursor-pointer"
             />
             <button
               onClick={() => setFontSize(Math.min(36, fontSize + 1))}
-              className="px-2 py-1 rounded-lg bg-surface-container-high border border-outline-variant/30 text-on-surface font-bold text-xs active:scale-95 shadow-xs"
+              className="px-2 py-1 rounded-lg bg-white/10 border border-white/20 text-on-surface font-bold text-xs active:scale-95 shadow-xs hover:bg-white/20 transition-all"
               title="Tăng cỡ chữ"
             >
               <Plus size={12} /> A+
@@ -106,11 +106,11 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
         </div>
 
         {/* Row 2: Super-Slim Color Swatches */}
-        <div className="flex items-center justify-between gap-2 bg-surface-container-low p-1.5 px-3 rounded-xl border border-outline-variant/20">
+        <div className="flex items-center justify-between gap-2 bg-white/5 p-1.5 px-3 rounded-xl border border-white/10">
           <div className="flex items-center gap-1 shrink-0">
-            <Palette size={11} className="text-primary" />
-            <span className="text-[10px] font-mono font-bold text-on-surface-variant/70 uppercase tracking-wider">
-              MÀU NỀN: <span className="text-primary font-black">{currentThemeObj.name}</span>
+            <Palette size={11} className="text-amber-400" />
+            <span className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider">
+              MÀU NỀN: <span className="text-amber-400 font-black">{currentThemeObj.name}</span>
             </span>
           </div>
 
@@ -124,7 +124,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
                   title={t.name}
                   className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 border border-black/20 transition-all active:scale-90 relative ${
                     isSelected
-                      ? 'ring-2 ring-primary ring-offset-1 ring-offset-surface scale-110 shadow-xs'
+                      ? 'ring-2 ring-amber-400 ring-offset-1 ring-offset-slate-900 scale-110 shadow-xs'
                       : 'opacity-70 hover:opacity-100'
                   }`}
                   style={{ backgroundColor: t.bg, color: t.text }}
@@ -146,8 +146,8 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
                 onClick={() => setFont(f.id)}
                 className={`px-3 py-1.5 rounded-xl border text-[11px] font-bold shrink-0 transition-all active:scale-95 flex items-center gap-1 ${
                   isSelected
-                    ? 'bg-primary text-on-primary border-primary shadow-xs font-extrabold'
-                    : 'bg-surface-container-low border-outline-variant/25 text-on-surface-variant hover:text-on-surface'
+                    ? 'bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black border-amber-300/70 shadow-[0_2px_8px_rgba(245,158,11,0.4)] font-black'
+                    : 'bg-white/10 border-white/20 text-on-surface-variant hover:text-on-surface hover:bg-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]'
                 }`}
               >
                 {f.name}
@@ -160,9 +160,9 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
         {/* Row 3: Line Height (Left) & Group Lines (Right) */}
         <div className="grid grid-cols-2 gap-2">
           {/* Line Height */}
-          <div className="bg-surface-container-low p-1.5 rounded-xl border border-outline-variant/20 space-y-1">
-            <span className="text-[9px] font-mono font-bold text-on-surface-variant/70 uppercase tracking-wider block px-1 flex items-center gap-1">
-              <AlignJustify size={10} className="text-primary" /> GIÃN DÒNG
+          <div className="bg-white/5 p-1.5 rounded-xl border border-white/10 space-y-1">
+            <span className="text-[9px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider block px-1 flex items-center gap-1">
+              <AlignJustify size={10} className="text-amber-400" /> GIÃN DÒNG
             </span>
             <div className="grid grid-cols-4 gap-1">
               {lineHeights.map((lh) => {
@@ -173,8 +173,8 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
                     onClick={() => setLineHeight(lh.val)}
                     className={`py-1 rounded-lg border text-[10px] font-bold text-center transition-all active:scale-95 ${
                       isSelected
-                        ? 'bg-primary text-on-primary border-primary font-black'
-                        : 'bg-surface-container border-outline-variant/20 text-on-surface-variant'
+                        ? 'bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black border-amber-300/70 font-black shadow-[0_2px_8px_rgba(245,158,11,0.4)]'
+                        : 'bg-white/10 border-white/20 text-on-surface-variant hover:bg-white/20'
                     }`}
                   >
                     {lh.val}
@@ -185,9 +185,9 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
           </div>
 
           {/* Group Lines */}
-          <div className="bg-surface-container-low p-1.5 rounded-xl border border-outline-variant/20 space-y-1">
-            <span className="text-[9px] font-mono font-bold text-on-surface-variant/70 uppercase tracking-wider block px-1 flex items-center gap-1">
-              <Layers size={10} className="text-primary" /> GỘP ĐOẠN
+          <div className="bg-white/5 p-1.5 rounded-xl border border-white/10 space-y-1">
+            <span className="text-[9px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider block px-1 flex items-center gap-1">
+              <Layers size={10} className="text-amber-400" /> GỘP ĐOẠN
             </span>
             <div className="grid grid-cols-3 gap-1">
               {lineGroups.map((lg) => {
@@ -198,8 +198,8 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
                     onClick={() => setGroupLines(lg.val)}
                     className={`py-1 rounded-lg border text-[10px] font-bold text-center transition-all active:scale-95 ${
                       isSelected
-                        ? 'bg-primary text-on-primary border-primary font-black'
-                        : 'bg-surface-container border-outline-variant/20 text-on-surface-variant'
+                        ? 'bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black border-amber-300/70 font-black shadow-[0_2px_8px_rgba(245,158,11,0.4)]'
+                        : 'bg-white/10 border-white/20 text-on-surface-variant hover:bg-white/20'
                     }`}
                   >
                     {lg.label}
@@ -211,16 +211,16 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
         </div>
 
         {/* Row 4: Utility Toggle Switch (Word Replacement) */}
-        <div className="bg-surface-container-low p-2 px-3 rounded-xl border border-outline-variant/20 flex items-center justify-between gap-2">
+        <div className="bg-white/5 p-2 px-3 rounded-xl border border-white/10 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
-            <Sliders size={13} className="text-primary shrink-0" />
+            <Sliders size={13} className="text-amber-400 shrink-0" />
             <span className="text-xs font-bold text-on-surface">Bộ Thay Thế Từ Ngữ</span>
           </div>
 
           <button
             onClick={() => setIsEnabledReplace(!isEnabledReplace)}
             className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ease-in-out shrink-0 ${
-              isEnabledReplace ? 'bg-primary' : 'bg-surface-container-highest border border-outline-variant/40'
+              isEnabledReplace ? 'bg-gradient-to-b from-amber-400 to-amber-500' : 'bg-white/10 border border-white/20'
             }`}
           >
             <div

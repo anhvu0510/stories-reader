@@ -57,6 +57,13 @@ export function ChapterListScreen() {
   const showToast = useToastStore((state) => state.showToast);
   const chapterLimit = useReaderConfigStore((state) => state.chapterLimit || 50);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fetchIdRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, []);
 
   // Fetch chapters with pagination, sorting & state filter
   const fetchChapters = useCallback(
@@ -68,6 +75,7 @@ export function ChapterListScreen() {
       isAppend: boolean = false
     ) => {
       if (!bookId) return;
+      const fetchId = ++fetchIdRef.current;
       if (isAppend) {
         setLoadingMore(true);
       } else {
@@ -90,6 +98,8 @@ export function ChapterListScreen() {
           searchQuery
         );
 
+        if (fetchId !== fetchIdRef.current) return;
+
         const newChapters = res.chapters || [];
         const totalPages = res.pagination?.totalPages || 1;
 
@@ -106,10 +116,14 @@ export function ChapterListScreen() {
         setPage(targetPage);
         setHasMore(targetPage < totalPages && newChapters.length > 0);
       } catch {
-        showToast('Lỗi khi tải danh sách chương', 'error');
+        if (fetchId === fetchIdRef.current) {
+          showToast('Lỗi khi tải danh sách chương', 'error');
+        }
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (fetchId === fetchIdRef.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [bookId, book, chapterLimit, showToast]

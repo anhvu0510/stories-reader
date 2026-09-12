@@ -83,17 +83,17 @@ export function SortSheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby="sort-sheet-title"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 backdrop-blur-[2px] animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-surface border-t border-outline-variant/30 rounded-t-3xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300"
+        className="w-full max-w-md bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-xl border-t sm:border border-white/20 dark:border-white/20 rounded-t-3xl shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] flex flex-col max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-outline-variant/20">
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-amber-400/15 border border-amber-400/30 text-amber-400 flex items-center justify-center">
               <ArrowUpDown size={16} />
             </div>
             <div>
@@ -108,7 +108,7 @@ export function SortSheet({
             <button
               type="button"
               onClick={handleReset}
-              className="px-2.5 py-1 text-xs font-semibold text-primary hover:text-primary/80 hover:bg-primary/10 rounded-lg transition-colors flex items-center gap-1"
+              className="px-2.5 py-1 text-xs font-semibold text-amber-400 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1"
               title="Đặt lại mặc định"
             >
               <RotateCcw size={12} />
@@ -118,7 +118,7 @@ export function SortSheet({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 text-on-surface-variant hover:text-on-surface rounded-full hover:bg-surface-container transition-colors"
+              className="p-1.5 text-on-surface-variant hover:text-on-surface rounded-full hover:bg-white/10 transition-colors"
               title="Đóng"
               aria-label="Đóng bảng sắp xếp"
             >
@@ -138,23 +138,25 @@ export function SortSheet({
                 onClick={() => handleSelect(opt.sortBy, opt.sortOrder)}
                 className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all active:scale-[0.99] text-left ${
                   isSelected
-                    ? 'bg-primary/10 border-primary text-primary shadow-xs'
-                    : 'bg-surface-container/50 border-outline-variant/30 text-on-surface hover:bg-surface-container hover:border-outline-variant/60'
+                    ? 'bg-amber-400/20 hover:bg-amber-400/25 backdrop-blur-md border-2 border-amber-400 text-amber-300 shadow-[0_4px_20px_rgba(245,158,11,0.35),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)]'
+                    : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-amber-400/80 text-on-surface'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                      isSelected ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant'
+                      isSelected
+                        ? 'bg-amber-400/30 border border-amber-400/70 text-amber-300 font-extrabold'
+                        : 'bg-amber-400/10 border border-amber-400/30 text-amber-400'
                     }`}
                   >
                     {opt.icon}
                   </div>
                   <div>
-                    <div className="text-xs font-bold leading-snug">{opt.label}</div>
+                    <div className={`text-xs font-extrabold leading-snug ${isSelected ? 'text-amber-300 drop-shadow-xs' : 'text-on-surface'}`}>{opt.label}</div>
                     <div
                       className={`text-[10px] mt-0.5 ${
-                        isSelected ? 'text-primary/80 font-medium' : 'text-on-surface-variant/70'
+                        isSelected ? 'text-amber-200/90 font-medium' : 'text-on-surface-variant/70'
                       }`}
                     >
                       {opt.description}
@@ -164,7 +166,7 @@ export function SortSheet({
 
                 <div
                   className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                    isSelected ? 'bg-primary text-on-primary' : 'border border-outline-variant/40'
+                    isSelected ? 'bg-amber-400/30 border border-amber-400/70 text-amber-300 font-bold' : 'border border-white/30'
                   }`}
                 >
                   {isSelected && <Check size={12} strokeWidth={3} />}
@@ -175,18 +177,18 @@ export function SortSheet({
         </div>
 
         {/* Footer Action */}
-        <div className="p-3.5 border-t border-outline-variant/20 bg-surface/95 backdrop-blur-xs flex items-center gap-2">
+        <div className="p-3.5 border-t border-white/10 bg-white/5 backdrop-blur-xs flex items-center gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-outline-variant/40 text-xs font-bold text-on-surface-variant hover:bg-surface-container active:scale-95 transition-all"
+            className="flex-1 py-2.5 rounded-xl border border-white/20 text-xs font-bold text-on-surface-variant hover:bg-white/10 active:scale-95 transition-all"
           >
             Hủy
           </button>
           <button
             type="button"
             onClick={handleApply}
-            className="flex-1 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-bold shadow-md hover:bg-primary/90 active:scale-95 transition-all"
+            className="flex-1 py-2.5 rounded-xl bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black text-xs font-extrabold border border-amber-300/70 shadow-[0_4px_16px_rgba(245,158,11,0.5)] hover:brightness-110 active:scale-95 transition-all"
           >
             Áp dụng
           </button>

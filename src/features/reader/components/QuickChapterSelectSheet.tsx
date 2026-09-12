@@ -78,10 +78,18 @@ export function QuickChapterSelectSheet({
   const activeItemRef = useRef<HTMLDivElement | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialScrollDoneRef = useRef(false);
+  const fetchIdRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, []);
 
   // Primary single API fetch handler starting from (currentChapterNumber - 5) to (currentChapterNumber + 20)
   const loadInitialChapters = useCallback(
     async (searchQuery: string = '') => {
+      const fetchId = ++fetchIdRef.current;
       setLoading(true);
       isInitialScrollDoneRef.current = false;
       const startChapterNumber = searchQuery
@@ -108,6 +116,8 @@ export function QuickChapterSelectSheet({
           endChapterNumber
         );
 
+        if (fetchId !== fetchIdRef.current) return;
+
         const newChapters = res.chapters || [];
         setChapters(newChapters);
 
@@ -125,7 +135,9 @@ export function QuickChapterSelectSheet({
       } catch {
         // Ignore error
       } finally {
-        setLoading(false);
+        if (fetchId === fetchIdRef.current) {
+          setLoading(false);
+        }
       }
     },
     [bookId, currentChapterNumber]
@@ -295,15 +307,15 @@ export function QuickChapterSelectSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-[95000] bg-black/80 flex justify-center items-end p-0 overflow-x-hidden box-border">
+    <div className="fixed inset-0 z-[95000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden box-border">
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="relative z-10 bg-surface-container text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t border-outline-variant/30 shadow-2xl h-[78vh] max-h-[85dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
+      <div className="relative z-10 bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] max-h-[85dvh] flex flex-col overflow-hidden box-border transition-colors duration-200">
         {/* Drag Handle */}
-        <div className="w-10 h-1 rounded-full bg-outline-variant/50 mx-auto my-2.5 flex-shrink-0" />
+        <div className="w-10 h-1 rounded-full bg-white/30 mx-auto my-2.5 flex-shrink-0" />
 
         {/* Header & Search */}
-        <div className="px-4 py-2 mb-1 border-b border-outline-variant/20 space-y-2.5 flex-shrink-0 bg-surface-container-low">
+        <div className="px-4 py-2 mb-1 border-b border-white/10 space-y-2.5 flex-shrink-0 bg-white/5 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-extrabold text-on-surface tracking-tight">Danh Sách Chương</h3>
             <div className="flex items-center gap-1">
@@ -316,12 +328,12 @@ export function QuickChapterSelectSheet({
                   isDownloaded
                     ? "text-rose-500 bg-rose-500/10 hover:bg-rose-500/20"
                     : downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting')
-                    ? "text-primary bg-primary/10"
-                    : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest"
+                    ? "text-amber-400 bg-amber-400/10"
+                    : "text-on-surface-variant hover:text-on-surface hover:bg-white/10"
                 }`}
               >
                 {downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting') ? (
-                  <RefreshCw size={16} className="animate-spin text-primary" />
+                  <RefreshCw size={16} className="animate-spin text-amber-400" />
                 ) : isDownloaded ? (
                   <Trash2 size={16} />
                 ) : (
@@ -331,7 +343,7 @@ export function QuickChapterSelectSheet({
 
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-full hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface transition-colors"
+                className="p-1.5 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors"
                 aria-label="Đóng"
               >
                 <X size={16} />
@@ -347,7 +359,7 @@ export function QuickChapterSelectSheet({
               placeholder="Tìm số hoặc tên chương..."
               value={search}
               onChange={handleSearchChange}
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-surface border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium"
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white/10 border border-white/20 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-amber-400/60 font-medium shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] transition-all"
             />
           </div>
         </div>

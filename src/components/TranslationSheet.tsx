@@ -719,23 +719,23 @@ export function TranslationSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-end justify-center p-0 bg-black/80 overflow-x-hidden box-border">
+    <div className="fixed inset-0 z-[99999] flex items-end justify-center p-0 bg-black/35 backdrop-blur-[2px] overflow-x-hidden box-border">
       {/* Backdrop */}
       <div className="absolute inset-0" onClick={onClose} />
       
       {/* Sheet Content */}
-      <div className="relative bg-surface-container text-on-surface w-full max-w-md mx-auto rounded-t-[28px] h-[78vh] min-h-[520px] max-h-[85dvh] flex flex-col shadow-2xl z-10 overflow-hidden box-border transform-gpu overscroll-contain transition-all duration-200">
+      <div className="relative bg-slate-900/40 dark:bg-slate-900/40 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] min-h-[520px] max-h-[85dvh] flex flex-col z-10 overflow-hidden box-border transform-gpu overscroll-contain transition-all duration-200">
         
         {/* Drag Handle & Header */}
-        <div className="flex-shrink-0 pt-3 px-4 sm:px-5 pb-3 border-b border-outline-variant/20 bg-surface-container-low">
-          <div className="w-12 h-1.5 bg-outline-variant/30 rounded-full mx-auto mb-2 sm:mb-3"></div>
-          <div className="flex justify-between items-center bg-surface-container p-1 rounded-xl">
-             <div className="flex bg-surface-container-low p-1 rounded-lg flex-1">
+        <div className="flex-shrink-0 pt-3 px-4 sm:px-5 pb-3 border-b border-white/10 bg-white/5">
+          <div className="w-12 h-1.5 bg-white/30 rounded-full mx-auto mb-2 sm:mb-3"></div>
+          <div className="flex justify-between items-center bg-white/5 p-1 rounded-xl border border-white/15">
+             <div className="flex bg-white/10 p-1 rounded-lg flex-1 gap-1">
                <TabButton active={activeTab === 'current'} onClick={() => setActiveTab('current')} disabled={disableCurrent}>Hiện tại</TabButton>
                <TabButton active={activeTab === 'batch_chapter'} onClick={() => setActiveTab('batch_chapter')}>Nhiều chương</TabButton>
                <TabButton active={activeTab === 'story'} onClick={() => setActiveTab('story')}>Truyện</TabButton>
              </div>
-             <button onClick={onClose} className="p-2 ml-2 bg-surface-container-highest/50 rounded-full text-on-surface-variant hover:text-on-surface transition-colors">
+             <button onClick={onClose} className="p-1.5 ml-2 bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] rounded-full text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all active:scale-95">
                <X size={16} className="sm:w-5 sm:h-5" />
              </button>
           </div>
@@ -743,18 +743,18 @@ export function TranslationSheet({
 
 
         {/* Global Config (Stuck below header) */}
-        <div className="flex-shrink-0 bg-surface-container-low border-b border-outline-variant/10">
+        <div className="flex-shrink-0 bg-black/10 dark:bg-black/20 border-b border-blue-500/20 dark:border-blue-400/20">
           <div 
-            className="w-full flex items-center justify-between py-2 px-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest hover:bg-surface-container-high transition-colors cursor-pointer select-none"
+            className="w-full flex items-center justify-between py-2 px-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest hover:bg-white/5 transition-colors cursor-pointer select-none"
             onClick={() => setShowConfig(!showConfig)}
           >
             <div className="flex items-center gap-2">
               <Settings2 size={12} />
               <span>Cấu hình AI</span>
               {poolStatus && poolStatus.model === options.model && (
-                <span className="ml-2 text-[9px] font-bold text-on-surface-variant bg-surface-container-highest px-1.5 py-0.5 rounded border border-outline-variant/20 flex items-center gap-1">
-                   <div className={`w-1 h-1 rounded-full ${poolStatus.remain > 0 ? 'bg-primary animate-pulse' : 'bg-error'}`}></div>
-                   RPD: <span className={poolStatus.remain > 0 ? 'text-primary' : 'text-error'}>{poolStatus.remain.toLocaleString()}</span>/{poolStatus.total > 0 ? poolStatus.total.toLocaleString() : '∞'}
+                <span className="ml-2 text-[9px] font-bold text-on-surface-variant bg-white/10 px-1.5 py-0.5 rounded border border-blue-500/20 flex items-center gap-1">
+                   <div className={`w-1 h-1 rounded-full ${poolStatus.remain > 0 ? 'bg-amber-400 animate-pulse' : 'bg-rose-500'}`}></div>
+                   RPD: <span className={poolStatus.remain > 0 ? 'text-amber-400' : 'text-rose-400'}>{poolStatus.remain.toLocaleString()}</span>/{poolStatus.total > 0 ? poolStatus.total.toLocaleString() : '∞'}
                 </span>
               )}
             </div>
@@ -766,10 +766,10 @@ export function TranslationSheet({
                     setOptions({...options, batchingGroup: !options.batchingGroup});
                   }}
                   className={cn(
-                    "p-1.5 rounded-lg transition-all active:scale-95",
+                    "p-1.5 rounded-lg transition-all active:scale-95 border",
                     options.batchingGroup 
-                      ? "bg-primary text-on-primary shadow-sm shadow-primary/20" 
-                      : "bg-surface-container-highest text-on-surface-variant/50"
+                      ? "bg-amber-400 text-black border-amber-300/70 shadow-xs" 
+                      : "bg-white/5 border-blue-500/20 text-on-surface-variant/50"
                   )}
                   title="Gộp chung văn cảnh"
                 >
@@ -782,10 +782,10 @@ export function TranslationSheet({
                   setOptions({...options, forceRetranslate: !options.forceRetranslate});
                 }}
                 className={cn(
-                  "p-1.5 rounded-lg transition-all active:scale-95",
+                  "p-1.5 rounded-lg transition-all active:scale-95 border",
                   options.forceRetranslate 
-                    ? "bg-primary text-on-primary shadow-sm shadow-primary/20" 
-                    : "bg-surface-container-highest text-on-surface-variant/50"
+                    ? "bg-amber-400 text-black border-amber-300/70 shadow-xs" 
+                    : "bg-white/5 border-blue-500/20 text-on-surface-variant/50"
                 )}
                 title="Dịch lại toàn bộ"
               >
@@ -879,16 +879,16 @@ export function TranslationSheet({
                           className={cn(
                             'px-3 py-2 rounded-lg text-left border transition-all flex items-center justify-between',
                             isSelected
-                              ? 'bg-primary/10 border-primary/30 text-primary'
-                              : 'bg-surface-container-highest border-transparent text-on-surface-variant hover:bg-surface-container-high'
+                              ? 'bg-amber-400/20 hover:bg-amber-400/25 backdrop-blur-md border-2 border-amber-400 text-amber-300 font-extrabold shadow-[0_4px_16px_rgba(245,158,11,0.35),_inset_0_1px_1px_rgba(255,255,255,0.6)]'
+                              : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-amber-400/80 text-on-surface font-medium'
                           )}
                         >
                           <div className="min-w-0 pr-2">
-                            <div className="font-bold text-xs truncate">
+                            <div className={`font-bold text-xs truncate ${isSelected ? 'text-amber-300' : 'text-on-surface'}`}>
                               {m.replace(/^gemini-/, '').replace(/-/g, ' ').toUpperCase() || m}
                             </div>
                           </div>
-                          {isSelected && <Check size={12} className="text-primary flex-shrink-0" />}
+                          {isSelected && <Check size={12} className="text-amber-300 flex-shrink-0 font-bold" />}
                         </button>
                       );
                     });
@@ -926,20 +926,20 @@ export function TranslationSheet({
                     </label>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <button onClick={handleSelectAll} className="px-2 py-1 bg-surface-container-high rounded text-[11px] font-bold text-primary hover:bg-surface-container-highest transition-colors">Tất cả</button>
-                    <button onClick={handleSelectPending} className="px-2 py-1 bg-surface-container-high rounded text-[11px] font-bold text-primary hover:bg-surface-container-highest transition-colors">Chưa dịch</button>
-                    <button onClick={() => setSelectedChapters(new Set())} className="px-2 py-1 bg-surface-container-high rounded text-[11px] font-bold text-error hover:bg-surface-container-highest transition-colors">Bỏ chọn</button>
+                    <button onClick={handleSelectAll} className="px-2.5 py-1 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-lg text-[11px] font-bold text-amber-400 hover:bg-white/15 active:scale-95 transition-all">Tất cả</button>
+                    <button onClick={handleSelectPending} className="px-2.5 py-1 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-lg text-[11px] font-bold text-amber-400 hover:bg-white/15 active:scale-95 transition-all">Chưa dịch</button>
+                    <button onClick={() => setSelectedChapters(new Set())} className="px-2.5 py-1 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-lg text-[11px] font-bold text-rose-400 hover:bg-white/15 active:scale-95 transition-all">Bỏ chọn</button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 bg-surface-container-low p-2 rounded-lg border border-outline-variant/10">
+                <div className="flex items-center gap-2 bg-black/20 p-2 rounded-xl border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]">
                   <span className="text-[11px] text-on-surface-variant font-medium whitespace-nowrap">Từ chương:</span>
-                  <input type="number" placeholder="..." value={rangeStart} onChange={e => setRangeStart(e.target.value)} className="w-12 bg-surface px-1.5 py-1 rounded text-xs outline-none border border-transparent focus:border-primary/50 text-center text-on-surface" />
+                  <input type="number" placeholder="..." value={rangeStart} onChange={e => setRangeStart(e.target.value)} className="w-12 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(0,0,0,0.5)] px-1.5 py-1 rounded-lg text-xs font-mono text-amber-300 text-center outline-none focus:border-amber-400/60 transition-all" />
                   <span className="text-xs text-on-surface-variant">-</span>
-                  <input type="number" placeholder="..." value={rangeEnd} onChange={e => setRangeEnd(e.target.value)} className="w-12 bg-surface px-1.5 py-1 rounded text-xs outline-none border border-transparent focus:border-primary/50 text-center text-on-surface" />
-                  <button onClick={handleSelectRange} className="text-[11px] ml-auto bg-primary text-on-primary px-3 py-1 rounded font-bold hover:bg-primary-fixed transition-colors">Chọn</button>
+                  <input type="number" placeholder="..." value={rangeEnd} onChange={e => setRangeEnd(e.target.value)} className="w-12 bg-white/5 border border-blue-500/20 shadow-[inset_0_1px_0.5px_rgba(0,0,0,0.5)] px-1.5 py-1 rounded-lg text-xs font-mono text-amber-300 text-center outline-none focus:border-amber-400/60 transition-all" />
+                  <button onClick={handleSelectRange} className="text-[11px] ml-auto bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black border border-amber-300/70 shadow-[0_2px_8px_rgba(245,158,11,0.4)] px-3.5 py-1 rounded-lg font-extrabold hover:brightness-110 active:scale-95 transition-all">Chọn</button>
                 </div>
               </div>
-              <div ref={chapterListRef} onScroll={handleScroll} className="flex-1 overflow-y-auto hide-scrollbar flex flex-col p-0 border border-outline-variant/20 bg-surface rounded-xl min-h-[30vh] shadow-sm overflow-hidden">
+              <div ref={chapterListRef} onScroll={handleScroll} className="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-1.5 p-1 min-h-[30vh]">
                 {[...chapters]
                   .sort((a, b) => a.chapterNumber - b.chapterNumber)
                   .filter(chap => !showOnlyPending || chap.state === 'PENDING' || chap.state === 'FAILED')
@@ -951,21 +951,25 @@ export function TranslationSheet({
                         id={`chapter-item-${chap.chapterNumber}`}
                         ref={isCurrentChapter ? activeItemRef : undefined}
                         onClick={() => toggleChapter(chap.chapterId)}
-                        className={cn("group flex justify-between items-center px-3 py-2 cursor-pointer transition-colors border-b border-outline-variant/10 last:border-b-0 relative", selectedChapters.has(chap.chapterId) ? "bg-primary/5" : "bg-surface hover:bg-surface-container-lowest")}
+                        className={cn(
+                          "group flex justify-between items-center px-3 py-2.5 cursor-pointer transition-all rounded-xl border relative shadow-xs", 
+                          selectedChapters.has(chap.chapterId) 
+                            ? "bg-amber-400/20 hover:bg-amber-400/25 backdrop-blur-md border-2 border-amber-400 text-amber-300 shadow-[0_4px_16px_rgba(245,158,11,0.35),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)]" 
+                            : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-amber-400/80 text-on-surface'
+                        )}
                       >
-                        {selectedChapters.has(chap.chapterId) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>}
                         <div className="flex items-center gap-3 overflow-hidden flex-1 pl-1">
-                          <div className={cn("shrink-0 w-8 h-8 rounded-full flex flex-col items-center justify-center font-bold tracking-tight border transition-colors", chap.state === 'SUCCEEDED' ? 'bg-primary/10 text-primary border-primary/20' : chap.state === 'PENDING' ? 'bg-warning/10 text-warning border-warning/20' : 'bg-surface-container-high text-on-surface-variant border-outline-variant/20')}>
+                          <div className={cn("shrink-0 w-8 h-8 rounded-xl flex flex-col items-center justify-center font-bold tracking-tight border transition-colors shadow-2xs", selectedChapters.has(chap.chapterId) ? "bg-amber-400/30 border-amber-400/70 text-amber-300 font-extrabold" : chap.state === 'SUCCEEDED' ? 'bg-amber-400/15 text-amber-300 border-amber-400/30' : chap.state === 'PENDING' ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : 'bg-white/10 text-on-surface-variant border-white/20')}>
                             <span className="text-[7px] leading-none opacity-80 mt-[1px]">CH</span>
-                            <span className="text-[11px] leading-none mt-[1px]">{chap.chapterNumber}</span>
+                            <span className="text-[11px] leading-none mt-[1px] font-mono">{chap.chapterNumber}</span>
                           </div>
                           
                           <div className="flex flex-col flex-1 truncate pr-2">
-                            <span className={cn("text-[12px] sm:text-[13px] truncate font-medium transition-colors", selectedChapters.has(chap.chapterId) ? "text-primary font-bold" : "text-on-surface")}>{chap.title || `Chương ${chap.chapterNumber}`}</span>
-                            {(chap.state === 'FAILED' || chap.state === 'PENDING') && <span className="text-[9px] text-warning/70 font-semibold mt-0.5">Chưa được dịch</span>}
+                            <span className={cn("text-[12px] sm:text-[13px] truncate font-medium transition-colors", selectedChapters.has(chap.chapterId) ? "text-amber-300 font-black drop-shadow-xs" : "text-on-surface")}>{chap.title || `Chương ${chap.chapterNumber}`}</span>
+                            {(chap.state === 'FAILED' || chap.state === 'PENDING') && <span className={cn("text-[9px] font-semibold mt-0.5", selectedChapters.has(chap.chapterId) ? "text-amber-200/80" : "text-amber-400/70")}>Chưa được dịch</span>}
                           </div>
                         </div>
-                        {selectedChapters.has(chap.chapterId) ? <Check size={14} className="text-primary flex-shrink-0 drop-shadow-sm mr-1" /> : <Square size={14} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />}
+                        {selectedChapters.has(chap.chapterId) ? <Check size={14} className="text-amber-300 flex-shrink-0 drop-shadow-sm mr-1 font-bold" /> : <Square size={14} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />}
                       </div>
                     );
                   })}
@@ -982,10 +986,10 @@ export function TranslationSheet({
                   placeholder="Tìm truyện..." 
                   value={searchBook}
                   onChange={(e) => setSearchBook(e.target.value)}
-                  className="w-full bg-surface-container-highest border border-transparent rounded-xl py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-xs sm:text-sm focus:outline-none focus:border-primary/50 focus:bg-surface transition-all placeholder:text-on-surface-variant/70"
+                  className="w-full bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-xl py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-xs sm:text-sm text-on-surface focus:outline-none focus:border-amber-400/60 transition-all placeholder:text-on-surface-variant/70"
                 />
               </div>
-              <div className="flex-1 overflow-y-auto hide-scrollbar flex flex-col p-0 border border-outline-variant/20 bg-surface rounded-xl min-h-[30vh] shadow-sm overflow-hidden">
+              <div className="flex-1 overflow-y-auto hide-scrollbar flex flex-col gap-1.5 p-1 min-h-[30vh]">
                 {books.length === 0 ? (
                   <div className="py-12 text-center text-xs text-on-surface-variant/60 font-medium">
                     Không tìm thấy truyện nào trong thư viện
@@ -998,18 +1002,19 @@ export function TranslationSheet({
                         key={book.bookId}
                         onClick={() => toggleBook(book.bookId)}
                         className={cn(
-                          'group flex justify-between items-center px-3 py-2.5 cursor-pointer transition-colors border-b border-outline-variant/10 last:border-b-0 relative',
-                          selectedBooks.has(book.bookId) ? 'bg-primary/5' : 'bg-surface hover:bg-surface-container-lowest'
+                          'group flex justify-between items-center px-3 py-2.5 cursor-pointer transition-all rounded-xl border relative shadow-xs',
+                          selectedBooks.has(book.bookId) 
+                            ? 'bg-amber-400/20 hover:bg-amber-400/25 backdrop-blur-md border-2 border-amber-400 text-amber-300 shadow-[0_4px_16px_rgba(245,158,11,0.35),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)]' 
+                            : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-amber-400/80 text-on-surface'
                         )}
                       >
-                        {selectedBooks.has(book.bookId) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>}
                         <div className="flex items-center gap-3 overflow-hidden pl-1">
                           <div
                             className={cn(
-                              'flex flex-col items-center justify-center w-8 h-8 rounded-lg shrink-0 border transition-colors',
+                              'flex flex-col items-center justify-center w-8 h-8 rounded-lg shrink-0 border transition-colors shadow-2xs',
                               selectedBooks.has(book.bookId)
-                                ? 'bg-primary/10 border-primary/20 text-primary'
-                                : 'bg-surface-container-highest border-transparent text-on-surface-variant'
+                                ? 'bg-amber-400/30 border-amber-400/70 text-amber-300 font-extrabold'
+                                : 'bg-amber-400/10 border-amber-400/30 text-amber-400'
                             )}
                           >
                             <Languages size={12} />
@@ -1017,14 +1022,14 @@ export function TranslationSheet({
                           <span
                             className={cn(
                               'text-[12px] sm:text-[13px] truncate font-medium transition-colors',
-                              selectedBooks.has(book.bookId) ? 'text-primary font-bold' : 'text-on-surface'
+                              selectedBooks.has(book.bookId) ? 'text-amber-300 font-black drop-shadow-xs' : 'text-on-surface'
                             )}
                           >
                             {book.bookName}
                           </span>
                         </div>
                         {selectedBooks.has(book.bookId) ? (
-                          <Check size={14} className="text-primary flex-shrink-0 drop-shadow-sm mr-1" />
+                          <Check size={14} className="text-amber-300 flex-shrink-0 drop-shadow-sm mr-1 font-bold" />
                         ) : (
                           <Square size={14} className="text-on-surface-variant/30 flex-shrink-0 mr-1" />
                         )}

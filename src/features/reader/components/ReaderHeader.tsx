@@ -25,13 +25,13 @@ export const ReaderHeader = memo(function ReaderHeader({
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-40 bg-surface/90 backdrop-blur-xl border-b border-outline-variant/30 px-3.5 py-2.5 w-full max-w-md mx-auto shadow-md overflow-x-hidden box-border transition-all duration-300 transform-gpu"
+      className="fixed top-0 left-0 right-0 z-40 bg-black/10 dark:bg-black/15 backdrop-blur-[2px] border-b border-blue-500/30 dark:border-blue-400/25 shadow-[0_8px_24px_rgba(0,0,0,0.4),_inset_0_-1px_0.5px_0_rgba(0,0,0,0.4)] px-3.5 py-2.5 w-full max-w-md mx-auto overflow-x-hidden box-border transition-all duration-300"
     >
       <div className="flex items-center justify-between gap-2">
         {/* Left: Home Button */}
         <button
           onClick={() => navigate('/')}
-          className="p-2 rounded-full bg-surface-container-high border border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-surface transition-all flex-shrink-0 active:scale-95 shadow-sm"
+          className="p-2 rounded-full bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 text-on-surface hover:text-primary hover:bg-white/15 transition-all flex-shrink-0 active:scale-95 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]"
           title="Về Thư viện"
         >
           <Home size={16} />
@@ -64,7 +64,7 @@ export const ReaderHeader = memo(function ReaderHeader({
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
             onClick={onOpenHistory}
-            className="p-2 rounded-full bg-surface-container-high border border-outline-variant/30 text-primary hover:bg-surface transition-all active:scale-95 shadow-sm"
+            className="p-2 rounded-full bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 text-primary hover:bg-white/15 transition-all active:scale-95 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]"
             title="Lịch sử đọc gần đây"
           >
             <Clock size={16} />

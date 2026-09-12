@@ -71,7 +71,7 @@ export function VerticalBatchChapterNav({
     >
       <div
         ref={containerRef}
-        className="w-fit p-1.5 rounded-full bg-surface-container-low/85 backdrop-blur-2xl border border-outline-variant/30 shadow-2xl shadow-black/20 flex flex-col items-center gap-1.5 max-h-[48vh] overflow-y-auto no-scrollbar pointer-events-auto box-border"
+        className="w-fit p-1.5 rounded-full bg-black/10 dark:bg-black/15 backdrop-blur-[2px] border border-blue-500/30 dark:border-blue-400/25 shadow-[0_12px_28px_rgba(0,0,0,0.4),_inset_0_1px_0.5px_0_rgba(255,255,255,0.45),_inset_0_-1px_0.5px_0_rgba(0,0,0,0.4)] flex flex-col items-center gap-1.5 max-h-[48vh] overflow-y-auto no-scrollbar pointer-events-auto box-border"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         <button

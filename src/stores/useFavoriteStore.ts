@@ -54,6 +54,14 @@ export const useFavoriteStore = create<FavoriteState>()(
         const updated = Array.from(new Set([...serverFavIds, ...favoriteBookIds])).filter(
           (id) => !serverUnfavIds.has(id) || serverFavIds.includes(id)
         );
+
+        if (
+          updated.length === favoriteBookIds.length &&
+          updated.every((id, idx) => favoriteBookIds[idx] === id)
+        ) {
+          return;
+        }
+
         set({ favoriteBookIds: updated });
       },
 
