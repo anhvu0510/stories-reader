@@ -7,7 +7,19 @@ import { ChapterItem } from '../../chapter-list/components/ChapterItem';
 import { downloadManager, DownloadTask } from '../../../lib/DownloadManager';
 import { offlineDb } from '../../../lib/offlineDb';
 import { useToastStore } from '../../../stores/useToastStore';
-import { useGlobalLoading } from '../../../hooks/useGlobalLoading';
+
+function ChapterSkeletonItem() {
+  return (
+    <div className="w-full p-3 rounded-2xl bg-white/5 dark:bg-white/[0.04] border border-white/10 flex items-center gap-3 animate-pulse">
+      <div className="w-12 h-7 rounded-xl bg-on-surface-variant/15 flex-shrink-0" />
+      <div className="flex-1 space-y-1.5 min-w-0">
+        <div className="h-4 w-3/4 bg-on-surface-variant/20 rounded-md" />
+        <div className="h-3 w-1/3 bg-on-surface-variant/15 rounded-md" />
+      </div>
+      <div className="w-8 h-8 rounded-full bg-on-surface-variant/15 flex-shrink-0" />
+    </div>
+  );
+}
 
 interface QuickChapterSelectSheetProps {
   bookId: string;
@@ -29,6 +41,16 @@ export function QuickChapterSelectSheet({
   const showToast = useToastStore((state) => state.showToast);
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [downloadTask, setDownloadTask] = useState<DownloadTask | undefined>(() => downloadManager.getTask(bookId));
+
+  // Lock body scroll while modal sheet is open to prevent background reader screen from scrolling
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     offlineDb.getBook(bookId).then((b) => setIsDownloaded(Boolean(b)));
@@ -66,7 +88,6 @@ export function QuickChapterSelectSheet({
   };
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
-  useGlobalLoading(loading && chapters.length === 0);
   const [loadingBottom, setLoadingBottom] = useState(false);
   const [loadingTop, setLoadingTop] = useState(false);
 
@@ -167,7 +188,7 @@ export function QuickChapterSelectSheet({
       const activeEl = activeItemRef.current;
       const containerRect = container.getBoundingClientRect();
       const activeRect = activeEl.getBoundingClientRect();
-      const targetScrollTop = container.scrollTop + (activeRect.top - containerRect.top);
+      const targetScrollTop = container.scrollTop + (activeRect.top - containerRect.top) - 40;
       container.scrollTop = Math.max(0, targetScrollTop);
     }
   }, []);
@@ -309,10 +330,14 @@ export function QuickChapterSelectSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-[95000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden box-border">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div className="fixed inset-0 z-[95000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden overscroll-none box-border">
+      <div
+        className="absolute inset-0"
+        onClick={onClose}
+        onTouchMove={(e) => e.preventDefault()}
+      />
 
-      <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] max-h-[85dvh] flex flex-col overflow-hidden box-border transition-colors duration-200">
+      <div className="relative z-1000 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.5)] h-[78vh] max-h-[85dvh] flex flex-col overflow-hidden box-border transition-colors duration-200">
         {/* Ambient Top Glow Effect */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
 
@@ -373,21 +398,31 @@ export function QuickChapterSelectSheet({
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-2"
+          className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-2 relative"
         >
+          {/* Top Thin Progress Bar when searching */}
+          {loading && chapters.length > 0 && (
+            <div className="h-0.5 bg-gradient-to-r from-primary/30 via-primary to-primary/30 animate-pulse rounded-full mb-2" />
+          )}
+
           {loading && chapters.length === 0 ? (
-            <div className="py-16 text-center text-xs text-on-surface-variant/60 font-medium" />
+            /* Initial Load Skeleton Cards */
+            <div className="space-y-2 py-1">
+              {[1, 2, 3, 4, 5].map((idx) => (
+                <ChapterSkeletonItem key={`sk-init-${idx}`} />
+              ))}
+            </div>
           ) : chapters.length === 0 ? (
             <div className="py-16 text-center text-xs text-on-surface-variant/60 font-medium">
               Không tìm thấy chương nào
             </div>
           ) : (
             <>
-              {/* Top Loading Spinner Indicator when Scrolling Up */}
+              {/* Top Loading Skeleton Cards when Scrolling Up */}
               {loadingTop && (
-                <div className="py-2 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2 font-mono">
-                  <RefreshCw size={14} className="animate-spin text-primary" />
-                  <span>Đang tải chương trước...</span>
+                <div className="space-y-2 mb-2">
+                  <ChapterSkeletonItem key="sk-top-1" />
+                  <ChapterSkeletonItem key="sk-top-2" />
                 </div>
               )}
 
@@ -416,11 +451,11 @@ export function QuickChapterSelectSheet({
                 );
               })}
 
-              {/* Bottom Loading Spinner Indicator when Scrolling Down */}
+              {/* Bottom Loading Skeleton Cards when Scrolling Down */}
               {loadingBottom && (
-                <div className="py-3 text-center text-xs text-on-surface-variant flex items-center justify-center gap-2 font-mono">
-                  <RefreshCw size={14} className="animate-spin text-primary" />
-                  <span>Đang tải chương tiếp theo...</span>
+                <div className="space-y-2 mt-2">
+                  <ChapterSkeletonItem key="sk-bottom-1" />
+                  <ChapterSkeletonItem key="sk-bottom-2" />
                 </div>
               )}
             </>
