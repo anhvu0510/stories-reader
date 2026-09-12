@@ -238,7 +238,7 @@ export function ReaderScreen() {
           const newProgress = (currentY / totalHeight) * 100;
           setScrollProgress((prev) => (Math.abs(prev - newProgress) > 0.5 ? newProgress : prev));
 
-          // Auto show dock when user reaches the very end of the batch / last chapter
+          // Case 1: Auto show dock when user reaches the very end of the batch / last chapter (reading completed)
           const isNearBottom = currentY >= totalHeight - 80 || newProgress >= 95;
           if (isNearBottom) {
             setShowZenControls(true);
@@ -257,21 +257,32 @@ export function ReaderScreen() {
   }, []);
 
   const lastTapTimeRef = useRef<number>(0);
+  const lastToggleTimeRef = useRef<number>(0);
 
-  // Double click/tap reading screen to toggle bottom dock control bar
-  const handleDoubleClick = useCallback(() => {
+  // Single unified toggle with 400ms lock to eliminate duplicate touch + dblclick flickering
+  const toggleZenControls = useCallback(() => {
+    const now = Date.now();
+    if (now - lastToggleTimeRef.current < 400) return;
+    lastToggleTimeRef.current = now;
     setShowZenControls((prev) => !prev);
   }, []);
 
-  const handleTouchEnd = useCallback(() => {
+  // Case 2: Double click / Double tap on reading screen to toggle bottom dock
+  const handleDoubleClick = useCallback((e?: React.MouseEvent) => {
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+    toggleZenControls();
+  }, [toggleZenControls]);
+
+  const handleTouchEnd = useCallback((e?: React.TouchEvent) => {
     const now = Date.now();
-    if (now - lastTapTimeRef.current < 350 && now - lastTapTimeRef.current > 30) {
-      setShowZenControls((prev) => !prev);
+    if (now - lastTapTimeRef.current < 350 && now - lastTapTimeRef.current > 40) {
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+      toggleZenControls();
       lastTapTimeRef.current = 0;
     } else {
       lastTapTimeRef.current = now;
     }
-  }, []);
+  }, [toggleZenControls]);
 
   // Fetch chapter data with smooth 200ms loading feedback
   const loadChapter = useCallback(async () => {
