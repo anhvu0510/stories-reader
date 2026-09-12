@@ -211,7 +211,7 @@ export function ReaderSettingsTab() {
 
           {/* Số chương gộp */}
           <NumericStepper
-            label="Gộp chương tải"
+            label="Gộp chương"
             icon={<Sliders size={12} className="text-primary" />}
             value={batchChapterSize || 1}
             min={1}
