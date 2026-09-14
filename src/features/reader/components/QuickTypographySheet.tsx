@@ -2,14 +2,13 @@ import React from 'react';
 import { X, Type, Minus, Plus, Palette, AlignJustify, Layers, Sliders, Check } from 'lucide-react';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { FontType, ThemeType } from '../../../shared/types';
-import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
+import { BottomSheet } from '../../../components/BottomSheet';
 
 interface QuickTypographySheetProps {
   onClose: () => void;
 }
 
 export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
-  useBodyScrollLock(true);
   const {
     fontSize, setFontSize,
     lineHeight, setLineHeight,
@@ -36,50 +35,37 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
     { id: 'font_viet_tay', name: 'Monospace' },
   ];
 
-  const lineHeights = [
-    { val: 1.2, label: '1.2 Chặt' },
-    { val: 1.4, label: '1.4 Chuẩn' },
-    { val: 1.6, label: '1.6 Rộng' },
-    { val: 1.8, label: '1.8 Thoáng' },
-  ];
-
-  const lineGroups = [
-    { val: 1, label: '1 dòng' },
-    { val: 2, label: 'Gộp 2' },
-    { val: 3, label: 'Gộp 3' },
-  ];
-
   const currentThemeObj = themes.find((t) => t.id === theme) || themes[0];
 
   return (
-    <div className="fixed inset-0 z-[99000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden overscroll-none box-border">
-      {/* Backdrop */}
-      <div className="absolute inset-0" onClick={onClose} onTouchMove={(e) => e.preventDefault()} />
-
-      {/* Ultra-Compact Mobile Bottom Sheet (~340px Max Height) */}
-      <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.4)] flex flex-col overflow-hidden transition-all duration-200 box-border">
-        {/* Header & Drag Handle (100% unified top header) */}
-        <div className="pt-2.5 px-4 pb-2 border-b border-white/10 flex-shrink-0 bg-transparent relative z-20">
-          <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto mb-2 flex-shrink-0" />
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Type size={15} className="text-primary" />
-              <h3 className="text-xs font-black tracking-tight text-on-surface uppercase font-mono">
-                Giao Diện Đọc ({fontSize}px)
-              </h3>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-1 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95"
-            >
-              <X size={15} />
-            </button>
+    <BottomSheet
+      isOpen={true}
+      onClose={onClose}
+      ariaLabel="Giao Diện Đọc"
+      maxHeight="max-h-[85vh]"
+      showDragHandle={false}
+    >
+      {/* Header & Drag Handle (100% unified top header) */}
+      <div className="pt-2.5 px-4 pb-2 border-b border-white/10 flex-shrink-0 bg-transparent relative z-20">
+        <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto mb-2 flex-shrink-0" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Type size={15} className="text-primary" />
+            <h3 className="text-xs font-black tracking-tight text-on-surface uppercase font-mono">
+              Giao Diện Đọc ({fontSize}px)
+            </h3>
           </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95"
+          >
+            <X size={15} />
+          </button>
         </div>
+      </div>
 
-        {/* Content Body */}
-        <div className="p-3.5 sm:p-4 space-y-3 max-h-[50dvh] overflow-y-auto hide-scrollbar box-border">
-
+      {/* Content Body */}
+      <div className="p-3.5 sm:p-4 space-y-3 max-h-[50dvh] overflow-y-auto hide-scrollbar box-border flex-1">
         {/* Row 1: Font Size Controls */}
         <div className="flex items-center justify-between gap-2 bg-white/10 p-2 px-3 rounded-xl border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]">
           <span className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider flex items-center gap-1">
@@ -241,7 +227,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
           </button>
         </div>
       </div>
-    </div>
-  </div>
-);
+    </BottomSheet>
+  );
 }
+

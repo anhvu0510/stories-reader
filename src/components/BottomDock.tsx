@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ChevronUp, X, Check, Minus, Plus } from 'lucide-react';
+import { BottomSheet } from './BottomSheet';
 
 interface BottomDockProps {
   page?: number;
@@ -109,138 +110,135 @@ export function BottomDock({
       </nav>
 
       {/* Mobile-Native Touch Bottom Sheet Page Picker */}
-      {showPagePicker && (
-        <div className="fixed inset-0 z-[95000] bg-black/40 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden box-border">
-          {/* Backdrop */}
-          <div className="absolute inset-0" onClick={() => setShowPagePicker(false)} />
-
-          {/* Touch Bottom Sheet */}
-          <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-outline-variant/30 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.5)] p-4 sm:p-5 space-y-3.5 max-h-[85dvh] overflow-y-auto hide-scrollbar transition-all duration-200 box-border">
-            {/* Drag Handle & Header */}
-            <div>
-              <div className="w-10 h-1 rounded-full bg-white/30 mx-auto mb-2.5" />
-              <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                <h3 className="text-xs font-black text-on-surface tracking-tight uppercase flex items-center gap-1.5">
-                  <span>🚀</span> NHẢY TỚI TRANG
-                </h3>
-                <button
-                  onClick={() => setShowPagePicker(false)}
-                  className="p-1 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors"
-                >
-                  <X size={15} />
-                </button>
-              </div>
-            </div>
-
-            {/* Target Page Direct Input Hero Badge */}
-            <div className="bg-white/[0.025] backdrop-blur-md border-2 border-outline-variant/60 rounded-2xl p-3 text-center space-y-1 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.25)]">
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-xs font-bold text-on-surface-variant/80 uppercase tracking-wider">Trang</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={totalPages}
-                  value={targetPage}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    if (!isNaN(val)) {
-                      setTargetPage(Math.max(1, Math.min(totalPages, val)));
-                    }
-                  }}
-                  className="w-20 text-center text-xl font-mono font-black text-primary bg-white/10 border-2 border-primary/50 rounded-xl px-2 py-1 focus:border-primary focus:bg-primary/20 outline-none transition-all shadow-inner"
-                />
-                <span className="text-xs font-mono text-on-surface-variant font-medium">/ {totalPages}</span>
-              </div>
-              <p className="text-[10px] font-mono text-on-surface-variant/60 pt-0.5">
-                Gõ số trang, vuốt slider hoặc bấm mốc nhanh
-              </p>
-            </div>
-
-            {/* Stepper Buttons & Range Slider */}
-            <div className="flex items-center gap-3 bg-white/[0.025] backdrop-blur-md p-3 rounded-2xl border-2 border-outline-variant/60">
-              <button
-                onClick={() => setTargetPage((prev) => Math.max(1, prev - 1))}
-                disabled={targetPage <= 1}
-                className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-on-surface disabled:opacity-30 font-bold flex items-center justify-center active:scale-95 shrink-0 transition-all cursor-pointer"
-                title="Trang trước"
-              >
-                <Minus size={16} />
-              </button>
-
-              <input
-                type="range"
-                min={1}
-                max={totalPages}
-                value={targetPage}
-                onChange={(e) => setTargetPage(Number(e.target.value))}
-                className="flex-1 accent-primary h-2 bg-white/10 rounded-lg cursor-pointer transition-all"
-              />
-
-              <button
-                onClick={() => setTargetPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={targetPage >= totalPages}
-                className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-on-surface disabled:opacity-30 font-bold flex items-center justify-center active:scale-95 shrink-0 transition-all cursor-pointer"
-                title="Trang sau"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-
-            {/* Quick Jump Presets (Mốc nhanh) */}
-            {totalPages > 1 && (
-              <div className="space-y-1">
-                <span className="text-[10px] font-mono font-bold text-on-surface-variant/60 uppercase tracking-wider px-1">
-                  ⚡ Mốc nhanh
-                </span>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {(() => {
-                    const p1 = 1;
-                    const p2 = Math.max(1, Math.round(totalPages * 0.25));
-                    const p3 = Math.max(1, Math.round(totalPages * 0.50));
-                    const p4 = Math.max(1, Math.round(totalPages * 0.75));
-                    const p5 = totalPages;
-                    const presets = Array.from(new Set([p1, p2, p3, p4, p5])).sort((a, b) => a - b);
-                    
-                    return presets.map((presetNum) => {
-                      const isSelected = targetPage === presetNum;
-                      let label = `Trang ${presetNum}`;
-                      if (presetNum === 1) label = 'Đầu (1)';
-                      else if (presetNum === totalPages) label = `Cuối (${totalPages})`;
-                      else {
-                        const pct = Math.round((presetNum / totalPages) * 100);
-                        label = `${pct}% (${presetNum})`;
-                      }
-
-                      return (
-                        <button
-                          key={presetNum}
-                          onClick={() => setTargetPage(presetNum)}
-                          className={`py-2 px-1 rounded-xl text-[10px] font-mono font-extrabold border transition-all active:scale-95 text-center truncate cursor-pointer ${
-                            isSelected
-                              ? 'bg-primary/25 border-2 border-primary text-primary shadow-[0_2px_10px_rgba(0,0,0,0.2)]'
-                              : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border border-outline-variant/60 text-on-surface-variant hover:text-on-surface'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
-            )}
-
-            {/* Primary Action Button */}
+      <BottomSheet
+        isOpen={showPagePicker}
+        onClose={() => setShowPagePicker(false)}
+        ariaLabel="Nhảy Tới Trang"
+        maxHeight="max-h-[85dvh]"
+        contentClassName="p-4 sm:p-5 space-y-3.5"
+      >
+        {/* Header */}
+        <div>
+          <div className="flex items-center justify-between border-b border-white/10 pb-2">
+            <h3 className="text-xs font-black text-on-surface tracking-tight uppercase flex items-center gap-1.5">
+              <span>🚀</span> NHẢY TỚI TRANG
+            </h3>
             <button
-              onClick={() => handleGoToPage(targetPage)}
-              className="w-full py-3.5 rounded-xl bg-primary text-on-primary text-xs font-extrabold border border-primary/70 shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1px_1px_rgba(255,255,255,0.4)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-1.5 uppercase tracking-wider cursor-pointer mt-1"
+              onClick={() => setShowPagePicker(false)}
+              className="p-1 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors"
             >
-              <Check size={16} strokeWidth={3} />
-              <span>Chuyển Tới Trang {targetPage}</span>
+              <X size={15} />
             </button>
           </div>
         </div>
-      )}
+
+        {/* Target Page Direct Input Hero Badge */}
+        <div className="bg-white/[0.025] backdrop-blur-md border-2 border-outline-variant/60 rounded-2xl p-3 text-center space-y-1 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.25)]">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-xs font-bold text-on-surface-variant/80 uppercase tracking-wider">Trang</span>
+            <input
+              type="number"
+              min={1}
+              max={totalPages}
+              value={targetPage}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                if (!isNaN(val)) {
+                  setTargetPage(Math.max(1, Math.min(totalPages, val)));
+                }
+              }}
+              className="w-20 text-center text-xl font-mono font-black text-primary bg-white/10 border-2 border-primary/50 rounded-xl px-2 py-1 focus:border-primary focus:bg-primary/20 outline-none transition-all shadow-inner"
+            />
+            <span className="text-xs font-mono text-on-surface-variant font-medium">/ {totalPages}</span>
+          </div>
+          <p className="text-[10px] font-mono text-on-surface-variant/60 pt-0.5">
+            Gõ số trang, vuốt slider hoặc bấm mốc nhanh
+          </p>
+        </div>
+
+        {/* Stepper Buttons & Range Slider */}
+        <div className="flex items-center gap-3 bg-white/[0.025] backdrop-blur-md p-3 rounded-2xl border-2 border-outline-variant/60">
+          <button
+            onClick={() => setTargetPage((prev) => Math.max(1, prev - 1))}
+            disabled={targetPage <= 1}
+            className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-on-surface disabled:opacity-30 font-bold flex items-center justify-center active:scale-95 shrink-0 transition-all cursor-pointer"
+            title="Trang trước"
+          >
+            <Minus size={16} />
+          </button>
+
+          <input
+            type="range"
+            min={1}
+            max={totalPages}
+            value={targetPage}
+            onChange={(e) => setTargetPage(Number(e.target.value))}
+            className="flex-1 accent-primary h-2 bg-white/10 rounded-lg cursor-pointer transition-all"
+          />
+
+          <button
+            onClick={() => setTargetPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={targetPage >= totalPages}
+            className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-on-surface disabled:opacity-30 font-bold flex items-center justify-center active:scale-95 shrink-0 transition-all cursor-pointer"
+            title="Trang sau"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+
+        {/* Quick Jump Presets (Mốc nhanh) */}
+        {totalPages > 1 && (
+          <div className="space-y-1">
+            <span className="text-[10px] font-mono font-bold text-on-surface-variant/60 uppercase tracking-wider px-1">
+              ⚡ Mốc nhanh
+            </span>
+            <div className="grid grid-cols-5 gap-1.5">
+              {(() => {
+                const p1 = 1;
+                const p2 = Math.max(1, Math.round(totalPages * 0.25));
+                const p3 = Math.max(1, Math.round(totalPages * 0.50));
+                const p4 = Math.max(1, Math.round(totalPages * 0.75));
+                const p5 = totalPages;
+                const presets = Array.from(new Set([p1, p2, p3, p4, p5])).sort((a, b) => a - b);
+                
+                return presets.map((presetNum) => {
+                  const isSelected = targetPage === presetNum;
+                  let label = `Trang ${presetNum}`;
+                  if (presetNum === 1) label = 'Đầu (1)';
+                  else if (presetNum === totalPages) label = `Cuối (${totalPages})`;
+                  else {
+                    const pct = Math.round((presetNum / totalPages) * 100);
+                    label = `${pct}% (${presetNum})`;
+                  }
+
+                  return (
+                    <button
+                      key={presetNum}
+                      onClick={() => setTargetPage(presetNum)}
+                      className={`py-2 px-1 rounded-xl text-[10px] font-mono font-extrabold border transition-all active:scale-95 text-center truncate cursor-pointer ${
+                        isSelected
+                          ? 'bg-primary/25 border-2 border-primary text-primary shadow-[0_2px_10px_rgba(0,0,0,0.2)]'
+                          : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border border-outline-variant/60 text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* Primary Action Button */}
+        <button
+          onClick={() => handleGoToPage(targetPage)}
+          className="w-full py-3.5 rounded-xl bg-primary text-on-primary text-xs font-extrabold border border-primary/70 shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1px_1px_rgba(255,255,255,0.4)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-1.5 uppercase tracking-wider cursor-pointer mt-1"
+        >
+          <Check size={16} strokeWidth={3} />
+          <span>Chuyển Tới Trang {targetPage}</span>
+        </button>
+      </BottomSheet>
     </>
   );
 }

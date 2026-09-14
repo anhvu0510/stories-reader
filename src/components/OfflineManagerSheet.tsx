@@ -4,10 +4,9 @@ import { Book } from '../shared/types';
 import { offlineDb } from '../lib/offlineDb';
 import { useAppStore } from '../stores/useAppStore';
 import { useToastStore } from '../stores/useToastStore';
-import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { BottomSheet } from './BottomSheet';
 
 export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?: () => void, isEmbedded?: boolean }) {
-  useBodyScrollLock(!isEmbedded);
   const isOffline = useAppStore((state) => state.isOfflineMode);
   const setOfflineMode = useAppStore((state) => state.setOfflineMode);
   const showToast = useToastStore((state) => state.showToast);
@@ -134,9 +133,13 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
   }
 
   return (
-    <div className="fixed inset-0 z-[99000] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-x-hidden box-border overscroll-none">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} onTouchMove={(e) => e.preventDefault()} />
+    <BottomSheet
+      isOpen={true}
+      onClose={onClose || (() => {})}
+      ariaLabel="Quản lý Offline"
+      showDragHandle={false}
+    >
       {content}
-    </div>
+    </BottomSheet>
   );
 }

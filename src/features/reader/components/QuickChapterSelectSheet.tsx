@@ -8,7 +8,7 @@ import { downloadManager, DownloadTask } from '../../../lib/DownloadManager';
 import { offlineDb } from '../../../lib/offlineDb';
 import { useToastStore } from '../../../stores/useToastStore';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
-import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
+import { BottomSheet } from '../../../components/BottomSheet';
 
 function ChapterSkeletonItem() {
   return (
@@ -346,17 +346,14 @@ export function QuickChapterSelectSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-[99000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden overscroll-none box-border">
-      <div
-        className="absolute inset-0"
-        onClick={onClose}
-        onTouchMove={(e) => e.preventDefault()}
-      />
-
-      <div className="relative z-[1000] bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.4)] h-[78vh] max-h-[85dvh] flex flex-col overflow-hidden box-border transition-colors duration-200">
-        {/* Ambient Top Glow Effect */}
-        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
-
+    <>
+      <BottomSheet
+        isOpen={true}
+        onClose={onClose}
+        ariaLabel="Danh Sách Chương"
+        maxHeight="h-[78vh] max-h-[85dvh]"
+        showDragHandle={false}
+      >
         {/* Header & Search (Includes Drag Handle for 100% seamless unified background) */}
         <div className="pt-2.5 px-4 pb-2 border-b border-white/10 space-y-2 flex-shrink-0 bg-transparent relative z-20">
           {/* Drag Handle */}
@@ -389,84 +386,73 @@ export function QuickChapterSelectSheet({
 
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors"
-                aria-label="Đóng"
+                className="p-1.5 text-on-surface-variant hover:text-on-surface rounded-full hover:bg-white/10 transition-colors"
+                title="Đóng"
+                aria-label="Đóng bảng chọn chương"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
           </div>
 
-          {/* Search Input */}
-          <div className="relative">
+          <div className="relative pt-1">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
             <input
               type="text"
-              placeholder="Tìm số hoặc tên chương..."
+              placeholder="Tìm nhanh số hoặc tên chương..."
               value={search}
               onChange={handleSearchChange}
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white/10 dark:bg-white/10 border border-white/15 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 font-medium shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] transition-all"
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white/10 border border-white/15 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 font-medium transition-all"
             />
           </div>
         </div>
 
-        {/* Chapters Scroll Area with 2-way Infinite Scroll */}
+        {/* Chapter List with Windowing 2-way Infinite Scroll */}
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          onTouchMove={(e) => e.stopPropagation()}
-          className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-2 relative"
+          className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5"
         >
-          {loading && chapters.length === 0 ? (
-            /* Initial Load Skeleton Cards */
-            <div className="space-y-2 py-1">
+          {/* Scroll Up Top Loading Indicator */}
+          {loadingTop && (
+            <div className="space-y-2 mb-2">
               {[1, 2, 3, 4, 5].map((idx) => (
+                <ChapterSkeletonItem key={`sk-top-${idx}`} />
+              ))}
+            </div>
+          )}
+
+          {loading && chapters.length === 0 ? (
+            <div className="space-y-2 py-2">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
                 <ChapterSkeletonItem key={`sk-init-${idx}`} />
               ))}
             </div>
           ) : chapters.length === 0 ? (
-            <div className="py-16 text-center text-xs text-on-surface-variant/60 font-medium">
+            <div className="py-12 text-center text-xs text-on-surface-variant font-medium">
               Không tìm thấy chương nào
             </div>
           ) : (
             <>
-              {/* Top Loading Skeleton Cards when Scrolling Up */}
-              {loadingTop && (
-                <div className="space-y-2 mb-2">
-                  {[1, 2, 3, 4, 5].map((idx) => (
-                    <ChapterSkeletonItem key={`sk-top-${idx}`} />
-                  ))}
-                </div>
-              )}
-
-              {/* Section 2: All Chapters Header */}
-              {chapters.length > 0 && (
-                <div className="text-[11px] font-mono font-black text-on-surface-variant/70 uppercase tracking-wider flex items-center justify-between px-1 pt-1 pb-0.5">
-                  <span>📚 Danh sách chương ({chapters.length})</span>
-                </div>
-              )}
-
               {chapters.map((c, idx) => {
-                const isActive = Boolean(
+                const isCurrent = Boolean(
                   (currentChapterId && c.chapterId === currentChapterId) ||
                   (currentChapterNumber !== undefined && c.chapterNumber === currentChapterNumber)
                 );
+
                 return (
-                  <div
+                  <ChapterItem
                     key={c.chapterId || `chap-${c.chapterNumber || idx}-${idx}`}
-                    ref={isActive ? activeItemRef : null}
-                  >
-                    <ChapterItem
-                      chapter={c}
-                      isActive={isActive}
-                      showStatus={true}
-                      onClick={() => handleSelectChapter(c.chapterId)}
-                    />
-                  </div>
+                    ref={isCurrent ? activeItemRef : null}
+                    chapter={c}
+                    isActive={isCurrent}
+                    showStatus={true}
+                    onClick={() => handleSelectChapter(c.chapterId)}
+                  />
                 );
               })}
 
-              {/* Bottom Loading Skeleton Cards when Scrolling Down */}
+              {/* Scroll Down Bottom Loading Indicator */}
               {loadingBottom && (
                 <div className="space-y-2 mt-2">
                   {[1, 2, 3, 4, 5].map((idx) => (
@@ -477,7 +463,7 @@ export function QuickChapterSelectSheet({
             </>
           )}
         </div>
-      </div>
+      </BottomSheet>
 
       {/* Mobile Delete Confirm Modal */}
       {showDeleteConfirm && (
@@ -511,6 +497,6 @@ export function QuickChapterSelectSheet({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

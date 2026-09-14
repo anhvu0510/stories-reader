@@ -3,7 +3,7 @@ import { X, Plus, Edit2, Trash2, Check, RefreshCw, PlayCircle, PauseCircle } fro
 import { AIRepository } from '../../../repositories/AIRepository';
 import { AIToken } from '../../../shared/types';
 import { useToastStore } from '../../../stores/useToastStore';
-import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
+import { BottomSheet } from '../../../components/BottomSheet';
 
 export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: () => void; isEmbedded?: boolean }) {
   const [tokens, setTokens] = useState<AIToken[]>([]);
@@ -287,17 +287,19 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
     </div>
   );
 
-  useBodyScrollLock(!isEmbedded);
-
   if (isEmbedded) {
     return <div className="flex flex-col w-full h-full bg-transparent">{content}</div>;
   }
 
   return (
-    <div className="fixed inset-0 z-[99000] flex items-end sm:items-center justify-center p-0 sm:p-4 overscroll-none">
-      <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={onClose} onTouchMove={(e) => e.preventDefault()} />
+    <BottomSheet
+      isOpen={true}
+      onClose={onClose || (() => {})}
+      ariaLabel="Quản lý API Tokens"
+      showDragHandle={false}
+    >
       {content}
-    </div>
+    </BottomSheet>
   );
 }
 

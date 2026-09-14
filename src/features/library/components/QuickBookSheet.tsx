@@ -10,7 +10,7 @@ import { useAppStore } from '../../../stores/useAppStore';
 import { offlineDb } from '../../../lib/offlineDb';
 import { TranslationSheet } from '../../../components/TranslationSheet';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
-import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock';
+import { BottomSheet } from '../../../components/BottomSheet';
 
 interface QuickBookSheetProps {
   book: Book;
@@ -18,7 +18,6 @@ interface QuickBookSheetProps {
 }
 
 export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
-  useBodyScrollLock(true);
   const navigate = useNavigate();
   const showToast = useToastStore((state) => state.showToast);
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
@@ -308,170 +307,169 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 
   return (
     <>
-      <div className="fixed inset-0 z-[99000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden overscroll-none box-border">
-        <div className="absolute inset-0" onClick={onClose} onTouchMove={(e) => e.preventDefault()} />
+      <BottomSheet
+        isOpen={true}
+        onClose={onClose}
+        ariaLabel={book.bookName}
+        maxHeight="h-[82vh] max-h-[90dvh]"
+        showDragHandle={false}
+      >
+        {/* Top Header & Compact Mobile Info Area (Includes Drag Handle for 100% seamless unified background) */}
+        <div className="pt-2 px-3.5 pb-1.5 border-b border-white/10 space-y-1.5 flex-shrink-0 bg-transparent relative z-20">
+          {/* Drag Handle */}
+          <div className="w-8 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto mb-1 flex-shrink-0" />
 
-        <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[32px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.4)] h-[82vh] max-h-[90dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
-          {/* Ambient Top Glow Effect */}
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-28 bg-primary/10 blur-3xl pointer-events-none rounded-full" />
+          {/* Row 1: Title + Action Icon Buttons */}
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-xs sm:text-sm font-extrabold text-on-surface tracking-tight leading-snug truncate flex-1 min-w-0">
+              {book.bookName}
+            </h2>
 
-          {/* Top Header & Compact Mobile Info Area (Includes Drag Handle for 100% seamless unified background) */}
-          <div className="pt-2.5 px-4 pb-2 border-b border-white/10 space-y-2 flex-shrink-0 bg-transparent relative z-20">
-            {/* Drag Handle */}
-            <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto mb-1.5 flex-shrink-0" />
-
-            {/* Row 1: Title + Action Icon Buttons */}
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-base font-extrabold text-on-surface tracking-tight leading-snug truncate flex-1 min-w-0">
-                {book.bookName}
-              </h2>
-
-              {/* Action Icon Group (Uniform rounded-full buttons like Close button) */}
-              <div className="flex items-center gap-1 shrink-0">
-                {/* AI Batch Translation icon button with pending badge */}
-                {!isOfflineMode && (
-                  <button
-                    type="button"
-                    onClick={() => setShowTranslationSheet(true)}
-                    className="relative p-1.5 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-primary hover:bg-white/20 transition-all flex items-center justify-center active:scale-95"
-                    title={pendingCount > 0 ? `Chờ dịch: ${pendingCount} chương (Mở Dịch AI)` : 'Mở Dịch AI'}
-                  >
-                    <Sparkles size={17} className={pendingCount > 0 ? 'text-primary animate-pulse' : ''} />
-                    {pendingCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-primary text-on-primary font-mono font-black text-[8px] flex items-center justify-center leading-none shadow-xs">
-                        {pendingCount > 99 ? '99+' : pendingCount}
-                      </span>
-                    )}
-                  </button>
-                )}
-
-                {/* Download / Delete icon button */}
-                {isDownloaded ? (
-                  <button
-                    onClick={handleDeleteOfflineBook}
-                    className="p-1.5 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-rose-400 hover:text-rose-300 hover:bg-white/20 transition-all flex items-center justify-center active:scale-95"
-                    title="Xóa truyện khỏi máy"
-                  >
-                    <Trash2 size={17} />
-                  </button>
-                ) : !isOfflineMode ? (
-                  <button
-                    onClick={handleDownloadBook}
-                    className="p-1.5 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all flex items-center justify-center active:scale-95"
-                    title="Tải về ngoại tuyến"
-                  >
-                    <Download size={17} />
-                  </button>
-                ) : null}
-
-                {/* Close modal button */}
+            {/* Action Icon Group (Compact p-1 buttons) */}
+            <div className="flex items-center gap-1 shrink-0">
+              {/* AI Batch Translation icon button with pending badge */}
+              {!isOfflineMode && (
                 <button
-                  onClick={onClose}
-                  className="p-1.5 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all flex items-center justify-center ml-0.5 active:scale-95"
-                  title="Đóng"
+                  type="button"
+                  onClick={() => setShowTranslationSheet(true)}
+                  className="relative p-1 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-primary hover:bg-white/20 transition-all flex items-center justify-center active:scale-95"
+                  title={pendingCount > 0 ? `Chờ dịch: ${pendingCount} chương (Mở Dịch AI)` : 'Mở Dịch AI'}
                 >
-                  <X size={18} />
+                  <Sparkles size={15} className={pendingCount > 0 ? 'text-primary animate-pulse' : ''} />
+                  {pendingCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[13px] h-[13px] px-0.5 rounded-full bg-primary text-on-primary font-mono font-black text-[7.5px] flex items-center justify-center leading-none shadow-xs">
+                      {pendingCount > 99 ? '99+' : pendingCount}
+                    </span>
+                  )}
                 </button>
-              </div>
+              )}
+
+              {/* Download / Delete icon button */}
+              {isDownloaded ? (
+                <button
+                  onClick={handleDeleteOfflineBook}
+                  className="p-1 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-rose-400 hover:text-rose-300 hover:bg-white/20 transition-all flex items-center justify-center active:scale-95"
+                  title="Xóa truyện khỏi máy"
+                >
+                  <Trash2 size={15} />
+                </button>
+              ) : !isOfflineMode ? (
+                <button
+                  onClick={handleDownloadBook}
+                  className="p-1 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all flex items-center justify-center active:scale-95"
+                  title="Tải về ngoại tuyến"
+                >
+                  <Download size={15} />
+                </button>
+              ) : null}
+
+              {/* Close modal button */}
+              <button
+                onClick={onClose}
+                className="p-1 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all flex items-center justify-center ml-0.5 active:scale-95"
+                title="Đóng"
+              >
+                <X size={16} />
+              </button>
             </div>
+          </div>
 
-            {/* Row 2: Progress Stat & Mini Bar */}
-            <div className="flex items-center justify-between text-[10px] font-mono text-on-surface-variant/80">
-              <span>Đã dịch: <b className="text-on-surface">{book.totalTranslated}/{book.chapterCount}</b> ch ({percent}%)</span>
-              <div className="w-24 bg-white/10 border border-white/15 h-1 rounded-full overflow-hidden ml-2">
-                <div
-                  className="bg-primary h-full rounded-full transition-all duration-300"
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Row 3: Book Tags at Bottom (Clean 1-Line Horizontal Scroll Strip) */}
-            {book.tags && book.tags.length > 0 && (
-              <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar -mx-4 px-4 pt-0.5 pb-0.5">
-                {book.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center px-2 py-0.5 rounded-md text-[9.5px] font-medium bg-white/10 border border-white/15 text-on-surface-variant shrink-0"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Row 4: Search Bar for Inline Chapter List */}
-            <div className="relative pt-1">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
-              <input
-                type="text"
-                placeholder="Tìm nhanh số hoặc tên chương..."
-                value={search}
-                onChange={handleSearchChange}
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white/10 border border-white/15 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 font-medium transition-all"
+          {/* Row 2: Progress Stat & Bar */}
+          <div className="flex items-center justify-between text-[10px] font-mono text-on-surface-variant/80">
+            <span>Đã dịch: <b className="text-on-surface">{book.totalTranslated}/{book.chapterCount}</b> ch ({percent}%)</span>
+            <div className="w-16 bg-white/10 border border-white/15 h-1 rounded-full overflow-hidden ml-2 shrink-0">
+              <div
+                className="bg-primary h-full rounded-full transition-all duration-300"
+                style={{ width: `${percent}%` }}
               />
             </div>
           </div>
 
-          {/* Inline Chapter List Container with 2-way Infinite Scroll */}
-          <div
-            ref={scrollContainerRef}
-            onScroll={handleScroll}
-            className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5"
-          >
-            {/* Scroll Up Top Loading Indicator */}
-            {loadingTop && (
-              <div className="space-y-1.5 mb-2">
-                {[1, 2, 3, 4, 5].map((idx) => (
-                  <div key={`sk-top-${idx}`} className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 animate-pulse flex items-center justify-between">
-                    <div className="h-4 w-36 bg-on-surface-variant/20 rounded" />
-                    <div className="h-4 w-12 bg-primary/20 rounded-lg" />
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* Row 3: Tags List (Wrapping flex, zero horizontal scroll) */}
+          {book.tags && book.tags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1 pt-0.5">
+              {book.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium bg-white/10 border border-white/15 text-on-surface-variant shrink-0"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
 
-            {loading && chapters.length === 0 ? (
-              <div className="py-16 text-center space-y-2 text-on-surface-variant">
-                <RefreshCw size={20} className="animate-spin text-primary mx-auto" />
-                <p className="text-xs font-medium">Đang tải danh sách chương...</p>
-              </div>
-            ) : chapters.length === 0 ? (
-              <div className="py-12 text-center text-xs text-on-surface-variant/60 font-medium">
-                Không tìm thấy chương nào
-              </div>
-            ) : (
-              <>
-                {chapters.map((c, idx) => {
-                  const isLastRead = book.lastReadChapter?.chapterId === c.chapterId;
-
-                  return (
-                    <ChapterItem
-                      key={c.chapterId || `chap-${c.chapterNumber || idx}-${idx}`}
-                      ref={isLastRead ? activeItemRef : null}
-                      chapter={c}
-                      isActive={isLastRead}
-                      onClick={() => handleSelectChapter(c.chapterId)}
-                    />
-                  );
-                })}
-
-                {/* Scroll Down Bottom Loading Indicator */}
-                {loadingBottom && (
-                  <div className="space-y-1.5 mt-2">
-                    {[1, 2, 3, 4, 5].map((idx) => (
-                      <div key={`sk-bottom-${idx}`} className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 animate-pulse flex items-center justify-between">
-                        <div className="h-4 w-36 bg-on-surface-variant/20 rounded" />
-                        <div className="h-4 w-12 bg-primary/20 rounded-lg" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
+          {/* Row 3: Compact Search Bar */}
+          <div className="relative pt-0.5">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
+            <input
+              type="text"
+              placeholder="Tìm nhanh số hoặc tên chương..."
+              value={search}
+              onChange={handleSearchChange}
+              className="w-full pl-8 pr-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 font-medium transition-all"
+            />
           </div>
         </div>
-      </div>
+
+        {/* Inline Chapter List Container with 2-way Infinite Scroll */}
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5"
+        >
+          {/* Scroll Up Top Loading Indicator */}
+          {loadingTop && (
+            <div className="space-y-1.5 mb-2">
+              {[1, 2, 3, 4, 5].map((idx) => (
+                <div key={`sk-top-${idx}`} className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 animate-pulse flex items-center justify-between">
+                  <div className="h-4 w-36 bg-on-surface-variant/20 rounded" />
+                  <div className="h-4 w-12 bg-primary/20 rounded-lg" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {loading && chapters.length === 0 ? (
+            <div className="py-16 text-center space-y-2 text-on-surface-variant">
+              <RefreshCw size={20} className="animate-spin text-primary mx-auto" />
+              <p className="text-xs font-medium">Đang tải danh sách chương...</p>
+            </div>
+          ) : chapters.length === 0 ? (
+            <div className="py-12 text-center text-xs text-on-surface-variant/60 font-medium">
+              Không tìm thấy chương nào
+            </div>
+          ) : (
+            <>
+              {chapters.map((c, idx) => {
+                const isLastRead = book.lastReadChapter?.chapterId === c.chapterId;
+
+                return (
+                  <ChapterItem
+                    key={c.chapterId || `chap-${c.chapterNumber || idx}-${idx}`}
+                    ref={isLastRead ? activeItemRef : null}
+                    chapter={c}
+                    isActive={isLastRead}
+                    onClick={() => handleSelectChapter(c.chapterId)}
+                  />
+                );
+              })}
+
+              {/* Scroll Down Bottom Loading Indicator */}
+              {loadingBottom && (
+                <div className="space-y-1.5 mt-2">
+                  {[1, 2, 3, 4, 5].map((idx) => (
+                    <div key={`sk-bottom-${idx}`} className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 animate-pulse flex items-center justify-between">
+                      <div className="h-4 w-36 bg-on-surface-variant/20 rounded" />
+                      <div className="h-4 w-12 bg-primary/20 rounded-lg" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </BottomSheet>
 
       {/* Batch AI Translation Modal Sheet */}
       {showTranslationSheet && (

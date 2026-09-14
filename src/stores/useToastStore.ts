@@ -9,33 +9,51 @@ export interface ToastItem {
 }
 
 interface ToastStore {
+  activeToast: ToastItem | null;
   toasts: ToastItem[];
   showToast: (message: string, type?: ToastType) => void;
-  removeToast: (id: string) => void;
+  removeToast: (id?: string) => void;
 }
 
+let activeTimeout: ReturnType<typeof setTimeout> | null = null;
+
 export const useToastStore = create<ToastStore>((set, get) => ({
+  activeToast: null,
   toasts: [],
   showToast: (message: string, type = 'info') => {
-    const currentToasts = get().toasts;
-    if (currentToasts.some((t) => t.message === message)) {
-      return;
+    if (activeTimeout) {
+      clearTimeout(activeTimeout);
+      activeTimeout = null;
     }
-    const id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
-    set((state) => ({
-      toasts: [...state.toasts, { id, message, type }],
-    }));
 
-    setTimeout(() => {
-      set((state) => ({
-        toasts: state.toasts.filter((t) => t.id !== id),
-      }));
-    }, 4000);
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 5);
+    const newToast: ToastItem = { id, message, type };
+
+    set({
+      activeToast: newToast,
+      toasts: [newToast],
+    });
+
+    activeTimeout = setTimeout(() => {
+      set({
+        activeToast: null,
+        toasts: [],
+      });
+      activeTimeout = null;
+    }, 2800);
   },
-  removeToast: (id: string) => {
-    set((state) => ({
-      toasts: state.toasts.filter((t) => t.id !== id),
-    }));
+  removeToast: (id?: string) => {
+    if (activeTimeout) {
+      clearTimeout(activeTimeout);
+      activeTimeout = null;
+    }
+    const current = get().activeToast;
+    if (!id || (current && current.id === id)) {
+      set({
+        activeToast: null,
+        toasts: [],
+      });
+    }
   },
 }));
 

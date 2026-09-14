@@ -4,6 +4,7 @@ import { BookRepository } from '../../../repositories/BookRepository';
 import { Book } from '../../../shared/types';
 import { X, Clock, BookOpen, Sparkles, Layers, Search, RefreshCw } from 'lucide-react';
 import { useGlobalLoading } from '../../../hooks/useGlobalLoading';
+import { BottomSheet } from '../../../components/BottomSheet';
 
 interface QuickBookHistorySheetProps {
   currentBookId?: string;
@@ -172,105 +173,107 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
   };
 
   return (
-    <div className="fixed inset-0 z-[99000] bg-black/35 backdrop-blur-[2px] flex justify-center items-end p-0 overflow-x-hidden overscroll-none box-border">
-      <div className="absolute inset-0" onClick={onClose} onTouchMove={(e) => e.preventDefault()} />
+    <BottomSheet
+      isOpen={true}
+      onClose={onClose}
+      ariaLabel="Lịch Sử Đọc Truyện"
+      maxHeight="h-[78vh] max-h-[90dvh]"
+      showDragHandle={false}
+    >
+      {/* Header & Search (100% unified top header) */}
+      <div className="pt-2.5 px-4 pb-2.5 border-b border-white/10 space-y-2 flex-shrink-0 bg-transparent relative z-20">
+        {/* Drag Handle */}
+        <div className="w-10 h-1 rounded-full bg-white/30 mx-auto flex-shrink-0" />
 
-      <div className="relative z-10 bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full max-w-md mx-auto rounded-t-[28px] border-t sm:border border-white/20 dark:border-white/20 shadow-[0_16px_40px_rgba(0,0,0,0.5),_inset_0_1px_1.5px_0_rgba(255,255,255,0.4)] h-[78vh] max-h-[90dvh] flex flex-col overflow-hidden box-border transform-gpu transition-colors duration-200">
-        {/* Header & Search (100% unified top header) */}
-        <div className="pt-2.5 px-4 pb-2.5 border-b border-white/10 space-y-2 flex-shrink-0 bg-transparent">
-          {/* Drag Handle */}
-          <div className="w-10 h-1 rounded-full bg-white/30 mx-auto flex-shrink-0" />
-
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-black text-on-surface tracking-tight flex items-center gap-1.5 uppercase">
-              <Clock size={15} className="text-primary" /> LỊCH SỬ ĐỌC TRUYỆN ({historyBooks.length})
-            </h3>
-            <button
-              onClick={onClose}
-              className="p-1 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors"
-            >
-              <X size={15} />
-            </button>
-          </div>
-
-          {/* Search Input Bar */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={handleSearchSubmit}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60 hover:text-primary transition-colors cursor-pointer"
-              title="Bấm để tìm kiếm"
-            >
-              <Search size={13} />
-            </button>
-            <input
-              type="text"
-              placeholder="Tìm kiếm truyện trong lịch sử (nhấn Enter)..."
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSearchSubmit();
-                }
-              }}
-              className="w-full pl-8 pr-7 py-1.5 rounded-xl bg-white/10 dark:bg-white/10 border border-white/15 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] transition-all"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => handleSearchChange('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-on-surface-variant/60 hover:text-on-surface active:scale-90 transition-all"
-                title="Xóa từ khóa"
-              >
-                <X size={12} />
-              </button>
-            )}
-          </div>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-black text-on-surface tracking-tight flex items-center gap-1.5 uppercase">
+            <Clock size={15} className="text-primary" /> LỊCH SỬ ĐỌC TRUYỆN ({historyBooks.length})
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors"
+          >
+            <X size={15} />
+          </button>
         </div>
 
-        {/* Book List Area */}
-        <div className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-3">
-          {loading ? (
-            <div className="py-16 text-center text-xs text-on-surface-variant/60 font-medium" />
-          ) : historyBooks.length === 0 ? (
-            <div className="py-16 text-center text-xs text-on-surface-variant/60 font-medium">
-              {searchQuery
-                ? `Không tìm thấy truyện phù hợp với "${searchQuery}"`
-                : 'Chưa có lịch sử đọc truyện nào'}
-            </div>
-          ) : (
-            <>
-              {/* Permanently Pinned Current Book Section (Only when not searching) */}
-              {currentBook && !searchQuery.trim() && (
-                <div className="space-y-1.5 pb-1">
-                  {renderBookCard(currentBook, true)}
-                  {otherBooks.length > 0 && (
-                    <div className="h-px w-full bg-outline-variant/30 my-2.5" />
-                  )}
-                </div>
-              )}
-
-              {/* History List / Search Results Section */}
-              {displayBooks.length > 0 ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[10px] font-mono font-extrabold text-on-surface-variant/70 uppercase tracking-widest px-1">
-                    <span>{searchQuery.trim() ? 'KẾT QUẢ TÌM KIẾM' : 'DANH SÁCH LỊCH SỬ'}</span>
-                    <span>{displayBooks.length} truyện</span>
-                  </div>
-                  <div className="space-y-3">
-                    {displayBooks.map((b) => renderBookCard(b, false))}
-                  </div>
-                </div>
-              ) : (
-                searchQuery.trim() && (
-                  <div className="py-10 text-center text-xs text-on-surface-variant/60 font-medium">
-                    Không tìm thấy truyện phù hợp với "{searchQuery}"
-                  </div>
-                )
-              )}
-            </>
+        {/* Search Input Bar */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={handleSearchSubmit}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60 hover:text-primary transition-colors cursor-pointer"
+            title="Bấm để tìm kiếm"
+          >
+            <Search size={13} />
+          </button>
+          <input
+            type="text"
+            placeholder="Tìm kiếm truyện trong lịch sử (nhấn Enter)..."
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSearchSubmit();
+              }
+            }}
+            className="w-full pl-8 pr-7 py-1.5 rounded-xl bg-white/10 dark:bg-white/10 border border-white/15 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => handleSearchChange('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-on-surface-variant/60 hover:text-on-surface active:scale-90 transition-all"
+              title="Xóa từ khóa"
+            >
+              <X size={12} />
+            </button>
           )}
         </div>
       </div>
-    </div>
+
+      {/* Book List Area */}
+      <div className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-3">
+        {loading ? (
+          <div className="py-16 text-center text-xs text-on-surface-variant/60 font-medium" />
+        ) : historyBooks.length === 0 ? (
+          <div className="py-16 text-center text-xs text-on-surface-variant/60 font-medium">
+            {searchQuery
+              ? `Không tìm thấy truyện phù hợp với "${searchQuery}"`
+              : 'Chưa có lịch sử đọc truyện nào'}
+          </div>
+        ) : (
+          <>
+            {/* Permanently Pinned Current Book Section (Only when not searching) */}
+            {currentBook && !searchQuery.trim() && (
+              <div className="space-y-1.5 pb-1">
+                {renderBookCard(currentBook, true)}
+                {otherBooks.length > 0 && (
+                  <div className="h-px w-full bg-outline-variant/30 my-2.5" />
+                )}
+              </div>
+            )}
+
+            {/* History List / Search Results Section */}
+            {displayBooks.length > 0 ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-mono font-extrabold text-on-surface-variant/70 uppercase tracking-widest px-1">
+                  <span>{searchQuery.trim() ? 'KẾT QUẢ TÌM KIẾM' : 'DANH SÁCH LỊCH SỬ'}</span>
+                  <span>{displayBooks.length} truyện</span>
+                </div>
+                <div className="space-y-3">
+                  {displayBooks.map((b) => renderBookCard(b, false))}
+                </div>
+              </div>
+            ) : (
+              searchQuery.trim() && (
+                <div className="py-10 text-center text-xs text-on-surface-variant/60 font-medium">
+                  Không tìm thấy truyện phù hợp với "{searchQuery}"
+                </div>
+              )
+            )}
+          </>
+        )}
+      </div>
+    </BottomSheet>
   );
 }
