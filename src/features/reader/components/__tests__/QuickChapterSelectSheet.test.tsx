@@ -82,9 +82,14 @@ describe('QuickChapterSelectSheet Download Button & Mobile Confirm Modal', () =>
 
     // Click Trash icon again -> confirm delete
     fireEvent.click(deleteIconBtn);
+    const modalTitleElem = screen.getByText('Xóa dữ liệu ngoại tuyến?');
+    const modalBackdrop = modalTitleElem.closest('.fixed');
+    expect(modalBackdrop?.className).toContain('z-[99990]');
+
     const confirmBtn = screen.getByRole('button', { name: 'Xóa khỏi máy' });
     fireEvent.click(confirmBtn);
 
     expect(offlineDb.deleteBook).toHaveBeenCalledWith('book-downloaded');
   });
 });
+

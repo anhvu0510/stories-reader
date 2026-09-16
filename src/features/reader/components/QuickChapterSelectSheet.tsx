@@ -467,7 +467,7 @@ export function QuickChapterSelectSheet({
 
       {/* Mobile Delete Confirm Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[96000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[99990] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-surface/90 dark:bg-surface/90 backdrop-blur-2xl text-on-surface w-full max-w-xs sm:max-w-sm rounded-3xl p-5 border border-outline-variant/30 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto">
               <Trash2 size={24} />
