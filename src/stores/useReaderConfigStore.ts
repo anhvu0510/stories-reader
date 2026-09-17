@@ -13,10 +13,12 @@ const defaultSettings: ReaderConfig = {
   groupLines: 1,
   batchChapterSize: 1,
   isEnabledReplace: true,
-  voiceUri: '',
+  voiceUri: 'Minh Quân',
   speechRate: 1.0,
   bookLimit: 20,
   chapterLimit: 50,
+  ttsEngine: 'vieneu',
+  vieneuServerUrl: 'https://api-anhvu0510.duckdns.org/vieneu-tts',
 };
 
 function getInitialSettings(isOffline: boolean): ReaderConfig {
@@ -40,6 +42,8 @@ interface ReaderConfigStore extends ReaderConfig {
   setIsEnabledReplace: (enabled: boolean) => void;
   setVoiceUri: (voiceUri: string) => void;
   setSpeechRate: (speechRate: number) => void;
+  setTTSEngine: (engine: 'vieneu' | 'browser') => void;
+  setVieneuServerUrl: (url: string) => void;
   setBookLimit: (limit: number) => void;
   setChapterLimit: (limit: number) => void;
   updateSettings: (partial: Partial<ReaderConfig>) => void;
@@ -142,6 +146,20 @@ export const useReaderConfigStore = create<ReaderConfigStore>((set, get) => {
         const next = { ...state, speechRate };
         persist(next);
         return { speechRate };
+      });
+    },
+    setTTSEngine: (ttsEngine) => {
+      set((state) => {
+        const next = { ...state, ttsEngine };
+        persist(next);
+        return { ttsEngine };
+      });
+    },
+    setVieneuServerUrl: (vieneuServerUrl) => {
+      set((state) => {
+        const next = { ...state, vieneuServerUrl };
+        persist(next);
+        return { vieneuServerUrl };
       });
     },
     setBookLimit: (bookLimit) => {

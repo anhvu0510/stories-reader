@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useReaderConfigStore } from '../stores/useReaderConfigStore';
+import { TTSService, DEFAULT_VIENEU_SERVER_URL } from '../services/ttsService';
+import { useTTSStore } from '../features/reader/stores/useTTSStore';
 
 interface Chunk {
   pIdx: number;
@@ -10,11 +12,11 @@ interface Chunk {
 
 function highlightText(rootElement: HTMLElement, startOffset: number, length: number, className: string) {
   if (length <= 0) return;
-  
+
   const walker = document.createTreeWalker(rootElement, NodeFilter.SHOW_TEXT, null);
-  let node;
+  let node: Node | null;
   let currentOffset = 0;
-  const targetNodes = [];
+  const targetNodes: { node: Node; nodeStart: number }[] = [];
 
   while ((node = walker.nextNode())) {
     const nodeLen = node.nodeValue?.length || 0;
@@ -40,14 +42,14 @@ function highlightText(rootElement: HTMLElement, startOffset: number, length: nu
 
     const fragment = document.createDocumentFragment();
     if (beforeText) fragment.appendChild(document.createTextNode(beforeText));
-    
+
     const mark = document.createElement('msreadoutspan');
     mark.className = className;
     mark.textContent = highlightTxt;
     fragment.appendChild(mark);
-    
+
     if (afterText) fragment.appendChild(document.createTextNode(afterText));
-    
+
     node.parentNode?.replaceChild(fragment, node);
   });
 }
@@ -55,20 +57,35 @@ function highlightText(rootElement: HTMLElement, startOffset: number, length: nu
 export function useReadAloud(paragraphs: string[]) {
   const voiceUri = useReaderConfigStore((state) => state.voiceUri);
   const speechRate = useReaderConfigStore((state) => state.speechRate);
+  const ttsEngine = useReaderConfigStore((state) => state.ttsEngine || 'vieneu');
+  const vieneuServerUrl = useReaderConfigStore((state) => state.vieneuServerUrl || DEFAULT_VIENEU_SERVER_URL);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(-1);
   const [charIndex, setCharIndex] = useState(-1);
   const [charLength, setCharLength] = useState(0);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  
+
+  // Sync state with global useTTSStore
+  useEffect(() => {
+    useTTSStore.setState({
+      isPlaying,
+      isPaused,
+      currentParagraphIndex: currentChunkIndex,
+      currentCharIndex: charIndex,
+      currentCharLength: charLength,
+    });
+  }, [isPlaying, isPaused, currentChunkIndex, charIndex, charLength]);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const activeAudioUrlRef = useRef<string | null>(null);
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  
+
   const currentChunkIdxRef = useRef<number>(0);
   const isPlayingRef = useRef(false);
   const isPausedRef = useRef(false);
-  const currentUtteranceIdRef = useRef<number | null>(null);
+  const playSessionIdRef = useRef<number>(0);
 
   const chunks = useMemo(() => {
     const res: Chunk[] = [];
@@ -77,18 +94,47 @@ export function useReadAloud(paragraphs: string[]) {
       const tmp = document.createElement('div');
       tmp.innerHTML = html;
       const text = tmp.textContent || tmp.innerText || '';
-      
+
       if (text.trim()) {
         res.push({
           pIdx,
           text: text,
           startOffset: 0,
-          length: text.length
+          length: text.length,
         });
       }
     });
     return res;
   }, [paragraphs]);
+
+  const stopAudioPlayer = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      audioRef.current = null;
+    }
+    if (activeAudioUrlRef.current) {
+      TTSService.revokeAudioUrl(activeAudioUrlRef.current);
+      activeAudioUrlRef.current = null;
+    }
+  };
+
+  const stopReading = () => {
+    setIsPlaying(false);
+    setIsPaused(false);
+    isPlayingRef.current = false;
+    isPausedRef.current = false;
+    playSessionIdRef.current += 1;
+
+    stopAudioPlayer();
+    if (synth) synth.cancel();
+
+    currentChunkIdxRef.current = 0;
+    setCurrentChunkIndex(-1);
+    setCharIndex(-1);
+    setCharLength(0);
+  };
 
   useEffect(() => {
     stopReading();
@@ -97,11 +143,13 @@ export function useReadAloud(paragraphs: string[]) {
   const lastInteractionTime = useRef(0);
 
   useEffect(() => {
-    const onInteraction = () => { lastInteractionTime.current = Date.now(); };
-    window.addEventListener('wheel', onInteraction, {passive: true});
-    window.addEventListener('touchmove', onInteraction, {passive: true});
-    window.addEventListener('mousedown', onInteraction, {passive: true});
-    window.addEventListener('keydown', onInteraction, {passive: true});
+    const onInteraction = () => {
+      lastInteractionTime.current = Date.now();
+    };
+    window.addEventListener('wheel', onInteraction, { passive: true });
+    window.addEventListener('touchmove', onInteraction, { passive: true });
+    window.addEventListener('mousedown', onInteraction, { passive: true });
+    window.addEventListener('keydown', onInteraction, { passive: true });
     return () => {
       window.removeEventListener('wheel', onInteraction);
       window.removeEventListener('touchmove', onInteraction);
@@ -114,15 +162,11 @@ export function useReadAloud(paragraphs: string[]) {
   useEffect(() => {
     const article = document.querySelector('article');
     if (!article) return;
-    
-    // Get all paragraph div elements inside article
+
     const pNodes = Array.from(article.querySelectorAll(':scope > div.mb-4'));
     if (pNodes.length === 0) return;
 
-    // Reset innerHTML for active reading changes to clear previous highlights
     pNodes.forEach((node, idx) => {
-      // Restore original innerHTML to clean up injected msreadoutspans
-      // Only check if there's a difference to avoid unnecessary reflows
       const origHtml = paragraphs[idx] || '';
       if (origHtml && node.innerHTML !== origHtml) {
         node.innerHTML = origHtml;
@@ -134,30 +178,28 @@ export function useReadAloud(paragraphs: string[]) {
       const pNode = pNodes[chunk.pIdx] as HTMLElement;
 
       if (pNode) {
-        // Just highlight the active word
         if (charIndex >= 0 && charLength > 0) {
           const wordText = chunk.text.substring(charIndex, charIndex + charLength);
           let offset = charIndex;
           let length = charLength;
-          // Match the first alphanumeric part to skip leading/trailing punctuation/spaces
           const match = wordText.match(/[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
           if (match && match.index !== undefined) {
-             offset = charIndex + match.index;
-             length = match[0].length;
+            offset = charIndex + match.index;
+            length = match[0].length;
           } else {
-             length = 0;
+            length = 0;
           }
 
           highlightText(
-            pNode, 
-            chunk.startOffset + offset, 
-            length, 
+            pNode,
+            chunk.startOffset + offset,
+            length,
             'msreadout-word-highlight bg-yellow-400 text-black box-decoration-clone rounded-sm px-0.5 mx-[-2px]'
           );
         }
-        
-        // Scroll into view logic - smoothly glide along the reader's document
-        const highlight = pNode.querySelector('.msreadout-word-highlight') || pNode.querySelector('.msreadout-line-highlight');
+
+        const highlight =
+          pNode.querySelector('.msreadout-word-highlight') || pNode.querySelector('.msreadout-line-highlight');
         if (highlight && Date.now() - lastInteractionTime.current > 3000) {
           const rect = highlight.getBoundingClientRect();
           if (rect.top < 120 || rect.bottom > window.innerHeight - 120) {
@@ -168,230 +210,164 @@ export function useReadAloud(paragraphs: string[]) {
     }
   }, [currentChunkIndex, charIndex, charLength, paragraphs, chunks]);
 
-  // Clean-up totally on unmount
   useEffect(() => {
     return () => {
-      const article = document.querySelector('article');
-      if (!article) return;
-      const pNodes = Array.from(article.querySelectorAll(':scope > div.mb-4'));
-      pNodes.forEach((node, idx) => {
-        const origHtml = paragraphs[idx] || '';
-        if (origHtml && node.innerHTML !== origHtml) {
-          node.innerHTML = origHtml;
-        }
-      });
       stopReading();
     };
-  }, [paragraphs]);
+  }, []);
 
-  useEffect(() => {
-    if (!synth) return;
-
-    const loadVoices = () => {
-      const allVoices = synth.getVoices();
-      const viVoices = allVoices.filter(v => v.lang.includes('vi') || v.lang.includes('vi-VN'));
-      setVoices(viVoices);
-    };
-
-    loadVoices();
-    synth.onvoiceschanged = loadVoices;
-
-    return () => {
-      if (isPlayingRef.current || isPausedRef.current) {
-        synth.cancel();
-      }
-      isPlayingRef.current = false;
-      isPausedRef.current = false;
-      synth.onvoiceschanged = null;
-    };
-  }, [synth]);
-
-  const prevSettingsRef = useRef({ voiceUri, speechRate });
-  const isSettingsChangingRef = useRef(false);
-
-  const utteranceOffsetRef = useRef(0);
-
-  useEffect(() => {
-    if (prevSettingsRef.current.voiceUri !== voiceUri || prevSettingsRef.current.speechRate !== speechRate) {
-      prevSettingsRef.current = { voiceUri, speechRate };
-      
-      if (isPlayingRef.current && synth) {
-        isSettingsChangingRef.current = true;
-        synth.cancel(); // Stop current playing utterance
-        
-        // Resume playing after a short delay to allow cancel to finish
-        setTimeout(() => {
-          isSettingsChangingRef.current = false;
-          playChunk(currentChunkIdxRef.current, utteranceOffsetRef.current);
-        }, 100);
-      }
-    }
-  }, [voiceUri, speechRate, synth]);
-
-  const playChunk = (index: number, startOffset: number = 0) => {
-    if (!synth || !isPlayingRef.current) return;
+  const playChunkViaBrowser = (index: number, startOffset: number = 0, sessionId: number) => {
+    if (!synth || !isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
     if (index >= chunks.length) {
-      setIsPlaying(false);
-      setIsPaused(false);
-      isPlayingRef.current = false;
-      isPausedRef.current = false;
-      setCurrentChunkIndex(-1);
-      currentChunkIdxRef.current = 0;
+      stopReading();
       return;
     }
 
     currentChunkIdxRef.current = index;
-    utteranceOffsetRef.current = startOffset;
     setCurrentChunkIndex(index);
     setCharIndex(startOffset);
     setCharLength(0);
-    
+
     const chunk = chunks[index];
     const textToSpeak = startOffset > 0 ? chunk.text.substring(startOffset) : chunk.text;
-    
+
     if (!textToSpeak.trim()) {
-      playChunk(index + 1, 0);
+      playChunkViaBrowser(index + 1, 0, sessionId);
       return;
     }
 
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.rate = speechRate;
-    
-    const selectedVoice = voices.find(v => v.voiceURI === voiceUri) || voices[0];
+
+    const voices = synth.getVoices();
+    const selectedVoice = voices.find((v) => v.voiceURI === voiceUri || v.name === voiceUri);
     if (selectedVoice) {
       utterance.voice = selectedVoice;
     }
 
-    const utteranceId = Date.now() + Math.random();
-    currentUtteranceIdRef.current = utteranceId;
-
     utterance.onboundary = (e) => {
-      if (currentUtteranceIdRef.current !== utteranceId) return;
+      if (playSessionIdRef.current !== sessionId) return;
       if (e.name === 'word') {
-        const absoluteIndex = startOffset + e.charIndex;
-        setCharIndex(absoluteIndex);
+        setCharIndex(startOffset + e.charIndex);
         setCharLength(e.charLength);
-        utteranceOffsetRef.current = absoluteIndex;
       }
     };
 
     utterance.onend = () => {
-      if (currentUtteranceIdRef.current !== utteranceId) return;
-      if (isPlayingRef.current && !isPausedRef.current && !isSettingsChangingRef.current) {
+      if (playSessionIdRef.current !== sessionId) return;
+      if (isPlayingRef.current && !isPausedRef.current) {
         playChunk(index + 1, 0);
       }
     };
 
     utterance.onerror = (e) => {
-      if (currentUtteranceIdRef.current !== utteranceId) return;
-      if (e.error === 'canceled' || isSettingsChangingRef.current) return;
-      
-      console.error('Speech synthesis error on chunk', index, e.error);
-      
-      // If interrupted by system/another tab or browser blocks autoplay, pause instead of skipping.
-      if (e.error === 'interrupted' || e.error === 'not-allowed' || e.error === 'audio-busy') {
-        setIsPaused(true);
-        setIsPlaying(false);
-        isPausedRef.current = true;
-        isPlayingRef.current = false;
-        return;
-      }
-
+      if (playSessionIdRef.current !== sessionId) return;
+      if (e.error === 'canceled') return;
+      console.warn('Browser SpeechSynthesis error:', e.error);
       if (isPlayingRef.current && !isPausedRef.current) {
-        playChunk(index + 1);
+        playChunk(index + 1, 0);
       }
-    };
-
-    utterance.onpause = () => {
-      if (currentUtteranceIdRef.current !== utteranceId) return;
-      setIsPaused(true);
-      setIsPlaying(false);
-      isPausedRef.current = true;
-      isPlayingRef.current = false;
-    };
-
-    utterance.onresume = () => {
-      if (currentUtteranceIdRef.current !== utteranceId) return;
-      setIsPaused(false);
-      setIsPlaying(true);
-      isPausedRef.current = false;
-      isPlayingRef.current = true;
     };
 
     utteranceRef.current = utterance;
     synth.speak(utterance);
   };
 
-  const wakeLockRef = useRef<any>(null);
-
-  const requestWakeLock = async () => {
-    try {
-      if ('wakeLock' in navigator) {
-        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
-        wakeLockRef.current.addEventListener('release', () => {
-          console.log('Screen Wake Lock was released');
-        });
-      }
-    } catch (err: any) {
-      console.warn(`WakeLock Error: ${err.name}, ${err.message}`);
-    }
-  };
-
-  const releaseWakeLock = () => {
-    if (wakeLockRef.current !== null) {
-      wakeLockRef.current.release();
-      wakeLockRef.current = null;
-    }
-  };
-
-  useEffect(() => {
-    if (isPlaying && !isPaused) {
-      requestWakeLock();
-    } else {
-      releaseWakeLock();
-    }
-    return () => {
-      releaseWakeLock();
-    };
-  }, [isPlaying, isPaused]);
-
-  useEffect(() => {
-    const handleVisibilityChange = async () => {
-      if (wakeLockRef.current !== null && document.visibilityState === 'visible' && isPlaying && !isPaused) {
-        requestWakeLock();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isPlaying, isPaused]);
-
-  const startReading = () => {
-    requestWakeLock();
-    if (!synth) return;
-
-    if (isPaused) {
-      if (synth.paused) {
-        synth.resume(); // Safari requires this before cancel to truly clear paused state
-      }
-      setIsPaused(false);
-      setIsPlaying(true);
-      isPausedRef.current = false;
-      isPlayingRef.current = true;
-      synth.cancel();
-      setTimeout(() => {
-        if (isPlayingRef.current && !isPausedRef.current) {
-          playChunk(currentChunkIdxRef.current, utteranceOffsetRef.current);
-        }
-      }, 50);
+  const playChunkViaVieNeu = async (index: number, sessionId: number) => {
+    if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
+    if (index >= chunks.length) {
+      stopReading();
       return;
     }
-    
-    synth.cancel();
+
+    currentChunkIdxRef.current = index;
+    setCurrentChunkIndex(index);
+    setCharIndex(0);
+    setCharLength(chunks[index].text.length);
+
+    const chunk = chunks[index];
+
+    if (!chunk.text.trim()) {
+      playChunkViaVieNeu(index + 1, sessionId);
+      return;
+    }
+
+    try {
+      stopAudioPlayer();
+      const activeVoice = voiceUri || 'Minh Quân';
+      const blob = await TTSService.synthesizeSpeech(chunk.text, activeVoice, speechRate, vieneuServerUrl);
+
+      if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
+
+      const audioUrl = TTSService.createAudioUrl(blob);
+      activeAudioUrlRef.current = audioUrl;
+
+      const audio = new Audio(audioUrl);
+      audio.playbackRate = speechRate;
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        if (playSessionIdRef.current !== sessionId) return;
+        TTSService.revokeAudioUrl(audioUrl);
+        activeAudioUrlRef.current = null;
+        if (isPlayingRef.current && !isPausedRef.current) {
+          playChunk(index + 1, 0);
+        }
+      };
+
+      audio.onerror = (err) => {
+        console.warn('VieNeu Audio playback error, falling back to browser voice:', err);
+        TTSService.revokeAudioUrl(audioUrl);
+        activeAudioUrlRef.current = null;
+        if (playSessionIdRef.current === sessionId) {
+          playChunkViaBrowser(index, 0, sessionId);
+        }
+      };
+
+      await audio.play();
+    } catch (err) {
+      console.warn('VieNeu TTS Synthesis failed, fallback to browser voice:', err);
+      if (playSessionIdRef.current === sessionId) {
+        playChunkViaBrowser(index, 0, sessionId);
+      }
+    }
+  };
+
+  const playChunk = (index: number, startOffset: number = 0) => {
+    const sessionId = playSessionIdRef.current;
+    if (ttsEngine === 'browser') {
+      playChunkViaBrowser(index, startOffset, sessionId);
+    } else {
+      playChunkViaVieNeu(index, sessionId);
+    }
+  };
+
+  const startReading = () => {
+    const newSessionId = playSessionIdRef.current + 1;
+    playSessionIdRef.current = newSessionId;
+
+    if (isPaused) {
+      setIsPaused(false);
+      setIsPlaying(true);
+      isPlayingRef.current = true;
+      isPausedRef.current = false;
+
+      if (audioRef.current) {
+        audioRef.current.play().catch(() => playChunk(currentChunkIdxRef.current));
+      } else {
+        playChunk(currentChunkIdxRef.current);
+      }
+      return;
+    }
+
+    stopAudioPlayer();
+    if (synth) synth.cancel();
+
     setIsPlaying(true);
     setIsPaused(false);
     isPlayingRef.current = true;
     isPausedRef.current = false;
-    
+
     if (currentChunkIdxRef.current >= chunks.length) {
       currentChunkIdxRef.current = 0;
     }
@@ -403,39 +379,22 @@ export function useReadAloud(paragraphs: string[]) {
     setIsPaused(true);
     isPlayingRef.current = false;
     isPausedRef.current = true;
-    currentUtteranceIdRef.current = null; // Unbind events so onend/onerror don't skip chunks
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
     if (synth) {
-      synth.pause(); // Standard pause (for desktop)
-      setTimeout(() => {
-        synth.cancel(); // Convert to cancel to avoid broken resume on mobile
-      }, 10);
+      synth.pause();
     }
   };
 
-  const stopReading = () => {
-    const wasActive = isPlayingRef.current || isPausedRef.current;
-    setIsPlaying(false);
-    setIsPaused(false);
-    isPlayingRef.current = false;
-    isPausedRef.current = false;
-    currentUtteranceIdRef.current = null;
-    if (synth && wasActive) synth.cancel();
-    currentChunkIdxRef.current = 0;
-    setCurrentChunkIndex(-1);
-    setCharIndex(-1);
-    setCharLength(0);
-  };
-
   const nextSection = () => {
-    if (!synth) return;
-    
-    // Force scroll logic to run
     lastInteractionTime.current = 0;
-
     if (currentChunkIdxRef.current < chunks.length - 1) {
       const nextIdx = currentChunkIdxRef.current + 1;
-      currentUtteranceIdRef.current = null;
-      synth.cancel();
+      stopAudioPlayer();
+      if (synth) synth.cancel();
+
       setIsPlaying(true);
       setIsPaused(false);
       isPlayingRef.current = true;
@@ -446,37 +405,53 @@ export function useReadAloud(paragraphs: string[]) {
     }
   };
 
-  const jumpToContent = (pIdx: number, textOffset: number) => {
-    requestWakeLock();
-    if (!synth) return;
-    let targetIndex = chunks.findIndex(c => c.pIdx === pIdx && textOffset >= c.startOffset && textOffset < c.startOffset + c.length);
-    if (targetIndex === -1) {
-      targetIndex = chunks.findIndex(c => c.pIdx === pIdx);
+  const prevSection = () => {
+    lastInteractionTime.current = 0;
+    if (currentChunkIdxRef.current > 0) {
+      const prevIdx = currentChunkIdxRef.current - 1;
+      stopAudioPlayer();
+      if (synth) synth.cancel();
+
+      setIsPlaying(true);
+      setIsPaused(false);
+      isPlayingRef.current = true;
+      isPausedRef.current = false;
+      playChunk(prevIdx);
+    } else {
+      stopReading();
     }
-    
+  };
+
+  const jumpToContent = (pIdx: number, textOffset: number = 0) => {
+    let targetIndex = chunks.findIndex(
+      (c) => c.pIdx === pIdx && textOffset >= c.startOffset && textOffset < c.startOffset + c.length
+    );
+    if (targetIndex === -1) {
+      targetIndex = chunks.findIndex((c) => c.pIdx === pIdx);
+    }
+
     if (targetIndex !== -1) {
-      currentUtteranceIdRef.current = null; // Invalidate any old ones immediately
-      synth.cancel();
+      stopAudioPlayer();
+      if (synth) synth.cancel();
+
       setIsPlaying(true);
       setIsPaused(false);
       isPlayingRef.current = true;
       isPausedRef.current = false;
       currentChunkIdxRef.current = targetIndex;
-      setTimeout(() => {
-        if (isPlayingRef.current && !isPausedRef.current) {
-          playChunk(targetIndex, textOffset);
-        }
-      }, 50);
+      playChunk(targetIndex, textOffset);
     }
   };
 
   return {
     isPlaying,
     isPaused,
+    currentChunkIndex,
     startReading,
     pauseReading,
     stopReading,
     nextSection,
-    jumpToContent
+    prevSection,
+    jumpToContent,
   };
 }

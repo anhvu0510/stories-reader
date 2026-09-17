@@ -19,6 +19,8 @@ import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useReadingProgress } from '../../hooks/useReadingProgress';
 import { useGlobalLoading } from '../../hooks/useGlobalLoading';
+import { useReadAloud } from '../../hooks/useReadAloud';
+import { TTSControlBar } from './components/TTSControlBar';
 import { offlineDb } from '../../lib/offlineDb';
 import { AlertCircle, RotateCcw, Home } from 'lucide-react';
 
@@ -121,14 +123,35 @@ export function ReaderScreen() {
   const batchChapterSize = useReaderConfigStore((state) => state.batchChapterSize || 1);
   const isEnabledReplace = useReaderConfigStore((state) => state.isEnabledReplace);
 
-  /* READ ALOUD (TTS) TEMPORARILY DISABLED */
-  const isPlaying = false;
-  const isPaused = false;
-  const currentParagraphIndex = -1;
-
   const [contentData, setContentData] = useState<ChapterContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Normalized list of chapters to display
+  const displayChapters: ChapterDetailItem[] = useMemo(() => {
+    if (contentData?.chapters && contentData.chapters.length > 0) {
+      return contentData.chapters;
+    }
+    if (contentData?.chapter) {
+      return [contentData.chapter];
+    }
+    return [];
+  }, [contentData]);
+
+  const allParagraphs = useMemo(() => {
+    return displayChapters.flatMap((chap) => chap.content || []);
+  }, [displayChapters]);
+
+  const {
+    isPlaying,
+    isPaused,
+    currentChunkIndex,
+    startReading,
+    pauseReading,
+    stopReading,
+    nextSection,
+    prevSection,
+  } = useReadAloud(allParagraphs);
 
   // Keep single global LoadingOverlay active until chapter data is rendered in React state
   useGlobalLoading(loading);
@@ -150,17 +173,6 @@ export function ReaderScreen() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const lastScrollY = useRef(0);
   const scrollAnimRef = useRef<number | null>(null);
-
-  // Normalized list of chapters to display
-  const displayChapters: ChapterDetailItem[] = useMemo(() => {
-    if (contentData?.chapters && contentData.chapters.length > 0) {
-      return contentData.chapters;
-    }
-    if (contentData?.chapter) {
-      return [contentData.chapter];
-    }
-    return [];
-  }, [contentData]);
 
   // Active Chapter currently in viewport
   const [activeChapter, setActiveChapter] = useState<{
@@ -472,10 +484,19 @@ export function ReaderScreen() {
         lineHeight={lineHeight}
         isPlaying={isPlaying}
         isPaused={isPaused}
-        currentParagraphIndex={currentParagraphIndex}
+        currentParagraphIndex={currentChunkIndex}
         onDoubleClick={handleDoubleClick}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
+      />
+
+      {/* Floating TTS Control Bar when TTS is active */}
+      <TTSControlBar
+        onPlay={startReading}
+        onPause={pauseReading}
+        onStop={stopReading}
+        onPrev={prevSection}
+        onNext={nextSection}
       />
 
       {/* Single Capsule Zen Mode Floating Control Bar */}
@@ -489,11 +510,16 @@ export function ReaderScreen() {
           chapters={displayChapters}
           activeChapterId={activeChapter?.chapterId}
           isVisible={showZenControls}
-          isTTSActive={false}
-          isTTSPlaying={false}
-          currentParagraphIndex={-1}
+          isTTSActive={isPlaying || isPaused}
+          isTTSPlaying={isPlaying}
+          currentParagraphIndex={currentChunkIndex}
           onOpenChapterSelect={handleOpenChapterSelect}
           onOpenTranslation={handleOpenTranslation}
+          onTTSPlay={startReading}
+          onTTSPause={pauseReading}
+          onTTSStop={stopReading}
+          onTTSPrev={prevSection}
+          onTTSNext={nextSection}
         />
       </div>
 
