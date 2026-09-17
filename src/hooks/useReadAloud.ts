@@ -216,8 +216,7 @@ export function useReadAloud(paragraphs: string[]) {
     }
   };
 
-  const stopAudioPlayer = () => {
-    clearPrefetchCache();
+  const stopCurrentAudioOnly = () => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.onended = null;
@@ -228,6 +227,11 @@ export function useReadAloud(paragraphs: string[]) {
       TTSService.revokeAudioUrl(activeAudioUrlRef.current);
       activeAudioUrlRef.current = null;
     }
+  };
+
+  const stopAudioPlayer = () => {
+    clearPrefetchCache();
+    stopCurrentAudioOnly();
   };
 
   const stopReading = () => {
@@ -403,7 +407,7 @@ export function useReadAloud(paragraphs: string[]) {
     }
 
     try {
-      stopAudioPlayer();
+      stopCurrentAudioOnly();
       const activeVoice = voiceUri || 'Minh Quân';
 
       let itemPromise = prefetchCacheRef.current.get(index);

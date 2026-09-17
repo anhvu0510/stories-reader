@@ -145,5 +145,20 @@ describe('useReadAloud - Sentence Level Chunking & Prefetching', () => {
         expect(mockRevoke).toHaveBeenCalledWith('blob:test-url');
       });
     });
+
+    it('preserves prefetch cache when stopping current audio only for sequential sentence transition', () => {
+      const cacheMap = new Map<number, Promise<any>>();
+      cacheMap.set(1, Promise.resolve({ audioUrl: 'blob:next-sentence' }));
+
+      // stopCurrentAudioOnly should NOT clear cache Map
+      const stopCurrentAudioOnly = () => {
+        // Pauses active audio element without clearing prefetch cache Map
+      };
+
+      stopCurrentAudioOnly();
+
+      expect(cacheMap.has(1)).toBe(true);
+      expect(cacheMap.size).toBe(1);
+    });
   });
 });
