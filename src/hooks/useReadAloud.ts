@@ -246,12 +246,13 @@ export function useReadAloud(paragraphs: string[]) {
     const activeVoice = voiceUri || 'Minh Quân';
     let activeIndex = index;
     const player = new GaplessTtsPlayer({
-      engine: new WebAudioPlaybackEngine(audioContext, speechRate),
+      engine: new WebAudioPlaybackEngine(audioContext),
+      speechRate,
       synthesize: (segment, signal) =>
         TTSService.synthesizeSpeech(
           segment.text,
           activeVoice,
-          1.0,
+          speechRate,
           vieneuServerUrl,
           signal
         ),
@@ -259,7 +260,7 @@ export function useReadAloud(paragraphs: string[]) {
         TTSService.streamSpeech(
           segment.text,
           activeVoice,
-          1.0,
+          speechRate,
           vieneuServerUrl,
           signal
         ),

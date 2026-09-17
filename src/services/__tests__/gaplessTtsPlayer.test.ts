@@ -74,6 +74,21 @@ describe('buildSpeechSegments', () => {
     ]);
   });
 
+  it('batches several sentences from one paragraph into one bounded streaming request by default', () => {
+    const paragraph = [
+      'Câu thứ nhất giới thiệu bối cảnh và các nhân vật đang xuất hiện trong câu chuyện.',
+      'Câu thứ hai tiếp tục diễn biến để luồng đọc có đủ dữ liệu dự phòng.',
+      'Câu thứ ba khép lại đoạn văn nhưng vẫn thuộc cùng một yêu cầu phát âm.',
+    ].join(' ');
+    const sentences = splitParagraphIntoSentences(paragraph, 3);
+
+    const segments = buildSpeechSegments(sentences);
+
+    expect(segments).toHaveLength(1);
+    expect(segments[0].text).toBe(paragraph);
+    expect(segments[0].length).toBeLessThanOrEqual(480);
+  });
+
   it('splits an unusually long sentence into source-aligned speech phrases', () => {
     const paragraph = [
       'Đây là một mệnh đề khá dài để kiểm tra cách chia cụm đọc tự nhiên',
@@ -92,7 +107,7 @@ describe('buildSpeechSegments', () => {
     });
 
     const segments = buildSpeechSegments(phrases);
-    expect(segments.every((segment) => segment.length <= 180)).toBe(true);
+    expect(segments.every((segment) => segment.length <= 480)).toBe(true);
   });
 
   it('does not merge a short trailing sentence past the phrase limit', () => {
@@ -469,5 +484,36 @@ describe('WebAudioPlaybackEngine', () => {
 
     expect(starts[0]).toBeCloseTo(5.03, 10);
     expect(playback.startAt).toBeCloseTo(5.03, 10);
+  });
+
+  it('rebases a late PCM chunk onto the current audio clock instead of overlapping elapsed audio', () => {
+    const starts: number[] = [];
+    const context = {
+      currentTime: 0,
+      destination: {},
+      createBuffer: vi.fn((_channels: number, frameCount: number, sampleRate: number) => ({
+        duration: frameCount / sampleRate,
+        copyToChannel: vi.fn(),
+      })),
+      createBufferSource: vi.fn(() => ({
+        buffer: null as AudioBuffer | null,
+        playbackRate: { value: 1 },
+        onended: null as (() => void) | null,
+        connect: vi.fn(),
+        start: (at: number) => starts.push(at),
+        stop: vi.fn(),
+      })),
+      suspend: vi.fn(async () => {}),
+      resume: vi.fn(async () => {}),
+      close: vi.fn(async () => {}),
+    } as unknown as AudioContext;
+    const engine = new WebAudioPlaybackEngine(context);
+    const playback = engine.beginPcmStream(2, 1, 0);
+
+    playback.append(new Uint8Array([0, 0, 0, 0]));
+    Object.defineProperty(context, 'currentTime', { value: 5 });
+    playback.append(new Uint8Array([0, 0, 0, 0]));
+
+    expect(starts).toEqual([0.03, 5.03]);
   });
 });

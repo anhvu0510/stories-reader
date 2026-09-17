@@ -67,6 +67,7 @@ export interface GaplessTtsPlayerOptions {
   engine: AudioPlaybackEngine;
   synthesize: (segment: SpeechSegment, signal: AbortSignal) => Promise<Blob>;
   stream?: (segment: SpeechSegment, signal: AbortSignal) => Promise<PcmAudioStream>;
+  speechRate?: number;
   startLeadSeconds?: number;
   prefetchAhead?: number;
 }
@@ -91,8 +92,8 @@ interface PlaybackSession {
 }
 
 const MAX_PHRASE_CHARACTERS = 180;
-const DEFAULT_TARGET_CHARACTERS = 120;
-const DEFAULT_MAX_CHARACTERS = MAX_PHRASE_CHARACTERS;
+const DEFAULT_TARGET_CHARACTERS = 320;
+const DEFAULT_MAX_CHARACTERS = 480;
 const WORD_PATTERN = /[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/gu;
 
 function joinChunksPreservingOffsets(previous: SentenceChunk, next: SentenceChunk): string {
@@ -298,6 +299,7 @@ export class GaplessTtsPlayer {
   private readonly engine: AudioPlaybackEngine;
   private readonly synthesize: GaplessTtsPlayerOptions['synthesize'];
   private readonly stream?: GaplessTtsPlayerOptions['stream'];
+  private readonly speechRate: number;
   private readonly startLeadSeconds: number;
   private readonly prefetchAhead: number;
   private readonly scheduledAudio = new Set<ScheduledAudio>();
@@ -308,6 +310,7 @@ export class GaplessTtsPlayer {
     this.engine = options.engine;
     this.synthesize = options.synthesize;
     this.stream = options.stream;
+    this.speechRate = Math.max(0.25, Math.min(options.speechRate ?? 1.0, 4.0));
     this.startLeadSeconds = Math.max(0, options.startLeadSeconds ?? 0.03);
     this.prefetchAhead = Math.max(1, Math.floor(options.prefetchAhead ?? 2));
   }
@@ -573,8 +576,11 @@ export class GaplessTtsPlayer {
   }
 
   private estimateSpeechDuration(text: string): number {
-    const rate = this.engine.playbackRate && this.engine.playbackRate > 0 ? this.engine.playbackRate : 1.0;
-    return Math.max(0.6, text.length / 18) / rate;
+    const playbackRate =
+      this.engine.playbackRate && this.engine.playbackRate > 0
+        ? this.engine.playbackRate
+        : 1.0;
+    return Math.max(0.6, text.length / 18) / this.speechRate / playbackRate;
   }
 
   private correctPendingWordCues(
@@ -765,6 +771,9 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
           sources.delete(source);
           settleIfDone();
         };
+        if (cursor < this.context.currentTime) {
+          cursor = this.context.currentTime + 0.03;
+        }
         source.start(cursor);
         cursor += buffer.duration / this.playbackRate;
       },
