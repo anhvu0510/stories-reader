@@ -8,53 +8,13 @@ import {
   type SentenceChunk,
   WebAudioPlaybackEngine,
 } from '../services/gaplessTtsPlayer';
+import { DomWordHighlighter } from '../services/domWordHighlighter';
 import { useTTSStore } from '../features/reader/stores/useTTSStore';
 
 export { splitParagraphIntoSentences } from '../services/gaplessTtsPlayer';
 
-function highlightText(rootElement: HTMLElement, startOffset: number, length: number, className: string) {
-  if (length <= 0) return;
-
-  const walker = document.createTreeWalker(rootElement, NodeFilter.SHOW_TEXT, null);
-  let node: Node | null;
-  let currentOffset = 0;
-  const targetNodes: { node: Node; nodeStart: number }[] = [];
-
-  while ((node = walker.nextNode())) {
-    const nodeLen = node.nodeValue?.length || 0;
-    if (currentOffset + nodeLen > startOffset && currentOffset < startOffset + length) {
-      targetNodes.push({
-        node,
-        nodeStart: currentOffset,
-      });
-    }
-    currentOffset += nodeLen;
-    if (currentOffset >= startOffset + length) break;
-  }
-
-  targetNodes.forEach(({ node, nodeStart }) => {
-    if (!node.nodeValue) return;
-    const nodeLen = node.nodeValue.length;
-    const overlapStart = Math.max(0, startOffset - nodeStart);
-    const overlapEnd = Math.min(nodeLen, startOffset + length - nodeStart);
-
-    const beforeText = node.nodeValue.substring(0, overlapStart);
-    const highlightTxt = node.nodeValue.substring(overlapStart, overlapEnd);
-    const afterText = node.nodeValue.substring(overlapEnd);
-
-    const fragment = document.createDocumentFragment();
-    if (beforeText) fragment.appendChild(document.createTextNode(beforeText));
-
-    const mark = document.createElement('msreadoutspan');
-    mark.className = className;
-    mark.textContent = highlightTxt;
-    fragment.appendChild(mark);
-
-    if (afterText) fragment.appendChild(document.createTextNode(afterText));
-
-    node.parentNode?.replaceChild(fragment, node);
-  });
-}
+const WORD_HIGHLIGHT_CLASS =
+  'msreadout-word-highlight bg-yellow-400 text-black box-decoration-clone rounded-sm px-0.5 mx-[-2px]';
 
 export function useReadAloud(paragraphs: string[]) {
   const voiceUri = useReaderConfigStore((state) => state.voiceUri);
@@ -69,6 +29,10 @@ export function useReadAloud(paragraphs: string[]) {
   const [charLength, setCharLength] = useState(0);
 
   const gaplessPlayerRef = useRef<GaplessTtsPlayer | null>(null);
+  const wordHighlighterRef = useRef<DomWordHighlighter | null>(null);
+  if (!wordHighlighterRef.current) {
+    wordHighlighterRef.current = new DomWordHighlighter(WORD_HIGHLIGHT_CLASS);
+  }
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
@@ -127,6 +91,7 @@ export function useReadAloud(paragraphs: string[]) {
     playSessionIdRef.current += 1;
 
     stopAudioPlayer();
+    wordHighlighterRef.current?.clear();
     if (synth) synth.cancel();
 
     currentChunkIdxRef.current = 0;
@@ -159,60 +124,46 @@ export function useReadAloud(paragraphs: string[]) {
 
   // Handle Highlighting directly on the ReaderScreen DOM elements
   useEffect(() => {
+    const highlighter = wordHighlighterRef.current;
+    if (!highlighter) return;
+
     const readerContent = document.querySelector('#main-story-content');
-    if (!readerContent) return;
+    if (!readerContent || currentChunkIndex === -1 || !chunks[currentChunkIndex]) {
+      highlighter.clear();
+      return;
+    }
 
-    const pNodes = Array.from(
-      readerContent.querySelectorAll('article > div[data-paragraph-index]')
+    const chunk = chunks[currentChunkIndex];
+    const pNode = readerContent.querySelector<HTMLElement>(
+      `article > div[data-paragraph-index="${chunk.pIdx}"]`
     );
-    if (pNodes.length === 0) return;
+    if (!pNode || charIndex < 0 || charLength <= 0) {
+      highlighter.clear();
+      return;
+    }
 
-    pNodes.forEach((node, idx) => {
-      const origHtml = paragraphs[idx] || '';
-      if (origHtml && node.innerHTML !== origHtml) {
-        node.innerHTML = origHtml;
-      }
-    });
+    const wordText = chunk.text.substring(charIndex, charIndex + charLength);
+    const match = wordText.match(/[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
+    if (!match || match.index === undefined) {
+      highlighter.clear();
+      return;
+    }
 
-    if (currentChunkIndex !== -1 && chunks[currentChunkIndex]) {
-      const chunk = chunks[currentChunkIndex];
-      const pNode = pNodes[chunk.pIdx] as HTMLElement;
+    const offset = charIndex + match.index;
+    highlighter.highlight(pNode, chunk.startOffset + offset, match[0].length);
 
-      if (pNode) {
-        if (charIndex >= 0 && charLength > 0) {
-          const wordText = chunk.text.substring(charIndex, charIndex + charLength);
-          let offset = charIndex;
-          let length = charLength;
-          const match = wordText.match(/[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
-          if (match && match.index !== undefined) {
-            offset = charIndex + match.index;
-            length = match[0].length;
-          } else {
-            length = 0;
-          }
-
-          highlightText(
-            pNode,
-            chunk.startOffset + offset,
-            length,
-            'msreadout-word-highlight bg-yellow-400 text-black box-decoration-clone rounded-sm px-0.5 mx-[-2px]'
-          );
-        }
-
-        const highlight =
-          pNode.querySelector('.msreadout-word-highlight') || pNode.querySelector('.msreadout-line-highlight');
-        if (highlight && Date.now() - lastInteractionTime.current > 3000) {
-          const rect = highlight.getBoundingClientRect();
-          if (rect.top < 120 || rect.bottom > window.innerHeight - 120) {
-            highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }
+    const highlight = pNode.querySelector('.msreadout-word-highlight');
+    if (highlight && Date.now() - lastInteractionTime.current > 3000) {
+      const rect = highlight.getBoundingClientRect();
+      if (rect.top < 120 || rect.bottom > window.innerHeight - 120) {
+        highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
-  }, [currentChunkIndex, charIndex, charLength, paragraphs, chunks]);
+  }, [currentChunkIndex, charIndex, charLength, chunks]);
 
   useEffect(() => {
     return () => {
+      wordHighlighterRef.current?.clear();
       stopReading();
     };
   }, []);

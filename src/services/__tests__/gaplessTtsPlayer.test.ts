@@ -89,6 +89,18 @@ describe('buildSpeechSegments', () => {
         phrase.text
       );
     });
+
+    const segments = buildSpeechSegments(phrases);
+    expect(segments.every((segment) => segment.length <= 180)).toBe(true);
+  });
+
+  it('does not merge a short trailing sentence past the phrase limit', () => {
+    const longSentence = `${'một '.repeat(44).trim()}.`;
+    const paragraph = `${longSentence} Ừm nhé.`;
+
+    const phrases = splitParagraphIntoSentences(paragraph, 0);
+
+    expect(phrases.every((phrase) => phrase.length <= 180)).toBe(true);
   });
 
   it('preserves source offsets when a sentence starts with a closing quote', () => {

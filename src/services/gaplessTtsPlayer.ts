@@ -49,6 +49,7 @@ export interface GaplessTtsPlayerOptions {
   engine: AudioPlaybackEngine;
   synthesize: (segment: SpeechSegment, signal: AbortSignal) => Promise<Blob>;
   startLeadSeconds?: number;
+  prefetchAhead?: number;
 }
 
 export interface GaplessPlaybackCallbacks {
@@ -70,8 +71,9 @@ interface PlaybackSession {
   stopWatchingTime?: () => void;
 }
 
-const DEFAULT_TARGET_CHARACTERS = 260;
-const DEFAULT_MAX_CHARACTERS = 340;
+const MAX_PHRASE_CHARACTERS = 180;
+const DEFAULT_TARGET_CHARACTERS = 120;
+const DEFAULT_MAX_CHARACTERS = MAX_PHRASE_CHARACTERS;
 const WORD_PATTERN = /[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/gu;
 
 function joinChunksPreservingOffsets(previous: SentenceChunk, next: SentenceChunk): string {
@@ -79,6 +81,64 @@ function joinChunksPreservingOffsets(previous: SentenceChunk, next: SentenceChun
   const gapLength = Math.max(0, next.startOffset - previousEndOffset);
 
   return `${previous.text}${' '.repeat(gapLength)}${next.text}`;
+}
+
+function splitLongSpeechChunk(chunk: SentenceChunk): SentenceChunk[] {
+  if (chunk.length <= MAX_PHRASE_CHARACTERS) return [chunk];
+
+  const phrases: SentenceChunk[] = [];
+  let cursor = 0;
+
+  while (chunk.text.length - cursor > MAX_PHRASE_CHARACTERS) {
+    const minimumNaturalBreak = Math.floor(MAX_PHRASE_CHARACTERS * 0.55);
+    const candidate = chunk.text.slice(cursor, cursor + MAX_PHRASE_CHARACTERS + 1);
+    let breakAt = -1;
+
+    for (let index = MAX_PHRASE_CHARACTERS; index >= minimumNaturalBreak; index -= 1) {
+      if (/[,;:]/u.test(candidate[index - 1] ?? '')) {
+        breakAt = index;
+        break;
+      }
+    }
+
+    if (breakAt === -1) {
+      for (let index = MAX_PHRASE_CHARACTERS; index >= minimumNaturalBreak; index -= 1) {
+        if (/\s/u.test(candidate[index - 1] ?? '')) {
+          breakAt = index - 1;
+          break;
+        }
+      }
+    }
+
+    if (breakAt <= 0) breakAt = MAX_PHRASE_CHARACTERS;
+
+    const rawPhrase = chunk.text.slice(cursor, cursor + breakAt);
+    const leadingWhitespace = rawPhrase.length - rawPhrase.trimStart().length;
+    const phraseText = rawPhrase.trim();
+    if (phraseText) {
+      phrases.push({
+        pIdx: chunk.pIdx,
+        text: phraseText,
+        startOffset: chunk.startOffset + cursor + leadingWhitespace,
+        length: phraseText.length,
+      });
+    }
+    cursor += breakAt;
+  }
+
+  const rawRemainder = chunk.text.slice(cursor);
+  const leadingWhitespace = rawRemainder.length - rawRemainder.trimStart().length;
+  const remainderText = rawRemainder.trim();
+  if (remainderText) {
+    phrases.push({
+      pIdx: chunk.pIdx,
+      text: remainderText,
+      startOffset: chunk.startOffset + cursor + leadingWhitespace,
+      length: remainderText.length,
+    });
+  }
+
+  return phrases;
 }
 
 export function splitParagraphIntoSentences(text: string, pIdx: number): SentenceChunk[] {
@@ -94,12 +154,13 @@ export function splitParagraphIntoSentences(text: string, pIdx: number): Sentenc
     if (!trimmedSentence) continue;
 
     const leadingSpaces = rawSentence.length - rawSentence.trimStart().length;
-    sentences.push({
+    const sentence = {
       pIdx,
       text: trimmedSentence,
       startOffset: match.index + leadingSpaces,
       length: trimmedSentence.length,
-    });
+    };
+    sentences.push(...splitLongSpeechChunk(sentence));
   }
 
   if (sentences.length === 0 && text.trim()) {
@@ -116,9 +177,12 @@ export function splitParagraphIntoSentences(text: string, pIdx: number): Sentenc
   sentences.forEach((sentence) => {
     const previous = mergedSentences.at(-1);
     if (previous && previous.pIdx === sentence.pIdx && sentence.text.length < 10) {
-      previous.text = joinChunksPreservingOffsets(previous, sentence);
-      previous.length = previous.text.length;
-      return;
+      const combinedText = joinChunksPreservingOffsets(previous, sentence);
+      if (combinedText.length <= MAX_PHRASE_CHARACTERS) {
+        previous.text = combinedText;
+        previous.length = previous.text.length;
+        return;
+      }
     }
     mergedSentences.push({ ...sentence });
   });
@@ -215,6 +279,7 @@ export class GaplessTtsPlayer {
   private readonly engine: AudioPlaybackEngine;
   private readonly synthesize: GaplessTtsPlayerOptions['synthesize'];
   private readonly startLeadSeconds: number;
+  private readonly prefetchAhead: number;
   private readonly scheduledAudio = new Set<ScheduledAudio>();
   private activeSession: PlaybackSession | null = null;
   private nextSessionId = 1;
@@ -223,6 +288,7 @@ export class GaplessTtsPlayer {
     this.engine = options.engine;
     this.synthesize = options.synthesize;
     this.startLeadSeconds = Math.max(0, options.startLeadSeconds ?? 0.03);
+    this.prefetchAhead = Math.max(1, Math.floor(options.prefetchAhead ?? 2));
   }
 
   public start(segments: SpeechSegment[], callbacks: GaplessPlaybackCallbacks = {}): void {
@@ -274,18 +340,39 @@ export class GaplessTtsPlayer {
     callbacks: GaplessPlaybackCallbacks
   ): Promise<void> {
     try {
-      const firstAudio = await this.prepareSegment(session, segments[0]);
+      const preparedAudio = new Map<number, Promise<DecodedAudio>>();
+      const ensurePrepared = (index: number): Promise<DecodedAudio> | undefined => {
+        if (index < 0 || index >= segments.length) return undefined;
+
+        let prepared = preparedAudio.get(index);
+        if (!prepared) {
+          prepared = this.prepareSegment(session, segments[index]);
+          preparedAudio.set(index, prepared);
+          void prepared.catch(() => {});
+        }
+        return prepared;
+      };
+      const prefetchAfter = (index: number) => {
+        for (let offset = 1; offset <= this.prefetchAhead; offset += 1) {
+          ensurePrepared(index + offset);
+        }
+      };
+
+      const firstAudio = await ensurePrepared(0)!;
       if (!this.isActive(session)) return;
 
       const firstStartAt = this.engine.now() + this.startLeadSeconds;
       let currentPlayback = this.scheduleAudio(firstAudio, firstStartAt);
+      preparedAudio.delete(0);
+      prefetchAfter(0);
       this.queueWordCues(session, 0, segments[0], firstAudio, firstStartAt);
       this.startWordTracking(session, callbacks);
       callbacks.onSegmentStart?.(0, segments[0]);
 
       for (let index = 1; index < segments.length; index += 1) {
-        const nextAudio = await this.prepareSegment(session, segments[index]);
+        const nextAudio = await ensurePrepared(index)!;
         if (!this.isActive(session)) return;
+        preparedAudio.delete(index);
 
         const nextStartAt = Math.max(
           currentPlayback.endAt,
@@ -300,6 +387,7 @@ export class GaplessTtsPlayer {
 
         callbacks.onSegmentStart?.(index, segments[index]);
         currentPlayback = nextPlayback;
+        prefetchAfter(index);
       }
 
       await Promise.race([currentPlayback.ended, session.cancelled]);
