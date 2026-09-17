@@ -255,6 +255,14 @@ export function useReadAloud(paragraphs: string[]) {
           vieneuServerUrl,
           signal
         ),
+      stream: (segment, signal) =>
+        TTSService.streamSpeech(
+          segment.text,
+          activeVoice,
+          1.0,
+          vieneuServerUrl,
+          signal
+        ),
     });
     gaplessPlayerRef.current = player;
 

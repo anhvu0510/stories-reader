@@ -7,6 +7,7 @@ import {
   WebAudioPlaybackEngine,
   type AudioPlaybackEngine,
   type DecodedAudio,
+  type PcmStreamPlayback,
   type ScheduledAudio,
   type SpeechSegment,
 } from '../gaplessTtsPlayer';
@@ -239,6 +240,97 @@ describe('GaplessTtsPlayer', () => {
     expect(requestSignal?.aborted).toBe(true);
     expect(engine.schedule).not.toHaveBeenCalled();
   });
+
+  it('feeds PCM response chunks into one continuous scheduler without using WAV fallback', async () => {
+    const streamStarts: number[] = [];
+    const appendedChunks: number[][] = [];
+    const engine: AudioPlaybackEngine = {
+      now: () => 0,
+      decode: vi.fn(async (): Promise<DecodedAudio> => ({ duration: 2, value: null })),
+      schedule: vi.fn(),
+      beginPcmStream: vi.fn((sampleRate, _channels, startAt): PcmStreamPlayback => {
+        let duration = 0;
+        streamStarts.push(startAt);
+        return {
+          startAt,
+          get duration() {
+            return duration;
+          },
+          get endAt() {
+            return startAt + duration;
+          },
+          ended: createPendingPromise(),
+          append: vi.fn((chunk: Uint8Array) => {
+            appendedChunks.push(Array.from(chunk));
+            duration += chunk.byteLength / 2 / sampleRate;
+          }),
+          finish: vi.fn(),
+          stop: vi.fn(),
+        };
+      }),
+      pause: vi.fn(async () => {}),
+      resume: vi.fn(async () => {}),
+      dispose: vi.fn(async () => {}),
+    };
+    const stream = vi.fn(async () => ({
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([0, 0]));
+          controller.close();
+        },
+      }),
+      sampleRate: 24000,
+      channels: 1,
+      sampleFormat: 's16le' as const,
+    }));
+    const synthesize = vi.fn(async () => new Blob(['wav fallback']));
+    const player = new GaplessTtsPlayer({
+      engine,
+      synthesize,
+      stream,
+      startLeadSeconds: 0,
+    });
+
+    player.start([createSegment(0), createSegment(1)]);
+    await vi.waitFor(() => expect(stream).toHaveBeenCalledTimes(2));
+
+    expect(synthesize).not.toHaveBeenCalled();
+    expect(appendedChunks).toEqual([[0, 0], [0, 0]]);
+    expect(streamStarts[0]).toBe(0);
+    expect(streamStarts[1]).toBeCloseTo(1 / 24000, 10);
+
+    await player.stop();
+  });
+
+  it('falls back to decoded WAV when the PCM endpoint is unavailable', async () => {
+    const engine: AudioPlaybackEngine = {
+      now: () => 0,
+      decode: vi.fn(async (): Promise<DecodedAudio> => ({ duration: 1, value: null })),
+      schedule: vi.fn((_audio, startAt): ScheduledAudio => ({
+        endAt: startAt + 1,
+        ended: createPendingPromise(),
+        stop: vi.fn(),
+      })),
+      beginPcmStream: vi.fn(),
+      pause: vi.fn(async () => {}),
+      resume: vi.fn(async () => {}),
+      dispose: vi.fn(async () => {}),
+    };
+    const stream = vi.fn(async () => {
+      throw new Error('stream endpoint unavailable');
+    });
+    const synthesize = vi.fn(async () => new Blob(['wav fallback']));
+    const player = new GaplessTtsPlayer({ engine, synthesize, stream, startLeadSeconds: 0 });
+
+    player.start([createSegment(0)]);
+    await vi.waitFor(() => expect(engine.schedule).toHaveBeenCalledTimes(1));
+
+    expect(stream).toHaveBeenCalledTimes(1);
+    expect(synthesize).toHaveBeenCalledTimes(1);
+    expect(engine.decode).toHaveBeenCalledTimes(1);
+
+    await player.stop();
+  });
 });
 
 describe('WebAudioPlaybackEngine', () => {
@@ -299,5 +391,83 @@ describe('WebAudioPlaybackEngine', () => {
 
     expect(source.playbackRate.value).toBe(1.5);
     expect(scheduled.endAt).toBe(4.0); // 2 + (3.0 / 1.5) = 4.0
+  });
+
+  it('schedules split PCM network chunks on one continuous audio clock', () => {
+    const starts: number[] = [];
+    const sources: Array<{
+      buffer: AudioBuffer | null;
+      playbackRate: { value: number };
+      onended: (() => void) | null;
+      connect: ReturnType<typeof vi.fn>;
+      start: (at: number) => void;
+      stop: ReturnType<typeof vi.fn>;
+    }> = [];
+    const context = {
+      currentTime: 0,
+      destination: {},
+      createBuffer: vi.fn((_channels: number, frameCount: number, sampleRate: number) => ({
+        duration: frameCount / sampleRate,
+        copyToChannel: vi.fn(),
+      })),
+      createBufferSource: vi.fn(() => {
+        const source = {
+          buffer: null as AudioBuffer | null,
+          playbackRate: { value: 1 },
+          onended: null as (() => void) | null,
+          connect: vi.fn(),
+          start: (at: number) => starts.push(at),
+          stop: vi.fn(),
+        };
+        sources.push(source);
+        return source;
+      }),
+      suspend: vi.fn(async () => {}),
+      resume: vi.fn(async () => {}),
+      close: vi.fn(async () => {}),
+    } as unknown as AudioContext;
+    const engine = new WebAudioPlaybackEngine(context);
+    const playback = engine.beginPcmStream(24000, 1, 2);
+
+    playback.append(new Uint8Array([0, 0, 255]));
+    playback.append(new Uint8Array([127]));
+    playback.finish();
+
+    expect(context.createBuffer).toHaveBeenCalledTimes(2);
+    expect(starts).toEqual([2, 2 + 1 / 24000]);
+    expect(playback.duration).toBeCloseTo(2 / 24000, 10);
+    expect(playback.endAt).toBeCloseTo(2 + 2 / 24000, 10);
+    expect(sources).toHaveLength(2);
+  });
+
+  it('starts a delayed first PCM chunk from the current audio clock instead of the past', () => {
+    const starts: number[] = [];
+    const context = {
+      currentTime: 0,
+      destination: {},
+      createBuffer: vi.fn((_channels: number, frameCount: number, sampleRate: number) => ({
+        duration: frameCount / sampleRate,
+        copyToChannel: vi.fn(),
+      })),
+      createBufferSource: vi.fn(() => ({
+        buffer: null as AudioBuffer | null,
+        playbackRate: { value: 1 },
+        onended: null as (() => void) | null,
+        connect: vi.fn(),
+        start: (at: number) => starts.push(at),
+        stop: vi.fn(),
+      })),
+      suspend: vi.fn(async () => {}),
+      resume: vi.fn(async () => {}),
+      close: vi.fn(async () => {}),
+    } as unknown as AudioContext;
+    const engine = new WebAudioPlaybackEngine(context);
+    const playback = engine.beginPcmStream(24000, 1, 0);
+
+    Object.defineProperty(context, 'currentTime', { value: 5 });
+    playback.append(new Uint8Array([0, 0]));
+
+    expect(starts[0]).toBeCloseTo(5.03, 10);
+    expect(playback.startAt).toBeCloseTo(5.03, 10);
   });
 });

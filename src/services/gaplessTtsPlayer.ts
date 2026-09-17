@@ -34,6 +34,19 @@ export interface ScheduledAudio {
   stop: () => void;
 }
 
+export interface PcmStreamPlayback extends ScheduledAudio {
+  readonly startAt: number;
+  readonly duration: number;
+  append: (chunk: Uint8Array) => void;
+  finish: () => void;
+}
+
+export interface PcmAudioStream {
+  body: ReadableStream<Uint8Array>;
+  sampleRate: number;
+  channels: number;
+}
+
 export interface AudioPlaybackEngine {
   now: () => number;
   decode: (blob: Blob) => Promise<DecodedAudio>;
@@ -41,6 +54,11 @@ export interface AudioPlaybackEngine {
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   dispose: () => Promise<void>;
+  beginPcmStream?: (
+    sampleRate: number,
+    channels: number,
+    startAt: number
+  ) => PcmStreamPlayback;
   watchTime?: (callback: (currentTime: number) => void) => () => void;
   playbackRate?: number;
 }
@@ -48,6 +66,7 @@ export interface AudioPlaybackEngine {
 export interface GaplessTtsPlayerOptions {
   engine: AudioPlaybackEngine;
   synthesize: (segment: SpeechSegment, signal: AbortSignal) => Promise<Blob>;
+  stream?: (segment: SpeechSegment, signal: AbortSignal) => Promise<PcmAudioStream>;
   startLeadSeconds?: number;
   prefetchAhead?: number;
 }
@@ -278,6 +297,7 @@ export function buildWordTimeline(text: string, audioDurationSeconds: number): W
 export class GaplessTtsPlayer {
   private readonly engine: AudioPlaybackEngine;
   private readonly synthesize: GaplessTtsPlayerOptions['synthesize'];
+  private readonly stream?: GaplessTtsPlayerOptions['stream'];
   private readonly startLeadSeconds: number;
   private readonly prefetchAhead: number;
   private readonly scheduledAudio = new Set<ScheduledAudio>();
@@ -287,6 +307,7 @@ export class GaplessTtsPlayer {
   constructor(options: GaplessTtsPlayerOptions) {
     this.engine = options.engine;
     this.synthesize = options.synthesize;
+    this.stream = options.stream;
     this.startLeadSeconds = Math.max(0, options.startLeadSeconds ?? 0.03);
     this.prefetchAhead = Math.max(1, Math.floor(options.prefetchAhead ?? 2));
   }
@@ -311,8 +332,11 @@ export class GaplessTtsPlayer {
     };
     this.activeSession = session;
 
+    const supportsStreaming = Boolean(this.stream && this.engine.beginPcmStream);
     void this.engine.resume().then(
-      () => this.run(session, segments, callbacks),
+      () => supportsStreaming
+        ? this.runStreaming(session, segments, callbacks)
+        : this.run(session, segments, callbacks),
       (error: unknown) => callbacks.onError?.(error)
     );
   }
@@ -404,6 +428,104 @@ export class GaplessTtsPlayer {
     }
   }
 
+  private async runStreaming(
+    session: PlaybackSession,
+    segments: SpeechSegment[],
+    callbacks: GaplessPlaybackCallbacks
+  ): Promise<void> {
+    let hasScheduledAudio = false;
+
+    try {
+      let previousPlayback: PcmStreamPlayback | null = null;
+
+      for (let index = 0; index < segments.length; index += 1) {
+        if (!this.stream || !this.engine.beginPcmStream) return;
+
+        const segment = segments[index];
+        const audioStream = await this.stream(segment, session.controller.signal);
+        if (!this.isActive(session)) return;
+
+        const startAt = previousPlayback
+          ? previousPlayback.endAt
+          : this.engine.now() + this.startLeadSeconds;
+        const playback = this.engine.beginPcmStream(
+          audioStream.sampleRate,
+          audioStream.channels,
+          startAt
+        );
+        this.scheduledAudio.add(playback);
+        const reader = audioStream.body.getReader();
+        let hasSegmentAudio = false;
+        let segmentCues: Array<
+          WordCue & { absoluteStart: number; segmentIndex: number; segment: SpeechSegment }
+        > = [];
+
+        try {
+          while (this.isActive(session)) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (!value || value.byteLength === 0) continue;
+
+            playback.append(value);
+            if (!hasSegmentAudio && playback.duration > 0) {
+              hasSegmentAudio = true;
+              hasScheduledAudio = true;
+
+              const estimatedDuration = this.estimateSpeechDuration(segment.text);
+              segmentCues = this.queueWordCuesForDuration(
+                session,
+                index,
+                segment,
+                estimatedDuration,
+                playback.startAt
+              );
+              this.startWordTracking(session, callbacks);
+
+              if (previousPlayback) {
+                const priorPlayback = previousPlayback;
+                void Promise.race([priorPlayback.ended, session.cancelled]).then(() => {
+                  if (this.isActive(session)) {
+                    callbacks.onSegmentStart?.(index, segment);
+                  }
+                });
+              } else {
+                callbacks.onSegmentStart?.(index, segment);
+              }
+            }
+          }
+        } finally {
+          reader.releaseLock();
+        }
+
+        if (!this.isActive(session)) return;
+        if (!hasSegmentAudio) {
+          throw new Error('TTS streaming returned no audio');
+        }
+
+        playback.finish();
+        this.correctPendingWordCues(segmentCues, segment.text, playback.duration, playback.startAt);
+        void playback.ended.then(() => this.scheduledAudio.delete(playback));
+        previousPlayback = playback;
+      }
+
+      if (!previousPlayback) return;
+      await Promise.race([previousPlayback.ended, session.cancelled]);
+      if (!this.isActive(session)) return;
+
+      session.stopWatchingTime?.();
+      this.activeSession = null;
+      callbacks.onFinished?.();
+    } catch (error: unknown) {
+      if (!this.isActive(session)) return;
+      if (!hasScheduledAudio) {
+        await this.run(session, segments, callbacks);
+        return;
+      }
+      this.cancelActiveSession();
+      callbacks.onError?.(error);
+    }
+  }
+
   private async prepareSegment(session: PlaybackSession, segment: SpeechSegment): Promise<DecodedAudio> {
     const blob = await this.synthesize(segment, session.controller.signal);
     return this.engine.decode(blob);
@@ -424,13 +546,51 @@ export class GaplessTtsPlayer {
   ): void {
     const rate = this.engine.playbackRate && this.engine.playbackRate > 0 ? this.engine.playbackRate : 1.0;
     const effectiveDuration = audio.duration / rate;
-    buildWordTimeline(segment.text, effectiveDuration).forEach((cue) => {
-      session.scheduledWordCues.push({
+    this.queueWordCuesForDuration(
+      session,
+      segmentIndex,
+      segment,
+      effectiveDuration,
+      startAt
+    );
+  }
+
+  private queueWordCuesForDuration(
+    session: PlaybackSession,
+    segmentIndex: number,
+    segment: SpeechSegment,
+    duration: number,
+    startAt: number
+  ): Array<WordCue & { absoluteStart: number; segmentIndex: number; segment: SpeechSegment }> {
+    const scheduled = buildWordTimeline(segment.text, duration).map((cue) => ({
         ...cue,
         absoluteStart: startAt + cue.startSeconds,
         segmentIndex,
         segment,
-      });
+      }));
+    session.scheduledWordCues.push(...scheduled);
+    return scheduled;
+  }
+
+  private estimateSpeechDuration(text: string): number {
+    const rate = this.engine.playbackRate && this.engine.playbackRate > 0 ? this.engine.playbackRate : 1.0;
+    return Math.max(0.6, text.length / 18) / rate;
+  }
+
+  private correctPendingWordCues(
+    scheduled: Array<WordCue & { absoluteStart: number; segmentIndex: number; segment: SpeechSegment }>,
+    text: string,
+    duration: number,
+    startAt: number
+  ): void {
+    const corrected = buildWordTimeline(text, duration);
+    const now = this.engine.now();
+    scheduled.forEach((cue, index) => {
+      const nextCue = corrected[index];
+      if (!nextCue || cue.absoluteStart <= now) return;
+      cue.startSeconds = nextCue.startSeconds;
+      cue.endSeconds = nextCue.endSeconds;
+      cue.absoluteStart = startAt + nextCue.startSeconds;
     });
   }
 
@@ -525,6 +685,114 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
         }
       },
     };
+  }
+
+  public beginPcmStream(
+    sampleRate: number,
+    channels: number,
+    startAt: number
+  ): PcmStreamPlayback {
+    if (channels !== 1) {
+      throw new Error(`Unsupported PCM channel count: ${channels}`);
+    }
+
+    const sources = new Set<AudioBufferSourceNode>();
+    let cursor = startAt;
+    let actualStartAt: number | undefined;
+    let pendingByte: number | undefined;
+    let isFinished = false;
+    let hasSettled = false;
+    let resolveEnded = () => {};
+    const ended = new Promise<void>((resolve) => {
+      resolveEnded = resolve;
+    });
+    const settleIfDone = () => {
+      if (hasSettled || !isFinished || sources.size > 0) return;
+      hasSettled = true;
+      resolveEnded();
+    };
+
+    const playback: PcmStreamPlayback = {
+      get startAt() {
+        return actualStartAt ?? startAt;
+      },
+      get duration() {
+        return actualStartAt === undefined ? 0 : cursor - actualStartAt;
+      },
+      get endAt() {
+        return cursor;
+      },
+      ended,
+      append: (chunk: Uint8Array) => {
+        if (isFinished) throw new Error('Cannot append PCM after the stream has finished');
+        if (chunk.byteLength === 0) return;
+
+        let bytes = chunk;
+        if (pendingByte !== undefined) {
+          bytes = new Uint8Array(chunk.byteLength + 1);
+          bytes[0] = pendingByte;
+          bytes.set(chunk, 1);
+          pendingByte = undefined;
+        }
+        if (bytes.byteLength % 2 === 1) {
+          pendingByte = bytes[bytes.byteLength - 1];
+          bytes = bytes.subarray(0, bytes.byteLength - 1);
+        }
+        if (bytes.byteLength === 0) return;
+
+        if (actualStartAt === undefined) {
+          actualStartAt = Math.max(startAt, this.context.currentTime + 0.03);
+          cursor = actualStartAt;
+        }
+
+        const frameCount = bytes.byteLength / 2;
+        const samples = new Float32Array(frameCount);
+        const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        for (let index = 0; index < frameCount; index += 1) {
+          samples[index] = view.getInt16(index * 2, true) / 32768;
+        }
+
+        const buffer = this.context.createBuffer(1, frameCount, sampleRate);
+        buffer.copyToChannel(samples, 0);
+        const source = this.context.createBufferSource();
+        source.buffer = buffer;
+        if (this.playbackRate !== 1.0) {
+          source.playbackRate.value = this.playbackRate;
+        }
+        source.connect(this.context.destination);
+        sources.add(source);
+        source.onended = () => {
+          sources.delete(source);
+          settleIfDone();
+        };
+        source.start(cursor);
+        cursor += buffer.duration / this.playbackRate;
+      },
+      finish: () => {
+        if (pendingByte !== undefined) {
+          throw new Error('PCM stream ended with an incomplete sample');
+        }
+        isFinished = true;
+        settleIfDone();
+      },
+      stop: () => {
+        if (hasSettled) return;
+        isFinished = true;
+        sources.forEach((source) => {
+          try {
+            source.stop();
+          } catch (error: unknown) {
+            if (!(error instanceof DOMException && error.name === 'InvalidStateError')) {
+              throw error;
+            }
+          }
+        });
+        sources.clear();
+        settleIfDone();
+      },
+    };
+
+    return playback;
   }
 
   public async pause(): Promise<void> {
