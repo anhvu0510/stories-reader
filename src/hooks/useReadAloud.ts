@@ -3,11 +3,60 @@ import { useReaderConfigStore } from '../stores/useReaderConfigStore';
 import { TTSService, DEFAULT_VIENEU_SERVER_URL } from '../services/ttsService';
 import { useTTSStore } from '../features/reader/stores/useTTSStore';
 
-interface Chunk {
+export interface Chunk {
   pIdx: number;
   text: string;
   startOffset: number;
   length: number;
+}
+
+export function splitParagraphIntoSentences(text: string, pIdx: number): Chunk[] {
+  if (!text || !text.trim()) return [];
+
+  const sentenceRegex = /[^.!?…\n]+[.!?…\n]*/g;
+  const chunks: Chunk[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = sentenceRegex.exec(text)) !== null) {
+    const rawSentence = match[0];
+    const trimmedSentence = rawSentence.trim();
+    if (trimmedSentence) {
+      const leadingSpaces = rawSentence.length - rawSentence.trimStart().length;
+      chunks.push({
+        pIdx,
+        text: trimmedSentence,
+        startOffset: match.index + leadingSpaces,
+        length: trimmedSentence.length,
+      });
+    }
+  }
+
+  if (chunks.length === 0 && text.trim()) {
+    const trimmedText = text.trim();
+    const leadingSpaces = text.length - text.trimStart().length;
+    chunks.push({
+      pIdx,
+      text: trimmedText,
+      startOffset: leadingSpaces,
+      length: trimmedText.length,
+    });
+  }
+
+  // Merge tiny trailing sentence fragments under 10 chars into preceding sentence
+  const mergedChunks: Chunk[] = [];
+  for (const chunk of chunks) {
+    if (mergedChunks.length > 0 && chunk.text.length < 10) {
+      const prev = mergedChunks[mergedChunks.length - 1];
+      if (prev.pIdx === chunk.pIdx) {
+        prev.text += ' ' + chunk.text;
+        prev.length += chunk.length + 1;
+        continue;
+      }
+    }
+    mergedChunks.push({ ...chunk });
+  }
+
+  return mergedChunks;
 }
 
 function highlightText(rootElement: HTMLElement, startOffset: number, length: number, className: string) {
@@ -79,6 +128,7 @@ export function useReadAloud(paragraphs: string[]) {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const activeAudioUrlRef = useRef<string | null>(null);
+  const prefetchCacheRef = useRef<Map<number, Promise<Blob>>>(new Map());
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
@@ -96,18 +146,42 @@ export function useReadAloud(paragraphs: string[]) {
       const text = tmp.textContent || tmp.innerText || '';
 
       if (text.trim()) {
-        res.push({
-          pIdx,
-          text: text,
-          startOffset: 0,
-          length: text.length,
-        });
+        const sentenceChunks = splitParagraphIntoSentences(text, pIdx);
+        res.push(...sentenceChunks);
       }
     });
     return res;
   }, [paragraphs]);
 
+  const clearPrefetchCache = () => {
+    prefetchCacheRef.current.clear();
+  };
+
+  const prefetchNextChunk = (
+    nextIndex: number,
+    activeVoice: string,
+    speedRateMultiplier: number,
+    serverUrl: string
+  ) => {
+    if (nextIndex >= chunks.length || prefetchCacheRef.current.has(nextIndex)) return;
+    const nextChunk = chunks[nextIndex];
+    if (!nextChunk || !nextChunk.text.trim()) return;
+
+    const prefetchPromise = TTSService.synthesizeSpeech(
+      nextChunk.text,
+      activeVoice,
+      speedRateMultiplier,
+      serverUrl
+    ).catch((err) => {
+      prefetchCacheRef.current.delete(nextIndex);
+      throw err;
+    });
+
+    prefetchCacheRef.current.set(nextIndex, prefetchPromise);
+  };
+
   const stopAudioPlayer = () => {
+    clearPrefetchCache();
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.onended = null;
@@ -295,7 +369,15 @@ export function useReadAloud(paragraphs: string[]) {
     try {
       stopAudioPlayer();
       const activeVoice = voiceUri || 'Minh Quân';
-      const blob = await TTSService.synthesizeSpeech(chunk.text, activeVoice, speechRate, vieneuServerUrl);
+
+      let blobPromise = prefetchCacheRef.current.get(index);
+      if (blobPromise) {
+        prefetchCacheRef.current.delete(index);
+      } else {
+        blobPromise = TTSService.synthesizeSpeech(chunk.text, activeVoice, speechRate, vieneuServerUrl);
+      }
+
+      const blob = await blobPromise;
 
       if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
 
@@ -305,6 +387,9 @@ export function useReadAloud(paragraphs: string[]) {
       const audio = new Audio(audioUrl);
       audio.playbackRate = speechRate;
       audioRef.current = audio;
+
+      // Immediately trigger background prefetch for the NEXT sentence!
+      prefetchNextChunk(index + 1, activeVoice, speechRate, vieneuServerUrl);
 
       audio.onended = () => {
         if (playSessionIdRef.current !== sessionId) return;
