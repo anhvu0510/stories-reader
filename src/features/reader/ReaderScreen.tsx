@@ -466,6 +466,8 @@ export function ReaderScreen() {
           chapterTitle={currentViewingTitle}
           progress={scrollProgress}
           isVisible={true}
+          isTTSActive={isPlaying || isPaused}
+          onToggleTTS={() => (isPlaying || isPaused ? stopReading() : startReading())}
           onOpenHistory={handleOpenHistory}
         />
       </div>
@@ -515,6 +517,7 @@ export function ReaderScreen() {
           currentParagraphIndex={currentChunkIndex}
           onOpenChapterSelect={handleOpenChapterSelect}
           onOpenTranslation={handleOpenTranslation}
+          onToggleTTS={() => (isPlaying || isPaused ? stopReading() : startReading())}
           onTTSPlay={startReading}
           onTTSPause={pauseReading}
           onTTSStop={stopReading}

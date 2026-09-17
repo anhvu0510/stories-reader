@@ -299,6 +299,28 @@ export function ReaderQuickControl({
 
         {/* RIGHT GROUP: macOS Control Center Glass Spheres Capsule */}
         <div className="relative z-10 flex items-center gap-1.5 bg-black/5 dark:bg-black/10 backdrop-blur-[1.5px] p-1 rounded-full border border-primary/40 dark:border-primary/40 shadow-[0_4px_14px_rgba(0,0,0,0.35),_inset_0_1.5px_1px_0_rgba(255,255,255,0.4),_inset_0_-1px_1px_0_rgba(0,0,0,0.4)] shrink-0">
+          {/* Quick TTS Activation / Toggle Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onToggleTTS) {
+                onToggleTTS();
+              } else if (isTTSActive) {
+                if (onTTSStop) onTTSStop();
+              } else {
+                if (onTTSPlay) onTTSPlay();
+              }
+            }}
+            className={`w-8 h-8 rounded-full border transition-all active:scale-90 cursor-pointer flex items-center justify-center ${
+              isTTSActive
+                ? 'bg-primary text-on-primary border-primary shadow-[0_3px_10px_rgba(59,130,246,0.5)] animate-pulse'
+                : 'bg-white/10 border border-primary/50 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.3)] hover:bg-white/20'
+            }`}
+            title={isTTSActive ? 'Tắt đọc thành tiếng' : 'Bật đọc thành tiếng (VieNeu AI TTS)'}
+          >
+            <Volume2 size={17} />
+          </button>
+
           {/* System Settings Button */}
           <button
             onClick={(e) => {
