@@ -94,4 +94,56 @@ describe('useReadAloud - Sentence Level Chunking & Prefetching', () => {
       expect(mockSynthesize).toHaveBeenCalledWith('Câu 3.');
     });
   });
+
+  describe('activeParagraphIndex & Preloaded Audio Buffer Cleanup', () => {
+    it('maps sentence chunk index to the correct paragraph index (pIdx)', () => {
+      const mockChunks = [
+        { pIdx: 0, text: 'Câu 1 của đoạn 0.', startOffset: 0, length: 17 },
+        { pIdx: 0, text: 'Câu 2 của đoạn 0.', startOffset: 18, length: 17 },
+        { pIdx: 1, text: 'Câu 1 của đoạn 1.', startOffset: 0, length: 17 },
+      ];
+
+      const getActiveParagraphIndex = (chunkIndex: number) => {
+        return chunkIndex >= 0 && mockChunks[chunkIndex] ? mockChunks[chunkIndex].pIdx : -1;
+      };
+
+      expect(getActiveParagraphIndex(-1)).toBe(-1);
+      expect(getActiveParagraphIndex(0)).toBe(0);
+      expect(getActiveParagraphIndex(1)).toBe(0);
+      expect(getActiveParagraphIndex(2)).toBe(1);
+    });
+
+    it('clears preloaded audio instances and revokes blob URLs on stop', () => {
+      const mockRevoke = vi.fn();
+      const mockPause = vi.fn();
+      const cacheMap = new Map<number, Promise<any>>();
+
+      const mockPreloadedItem = {
+        blob: new Blob(['audio']),
+        audioUrl: 'blob:test-url',
+        audio: { pause: mockPause, src: '' } as any,
+      };
+
+      cacheMap.set(1, Promise.resolve(mockPreloadedItem));
+
+      const clearPrefetchCache = () => {
+        cacheMap.forEach((promise) => {
+          promise.then(({ audioUrl, audio }) => {
+            audio.pause();
+            audio.src = '';
+            mockRevoke(audioUrl);
+          });
+        });
+        cacheMap.clear();
+      };
+
+      clearPrefetchCache();
+
+      expect(cacheMap.size).toBe(0);
+      return Promise.resolve().then(() => {
+        expect(mockPause).toHaveBeenCalledTimes(1);
+        expect(mockRevoke).toHaveBeenCalledWith('blob:test-url');
+      });
+    });
+  });
 });

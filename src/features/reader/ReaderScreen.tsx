@@ -146,6 +146,7 @@ export function ReaderScreen() {
     isPlaying,
     isPaused,
     currentChunkIndex,
+    activeParagraphIndex,
     startReading,
     pauseReading,
     stopReading,
@@ -486,7 +487,7 @@ export function ReaderScreen() {
         lineHeight={lineHeight}
         isPlaying={isPlaying}
         isPaused={isPaused}
-        currentParagraphIndex={currentChunkIndex}
+        currentParagraphIndex={activeParagraphIndex}
         onDoubleClick={handleDoubleClick}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}

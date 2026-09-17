@@ -103,6 +103,12 @@ function highlightText(rootElement: HTMLElement, startOffset: number, length: nu
   });
 }
 
+interface PreloadedItem {
+  blob: Blob;
+  audioUrl: string;
+  audio: HTMLAudioElement;
+}
+
 export function useReadAloud(paragraphs: string[]) {
   const voiceUri = useReaderConfigStore((state) => state.voiceUri);
   const speechRate = useReaderConfigStore((state) => state.speechRate);
@@ -115,20 +121,9 @@ export function useReadAloud(paragraphs: string[]) {
   const [charIndex, setCharIndex] = useState(-1);
   const [charLength, setCharLength] = useState(0);
 
-  // Sync state with global useTTSStore
-  useEffect(() => {
-    useTTSStore.setState({
-      isPlaying,
-      isPaused,
-      currentParagraphIndex: currentChunkIndex,
-      currentCharIndex: charIndex,
-      currentCharLength: charLength,
-    });
-  }, [isPlaying, isPaused, currentChunkIndex, charIndex, charLength]);
-
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const activeAudioUrlRef = useRef<string | null>(null);
-  const prefetchCacheRef = useRef<Map<number, Promise<Blob>>>(new Map());
+  const prefetchCacheRef = useRef<Map<number, Promise<PreloadedItem>>>(new Map());
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
@@ -153,7 +148,34 @@ export function useReadAloud(paragraphs: string[]) {
     return res;
   }, [paragraphs]);
 
+  const activeParagraphIndex =
+    currentChunkIndex >= 0 && chunks[currentChunkIndex]
+      ? chunks[currentChunkIndex].pIdx
+      : -1;
+
+  // Sync state with global useTTSStore
+  useEffect(() => {
+    useTTSStore.setState({
+      isPlaying,
+      isPaused,
+      currentParagraphIndex: activeParagraphIndex,
+      currentCharIndex: charIndex,
+      currentCharLength: charLength,
+    });
+  }, [isPlaying, isPaused, activeParagraphIndex, charIndex, charLength]);
+
   const clearPrefetchCache = () => {
+    prefetchCacheRef.current.forEach((promise) => {
+      promise
+        .then(({ audioUrl, audio }) => {
+          try {
+            audio.pause();
+            audio.src = '';
+          } catch (_) {}
+          TTSService.revokeAudioUrl(audioUrl);
+        })
+        .catch(() => {});
+    });
     prefetchCacheRef.current.clear();
   };
 
@@ -177,10 +199,18 @@ export function useReadAloud(paragraphs: string[]) {
         activeVoice,
         speedRateMultiplier,
         serverUrl
-      ).catch((err) => {
-        prefetchCacheRef.current.delete(targetIndex);
-        throw err;
-      });
+      )
+        .then((blob) => {
+          const audioUrl = TTSService.createAudioUrl(blob);
+          const audio = new Audio(audioUrl);
+          audio.preload = 'auto';
+          audio.playbackRate = speedRateMultiplier;
+          return { blob, audioUrl, audio };
+        })
+        .catch((err) => {
+          prefetchCacheRef.current.delete(targetIndex);
+          throw err;
+        });
 
       prefetchCacheRef.current.set(targetIndex, prefetchPromise);
     }
@@ -243,7 +273,7 @@ export function useReadAloud(paragraphs: string[]) {
     const article = document.querySelector('article');
     if (!article) return;
 
-    const pNodes = Array.from(article.querySelectorAll(':scope > div.mb-4'));
+    const pNodes = Array.from(article.querySelectorAll(':scope > div[data-paragraph-index]'));
     if (pNodes.length === 0) return;
 
     pNodes.forEach((node, idx) => {
@@ -376,22 +406,29 @@ export function useReadAloud(paragraphs: string[]) {
       stopAudioPlayer();
       const activeVoice = voiceUri || 'Minh Quân';
 
-      let blobPromise = prefetchCacheRef.current.get(index);
-      if (blobPromise) {
+      let itemPromise = prefetchCacheRef.current.get(index);
+      let audioUrl: string;
+      let audio: HTMLAudioElement;
+
+      if (itemPromise) {
         prefetchCacheRef.current.delete(index);
+        const item = await itemPromise;
+        audioUrl = item.audioUrl;
+        audio = item.audio;
       } else {
-        blobPromise = TTSService.synthesizeSpeech(chunk.text, activeVoice, speechRate, vieneuServerUrl);
+        const blob = await TTSService.synthesizeSpeech(chunk.text, activeVoice, speechRate, vieneuServerUrl);
+        if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
+        audioUrl = TTSService.createAudioUrl(blob);
+        audio = new Audio(audioUrl);
+        audio.playbackRate = speechRate;
       }
 
-      const blob = await blobPromise;
+      if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) {
+        TTSService.revokeAudioUrl(audioUrl);
+        return;
+      }
 
-      if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
-
-      const audioUrl = TTSService.createAudioUrl(blob);
       activeAudioUrlRef.current = audioUrl;
-
-      const audio = new Audio(audioUrl);
-      audio.playbackRate = speechRate;
       audioRef.current = audio;
 
       // Immediately trigger parallel background prefetching for the next 3 sentences!
@@ -538,6 +575,7 @@ export function useReadAloud(paragraphs: string[]) {
     isPlaying,
     isPaused,
     currentChunkIndex,
+    activeParagraphIndex,
     startReading,
     pauseReading,
     stopReading,
