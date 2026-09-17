@@ -157,27 +157,33 @@ export function useReadAloud(paragraphs: string[]) {
     prefetchCacheRef.current.clear();
   };
 
-  const prefetchNextChunk = (
-    nextIndex: number,
+  const triggerParallelPrefetchWindow = (
+    currentIndex: number,
     activeVoice: string,
     speedRateMultiplier: number,
-    serverUrl: string
+    serverUrl: string,
+    windowSize: number = 3
   ) => {
-    if (nextIndex >= chunks.length || prefetchCacheRef.current.has(nextIndex)) return;
-    const nextChunk = chunks[nextIndex];
-    if (!nextChunk || !nextChunk.text.trim()) return;
+    for (let offset = 1; offset <= windowSize; offset++) {
+      const targetIndex = currentIndex + offset;
+      if (targetIndex >= chunks.length) break;
+      if (prefetchCacheRef.current.has(targetIndex)) continue;
 
-    const prefetchPromise = TTSService.synthesizeSpeech(
-      nextChunk.text,
-      activeVoice,
-      speedRateMultiplier,
-      serverUrl
-    ).catch((err) => {
-      prefetchCacheRef.current.delete(nextIndex);
-      throw err;
-    });
+      const targetChunk = chunks[targetIndex];
+      if (!targetChunk || !targetChunk.text.trim()) continue;
 
-    prefetchCacheRef.current.set(nextIndex, prefetchPromise);
+      const prefetchPromise = TTSService.synthesizeSpeech(
+        targetChunk.text,
+        activeVoice,
+        speedRateMultiplier,
+        serverUrl
+      ).catch((err) => {
+        prefetchCacheRef.current.delete(targetIndex);
+        throw err;
+      });
+
+      prefetchCacheRef.current.set(targetIndex, prefetchPromise);
+    }
   };
 
   const stopAudioPlayer = () => {
@@ -388,8 +394,8 @@ export function useReadAloud(paragraphs: string[]) {
       audio.playbackRate = speechRate;
       audioRef.current = audio;
 
-      // Immediately trigger background prefetch for the NEXT sentence!
-      prefetchNextChunk(index + 1, activeVoice, speechRate, vieneuServerUrl);
+      // Immediately trigger parallel background prefetching for the next 3 sentences!
+      triggerParallelPrefetchWindow(index, activeVoice, speechRate, vieneuServerUrl, 3);
 
       audio.onended = () => {
         if (playSessionIdRef.current !== sessionId) return;

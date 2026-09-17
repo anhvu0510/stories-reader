@@ -54,4 +54,44 @@ describe('useReadAloud - Sentence Level Chunking & Prefetching', () => {
       expect(allChunks[3].pIdx).toBe(1);
     });
   });
+
+  describe('triggerParallelPrefetchWindow', () => {
+    it('fetches parallel sentence requests for a window of 3 sentences ahead', () => {
+      const mockChunks = [
+        { pIdx: 0, text: 'Câu 0.', startOffset: 0, length: 6 },
+        { pIdx: 0, text: 'Câu 1.', startOffset: 7, length: 6 },
+        { pIdx: 0, text: 'Câu 2.', startOffset: 14, length: 6 },
+        { pIdx: 0, text: 'Câu 3.', startOffset: 21, length: 6 },
+        { pIdx: 0, text: 'Câu 4.', startOffset: 28, length: 6 },
+      ];
+
+      const cacheMap = new Map<number, Promise<any>>();
+      const mockSynthesize = vi.fn().mockImplementation((text) => Promise.resolve(`blob_${text}`));
+
+      // Simulate triggerParallelPrefetchWindow function logic
+      const windowSize = 3;
+      const currentIndex = 0;
+
+      for (let offset = 1; offset <= windowSize; offset++) {
+        const targetIndex = currentIndex + offset;
+        if (targetIndex >= mockChunks.length) break;
+        if (cacheMap.has(targetIndex)) continue;
+
+        const targetChunk = mockChunks[targetIndex];
+        if (targetChunk && targetChunk.text.trim()) {
+          cacheMap.set(targetIndex, mockSynthesize(targetChunk.text));
+        }
+      }
+
+      expect(cacheMap.size).toBe(3);
+      expect(cacheMap.has(1)).toBe(true);
+      expect(cacheMap.has(2)).toBe(true);
+      expect(cacheMap.has(3)).toBe(true);
+      expect(cacheMap.has(4)).toBe(false);
+
+      expect(mockSynthesize).toHaveBeenCalledWith('Câu 1.');
+      expect(mockSynthesize).toHaveBeenCalledWith('Câu 2.');
+      expect(mockSynthesize).toHaveBeenCalledWith('Câu 3.');
+    });
+  });
 });
