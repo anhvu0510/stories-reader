@@ -1,63 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useReaderConfigStore } from '../stores/useReaderConfigStore';
 import { TTSService, DEFAULT_VIENEU_SERVER_URL } from '../services/ttsService';
+import {
+  buildSpeechSegments,
+  GaplessTtsPlayer,
+  splitParagraphIntoSentences,
+  type SentenceChunk,
+  WebAudioPlaybackEngine,
+} from '../services/gaplessTtsPlayer';
 import { useTTSStore } from '../features/reader/stores/useTTSStore';
 
-export interface Chunk {
-  pIdx: number;
-  text: string;
-  startOffset: number;
-  length: number;
-}
-
-export function splitParagraphIntoSentences(text: string, pIdx: number): Chunk[] {
-  if (!text || !text.trim()) return [];
-
-  const sentenceRegex = /[^.!?…\n]+[.!?…\n]*/g;
-  const chunks: Chunk[] = [];
-  let match: RegExpExecArray | null;
-
-  while ((match = sentenceRegex.exec(text)) !== null) {
-    const rawSentence = match[0];
-    const trimmedSentence = rawSentence.trim();
-    if (trimmedSentence) {
-      const leadingSpaces = rawSentence.length - rawSentence.trimStart().length;
-      chunks.push({
-        pIdx,
-        text: trimmedSentence,
-        startOffset: match.index + leadingSpaces,
-        length: trimmedSentence.length,
-      });
-    }
-  }
-
-  if (chunks.length === 0 && text.trim()) {
-    const trimmedText = text.trim();
-    const leadingSpaces = text.length - text.trimStart().length;
-    chunks.push({
-      pIdx,
-      text: trimmedText,
-      startOffset: leadingSpaces,
-      length: trimmedText.length,
-    });
-  }
-
-  // Merge tiny trailing sentence fragments under 10 chars into preceding sentence
-  const mergedChunks: Chunk[] = [];
-  for (const chunk of chunks) {
-    if (mergedChunks.length > 0 && chunk.text.length < 10) {
-      const prev = mergedChunks[mergedChunks.length - 1];
-      if (prev.pIdx === chunk.pIdx) {
-        prev.text += ' ' + chunk.text;
-        prev.length += chunk.length + 1;
-        continue;
-      }
-    }
-    mergedChunks.push({ ...chunk });
-  }
-
-  return mergedChunks;
-}
+export { splitParagraphIntoSentences } from '../services/gaplessTtsPlayer';
 
 function highlightText(rootElement: HTMLElement, startOffset: number, length: number, className: string) {
   if (length <= 0) return;
@@ -103,12 +56,6 @@ function highlightText(rootElement: HTMLElement, startOffset: number, length: nu
   });
 }
 
-interface PreloadedItem {
-  blob: Blob;
-  audioUrl: string;
-  audio: HTMLAudioElement;
-}
-
 export function useReadAloud(paragraphs: string[]) {
   const voiceUri = useReaderConfigStore((state) => state.voiceUri);
   const speechRate = useReaderConfigStore((state) => state.speechRate);
@@ -121,9 +68,7 @@ export function useReadAloud(paragraphs: string[]) {
   const [charIndex, setCharIndex] = useState(-1);
   const [charLength, setCharLength] = useState(0);
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const activeAudioUrlRef = useRef<string | null>(null);
-  const prefetchCacheRef = useRef<Map<number, Promise<PreloadedItem>>>(new Map());
+  const gaplessPlayerRef = useRef<GaplessTtsPlayer | null>(null);
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
@@ -133,7 +78,7 @@ export function useReadAloud(paragraphs: string[]) {
   const playSessionIdRef = useRef<number>(0);
 
   const chunks = useMemo(() => {
-    const res: Chunk[] = [];
+    const res: SentenceChunk[] = [];
     paragraphs.forEach((html, pIdx) => {
       if (!html) return;
       const tmp = document.createElement('div');
@@ -145,7 +90,7 @@ export function useReadAloud(paragraphs: string[]) {
         res.push(...sentenceChunks);
       }
     });
-    return res;
+    return buildSpeechSegments(res);
   }, [paragraphs]);
 
   const activeParagraphIndex =
@@ -164,74 +109,14 @@ export function useReadAloud(paragraphs: string[]) {
     });
   }, [isPlaying, isPaused, activeParagraphIndex, charIndex, charLength]);
 
-  const clearPrefetchCache = () => {
-    prefetchCacheRef.current.forEach((promise) => {
-      promise
-        .then(({ audioUrl, audio }) => {
-          try {
-            audio.pause();
-            audio.src = '';
-          } catch (_) {}
-          TTSService.revokeAudioUrl(audioUrl);
-        })
-        .catch(() => {});
-    });
-    prefetchCacheRef.current.clear();
-  };
-
-  const triggerParallelPrefetchWindow = (
-    currentIndex: number,
-    activeVoice: string,
-    speedRateMultiplier: number,
-    serverUrl: string,
-    windowSize: number = 3
-  ) => {
-    for (let offset = 1; offset <= windowSize; offset++) {
-      const targetIndex = currentIndex + offset;
-      if (targetIndex >= chunks.length) break;
-      if (prefetchCacheRef.current.has(targetIndex)) continue;
-
-      const targetChunk = chunks[targetIndex];
-      if (!targetChunk || !targetChunk.text.trim()) continue;
-
-      const prefetchPromise = TTSService.synthesizeSpeech(
-        targetChunk.text,
-        activeVoice,
-        speedRateMultiplier,
-        serverUrl
-      )
-        .then((blob) => {
-          const audioUrl = TTSService.createAudioUrl(blob);
-          const audio = new Audio(audioUrl);
-          audio.preload = 'auto';
-          audio.playbackRate = speedRateMultiplier;
-          return { blob, audioUrl, audio };
-        })
-        .catch((err) => {
-          prefetchCacheRef.current.delete(targetIndex);
-          throw err;
-        });
-
-      prefetchCacheRef.current.set(targetIndex, prefetchPromise);
-    }
-  };
-
-  const stopCurrentAudioOnly = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.onended = null;
-      audioRef.current.onerror = null;
-      audioRef.current = null;
-    }
-    if (activeAudioUrlRef.current) {
-      TTSService.revokeAudioUrl(activeAudioUrlRef.current);
-      activeAudioUrlRef.current = null;
-    }
-  };
-
   const stopAudioPlayer = () => {
-    clearPrefetchCache();
-    stopCurrentAudioOnly();
+    const player = gaplessPlayerRef.current;
+    gaplessPlayerRef.current = null;
+    if (player) {
+      void player.dispose().catch((error: unknown) => {
+        console.warn('Failed to dispose VieNeu audio player:', error);
+      });
+    }
   };
 
   const stopReading = () => {
@@ -274,10 +159,12 @@ export function useReadAloud(paragraphs: string[]) {
 
   // Handle Highlighting directly on the ReaderScreen DOM elements
   useEffect(() => {
-    const article = document.querySelector('article');
-    if (!article) return;
+    const readerContent = document.querySelector('#main-story-content');
+    if (!readerContent) return;
 
-    const pNodes = Array.from(article.querySelectorAll(':scope > div[data-paragraph-index]'));
+    const pNodes = Array.from(
+      readerContent.querySelectorAll('article > div[data-paragraph-index]')
+    );
     if (pNodes.length === 0) return;
 
     pNodes.forEach((node, idx) => {
@@ -387,82 +274,70 @@ export function useReadAloud(paragraphs: string[]) {
     synth.speak(utterance);
   };
 
-  const playChunkViaVieNeu = async (index: number, sessionId: number) => {
+  const playChunkViaVieNeu = (index: number, sessionId: number) => {
     if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
     if (index >= chunks.length) {
       stopReading();
       return;
     }
 
-    currentChunkIdxRef.current = index;
-    setCurrentChunkIndex(index);
-    setCharIndex(0);
-    setCharLength(chunks[index].text.length);
-
-    const chunk = chunks[index];
-
-    if (!chunk.text.trim()) {
-      playChunkViaVieNeu(index + 1, sessionId);
+    const AudioContextConstructor =
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextConstructor) {
+      console.warn('Web Audio API is unavailable, falling back to browser voice.');
+      playChunkViaBrowser(index, 0, sessionId);
       return;
     }
 
-    try {
-      stopCurrentAudioOnly();
-      const activeVoice = voiceUri || 'Minh Quân';
+    stopAudioPlayer();
+    const audioContext = new AudioContextConstructor();
+    const activeVoice = voiceUri || 'Minh Quân';
+    let activeIndex = index;
+    const player = new GaplessTtsPlayer({
+      engine: new WebAudioPlaybackEngine(audioContext, speechRate),
+      synthesize: (segment, signal) =>
+        TTSService.synthesizeSpeech(
+          segment.text,
+          activeVoice,
+          1.0,
+          vieneuServerUrl,
+          signal
+        ),
+    });
+    gaplessPlayerRef.current = player;
 
-      let itemPromise = prefetchCacheRef.current.get(index);
-      let audioUrl: string;
-      let audio: HTMLAudioElement;
-
-      if (itemPromise) {
-        prefetchCacheRef.current.delete(index);
-        const item = await itemPromise;
-        audioUrl = item.audioUrl;
-        audio = item.audio;
-      } else {
-        const blob = await TTSService.synthesizeSpeech(chunk.text, activeVoice, speechRate, vieneuServerUrl);
+    player.start(chunks.slice(index), {
+      onSegmentStart: (relativeIndex, segment) => {
         if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
-        audioUrl = TTSService.createAudioUrl(blob);
-        audio = new Audio(audioUrl);
-        audio.playbackRate = speechRate;
-      }
-
-      if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) {
-        TTSService.revokeAudioUrl(audioUrl);
-        return;
-      }
-
-      activeAudioUrlRef.current = audioUrl;
-      audioRef.current = audio;
-
-      // Immediately trigger parallel background prefetching for the next 3 sentences!
-      triggerParallelPrefetchWindow(index, activeVoice, speechRate, vieneuServerUrl, 3);
-
-      audio.onended = () => {
+        activeIndex = index + relativeIndex;
+        currentChunkIdxRef.current = activeIndex;
+        setCurrentChunkIndex(activeIndex);
+        setCharIndex(-1);
+        setCharLength(0);
+      },
+      onWordBoundary: (relativeIndex, _segment, cue) => {
+        if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
+        activeIndex = index + relativeIndex;
+        currentChunkIdxRef.current = activeIndex;
+        setCurrentChunkIndex(activeIndex);
+        setCharIndex(cue.charIndex);
+        setCharLength(cue.charLength);
+      },
+      onFinished: () => {
         if (playSessionIdRef.current !== sessionId) return;
-        TTSService.revokeAudioUrl(audioUrl);
-        activeAudioUrlRef.current = null;
-        if (isPlayingRef.current && !isPausedRef.current) {
-          playChunk(index + 1, 0);
-        }
-      };
-
-      audio.onerror = (err) => {
-        console.warn('VieNeu Audio playback error, falling back to browser voice:', err);
-        TTSService.revokeAudioUrl(audioUrl);
-        activeAudioUrlRef.current = null;
-        if (playSessionIdRef.current === sessionId) {
-          playChunkViaBrowser(index, 0, sessionId);
-        }
-      };
-
-      await audio.play();
-    } catch (err) {
-      console.warn('VieNeu TTS Synthesis failed, fallback to browser voice:', err);
-      if (playSessionIdRef.current === sessionId) {
-        playChunkViaBrowser(index, 0, sessionId);
-      }
-    }
+        gaplessPlayerRef.current = null;
+        void player.dispose();
+        stopReading();
+      },
+      onError: (error: unknown) => {
+        if (playSessionIdRef.current !== sessionId) return;
+        console.warn('VieNeu TTS playback failed, falling back to browser voice:', error);
+        gaplessPlayerRef.current = null;
+        void player.dispose();
+        playChunkViaBrowser(activeIndex, 0, sessionId);
+      },
+    });
   };
 
   const playChunk = (index: number, startOffset: number = 0) => {
@@ -475,22 +350,26 @@ export function useReadAloud(paragraphs: string[]) {
   };
 
   const startReading = () => {
-    const newSessionId = playSessionIdRef.current + 1;
-    playSessionIdRef.current = newSessionId;
-
     if (isPaused) {
       setIsPaused(false);
       setIsPlaying(true);
       isPlayingRef.current = true;
       isPausedRef.current = false;
 
-      if (audioRef.current) {
-        audioRef.current.play().catch(() => playChunk(currentChunkIdxRef.current));
+      if (ttsEngine === 'vieneu' && gaplessPlayerRef.current) {
+        void gaplessPlayerRef.current
+          .resume()
+          .catch(() => playChunk(currentChunkIdxRef.current));
+      } else if (ttsEngine === 'browser' && synth) {
+        synth.resume();
       } else {
         playChunk(currentChunkIdxRef.current);
       }
       return;
     }
+
+    const newSessionId = playSessionIdRef.current + 1;
+    playSessionIdRef.current = newSessionId;
 
     stopAudioPlayer();
     if (synth) synth.cancel();
@@ -512,10 +391,10 @@ export function useReadAloud(paragraphs: string[]) {
     isPlayingRef.current = false;
     isPausedRef.current = true;
 
-    if (audioRef.current) {
-      audioRef.current.pause();
+    if (gaplessPlayerRef.current) {
+      void gaplessPlayerRef.current.pause();
     }
-    if (synth) {
+    if (ttsEngine === 'browser' && synth) {
       synth.pause();
     }
   };

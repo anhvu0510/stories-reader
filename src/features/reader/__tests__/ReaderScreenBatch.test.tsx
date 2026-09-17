@@ -15,6 +15,20 @@ vi.mock('../../../repositories/ChapterRepository', () => ({
   },
 }));
 
+vi.mock('../../../hooks/useReadAloud', () => ({
+  useReadAloud: () => ({
+    isPlaying: true,
+    isPaused: false,
+    currentChunkIndex: 0,
+    activeParagraphIndex: 0,
+    startReading: vi.fn(),
+    pauseReading: vi.fn(),
+    stopReading: vi.fn(),
+    nextSection: vi.fn(),
+    prevSection: vi.fn(),
+  }),
+}));
+
 describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -94,6 +108,52 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
     }, { timeout: 3000 });
 
     expect(ChapterRepository.getChapterContent).toHaveBeenCalledWith('c1', 1, false, '', 3);
+  });
+
+  it('assigns globally unique paragraph indexes across a chapter batch', async () => {
+    vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
+      chapter: {
+        chapterId: 'c1',
+        chapterNumber: 1,
+        title: 'Một',
+        bookName: 'Truyện',
+        content: ['Đoạn 1', 'Đoạn 2'],
+      },
+      chapters: [
+        {
+          chapterId: 'c1',
+          chapterNumber: 1,
+          title: 'Một',
+          bookName: 'Truyện',
+          content: ['Đoạn 1', 'Đoạn 2'],
+        },
+        {
+          chapterId: 'c2',
+          chapterNumber: 2,
+          title: 'Hai',
+          bookName: 'Truyện',
+          content: ['Đoạn 3', 'Đoạn 4'],
+        },
+      ],
+      navigation: { prev: null, next: null },
+    } as never);
+
+    const { container } = render(
+      <MemoryRouter initialEntries={['/book/b1/chapter/c1']}>
+        <Routes>
+          <Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(container.querySelectorAll('[data-paragraph-index]')).toHaveLength(4));
+
+    expect(
+      Array.from(container.querySelectorAll('[data-paragraph-index]')).map((element) =>
+        element.getAttribute('data-paragraph-index')
+      )
+    ).toEqual(['0', '1', '2', '3']);
+    expect(container.querySelectorAll('article > div.ring-2')).toHaveLength(1);
   });
 
   it('QC-6 [Tier 3 - Offline Mode Support]: preserves batchChapterSize when offline mode is active', async () => {

@@ -47,7 +47,8 @@ export class TTSService {
     text: string,
     voice: string = 'Minh Quân',
     speed: number = 1.0,
-    baseUrl: string = DEFAULT_VIENEU_SERVER_URL
+    baseUrl: string = DEFAULT_VIENEU_SERVER_URL,
+    signal?: AbortSignal
   ): Promise<Blob> {
     if (!text || !text.trim()) {
       throw new Error('Input text cannot be empty');
@@ -60,6 +61,7 @@ export class TTSService {
         'Content-Type': 'application/json',
         Accept: 'audio/wav, audio/mpeg, audio/pcm',
       },
+      signal,
       body: JSON.stringify({
         model: 'vieneu-v3-turbo',
         input: text.trim(),

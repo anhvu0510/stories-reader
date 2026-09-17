@@ -48,6 +48,12 @@ const ChapterContentSection = memo(function ChapterContentSection({
   onTouchStart,
   onTouchEnd,
 }: ChapterContentSectionProps) {
+  const paragraphOffsets = chapters.map((_, chapterIndex) =>
+    chapters
+      .slice(0, chapterIndex)
+      .reduce((total, chapter) => total + chapter.content.length, 0)
+  );
+
   return (
     <main
       id="main-story-content"
@@ -91,16 +97,21 @@ const ChapterContentSection = memo(function ChapterContentSection({
             className="px-4 select-text"
             style={{ fontSize: `${fontSize}px`, lineHeight }}
           >
-            {chap.content.map((paragraphHtml, index) => (
-              <ParagraphView
-                key={`${chap.chapterId}-${index}`}
-                index={index}
-                content={paragraphHtml}
-                isTTSActive={(isPlaying || isPaused) && currentParagraphIndex === index}
-                onDoubleClick={onDoubleClick}
-                onTouchEnd={onTouchEnd}
-              />
-            ))}
+            {chap.content.map((paragraphHtml, index) => {
+              const paragraphIndex = paragraphOffsets[chapIdx] + index;
+              return (
+                <ParagraphView
+                  key={`${chap.chapterId}-${index}`}
+                  index={paragraphIndex}
+                  content={paragraphHtml}
+                  isTTSActive={
+                    (isPlaying || isPaused) && currentParagraphIndex === paragraphIndex
+                  }
+                  onDoubleClick={onDoubleClick}
+                  onTouchEnd={onTouchEnd}
+                />
+              );
+            })}
           </article>
         </section>
       ))}
