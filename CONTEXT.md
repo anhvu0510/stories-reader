@@ -25,11 +25,3 @@ domain is browser configuration, not a build-time constant.
 - Reader content is rendered from chapter state; lifecycle changes must not
   trigger an unnecessary chapter refetch.
 - API failures may fall back to offline content when it exists.
-
-## Commands
-
-```bash
-npm test
-npm run lint
-npm run build
-```
