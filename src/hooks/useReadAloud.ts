@@ -328,6 +328,12 @@ export function useReadAloud(paragraphs: string[]) {
     stopReading();
   }, [paragraphs]);
 
+  useEffect(() => {
+    if (ttsEngine === 'vieneu') {
+      stopReading();
+    }
+  }, [vieneuModel, voiceUri, ttsEngine]);
+
   const lastInteractionTime = useRef(0);
 
   useEffect(() => {
