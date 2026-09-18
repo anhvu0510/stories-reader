@@ -31,9 +31,30 @@ export function useReadAloud(paragraphs: string[]) {
   const ttsEngine = useReaderConfigStore((state) => state.ttsEngine || 'vieneu');
   const vieneuServerUrl = useReaderConfigStore((state) => state.vieneuServerUrl || DEFAULT_VIENEU_SERVER_URL);
   const vieneuModel = useReaderConfigStore((state) => state.vieneuModel || undefined);
+  const vieneuTemperature = useReaderConfigStore((state) => state.vieneuTemperature ?? 0.8);
+  const vieneuTopK = useReaderConfigStore((state) => state.vieneuTopK ?? 25);
+  const vieneuTopP = useReaderConfigStore((state) => state.vieneuTopP ?? 0.95);
+  const vieneuMaxNewFrames = useReaderConfigStore((state) => state.vieneuMaxNewFrames ?? 300);
+  const vieneuRepetitionPenalty = useReaderConfigStore((state) => state.vieneuRepetitionPenalty ?? 1.2);
+  const vieneuRepetitionWindow = useReaderConfigStore((state) => state.vieneuRepetitionWindow ?? 80);
+  const vieneuSteps = useReaderConfigStore((state) => state.vieneuSteps ?? 8);
+  const vieneuCfg = useReaderConfigStore((state) => state.vieneuCfg ?? 2.0);
+  const vieneuSway = useReaderConfigStore((state) => state.vieneuSway ?? -1.0);
+  const vieneuMaxChars = useReaderConfigStore((state) => state.vieneuMaxChars ?? 140);
+  const vieneuDenoise = useReaderConfigStore((state) => state.vieneuDenoise ?? true);
+  const vieneuUseRefCodes = useReaderConfigStore((state) => state.vieneuUseRefCodes ?? true);
+  const vieneuApplyWatermark = useReaderConfigStore((state) => state.vieneuApplyWatermark ?? true);
+  const vieneuOptions = useMemo(() => ({
+    temperature: vieneuTemperature, top_k: vieneuTopK, top_p: vieneuTopP,
+    max_new_frames: vieneuMaxNewFrames, repetition_penalty: vieneuRepetitionPenalty,
+    repetition_window: vieneuRepetitionWindow, steps: vieneuSteps, cfg: vieneuCfg,
+    sway: vieneuSway, max_chars: vieneuMaxChars, denoise: vieneuDenoise,
+    use_ref_codes: vieneuUseRefCodes, apply_watermark: vieneuApplyWatermark,
+  }), [vieneuTemperature, vieneuTopK, vieneuTopP, vieneuMaxNewFrames, vieneuRepetitionPenalty, vieneuRepetitionWindow, vieneuSteps, vieneuCfg, vieneuSway, vieneuMaxChars, vieneuDenoise, vieneuUseRefCodes, vieneuApplyWatermark]);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(-1);
   const gaplessPlayerRef = useRef<GaplessTtsPlayer | null>(null);
   const wordHighlighterRef = useRef<DomWordHighlighter | null>(null);
@@ -92,11 +113,12 @@ export function useReadAloud(paragraphs: string[]) {
     useTTSStore.setState({
       isPlaying,
       isPaused,
+      isLoading,
       currentParagraphIndex: activeParagraphIndex,
       currentCharIndex: charIndexRef.current,
       currentCharLength: charLengthRef.current,
     });
-  }, [isPlaying, isPaused, activeParagraphIndex]);
+  }, [isPlaying, isPaused, isLoading, activeParagraphIndex]);
 
   const edgeAudioRef = useRef<HTMLAudioElement | null>(null);
   const edgeAudioUrlRef = useRef<string | null>(null);
@@ -256,7 +278,13 @@ export function useReadAloud(paragraphs: string[]) {
         };
 
         audio.ontimeupdate = syncWordBoundary;
-        audio.onplay = startBoundaryTracking;
+        audio.onplay = () => {
+          if (playSessionIdRef.current === sessionId && isPlayingRef.current) {
+            setIsLoading(false);
+            setIsPlaying(true);
+          }
+          startBoundaryTracking();
+        };
         audio.onpause = stopEdgeBoundaryTracking;
 
         audio.onended = () => {
@@ -308,6 +336,7 @@ export function useReadAloud(paragraphs: string[]) {
   const stopReading = () => {
     setIsPlaying(false);
     setIsPaused(false);
+    setIsLoading(false);
     isPlayingRef.current = false;
     isPausedRef.current = false;
     playSessionIdRef.current += 1;
@@ -321,7 +350,7 @@ export function useReadAloud(paragraphs: string[]) {
     setCurrentChunkIndex(-1);
     charIndexRef.current = -1;
     charLengthRef.current = 0;
-    useTTSStore.setState({ currentCharIndex: -1, currentCharLength: 0 });
+    useTTSStore.setState({ currentCharIndex: -1, currentCharLength: 0, isLoading: false });
   };
 
   useEffect(() => {
@@ -332,7 +361,7 @@ export function useReadAloud(paragraphs: string[]) {
     if (ttsEngine === 'vieneu') {
       stopReading();
     }
-  }, [vieneuModel, voiceUri, ttsEngine]);
+  }, [vieneuModel, voiceUri, ttsEngine, speechRate, vieneuOptions]);
 
   const lastInteractionTime = useRef(0);
 
@@ -431,6 +460,13 @@ export function useReadAloud(paragraphs: string[]) {
       utterance.voice = selectedVoice;
     }
 
+    utterance.onstart = () => {
+      if (playSessionIdRef.current === sessionId && isPlayingRef.current) {
+        setIsLoading(false);
+        setIsPlaying(true);
+      }
+    };
+
     utterance.onboundary = (e) => {
       if (playSessionIdRef.current !== sessionId) return;
       if (e.name === 'word') {
@@ -488,7 +524,8 @@ export function useReadAloud(paragraphs: string[]) {
           speechRate,
           vieneuServerUrl,
           signal,
-          vieneuModel
+          vieneuModel,
+          vieneuOptions
         ),
       stream: (segment, signal) =>
         TTSService.streamSpeech(
@@ -497,7 +534,8 @@ export function useReadAloud(paragraphs: string[]) {
           speechRate,
           vieneuServerUrl,
           signal,
-          vieneuModel
+          vieneuModel,
+          vieneuOptions
         ),
     });
     gaplessPlayerRef.current = player;
@@ -505,10 +543,14 @@ export function useReadAloud(paragraphs: string[]) {
     player.start(chunks.slice(index), {
       onSegmentStart: (relativeIndex) => {
         if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
+        setIsLoading(false);
+        setIsPlaying(true);
         activeIndex = index + relativeIndex;
       },
       onWordBoundary: (relativeIndex, _segment, cue) => {
         if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
+        setIsLoading(false);
+        setIsPlaying(true);
         activeIndex = index + relativeIndex;
         if (currentChunkIdxRef.current !== activeIndex) {
           currentChunkIdxRef.current = activeIndex;
@@ -538,6 +580,7 @@ export function useReadAloud(paragraphs: string[]) {
     if (isPaused) {
       setIsPaused(false);
       setIsPlaying(true);
+      setIsLoading(false);
       isPlayingRef.current = true;
       isPausedRef.current = false;
 
@@ -561,7 +604,8 @@ export function useReadAloud(paragraphs: string[]) {
     stopAudioPlayer();
     if (synth) synth.cancel();
 
-    setIsPlaying(true);
+    setIsLoading(true);
+    setIsPlaying(false);
     setIsPaused(false);
     isPlayingRef.current = true;
     isPausedRef.current = false;
@@ -575,6 +619,7 @@ export function useReadAloud(paragraphs: string[]) {
   const pauseReading = () => {
     setIsPlaying(false);
     setIsPaused(true);
+    setIsLoading(false);
     isPlayingRef.current = false;
     isPausedRef.current = true;
 
@@ -596,7 +641,8 @@ export function useReadAloud(paragraphs: string[]) {
       stopAudioPlayer();
       if (synth) synth.cancel();
 
-      setIsPlaying(true);
+      setIsLoading(true);
+      setIsPlaying(false);
       setIsPaused(false);
       isPlayingRef.current = true;
       isPausedRef.current = false;
@@ -615,7 +661,8 @@ export function useReadAloud(paragraphs: string[]) {
       stopAudioPlayer();
       if (synth) synth.cancel();
 
-      setIsPlaying(true);
+      setIsLoading(true);
+      setIsPlaying(false);
       setIsPaused(false);
       isPlayingRef.current = true;
       isPausedRef.current = false;
@@ -639,7 +686,8 @@ export function useReadAloud(paragraphs: string[]) {
       stopAudioPlayer();
       if (synth) synth.cancel();
 
-      setIsPlaying(true);
+      setIsLoading(true);
+      setIsPlaying(false);
       setIsPaused(false);
       isPlayingRef.current = true;
       isPausedRef.current = false;
@@ -651,6 +699,7 @@ export function useReadAloud(paragraphs: string[]) {
   return {
     isPlaying,
     isPaused,
+    isLoading,
     currentChunkIndex,
     activeParagraphIndex,
     startReading,

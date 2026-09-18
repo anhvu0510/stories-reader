@@ -142,7 +142,12 @@ describe('useReadAloud VieNeu streaming speed', () => {
       2,
       'https://tts.example.test',
       expect.any(AbortSignal),
-      undefined
+      undefined,
+      expect.objectContaining({
+        temperature: 0.8,
+        top_k: 25,
+        max_chars: 140,
+      })
     );
 
     await waitFor(() =>

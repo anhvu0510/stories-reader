@@ -33,6 +33,20 @@ export function VoiceSettingsTab() {
     setVieneuServerUrl,
     vieneuModel = '',
     setVieneuModel,
+    vieneuTemperature = 0.8,
+    vieneuTopK = 25,
+    vieneuTopP = 0.95,
+    vieneuMaxNewFrames = 300,
+    vieneuRepetitionPenalty = 1.2,
+    vieneuRepetitionWindow = 80,
+    vieneuSteps = 8,
+    vieneuCfg = 2,
+    vieneuSway = -1,
+    vieneuMaxChars = 140,
+    vieneuDenoise = true,
+    vieneuUseRefCodes = true,
+    vieneuApplyWatermark = true,
+    setVieneuParameter,
   } = useReaderConfigStore();
 
   const [vieneuVoices, setVieneuVoices] = useState<VieNeuVoice[]>([]);
@@ -198,7 +212,21 @@ export function VoiceSettingsTab() {
       }
 
       const sampleText = 'Xin chào bạn, đây là bản đọc thử nghiệm từ máy chủ VieNeu TTS.';
-      const blob = await TTSService.synthesizeSpeech(sampleText, targetVoice, speechRate, vieneuServerUrl, undefined, vieneuModel || undefined);
+      const blob = await TTSService.synthesizeSpeech(sampleText, targetVoice, speechRate, vieneuServerUrl, undefined, vieneuModel || undefined, {
+        temperature: vieneuTemperature,
+        top_k: vieneuTopK,
+        top_p: vieneuTopP,
+        max_new_frames: vieneuMaxNewFrames,
+        repetition_penalty: vieneuRepetitionPenalty,
+        repetition_window: vieneuRepetitionWindow,
+        steps: vieneuSteps,
+        cfg: vieneuCfg,
+        sway: vieneuSway,
+        max_chars: vieneuMaxChars,
+        denoise: vieneuDenoise,
+        use_ref_codes: vieneuUseRefCodes,
+        apply_watermark: vieneuApplyWatermark,
+      });
       const audioUrl = TTSService.createAudioUrl(blob);
 
       const audio = new Audio(audioUrl);
@@ -355,6 +383,30 @@ export function VoiceSettingsTab() {
               </option>
             ))}
           </select>
+
+          <details className="mt-2 rounded-xl bg-black/10 border border-white/10 px-2 py-1.5">
+            <summary className="cursor-pointer text-[10px] font-black text-on-surface-variant uppercase tracking-wider">
+              Tham số nâng cao (áp dụng realtime)
+            </summary>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              {vieneuModel?.endsWith('turbo') ? <>
+                <label className="text-[10px]">Temperature <input type="number" min="0.1" max="2" step="0.05" value={vieneuTemperature} onChange={(e) => setVieneuParameter('vieneuTemperature', Number(e.target.value))} className="w-full mt-1 input input-xs" /></label>
+                <label className="text-[10px]">Top K <input type="number" min="1" max="100" value={vieneuTopK} onChange={(e) => setVieneuParameter('vieneuTopK', Number(e.target.value))} className="w-full mt-1 input input-xs" /></label>
+                <label className="text-[10px]">Top P <input type="number" min="0.1" max="1" step="0.01" value={vieneuTopP} onChange={(e) => setVieneuParameter('vieneuTopP', Number(e.target.value))} className="w-full mt-1 input input-xs" /></label>
+                <label className="text-[10px]">Max frames <input type="number" min="32" max="600" value={vieneuMaxNewFrames} onChange={(e) => setVieneuParameter('vieneuMaxNewFrames', Number(e.target.value))} className="w-full mt-1 input input-xs" /></label>
+                <label className="text-[10px]">Repetition penalty <input type="number" min="1" max="2" step="0.05" value={vieneuRepetitionPenalty} onChange={(e) => setVieneuParameter('vieneuRepetitionPenalty', Number(e.target.value))} className="w-full mt-1 input input-xs" /></label>
+                <label className="text-[10px]">Repetition window <input type="number" min="0" max="300" value={vieneuRepetitionWindow} onChange={(e) => setVieneuParameter('vieneuRepetitionWindow', Number(e.target.value))} className="w-full mt-1 input input-xs" /></label>
+              </> : <>
+                <label className="text-[10px]">Steps <input type="number" min="1" max="32" value={vieneuSteps} onChange={(e) => setVieneuParameter('vieneuSteps', Number(e.target.value))} className="w-full mt-1 input input-xs" /></label>
+                <label className="text-[10px]">CFG <input type="number" min="0" max="10" step="0.1" value={vieneuCfg} onChange={(e) => setVieneuParameter('vieneuCfg', Number(e.target.value))} className="w-full mt-1 input input-xs" /></label>
+                <label className="text-[10px]">Sway <input type="number" min="-2" max="2" step="0.1" value={vieneuSway} onChange={(e) => setVieneuParameter('vieneuSway', Number(e.target.value))} className="w-full mt-1 input input-xs" /></label>
+              </>}
+              <label className="text-[10px]">Max chars/chunk <input type="number" min="40" max="256" value={vieneuMaxChars} onChange={(e) => setVieneuParameter('vieneuMaxChars', Number(e.target.value))} className="w-full mt-1 input input-xs" /></label>
+              <label className="col-span-2 flex items-center gap-2 text-[10px]"><input type="checkbox" checked={vieneuDenoise} onChange={(e) => setVieneuParameter('vieneuDenoise', e.target.checked)} /> Denoise reference</label>
+              {vieneuModel?.endsWith('turbo') && <label className="col-span-2 flex items-center gap-2 text-[10px]"><input type="checkbox" checked={vieneuUseRefCodes} onChange={(e) => setVieneuParameter('vieneuUseRefCodes', e.target.checked)} /> Use reference codes</label>}
+              <label className="col-span-2 flex items-center gap-2 text-[10px]"><input type="checkbox" checked={vieneuApplyWatermark} onChange={(e) => setVieneuParameter('vieneuApplyWatermark', e.target.checked)} /> Audio watermark</label>
+            </div>
+          </details>
         </div>
       )}
 

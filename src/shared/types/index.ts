@@ -151,6 +151,19 @@ export interface ReaderConfig {
   ttsEngine?: 'vieneu' | 'edge' | 'browser';
   vieneuServerUrl?: string;
   vieneuModel?: string;
+  vieneuTemperature?: number;
+  vieneuTopK?: number;
+  vieneuTopP?: number;
+  vieneuMaxNewFrames?: number;
+  vieneuRepetitionPenalty?: number;
+  vieneuRepetitionWindow?: number;
+  vieneuSteps?: number;
+  vieneuCfg?: number;
+  vieneuSway?: number;
+  vieneuMaxChars?: number;
+  vieneuDenoise?: boolean;
+  vieneuUseRefCodes?: boolean;
+  vieneuApplyWatermark?: boolean;
   edgeVoiceUri?: string;
   showTTSControlOnReader?: boolean;
 }
