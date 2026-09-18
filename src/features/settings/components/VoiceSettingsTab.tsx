@@ -93,7 +93,7 @@ export function VoiceSettingsTab() {
     return () => {
       isMounted = false;
     };
-  }, [vieneuServerUrl, ttsEngine, vieneuModel, setVoiceUri, voiceUri]);
+  }, [vieneuServerUrl, ttsEngine, vieneuModel, setVoiceUri]);
 
   // Fetch Edge TTS Voices
   useEffect(() => {
