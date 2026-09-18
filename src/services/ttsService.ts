@@ -23,9 +23,9 @@ export const FALLBACK_VIENEU_VOICES: VieNeuVoice[] = [
   { id: 'Trúc Ly', name: 'Trúc Ly', language: 'vi', gender: 'female', desc: 'Giọng nữ miền Nam truyền cảm' },
   { id: 'Anh Khôi', name: 'Anh Khôi', language: 'vi', gender: 'male', desc: 'Giọng nam trẻ trung, năng động' },
   { id: 'Mạnh Dũng', name: 'Mạnh Dũng', language: 'vi', gender: 'male', desc: 'Giọng nam miền Bắc truyền cảm' },
-  { id: 'Thùy Dung', name: 'Thùy Dung', language: 'vi', gender: 'female', desc: 'Giọng nữ mượt mà, đọc truyện/tiểu thuyết' },
-  { id: 'Quỳnh Anh', name: 'Quỳnh Anh', language: 'vi', gender: 'female', desc: 'Giọng nữ dịu dàng, truyền cảm' },
-  { id: 'Minh Đức', name: 'Minh Đức', language: 'vi', gender: 'male', desc: 'Giọng nam truyền cảm, trầm lắng' },
+  { id: 'Ái Hân', name: 'Ái Hân', language: 'vi', gender: 'female', desc: 'Giọng nữ nhẹ nhàng, truyền cảm' },
+  { id: 'Hữu Quân', name: 'Hữu Quân', language: 'vi', gender: 'male', desc: 'Giọng nam rõ ràng, tự nhiên' },
+  { id: 'Xuân Tiên', name: 'Xuân Tiên', language: 'vi', gender: 'female', desc: 'Giọng nữ đọc truyện tự nhiên' },
   { id: 'Adam', name: 'Adam', language: 'en', gender: 'male', desc: 'Giọng nam tiếng Anh chuẩn (English)' },
 ];
 
