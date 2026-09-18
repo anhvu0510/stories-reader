@@ -27,6 +27,8 @@ export function VoiceSettingsTab() {
     setEdgeVoiceUri,
     speechRate,
     setSpeechRate,
+    vieneuSpeedMode = 'server',
+    setVieneuSpeedMode,
     ttsEngine = 'vieneu',
     setTTSEngine,
     vieneuServerUrl = DEFAULT_VIENEU_SERVER_URL,
@@ -213,7 +215,8 @@ export function VoiceSettingsTab() {
       }
 
       const sampleText = 'Xin chào bạn, đây là bản đọc thử nghiệm từ máy chủ VieNeu TTS.';
-      const blob = await TTSService.synthesizeSpeech(sampleText, targetVoice, speechRate, vieneuServerUrl, undefined, vieneuModel || undefined, {
+      const synthesisSpeed = vieneuSpeedMode === 'frontend' ? 1 : speechRate;
+      const blob = await TTSService.synthesizeSpeech(sampleText, targetVoice, synthesisSpeed, vieneuServerUrl, undefined, vieneuModel || undefined, {
         temperature: vieneuTemperature,
         top_k: vieneuTopK,
         top_p: vieneuTopP,
@@ -232,6 +235,8 @@ export function VoiceSettingsTab() {
       const audioUrl = TTSService.createAudioUrl(blob);
 
       const audio = new Audio(audioUrl);
+      audio.playbackRate = vieneuSpeedMode === 'frontend' ? speechRate : 1;
+      audio.preservesPitch = true;
       audioRef.current = audio;
 
       audio.onended = () => {
@@ -543,6 +548,24 @@ export function VoiceSettingsTab() {
           </div>
         )}
       </div>
+
+      {/* 4. Speech Rate Stepper & Slider */}
+      {ttsEngine === 'vieneu' && (
+        <div className="p-2 rounded-2xl bg-white/5 border border-white/10 space-y-1.5 shadow-xs">
+          <div className="text-xs font-bold text-on-surface">Cách xử lý tốc độ</div>
+          <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-black/10">
+            <button type="button" onClick={() => setVieneuSpeedMode('server')} className={`rounded-lg px-2 py-1.5 text-[11px] font-bold ${vieneuSpeedMode === 'server' ? 'bg-primary/20 text-primary border border-primary/50' : 'text-on-surface-variant'}`}>
+              Server xử lý
+            </button>
+            <button type="button" onClick={() => setVieneuSpeedMode('frontend')} className={`rounded-lg px-2 py-1.5 text-[11px] font-bold ${vieneuSpeedMode === 'frontend' ? 'bg-primary/20 text-primary border border-primary/50' : 'text-on-surface-variant'}`}>
+              FE xử lý
+            </button>
+          </div>
+          <p className="text-[10px] text-on-surface-variant">
+            Server giữ nguyên cao độ ổn định. FE thử tốc độ cục bộ, có thể đổi cao độ ở trình duyệt chưa hỗ trợ time-stretch.
+          </p>
+        </div>
+      )}
 
       {/* 4. Speech Rate Stepper & Slider */}
       <div className="p-2 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-2 shadow-xs">

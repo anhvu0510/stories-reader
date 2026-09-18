@@ -16,6 +16,7 @@ import { useAppStore } from '../stores/useAppStore';
 import { ReadAloudScrollFollower } from '../services/readAloudScrollFollower';
 import { useTTSStore } from '../features/reader/stores/useTTSStore';
 import { BackgroundAudioKeepAlive } from '../services/backgroundAudioKeepAlive';
+import { getVieneuSpeedProfile } from '../services/vieneuSpeedProfile';
 
 export { splitParagraphIntoSentences } from '../services/gaplessTtsPlayer';
 
@@ -28,6 +29,7 @@ export function useReadAloud(paragraphs: string[]) {
   const voiceUri = useReaderConfigStore((state) => state.voiceUri);
   const edgeVoiceUri = useReaderConfigStore((state) => state.edgeVoiceUri || 'vi-VN-HoaiMyNeural');
   const speechRate = useReaderConfigStore((state) => state.speechRate);
+  const vieneuSpeedMode = useReaderConfigStore((state) => state.vieneuSpeedMode || 'server');
   const ttsEngine = useReaderConfigStore((state) => state.ttsEngine || 'vieneu');
   const vieneuServerUrl = useReaderConfigStore((state) => state.vieneuServerUrl || DEFAULT_VIENEU_SERVER_URL);
   const vieneuModel = useReaderConfigStore((state) => state.vieneuModel || undefined);
@@ -53,6 +55,7 @@ export function useReadAloud(paragraphs: string[]) {
     use_ref_codes: vieneuUseRefCodes, apply_watermark: vieneuApplyWatermark,
     ...(vieneuOutputSampleRate ? { output_sample_rate: vieneuOutputSampleRate as 24000 | 48000 } : {}),
   }), [vieneuTemperature, vieneuTopK, vieneuTopP, vieneuMaxNewFrames, vieneuRepetitionPenalty, vieneuRepetitionWindow, vieneuSteps, vieneuCfg, vieneuSway, vieneuMaxChars, vieneuDenoise, vieneuUseRefCodes, vieneuApplyWatermark, vieneuOutputSampleRate]);
+  const vieneuSpeedProfile = getVieneuSpeedProfile(vieneuSpeedMode, speechRate);
 
   const getVieneuOptionsForSegment = (text: string) => ({
     ...vieneuOptions,
@@ -369,7 +372,7 @@ export function useReadAloud(paragraphs: string[]) {
     if (ttsEngine === 'vieneu') {
       stopReading();
     }
-  }, [vieneuModel, voiceUri, ttsEngine, speechRate, vieneuOptions]);
+  }, [vieneuModel, voiceUri, ttsEngine, speechRate, vieneuSpeedMode, vieneuOptions]);
 
   const lastInteractionTime = useRef(0);
 
@@ -572,19 +575,16 @@ export function useReadAloud(paragraphs: string[]) {
     stopAudioPlayer();
     const audioContext = new AudioContextConstructor();
     const activeVoice = voiceUri || undefined;
-    // WebAudio's native playbackRate changes pitch (especially at 1.6x–2x),
-    // so let VieNeu apply the rate and keep the PCM player at neutral speed.
-    // A true FE-only speed change needs an AudioWorklet time-stretcher.
-    const vieneuSynthesisSpeed = speechRate;
+    const { synthesisSpeed, playbackRate } = vieneuSpeedProfile;
     let activeIndex = index;
     const player = new GaplessTtsPlayer({
-      engine: new WebAudioPlaybackEngine(audioContext, 1.0),
+      engine: new WebAudioPlaybackEngine(audioContext, playbackRate),
       speechRate,
       synthesize: (segment, signal) =>
         TTSService.synthesizeSpeech(
           segment.text,
           activeVoice,
-          vieneuSynthesisSpeed,
+          synthesisSpeed,
           vieneuServerUrl,
           signal,
           vieneuModel,
@@ -594,7 +594,7 @@ export function useReadAloud(paragraphs: string[]) {
         TTSService.streamSpeech(
           segment.text,
           activeVoice,
-          vieneuSynthesisSpeed,
+          synthesisSpeed,
           vieneuServerUrl,
           signal,
           vieneuModel,

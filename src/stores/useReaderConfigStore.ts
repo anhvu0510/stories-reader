@@ -15,6 +15,7 @@ const defaultSettings: ReaderConfig = {
   isEnabledReplace: true,
   voiceUri: '',
   speechRate: 1.0,
+  vieneuSpeedMode: 'server',
   bookLimit: 20,
   chapterLimit: 50,
   ttsEngine: 'vieneu',
@@ -59,6 +60,7 @@ interface ReaderConfigStore extends ReaderConfig {
   setIsEnabledReplace: (enabled: boolean) => void;
   setVoiceUri: (voiceUri: string) => void;
   setSpeechRate: (speechRate: number) => void;
+  setVieneuSpeedMode: (mode: 'server' | 'frontend') => void;
   setTTSEngine: (engine: 'vieneu' | 'edge' | 'browser') => void;
   setVieneuServerUrl: (url: string) => void;
   setVieneuModel: (model: string) => void;
@@ -167,6 +169,13 @@ export const useReaderConfigStore = create<ReaderConfigStore>((set, get) => {
         const next = { ...state, speechRate };
         persist(next);
         return { speechRate };
+      });
+    },
+    setVieneuSpeedMode: (vieneuSpeedMode) => {
+      set((state) => {
+        const next = { ...state, vieneuSpeedMode };
+        persist(next);
+        return { vieneuSpeedMode };
       });
     },
     setTTSEngine: (ttsEngine) => {
