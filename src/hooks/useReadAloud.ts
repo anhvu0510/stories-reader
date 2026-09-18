@@ -86,6 +86,7 @@ export function useReadAloud(paragraphs: string[]) {
   const edgeAudioRef = useRef<HTMLAudioElement | null>(null);
   const edgeAudioUrlRef = useRef<string | null>(null);
   const edgeBoundaryFrameRef = useRef<number | null>(null);
+  const edgeRequestAbortRef = useRef<AbortController | null>(null);
 
   const stopEdgeBoundaryTracking = () => {
     if (edgeBoundaryFrameRef.current !== null) {
@@ -113,6 +114,8 @@ export function useReadAloud(paragraphs: string[]) {
   };
 
   const stopAudioPlayer = () => {
+    edgeRequestAbortRef.current?.abort();
+    edgeRequestAbortRef.current = null;
     edgePrefetchCacheRef.current.clear();
     releaseEdgeAudio();
     const player = gaplessPlayerRef.current;
@@ -131,12 +134,16 @@ export function useReadAloud(paragraphs: string[]) {
     if (edgePrefetchCacheRef.current.has(index)) return;
     const chunk = chunks[index];
     if (!chunk || !chunk.text.trim()) return;
+    if (!edgeRequestAbortRef.current || edgeRequestAbortRef.current.signal.aborted) {
+      edgeRequestAbortRef.current = new AbortController();
+    }
 
     const promise = EdgeTTSService.synthesizeSpeechWithBoundaries(
       chunk.text,
       edgeVoiceUri,
       speechRate,
-      activeDomain?.url
+      activeDomain?.url,
+      edgeRequestAbortRef.current.signal
     ).catch((err) => {
       edgePrefetchCacheRef.current.delete(index);
       throw err;
@@ -162,7 +169,17 @@ export function useReadAloud(paragraphs: string[]) {
 
     releaseEdgeAudio();
 
-    // Prefetch upcoming chunks
+    // Put the audio the listener needs now at the front of the server's
+    // serialized Edge TTS queue. Starting speculative requests first can add
+    // multiple synthesis windows to initial playback latency.
+    prefetchEdgeChunk(index);
+    const fetchPromise = edgePrefetchCacheRef.current.get(index);
+    if (!fetchPromise) {
+      playChunkViaBrowser(index, 0, sessionId);
+      return;
+    }
+
+    // Prefetch upcoming chunks only after the current request is in flight.
     prefetchEdgeChunk(index + 1);
     prefetchEdgeChunk(index + 2);
 
@@ -170,15 +187,6 @@ export function useReadAloud(paragraphs: string[]) {
     for (const k of edgePrefetchCacheRef.current.keys()) {
       if (k < index) edgePrefetchCacheRef.current.delete(k);
     }
-
-    const fetchPromise =
-      edgePrefetchCacheRef.current.get(index) ||
-      EdgeTTSService.synthesizeSpeechWithBoundaries(
-        chunk.text,
-        edgeVoiceUri,
-        speechRate,
-        activeDomain?.url
-      );
 
     fetchPromise
       .then(({ audio: blob, wordBoundaries }) => {
@@ -264,6 +272,8 @@ export function useReadAloud(paragraphs: string[]) {
         });
       })
       .catch((err) => {
+        if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         console.warn('[Edge TTS] Synthesis error, fallback to browser voice:', err);
         playChunkViaBrowser(index, 0, sessionId);
       });

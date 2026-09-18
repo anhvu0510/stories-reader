@@ -291,4 +291,31 @@ describe('useReadAloud Edge word boundaries', () => {
 
     unmount();
   });
+
+  it('queues the current segment before speculative Edge prefetches', async () => {
+    const synthesize = vi
+      .spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries')
+      .mockResolvedValue({
+        audio: new Blob(['audio'], { type: 'audio/mpeg' }),
+        wordBoundaries: [],
+      });
+    const paragraphs = [
+      'Đoạn hiện tại cần được phát ngay.',
+      'Đoạn kế tiếp chỉ dùng để tải trước.',
+      'Đoạn thứ ba cũng chỉ dùng để tải trước.',
+    ];
+    const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
+
+    act(() => result.current.startReading());
+    await waitFor(() => expect(synthesize).toHaveBeenCalledTimes(3));
+
+    expect(synthesize.mock.calls.map(([text]) => text)).toEqual(paragraphs);
+    const requestSignals = synthesize.mock.calls.map((call) => call[4]);
+    expect(requestSignals.every((signal) => signal && !signal.aborted)).toBe(true);
+
+    act(() => result.current.stopReading());
+    expect(requestSignals.every((signal) => signal?.aborted)).toBe(true);
+
+    unmount();
+  });
 });
