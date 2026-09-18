@@ -572,13 +572,13 @@ export function useReadAloud(paragraphs: string[]) {
     stopAudioPlayer();
     const audioContext = new AudioContextConstructor();
     const activeVoice = voiceUri || undefined;
-    // Keep VieNeu inference at neutral speed. The listener's speed is applied
-    // once, locally, by WebAudioPlaybackEngine so synthesis quality and
-    // server latency stay stable across 1.0x–2.0x playback settings.
-    const vieneuSynthesisSpeed = 1.0;
+    // WebAudio's native playbackRate changes pitch (especially at 1.6x–2x),
+    // so let VieNeu apply the rate and keep the PCM player at neutral speed.
+    // A true FE-only speed change needs an AudioWorklet time-stretcher.
+    const vieneuSynthesisSpeed = speechRate;
     let activeIndex = index;
     const player = new GaplessTtsPlayer({
-      engine: new WebAudioPlaybackEngine(audioContext, speechRate),
+      engine: new WebAudioPlaybackEngine(audioContext, 1.0),
       speechRate,
       synthesize: (segment, signal) =>
         TTSService.synthesizeSpeech(
