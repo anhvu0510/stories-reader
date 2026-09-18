@@ -86,6 +86,10 @@ export function useReadAloud(
   }
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  // Edge can share its native SpeechSynthesis queue across same-site tabs.
+  // Track whether this hook instance has actually put an utterance on that
+  // queue so an idle tab cannot cancel another tab's narration.
+  const ownsBrowserSpeechQueueRef = useRef(false);
   const backgroundAudioRef = useRef<BackgroundAudioKeepAlive | null>(null);
   if (!backgroundAudioRef.current) {
     backgroundAudioRef.current = new BackgroundAudioKeepAlive();
@@ -373,6 +377,7 @@ export function useReadAloud(
   };
 
   const stopReading = () => {
+    const ownsBrowserSpeechQueue = ownsBrowserSpeechQueueRef.current;
     setIsPlaying(false);
     setIsPaused(false);
     setIsLoading(false);
@@ -384,7 +389,9 @@ export function useReadAloud(
     backgroundAudioRef.current?.stop();
     wordHighlighterRef.current?.clear();
     scrollFollowerRef.current?.cancel();
-    if (synth) synth.cancel();
+    if (ownsBrowserSpeechQueue && synth) synth.cancel();
+    ownsBrowserSpeechQueueRef.current = false;
+    utteranceRef.current = null;
 
     currentChunkIdxRef.current = 0;
     setCurrentChunkIndex(-1);
@@ -439,7 +446,7 @@ export function useReadAloud(
         if (edgeAudioRef.current?.paused) {
           void edgeAudioRef.current.play().catch(() => {});
         }
-      } else {
+      } else if (ownsBrowserSpeechQueueRef.current) {
         synth?.resume();
       }
     };
@@ -575,6 +582,10 @@ export function useReadAloud(
 
     utterance.onend = () => {
       if (playSessionIdRef.current !== sessionId) return;
+      if (utteranceRef.current === utterance) {
+        utteranceRef.current = null;
+        ownsBrowserSpeechQueueRef.current = false;
+      }
       if (isPlayingRef.current && !isPausedRef.current) {
         playChunk(index + 1, 0);
       }
@@ -582,6 +593,10 @@ export function useReadAloud(
 
     utterance.onerror = (e) => {
       if (playSessionIdRef.current !== sessionId) return;
+      if (utteranceRef.current === utterance) {
+        utteranceRef.current = null;
+        ownsBrowserSpeechQueueRef.current = false;
+      }
       if (e.error === 'canceled') return;
       console.warn('Browser SpeechSynthesis error:', e.error);
       if (isPlayingRef.current && !isPausedRef.current) {
@@ -590,6 +605,7 @@ export function useReadAloud(
     };
 
     utteranceRef.current = utterance;
+    ownsBrowserSpeechQueueRef.current = true;
     synth.speak(utterance);
   };
 
@@ -734,7 +750,9 @@ export function useReadAloud(
     playSessionIdRef.current = newSessionId;
 
     stopAudioPlayer();
-    if (synth) synth.cancel();
+    if (ownsBrowserSpeechQueueRef.current && synth) synth.cancel();
+    ownsBrowserSpeechQueueRef.current = false;
+    utteranceRef.current = null;
 
     setIsLoading(true);
     setIsPlaying(false);
@@ -760,7 +778,7 @@ export function useReadAloud(
     if (gaplessPlayerRef.current) {
       void gaplessPlayerRef.current.pause();
     }
-    if (ttsEngine === 'browser' && synth) {
+    if (ttsEngine === 'browser' && ownsBrowserSpeechQueueRef.current && synth) {
       synth.pause();
     } else if (ttsEngine === 'edge') {
       edgeAudioRef.current?.pause();
@@ -773,7 +791,9 @@ export function useReadAloud(
       const nextIdx = currentChunkIdxRef.current + 1;
       playSessionIdRef.current += 1;
       stopAudioPlayer();
-      if (synth) synth.cancel();
+      if (ownsBrowserSpeechQueueRef.current && synth) synth.cancel();
+      ownsBrowserSpeechQueueRef.current = false;
+      utteranceRef.current = null;
 
       setIsLoading(true);
       setIsPlaying(false);
@@ -793,7 +813,9 @@ export function useReadAloud(
       const prevIdx = currentChunkIdxRef.current - 1;
       playSessionIdRef.current += 1;
       stopAudioPlayer();
-      if (synth) synth.cancel();
+      if (ownsBrowserSpeechQueueRef.current && synth) synth.cancel();
+      ownsBrowserSpeechQueueRef.current = false;
+      utteranceRef.current = null;
 
       setIsLoading(true);
       setIsPlaying(false);
@@ -818,7 +840,9 @@ export function useReadAloud(
     if (targetIndex !== -1) {
       playSessionIdRef.current += 1;
       stopAudioPlayer();
-      if (synth) synth.cancel();
+      if (ownsBrowserSpeechQueueRef.current && synth) synth.cancel();
+      ownsBrowserSpeechQueueRef.current = false;
+      utteranceRef.current = null;
 
       setIsLoading(true);
       setIsPlaying(false);

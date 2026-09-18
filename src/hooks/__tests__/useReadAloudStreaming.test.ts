@@ -393,3 +393,58 @@ describe('useReadAloud Edge word boundaries', () => {
     unmount();
   });
 });
+
+describe('useReadAloud browser speech ownership', () => {
+  const createSpeechSynthesis = () => ({
+    cancel: vi.fn(),
+    pause: vi.fn(),
+    resume: vi.fn(),
+    speak: vi.fn(),
+    getVoices: vi.fn(() => []),
+  });
+
+  it('does not cancel browser speech when this tab has never started reading', () => {
+    const speechSynthesis = createSpeechSynthesis();
+    vi.stubGlobal('speechSynthesis', speechSynthesis);
+    useReaderConfigStore.setState({ ttsEngine: 'browser' });
+
+    const { rerender, unmount } = renderHook(
+      ({ paragraphs }) => useReadAloud(paragraphs),
+      { initialProps: { paragraphs: ['Tab này chưa từng bắt đầu đọc.'] } }
+    );
+
+    rerender({ paragraphs: ['Trang khác vừa được tải lại.'] });
+    unmount();
+
+    // Edge can share a native SpeechSynthesis queue across same-site tabs.
+    // An idle tab must never cancel a queue it does not own.
+    expect(speechSynthesis.cancel).not.toHaveBeenCalled();
+  });
+
+  it('still cancels the native queue when this tab started the utterance', () => {
+    const speechSynthesis = createSpeechSynthesis();
+    vi.stubGlobal('speechSynthesis', speechSynthesis);
+    vi.stubGlobal('SpeechSynthesisUtterance', class {
+      public rate = 1;
+      public voice: SpeechSynthesisVoice | null = null;
+      public onstart: (() => void) | null = null;
+      public onboundary: ((event: SpeechSynthesisEvent) => void) | null = null;
+      public onend: (() => void) | null = null;
+      public onerror: ((event: SpeechSynthesisErrorEvent) => void) | null = null;
+
+      public constructor(public readonly text: string) {}
+    });
+    useReaderConfigStore.setState({ ttsEngine: 'browser' });
+
+    const { result, unmount } = renderHook(() =>
+      useReadAloud(['Tab này đang đọc nên được phép tự dừng.'])
+    );
+
+    act(() => result.current.startReading());
+    expect(speechSynthesis.speak).toHaveBeenCalledTimes(1);
+
+    act(() => result.current.stopReading());
+    expect(speechSynthesis.cancel).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+});
