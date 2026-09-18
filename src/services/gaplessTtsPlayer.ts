@@ -92,8 +92,8 @@ interface PlaybackSession {
 }
 
 const MAX_PHRASE_CHARACTERS = 180;
-const DEFAULT_TARGET_CHARACTERS = 320;
-const DEFAULT_MAX_CHARACTERS = 480;
+const DEFAULT_TARGET_CHARACTERS = 160;
+const DEFAULT_MAX_CHARACTERS = MAX_PHRASE_CHARACTERS;
 const WORD_PATTERN = /[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/gu;
 
 function joinChunksPreservingOffsets(previous: SentenceChunk, next: SentenceChunk): string {

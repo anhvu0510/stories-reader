@@ -74,7 +74,7 @@ describe('buildSpeechSegments', () => {
     ]);
   });
 
-  it('batches several sentences from one paragraph into one bounded streaming request by default', () => {
+  it('keeps default streaming requests within one natural phrase', () => {
     const paragraph = [
       'Câu thứ nhất giới thiệu bối cảnh và các nhân vật đang xuất hiện trong câu chuyện.',
       'Câu thứ hai tiếp tục diễn biến để luồng đọc có đủ dữ liệu dự phòng.',
@@ -84,9 +84,9 @@ describe('buildSpeechSegments', () => {
 
     const segments = buildSpeechSegments(sentences);
 
-    expect(segments).toHaveLength(1);
-    expect(segments[0].text).toBe(paragraph);
-    expect(segments[0].length).toBeLessThanOrEqual(480);
+    expect(segments.length).toBeGreaterThan(1);
+    expect(segments.every((segment) => segment.length <= 180)).toBe(true);
+    expect(segments.map((segment) => segment.text).join(' ')).toBe(paragraph);
   });
 
   it('splits an unusually long sentence into source-aligned speech phrases', () => {
