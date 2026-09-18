@@ -130,7 +130,7 @@ describe('useReadAloud VieNeu streaming speed', () => {
     }));
     const synthesizeSpeech = vi.spyOn(TTSService, 'synthesizeSpeech').mockResolvedValue(new Blob());
 
-    const paragraphs = ['Câu đầu tiên. Câu thứ hai tiếp tục nội dung.'];
+    const paragraphs = ['Câu đầu tiên. \u2063 Câu thứ hai tiếp tục nội dung.'];
     const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
 
     act(() => result.current.startReading());

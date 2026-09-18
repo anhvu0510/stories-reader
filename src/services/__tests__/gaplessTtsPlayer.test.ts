@@ -4,6 +4,7 @@ import {
   buildWordTimeline,
   GaplessTtsPlayer,
   splitParagraphIntoSentences,
+  splitByDatabaseBoundaries,
   WebAudioPlaybackEngine,
   type AudioPlaybackEngine,
   type DecodedAudio,
@@ -160,6 +161,14 @@ describe('buildSpeechSegments', () => {
     chunks.forEach((chunk) => {
       expect(paragraph.slice(chunk.startOffset, chunk.startOffset + chunk.length)).toBe(chunk.text);
     });
+  });
+
+  it('keeps DB sentence text intact without punctuation or word-based splitting', () => {
+    const paragraph = 'Một câu dài, có nhiều dấu phẩy nhưng vẫn là một đơn vị DB.';
+    const [chunk] = splitByDatabaseBoundaries(paragraph, 1);
+
+    expect(chunk.text).toBe(paragraph);
+    expect(chunk.length).toBe(paragraph.length);
   });
 
   it('does not merge a short trailing sentence past the phrase limit', () => {

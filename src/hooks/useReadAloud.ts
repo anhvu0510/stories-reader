@@ -6,9 +6,8 @@ import {
   type EdgeSpeechWithBoundaries,
 } from '../services/edgeTtsService';
 import {
-  buildSpeechSegments,
   GaplessTtsPlayer,
-  splitParagraphIntoSentences,
+  splitByDatabaseBoundaries,
   type SentenceChunk,
   WebAudioPlaybackEngine,
 } from '../services/gaplessTtsPlayer';
@@ -22,7 +21,6 @@ export { splitParagraphIntoSentences } from '../services/gaplessTtsPlayer';
 const WORD_HIGHLIGHT_CLASS = 'msreadout-word-highlight';
 // Keep a grouped source line in one request whenever possible. The API accepts
 // up to 512 chars; 480 leaves headroom for request normalization.
-const VIENEU_SEGMENT_MAX_CHARACTERS = 480;
 
 export function useReadAloud(paragraphs: string[]) {
   const activeDomain = useAppStore((state) => state.activeDomain);
@@ -87,10 +85,6 @@ export function useReadAloud(paragraphs: string[]) {
 
   const chunks = useMemo(() => {
     const res: SentenceChunk[] = [];
-    const isVieneu = ttsEngine === 'vieneu';
-    const splitOptions = isVieneu
-      ? { maxCharacters: VIENEU_SEGMENT_MAX_CHARACTERS }
-      : undefined;
     paragraphs.forEach((html, pIdx) => {
       if (!html) return;
       const tmp = document.createElement('div');
@@ -98,22 +92,18 @@ export function useReadAloud(paragraphs: string[]) {
       const text = tmp.textContent || tmp.innerText || '';
 
       if (text.trim()) {
-        const sentenceChunks = splitParagraphIntoSentences(text, pIdx, splitOptions);
+        // Paragraphs are already sentence units from getChapterContent. The
+        // only valid subdivision is the invisible DB grouping delimiter.
+        const sentenceChunks = splitByDatabaseBoundaries(text, pIdx);
         res.push(...sentenceChunks);
       }
     });
-    if (isVieneu) {
-      // Keep one sentence per request so the server/model never receives a
-      // cross-sentence bundle. Long sentences were already split on whitespace
-      // by splitParagraphIntoSentences above.
-      return res.map((sentence, sentenceIndex) => ({
-        ...sentence,
-        sentenceStartIndex: sentenceIndex,
-        sentenceEndIndex: sentenceIndex,
-      }));
-    }
-    return buildSpeechSegments(res);
-  }, [paragraphs, ttsEngine]);
+    return res.map((sentence, sentenceIndex) => ({
+      ...sentence,
+      sentenceStartIndex: sentenceIndex,
+      sentenceEndIndex: sentenceIndex,
+    }));
+  }, [paragraphs]);
 
   const activeParagraphIndex =
     currentChunkIndex >= 0 && chunks[currentChunkIndex]

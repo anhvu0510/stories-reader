@@ -300,6 +300,30 @@ export function splitParagraphIntoSentences(
   return mergedSentences;
 }
 
+/** Split only at the explicit DB delimiter; each part remains an atomic source unit. */
+export function splitByDatabaseBoundaries(text: string, pIdx: number): SentenceChunk[] {
+  if (!text || !text.trim()) return [];
+
+  const parts = text.split(INVISIBLE_SENTENCE_DELIMITER);
+  const chunks: SentenceChunk[] = [];
+  let offset = 0;
+  parts.forEach((part, index) => {
+    const leadingSpaces = part.length - part.trimStart().length;
+    const trimmed = part.trim();
+    if (trimmed) {
+      chunks.push({
+        pIdx,
+        text: trimmed,
+        startOffset: offset + leadingSpaces,
+        length: trimmed.length,
+        explicitBoundary: index < parts.length - 1,
+      });
+    }
+    offset += part.length + INVISIBLE_SENTENCE_DELIMITER.length;
+  });
+  return chunks;
+}
+
 export function buildSpeechSegments(
   sentences: SentenceChunk[],
   options: SpeechSegmentOptions = {}
