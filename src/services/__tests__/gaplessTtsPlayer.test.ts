@@ -383,6 +383,120 @@ describe('GaplessTtsPlayer', () => {
     await player.stop();
   });
 
+  it.each([1.6, 1.8, 2])(
+    'buffers an atomic PCM segment before playback so highlighting stays aligned at %sx',
+    async (speechRate) => {
+      let streamController: ReadableStreamDefaultController<Uint8Array> | undefined;
+      let tickAudioClock: ((currentTime: number) => void) | undefined;
+      const highlightedWords: string[] = [];
+      const engine: AudioPlaybackEngine = {
+        now: () => 0,
+        decode: vi.fn(async (): Promise<DecodedAudio> => ({ duration: 2, value: null })),
+        schedule: vi.fn(),
+        beginPcmStream: vi.fn((sampleRate, _channels, startAt): PcmStreamPlayback => {
+          let duration = 0;
+          return {
+            startAt,
+            get duration() {
+              return duration;
+            },
+            get endAt() {
+              return startAt + duration;
+            },
+            ended: createPendingPromise(),
+            append: (chunk: Uint8Array) => {
+              duration += chunk.byteLength / 2 / sampleRate;
+            },
+            finish: vi.fn(),
+            stop: vi.fn(),
+          };
+        }),
+        watchTime: (callback) => {
+          tickAudioClock = callback;
+          return vi.fn();
+        },
+        pause: vi.fn(async () => {}),
+        resume: vi.fn(async () => {}),
+        dispose: vi.fn(async () => {}),
+      };
+      const stream = vi.fn(async () => ({
+        body: new ReadableStream<Uint8Array>({
+          start(controller) {
+            streamController = controller;
+            controller.enqueue(new Uint8Array(2));
+          },
+        }),
+        sampleRate: 10,
+        channels: 1,
+        sampleFormat: 's16le' as const,
+      }));
+      const segment: SpeechSegment = {
+        ...createSegment(0),
+        text: 'một hai ba bốn',
+        length: 15,
+      };
+      const player = new GaplessTtsPlayer({
+        engine,
+        synthesize: vi.fn(async () => new Blob()),
+        stream,
+        speechRate,
+        startLeadSeconds: 0,
+      });
+
+      player.start([segment], {
+        onWordBoundary: (_index, _segment, cue) => highlightedWords.push(cue.text),
+      });
+      await vi.waitFor(() => expect(stream).toHaveBeenCalledTimes(1));
+
+      expect(engine.beginPcmStream).not.toHaveBeenCalled();
+      expect(tickAudioClock).toBeUndefined();
+
+      streamController?.enqueue(new Uint8Array(78));
+      streamController?.close();
+      await vi.waitFor(() => expect(engine.beginPcmStream).toHaveBeenCalledTimes(1));
+
+      tickAudioClock?.(1);
+      expect(highlightedWords).toEqual(['một']);
+
+      await player.stop();
+    }
+  );
+
+  it('cancels an atomic PCM download when playback is stopped', async () => {
+    const cancelStream = vi.fn(async () => {});
+    const stream = vi.fn(async () => ({
+      body: new ReadableStream<Uint8Array>({
+        pull() {
+          return new Promise<void>(() => {});
+        },
+        cancel: cancelStream,
+      }),
+      sampleRate: 24000,
+      channels: 1,
+      sampleFormat: 's16le' as const,
+    }));
+    const engine: AudioPlaybackEngine = {
+      now: () => 0,
+      decode: vi.fn(async (): Promise<DecodedAudio> => ({ duration: 1, value: null })),
+      schedule: vi.fn(),
+      beginPcmStream: vi.fn(),
+      pause: vi.fn(async () => {}),
+      resume: vi.fn(async () => {}),
+      dispose: vi.fn(async () => {}),
+    };
+    const player = new GaplessTtsPlayer({
+      engine,
+      synthesize: vi.fn(async () => new Blob()),
+      stream,
+    });
+
+    player.start([createSegment(0)]);
+    await vi.waitFor(() => expect(stream).toHaveBeenCalledTimes(1));
+    await player.stop();
+
+    expect(cancelStream).toHaveBeenCalledTimes(1);
+  });
+
   it('prefetches and drains upcoming PCM streams while the current response is still flowing', async () => {
     let firstController: ReadableStreamDefaultController<Uint8Array> | undefined;
     let secondStreamPulls = 0;
@@ -528,7 +642,7 @@ describe('GaplessTtsPlayer', () => {
     await player.stop();
   });
 
-  it('cleans up an empty PCM playback before falling back to decoded WAV', async () => {
+  it('falls back before creating PCM playback when the atomic stream fails', async () => {
     const stopPcm = vi.fn();
     let fallbackSignal: AbortSignal | undefined;
     const engine: AudioPlaybackEngine = {
@@ -571,7 +685,8 @@ describe('GaplessTtsPlayer', () => {
     player.start([createSegment(0)]);
     await vi.waitFor(() => expect(engine.schedule).toHaveBeenCalledTimes(1));
 
-    expect(stopPcm).toHaveBeenCalledTimes(1);
+    expect(engine.beginPcmStream).not.toHaveBeenCalled();
+    expect(stopPcm).not.toHaveBeenCalled();
     expect(fallbackSignal?.aborted).toBe(false);
 
     await player.stop();

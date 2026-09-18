@@ -98,7 +98,8 @@ interface PlaybackSession {
 interface PrefetchedPcmStream {
   sampleRate: number;
   channels: number;
-  read: () => Promise<ReadableStreamReadResult<Uint8Array>>;
+  chunks: Uint8Array[];
+  byteLength: number;
 }
 
 const MAX_PHRASE_CHARACTERS = 180;
@@ -126,119 +127,9 @@ const ELLIPSIS_ENDING_PATTERN = /(?:\.{3}|…)["'”’)\]]*$/u;
 const EXPRESSIVE_ENDING_PATTERN = /[!?]+["'”’)\]]*$/u;
 const SENTENCE_ENDING_PATTERN = /\.["'”’)\]]*$/u;
 const CLAUSE_ENDING_PATTERN = /[,;:]["'”’)\]]*$/u;
-const STREAM_PREFETCH_BUFFER_SECONDS = 4;
 const PCM_INITIAL_BUFFER_SECONDS = 0.2;
 const PCM_STEADY_BUFFER_SECONDS = 0.1;
 const PCM_SCHEDULE_LEAD_SECONDS = 0.03;
-
-class BoundedPcmStreamBuffer {
-  private readonly reader: ReadableStreamDefaultReader<Uint8Array>;
-  private readonly maxBufferedBytes: number;
-  private readonly abortSignal: AbortSignal;
-  private readonly chunks: Uint8Array[] = [];
-  private readonly readWaiters: Array<{
-    resolve: (result: ReadableStreamReadResult<Uint8Array>) => void;
-    reject: (error: unknown) => void;
-  }> = [];
-  private readonly capacityWaiters: Array<() => void> = [];
-  private bufferedBytes = 0;
-  private isDone = false;
-  private failure: unknown = null;
-
-  constructor(
-    body: ReadableStream<Uint8Array>,
-    maxBufferedBytes: number,
-    abortSignal: AbortSignal
-  ) {
-    this.reader = body.getReader();
-    this.maxBufferedBytes = Math.max(1, maxBufferedBytes);
-    this.abortSignal = abortSignal;
-    this.abortSignal.addEventListener('abort', this.handleAbort, { once: true });
-    void this.pump();
-  }
-
-  public async read(): Promise<ReadableStreamReadResult<Uint8Array>> {
-    const chunk = this.chunks.shift();
-    if (chunk) {
-      this.bufferedBytes -= chunk.byteLength;
-      this.releaseCapacity();
-      return { done: false, value: chunk };
-    }
-    if (this.failure) throw this.failure;
-    if (this.isDone) return { done: true, value: undefined };
-
-    return new Promise<ReadableStreamReadResult<Uint8Array>>((resolve, reject) => {
-      this.readWaiters.push({ resolve, reject });
-    });
-  }
-
-  private readonly handleAbort = () => {
-    void this.reader.cancel().catch(() => {});
-    this.finish();
-  };
-
-  private async pump(): Promise<void> {
-    try {
-      while (!this.abortSignal.aborted) {
-        await this.waitForCapacity();
-        if (this.abortSignal.aborted) break;
-
-        const result = await this.reader.read();
-        if (result.done) {
-          this.finish();
-          return;
-        }
-        if (!result.value || result.value.byteLength === 0) continue;
-
-        const waiter = this.readWaiters.shift();
-        if (waiter) {
-          waiter.resolve({ done: false, value: result.value });
-        } else {
-          this.chunks.push(result.value);
-          this.bufferedBytes += result.value.byteLength;
-        }
-      }
-      this.finish();
-    } catch (error: unknown) {
-      if (this.abortSignal.aborted) {
-        this.finish();
-      } else {
-        this.fail(error);
-      }
-    } finally {
-      this.abortSignal.removeEventListener('abort', this.handleAbort);
-      this.reader.releaseLock();
-    }
-  }
-
-  private async waitForCapacity(): Promise<void> {
-    if (this.bufferedBytes < this.maxBufferedBytes) return;
-    await new Promise<void>((resolve) => {
-      this.capacityWaiters.push(resolve);
-    });
-  }
-
-  private releaseCapacity(): void {
-    if (this.bufferedBytes >= this.maxBufferedBytes) return;
-    this.capacityWaiters.splice(0).forEach((resolve) => resolve());
-  }
-
-  private finish(): void {
-    if (this.isDone) return;
-    this.isDone = true;
-    this.capacityWaiters.splice(0).forEach((resolve) => resolve());
-    this.readWaiters.splice(0).forEach(({ resolve }) => {
-      resolve({ done: true, value: undefined });
-    });
-  }
-
-  private fail(error: unknown): void {
-    this.failure = error;
-    this.isDone = true;
-    this.capacityWaiters.splice(0).forEach((resolve) => resolve());
-    this.readWaiters.splice(0).forEach(({ reject }) => reject(error));
-  }
-}
 
 function getBoundaryPauseSeconds(previous: SpeechSegment, next: SpeechSegment): number {
   if (previous.pIdx !== next.pIdx) return NATURAL_FAST_PAUSE_PROFILE.paragraph;
@@ -471,7 +362,6 @@ export class GaplessTtsPlayer {
   private readonly engine: AudioPlaybackEngine;
   private readonly synthesize: GaplessTtsPlayerOptions['synthesize'];
   private readonly stream?: GaplessTtsPlayerOptions['stream'];
-  private readonly speechRate: number;
   private readonly startLeadSeconds: number;
   private readonly prefetchAhead: number;
   private readonly scheduledAudio = new Set<ScheduledAudio>();
@@ -482,7 +372,6 @@ export class GaplessTtsPlayer {
     this.engine = options.engine;
     this.synthesize = options.synthesize;
     this.stream = options.stream;
-    this.speechRate = Math.max(0.25, Math.min(options.speechRate ?? 1.0, 4.0));
     this.startLeadSeconds = Math.max(0, options.startLeadSeconds ?? 0.03);
     this.prefetchAhead = Math.max(1, Math.floor(options.prefetchAhead ?? 2));
   }
@@ -642,6 +531,10 @@ export class GaplessTtsPlayer {
         preparedStreams.delete(index);
         prefetchAfter(index);
 
+        if (audioStream.byteLength === 0) {
+          throw new Error('TTS streaming returned no audio');
+        }
+
         const startAt = previousPlayback
           ? previousPlayback.endAt + getBoundaryPauseSeconds(segments[index - 1], segment)
           : this.engine.now() + this.startLeadSeconds;
@@ -651,54 +544,30 @@ export class GaplessTtsPlayer {
           startAt
         );
         this.scheduledAudio.add(playback);
-        let hasSegmentAudio = false;
-        let segmentCues: Array<
-          WordCue & { absoluteStart: number; segmentIndex: number; segment: SpeechSegment }
-        > = [];
-        const startSegmentPlayback = () => {
-          if (hasSegmentAudio || playback.duration <= 0) return;
-          hasSegmentAudio = true;
-          hasScheduledAudio = true;
-
-          const estimatedDuration = this.estimateSpeechDuration(segment.text);
-          segmentCues = this.queueWordCuesForDuration(
-            session,
-            index,
-            segment,
-            estimatedDuration,
-            playback.startAt
-          );
-          this.startWordTracking(session, callbacks);
-
-          if (previousPlayback) {
-            const priorPlayback = previousPlayback;
-            void Promise.race([priorPlayback.ended, session.cancelled]).then(() => {
-              if (this.isActive(session)) {
-                callbacks.onSegmentStart?.(index, segment);
-              }
-            });
-          } else {
-            callbacks.onSegmentStart?.(index, segment);
-          }
-        };
-
-        while (this.isActive(session)) {
-          const { value, done } = await audioStream.read();
-          if (done) break;
-          if (!value || value.byteLength === 0) continue;
-
-          playback.append(value);
-          startSegmentPlayback();
-        }
-
-        if (!this.isActive(session)) return;
+        audioStream.chunks.forEach((chunk) => playback.append(chunk));
         playback.finish();
-        startSegmentPlayback();
-        if (!hasSegmentAudio) {
-          throw new Error('TTS streaming returned no audio');
+        hasScheduledAudio = true;
+
+        this.queueWordCuesForDuration(
+          session,
+          index,
+          segment,
+          playback.duration,
+          playback.startAt
+        );
+        this.startWordTracking(session, callbacks);
+
+        if (previousPlayback) {
+          const priorPlayback = previousPlayback;
+          void Promise.race([priorPlayback.ended, session.cancelled]).then(() => {
+            if (this.isActive(session)) {
+              callbacks.onSegmentStart?.(index, segment);
+            }
+          });
+        } else {
+          callbacks.onSegmentStart?.(index, segment);
         }
 
-        this.correctPendingWordCues(segmentCues, segment.text, playback.duration, playback.startAt);
         void playback.ended.then(() => this.scheduledAudio.delete(playback));
         previousPlayback = playback;
       }
@@ -733,17 +602,35 @@ export class GaplessTtsPlayer {
     }
 
     const audioStream = await this.stream(segment, session.controller.signal);
-    const bytesPerSecond = audioStream.sampleRate * audioStream.channels * 2;
-    const buffer = new BoundedPcmStreamBuffer(
-      audioStream.body,
-      bytesPerSecond * STREAM_PREFETCH_BUFFER_SECONDS,
-      session.controller.signal
-    );
+    const reader = audioStream.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let byteLength = 0;
+    const cancelReader = () => {
+      void reader.cancel().catch(() => {});
+    };
+    session.controller.signal.addEventListener('abort', cancelReader, { once: true });
+
+    try {
+      if (session.controller.signal.aborted) {
+        cancelReader();
+      }
+      while (!session.controller.signal.aborted) {
+        const result = await reader.read();
+        if (result.done) break;
+        if (!result.value || result.value.byteLength === 0) continue;
+        chunks.push(result.value);
+        byteLength += result.value.byteLength;
+      }
+    } finally {
+      session.controller.signal.removeEventListener('abort', cancelReader);
+      reader.releaseLock();
+    }
 
     return {
       sampleRate: audioStream.sampleRate,
       channels: audioStream.channels,
-      read: () => buffer.read(),
+      chunks,
+      byteLength,
     };
   }
 
@@ -791,31 +678,6 @@ export class GaplessTtsPlayer {
       }));
     session.scheduledWordCues.push(...scheduled);
     return scheduled;
-  }
-
-  private estimateSpeechDuration(text: string): number {
-    const playbackRate =
-      this.engine.playbackRate && this.engine.playbackRate > 0
-        ? this.engine.playbackRate
-        : 1.0;
-    return Math.max(0.6, text.length / 18) / this.speechRate / playbackRate;
-  }
-
-  private correctPendingWordCues(
-    scheduled: Array<WordCue & { absoluteStart: number; segmentIndex: number; segment: SpeechSegment }>,
-    text: string,
-    duration: number,
-    startAt: number
-  ): void {
-    const corrected = buildWordTimeline(text, duration);
-    const now = this.engine.now();
-    scheduled.forEach((cue, index) => {
-      const nextCue = corrected[index];
-      if (!nextCue || cue.absoluteStart <= now) return;
-      cue.startSeconds = nextCue.startSeconds;
-      cue.endSeconds = nextCue.endSeconds;
-      cue.absoluteStart = startAt + nextCue.startSeconds;
-    });
   }
 
   private startWordTracking(session: PlaybackSession, callbacks: GaplessPlaybackCallbacks): void {
