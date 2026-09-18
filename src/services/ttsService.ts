@@ -39,6 +39,7 @@ export interface VieNeuSynthesisOptions {
   denoise?: boolean;
   use_ref_codes?: boolean;
   apply_watermark?: boolean;
+  output_sample_rate?: 24000 | 48000;
 }
 
 export const DEFAULT_VIENEU_SERVER_URL = 'https://api-anhvu0510.duckdns.org/vieneu-tts';

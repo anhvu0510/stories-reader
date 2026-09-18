@@ -46,6 +46,7 @@ export function VoiceSettingsTab() {
     vieneuDenoise = true,
     vieneuUseRefCodes = true,
     vieneuApplyWatermark = true,
+    vieneuOutputSampleRate = 0,
     setVieneuParameter,
   } = useReaderConfigStore();
 
@@ -226,6 +227,7 @@ export function VoiceSettingsTab() {
         denoise: vieneuDenoise,
         use_ref_codes: vieneuUseRefCodes,
         apply_watermark: vieneuApplyWatermark,
+        ...(vieneuOutputSampleRate ? { output_sample_rate: vieneuOutputSampleRate as 24000 | 48000 } : {}),
       });
       const audioUrl = TTSService.createAudioUrl(blob);
 
@@ -405,6 +407,13 @@ export function VoiceSettingsTab() {
               <label className="col-span-2 flex items-center gap-2 text-[10px]"><input type="checkbox" checked={vieneuDenoise} onChange={(e) => setVieneuParameter('vieneuDenoise', e.target.checked)} /> Denoise reference</label>
               {vieneuModel?.endsWith('turbo') && <label className="col-span-2 flex items-center gap-2 text-[10px]"><input type="checkbox" checked={vieneuUseRefCodes} onChange={(e) => setVieneuParameter('vieneuUseRefCodes', e.target.checked)} /> Use reference codes</label>}
               <label className="col-span-2 flex items-center gap-2 text-[10px]"><input type="checkbox" checked={vieneuApplyWatermark} onChange={(e) => setVieneuParameter('vieneuApplyWatermark', e.target.checked)} /> Audio watermark</label>
+              <label className="col-span-2 text-[10px]">Sample rate đầu ra
+                <select value={vieneuOutputSampleRate} onChange={(e) => setVieneuParameter('vieneuOutputSampleRate', Number(e.target.value) as 0 | 24000 | 48000)} className="w-full mt-1 px-2 py-1 rounded-lg bg-white/10 border border-white/15 text-xs">
+                  <option value={0}>Auto / native model</option>
+                  <option value={24000}>24 kHz</option>
+                  <option value={48000}>48 kHz</option>
+                </select>
+              </label>
             </div>
           </details>
         </div>

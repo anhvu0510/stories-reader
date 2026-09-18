@@ -44,13 +44,15 @@ export function useReadAloud(paragraphs: string[]) {
   const vieneuDenoise = useReaderConfigStore((state) => state.vieneuDenoise ?? true);
   const vieneuUseRefCodes = useReaderConfigStore((state) => state.vieneuUseRefCodes ?? true);
   const vieneuApplyWatermark = useReaderConfigStore((state) => state.vieneuApplyWatermark ?? true);
+  const vieneuOutputSampleRate = useReaderConfigStore((state) => state.vieneuOutputSampleRate ?? 0);
   const vieneuOptions = useMemo(() => ({
     temperature: vieneuTemperature, top_k: vieneuTopK, top_p: vieneuTopP,
     max_new_frames: vieneuMaxNewFrames, repetition_penalty: vieneuRepetitionPenalty,
     repetition_window: vieneuRepetitionWindow, steps: vieneuSteps, cfg: vieneuCfg,
     sway: vieneuSway, max_chars: vieneuMaxChars, denoise: vieneuDenoise,
     use_ref_codes: vieneuUseRefCodes, apply_watermark: vieneuApplyWatermark,
-  }), [vieneuTemperature, vieneuTopK, vieneuTopP, vieneuMaxNewFrames, vieneuRepetitionPenalty, vieneuRepetitionWindow, vieneuSteps, vieneuCfg, vieneuSway, vieneuMaxChars, vieneuDenoise, vieneuUseRefCodes, vieneuApplyWatermark]);
+    ...(vieneuOutputSampleRate ? { output_sample_rate: vieneuOutputSampleRate as 24000 | 48000 } : {}),
+  }), [vieneuTemperature, vieneuTopK, vieneuTopP, vieneuMaxNewFrames, vieneuRepetitionPenalty, vieneuRepetitionWindow, vieneuSteps, vieneuCfg, vieneuSway, vieneuMaxChars, vieneuDenoise, vieneuUseRefCodes, vieneuApplyWatermark, vieneuOutputSampleRate]);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);

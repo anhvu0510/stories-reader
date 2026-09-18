@@ -164,6 +164,7 @@ export interface ReaderConfig {
   vieneuDenoise?: boolean;
   vieneuUseRefCodes?: boolean;
   vieneuApplyWatermark?: boolean;
+  vieneuOutputSampleRate?: 0 | 24000 | 48000;
   edgeVoiceUri?: string;
   showTTSControlOnReader?: boolean;
 }

@@ -33,6 +33,7 @@ const defaultSettings: ReaderConfig = {
   vieneuDenoise: true,
   vieneuUseRefCodes: true,
   vieneuApplyWatermark: true,
+  vieneuOutputSampleRate: 0,
   edgeVoiceUri: 'vi-VN-HoaiMyNeural',
   showTTSControlOnReader: true,
 };
