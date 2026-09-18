@@ -4,14 +4,6 @@ import {
   ChevronsRight,
   Settings,
   Sparkles,
-  Volume2,
-  Play,
-  Pause,
-  Square,
-  SkipBack,
-  SkipForward,
-  LocateFixed,
-  ChevronDown,
   List,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -47,21 +39,12 @@ export function ReaderQuickControl({
   prevChapterId,
   nextChapterId,
   currentChapterNumber,
-  chapterDisplayLabel,
   totalChapters,
   isVisible = true,
-  isTTSActive = false,
-  isTTSPlaying = false,
   chapters,
   activeChapterId,
   onOpenChapterSelect,
   onOpenTranslation,
-  onToggleTTS,
-  onTTSPlay,
-  onTTSPause,
-  onTTSStop,
-  onTTSPrev,
-  onTTSNext,
 }: ReaderQuickControlProps) {
   const navigate = useNavigate();
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
@@ -74,17 +57,6 @@ export function ReaderQuickControl({
       targetEl.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
-      });
-    }
-  };
-
-  const handleJumpToHighlight = () => {
-    if (typeof document === 'undefined') return;
-    const highlightEl = document.querySelector('.msreadout-line-highlight');
-    if (highlightEl && typeof highlightEl.scrollIntoView === 'function') {
-      highlightEl.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
       });
     }
   };
@@ -167,70 +139,8 @@ export function ReaderQuickControl({
         {/* CENTER: Enclosed Glass Capsule Enclosure */}
         <div className="relative z-10 flex-1 flex items-center justify-center min-w-0 px-0.5">
           <div className="w-full flex items-center justify-center bg-black/5 dark:bg-black/10 backdrop-blur-[1.5px] p-1 rounded-full border border-primary/40 dark:border-primary/40 shadow-[0_4px_14px_rgba(0,0,0,0.35),_inset_0_1.5px_1px_0_rgba(255,255,255,0.4),_inset_0_-1px_1px_0_rgba(0,0,0,0.4)]">
-            {isTTSActive ? (
-              /* Inline TTS Player Suite */
-              <div className="flex items-center gap-1 px-1.5 animate-in fade-in duration-200">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onTTSPrev) onTTSPrev();
-                  }}
-                  className="p-1 rounded-full text-on-surface hover:text-primary bg-white/10 border border-primary/40 shadow-[0_2px_6px_rgba(0,0,0,0.25),_inset_0_1px_0.5px_rgba(255,255,255,0.3)] hover:bg-white/20 transition-all active:scale-90"
-                  title="Đoạn trước"
-                >
-                  <SkipBack size={15} />
-                </button>
-
-                {isTTSPlaying ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onTTSPause) onTTSPause();
-                    }}
-                    className="p-1.5 bg-primary/25 text-primary border border-primary/60 rounded-full shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.4)] active:scale-90 transition-all"
-                    title="Tạm dừng"
-                  >
-                    <Pause size={15} fill="currentColor" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onTTSPlay) onTTSPlay();
-                    }}
-                    className="p-1.5 bg-primary/25 text-primary border border-primary/60 rounded-full shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.4)] active:scale-90 transition-all"
-                    title="Tiếp tục đọc"
-                  >
-                    <Play size={15} fill="currentColor" />
-                  </button>
-                )}
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onTTSNext) onTTSNext();
-                  }}
-                  className="p-1 rounded-full text-on-surface hover:text-primary bg-white/10 border border-primary/40 shadow-[0_2px_6px_rgba(0,0,0,0.25),_inset_0_1px_0.5px_rgba(255,255,255,0.3)] hover:bg-white/20 transition-all active:scale-90"
-                  title="Đoạn sau"
-                >
-                  <SkipForward size={15} />
-                </button>
-
-                <div className="w-[1px] h-3.5 bg-primary/40 mx-0.5" />
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onTTSStop) onTTSStop();
-                  }}
-                  className="p-1 text-rose-400 hover:bg-rose-500/20 bg-rose-500/10 border border-rose-500/40 shadow-[0_2px_6px_rgba(0,0,0,0.25),_inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-full transition-all active:scale-90"
-                  title="Dừng đọc"
-                >
-                  <Square size={13} fill="currentColor" />
-                </button>
-              </div>
-            ) : chapters && chapters.length > 1 ? (
-              /* Multi-Chapter Batch Mode: 3D Glass Segmented Control (100% Fit, Zero Clipping) */
+            {chapters && chapters.length > 1 ? (
+              /* Multi-Chapter Batch Mode: 3D Glass Segmented Control */
               <div className="w-full flex items-center gap-1.5 min-w-0">
                 {/* 3D Glass Menu List Button on Far Left (Pin Fixed) */}
                 <button
@@ -247,7 +157,7 @@ export function ReaderQuickControl({
                 {/* Vertical Separator Line */}
                 <div className="w-[1px] h-4.5 bg-primary/40 shrink-0" />
 
-                {/* 3D Segmented Control Layout: Equal auto-cols-fr distribution (100% Fit, No Clipping) */}
+                {/* 3D Segmented Control Layout */}
                 <div className="flex-1 min-w-0 grid grid-flow-col auto-cols-fr gap-1 items-center justify-center py-0.5">
                   {chapters.map((chap) => {
                     const isActive = chap.chapterId === activeChapterId;
@@ -299,28 +209,6 @@ export function ReaderQuickControl({
 
         {/* RIGHT GROUP: macOS Control Center Glass Spheres Capsule */}
         <div className="relative z-10 flex items-center gap-1.5 bg-black/5 dark:bg-black/10 backdrop-blur-[1.5px] p-1 rounded-full border border-primary/40 dark:border-primary/40 shadow-[0_4px_14px_rgba(0,0,0,0.35),_inset_0_1.5px_1px_0_rgba(255,255,255,0.4),_inset_0_-1px_1px_0_rgba(0,0,0,0.4)] shrink-0">
-          {/* Quick TTS Activation / Toggle Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onToggleTTS) {
-                onToggleTTS();
-              } else if (isTTSActive) {
-                if (onTTSStop) onTTSStop();
-              } else {
-                if (onTTSPlay) onTTSPlay();
-              }
-            }}
-            className={`w-8 h-8 rounded-full border transition-all active:scale-90 cursor-pointer flex items-center justify-center ${
-              isTTSActive
-                ? 'bg-primary text-on-primary border-primary shadow-[0_3px_10px_rgba(59,130,246,0.5)] animate-pulse'
-                : 'bg-white/10 border border-primary/50 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.3)] hover:bg-white/20'
-            }`}
-            title={isTTSActive ? 'Tắt đọc thành tiếng' : 'Bật đọc thành tiếng (VieNeu AI TTS)'}
-          >
-            <Volume2 size={17} />
-          </button>
-
           {/* System Settings Button */}
           <button
             onClick={(e) => {

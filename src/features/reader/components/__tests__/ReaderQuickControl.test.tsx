@@ -93,8 +93,7 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
     expect(mockOnOpenChapterSelect).toHaveBeenCalledTimes(1);
   });
 
-  it('triggers onToggleTTS when clicking the quick TTS button on dock', () => {
-    const mockOnToggleTTS = vi.fn();
+  it('does not render the quick TTS button on bottom dock anymore as it moved to vertical menu dock', () => {
     render(
       <MemoryRouter>
         <ReaderQuickControl
@@ -104,14 +103,10 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
           activeChapterId="c551"
           onOpenChapterSelect={vi.fn()}
           onOpenTranslation={vi.fn()}
-          onToggleTTS={mockOnToggleTTS}
         />
       </MemoryRouter>
     );
 
-    const ttsBtn = screen.getByTitle('Bật đọc thành tiếng (VieNeu AI TTS)');
-    fireEvent.click(ttsBtn);
-
-    expect(mockOnToggleTTS).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTitle('Bật đọc thành tiếng (VieNeu AI TTS)')).toBeNull();
   });
 });

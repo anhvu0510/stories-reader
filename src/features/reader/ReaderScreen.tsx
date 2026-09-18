@@ -20,7 +20,6 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useReadingProgress } from '../../hooks/useReadingProgress';
 import { useGlobalLoading } from '../../hooks/useGlobalLoading';
 import { useReadAloud } from '../../hooks/useReadAloud';
-import { TTSControlBar } from './components/TTSControlBar';
 import { offlineDb } from '../../lib/offlineDb';
 import { AlertCircle, RotateCcw, Home } from 'lucide-react';
 
@@ -484,11 +483,20 @@ export function ReaderScreen() {
         />
       </div>
 
-      {/* Floating Vertical Chapter Circle Strip on Left Edge */}
+      {/* Floating Vertical Audio Menu Dock on Left Edge */}
       <VerticalBatchChapterNav
         chapters={displayChapters}
         activeChapterId={activeChapter?.chapterId}
         isVisible={showZenControls}
+        isTTSActive={isPlaying || isPaused}
+        isTTSPlaying={isPlaying}
+        currentParagraphIndex={activeParagraphIndex}
+        onToggleTTS={() => (isPlaying || isPaused ? stopReading() : startReading())}
+        onTTSPlay={startReading}
+        onTTSPause={pauseReading}
+        onTTSStop={stopReading}
+        onTTSPrev={prevSection}
+        onTTSNext={nextSection}
       />
 
       {/* Reader Content Article - Frozen Memoized Multi-Chapter Section with Tap-to-Toggle Dock */}
@@ -504,15 +512,6 @@ export function ReaderScreen() {
         onTouchEnd={handleTouchEnd}
       />
 
-      {/* Floating TTS Control Bar when TTS is active */}
-      <TTSControlBar
-        onPlay={startReading}
-        onPause={pauseReading}
-        onStop={stopReading}
-        onPrev={prevSection}
-        onNext={nextSection}
-      />
-
       {/* Single Capsule Zen Mode Floating Control Bar */}
       <div aria-hidden="true">
         <ReaderQuickControl
@@ -524,17 +523,8 @@ export function ReaderScreen() {
           chapters={displayChapters}
           activeChapterId={activeChapter?.chapterId}
           isVisible={showZenControls}
-          isTTSActive={isPlaying || isPaused}
-          isTTSPlaying={isPlaying}
-          currentParagraphIndex={currentChunkIndex}
           onOpenChapterSelect={handleOpenChapterSelect}
           onOpenTranslation={handleOpenTranslation}
-          onToggleTTS={() => (isPlaying || isPaused ? stopReading() : startReading())}
-          onTTSPlay={startReading}
-          onTTSPause={pauseReading}
-          onTTSStop={stopReading}
-          onTTSPrev={prevSection}
-          onTTSNext={nextSection}
         />
       </div>
 

@@ -18,14 +18,14 @@ export const DEFAULT_VIENEU_SERVER_URL = 'https://api-anhvu0510.duckdns.org/vien
 export const FALLBACK_VIENEU_VOICES: VieNeuVoice[] = [
   { id: 'Minh Quân', name: 'Minh Quân', language: 'vi', gender: 'male', desc: 'Giọng nam trầm ấm, tự nhiên (Default)' },
   { id: 'Mai Anh', name: 'Mai Anh', language: 'vi', gender: 'female', desc: 'Giọng nữ miền Bắc nhẹ nhàng, truyền cảm' },
-  { id: 'Ái Hân', name: 'Ái Hân', language: 'vi', gender: 'female', desc: 'Giọng nữ mượt mà, đọc truyện/tiểu thuyết' },
   { id: 'Mỹ Duyên', name: 'Mỹ Duyên', language: 'vi', gender: 'female', desc: 'Giọng nữ trong trẻo, truyền cảm' },
   { id: 'Đức Trí', name: 'Đức Trí', language: 'vi', gender: 'male', desc: 'Giọng nam dõng dạc, tin tức/báo chí' },
-  { id: 'Hữu Quân', name: 'Hữu Quân', language: 'vi', gender: 'male', desc: 'Giọng nam miền Nam tự nhiên' },
-  { id: 'Xuân Tiên', name: 'Xuân Tiên', language: 'vi', gender: 'female', desc: 'Giọng nữ dịu dàng, trầm lắng' },
   { id: 'Trúc Ly', name: 'Trúc Ly', language: 'vi', gender: 'female', desc: 'Giọng nữ miền Nam truyền cảm' },
   { id: 'Anh Khôi', name: 'Anh Khôi', language: 'vi', gender: 'male', desc: 'Giọng nam trẻ trung, năng động' },
   { id: 'Mạnh Dũng', name: 'Mạnh Dũng', language: 'vi', gender: 'male', desc: 'Giọng nam miền Bắc truyền cảm' },
+  { id: 'Thùy Dung', name: 'Thùy Dung', language: 'vi', gender: 'female', desc: 'Giọng nữ mượt mà, đọc truyện/tiểu thuyết' },
+  { id: 'Quỳnh Anh', name: 'Quỳnh Anh', language: 'vi', gender: 'female', desc: 'Giọng nữ dịu dàng, truyền cảm' },
+  { id: 'Minh Đức', name: 'Minh Đức', language: 'vi', gender: 'male', desc: 'Giọng nam truyền cảm, trầm lắng' },
   { id: 'Adam', name: 'Adam', language: 'en', gender: 'male', desc: 'Giọng nam tiếng Anh chuẩn (English)' },
 ];
 
