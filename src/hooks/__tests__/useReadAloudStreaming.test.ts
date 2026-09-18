@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { splitParagraphIntoSentences } from '../../services/gaplessTtsPlayer';
 import { DomWordHighlighter } from '../../services/domWordHighlighter';
+import { EdgeTTSService } from '../../services/edgeTtsService';
 import { TTSService } from '../../services/ttsService';
 import { useReaderConfigStore } from '../../stores/useReaderConfigStore';
 import { useReadAloud } from '../useReadAloud';
@@ -177,6 +178,116 @@ describe('useReadAloud VieNeu streaming speed', () => {
     });
 
     expect(clearHighlight).toHaveBeenCalledTimes(clearsBeforePlayback);
+
+    unmount();
+  });
+});
+
+describe('useReadAloud Edge word boundaries', () => {
+  const OriginalAudio = window.Audio;
+  const originalCreateObjectUrl = URL.createObjectURL;
+  const originalRevokeObjectUrl = URL.revokeObjectURL;
+  const fakeAudios: FakeEdgeAudio[] = [];
+
+  class FakeEdgeAudio {
+    public currentTime = 0;
+    public paused = true;
+    public ended = false;
+    public onplay: (() => void) | null = null;
+    public onpause: (() => void) | null = null;
+    public ontimeupdate: (() => void) | null = null;
+    public onended: (() => void) | null = null;
+    public onerror: ((error: unknown) => void) | null = null;
+    public readonly play = vi.fn(async () => {
+      this.paused = false;
+      this.onplay?.();
+    });
+    public readonly pause = vi.fn(() => {
+      this.paused = true;
+      this.onpause?.();
+    });
+
+    public constructor(public readonly src: string) {
+      fakeAudios.push(this);
+    }
+  }
+
+  beforeEach(() => {
+    fakeAudios.length = 0;
+    document.body.innerHTML = [
+      '<main id="main-story-content"><article>',
+      '<div data-paragraph-index="0">"Xin chào", thế giới.</div>',
+      '</article></main>',
+    ].join('');
+    useReaderConfigStore.setState({
+      speechRate: 1,
+      ttsEngine: 'edge',
+      edgeVoiceUri: 'vi-VN-HoaiMyNeural',
+    });
+    vi.stubGlobal('Audio', FakeEdgeAudio);
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: vi.fn(() => 'blob:edge-audio'),
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn(),
+    });
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+    Object.defineProperty(window, 'Audio', {
+      configurable: true,
+      value: OriginalAudio,
+    });
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: originalCreateObjectUrl,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: originalRevokeObjectUrl,
+    });
+  });
+
+  it('moves the highlight from Microsoft word-boundary timestamps instead of estimating duration', async () => {
+    const synthesize = vi.spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries').mockResolvedValue({
+      audio: new Blob(['audio'], { type: 'audio/mpeg' }),
+      wordBoundaries: [
+        { text: 'Xin', charIndex: 1, charLength: 3, startSeconds: 0.125, endSeconds: 0.325 },
+        { text: 'chào', charIndex: 5, charLength: 4, startSeconds: 0.325, endSeconds: 0.5875 },
+      ],
+    });
+    const highlight = vi.spyOn(DomWordHighlighter.prototype, 'highlight').mockReturnValue(null);
+    const paragraphs = ['"Xin chào", thế giới.'];
+    const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
+
+    act(() => result.current.startReading());
+    await waitFor(() => expect(synthesize).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(fakeAudios).toHaveLength(1));
+    expect(highlight).not.toHaveBeenCalled();
+
+    act(() => {
+      fakeAudios[0].currentTime = 0.13;
+      fakeAudios[0].ontimeupdate?.();
+    });
+    expect(highlight).toHaveBeenLastCalledWith(expect.any(HTMLElement), 1, 3);
+
+    act(() => {
+      fakeAudios[0].currentTime = 0.34;
+      fakeAudios[0].ontimeupdate?.();
+    });
+    expect(highlight).toHaveBeenLastCalledWith(expect.any(HTMLElement), 5, 4);
+
+    act(() => result.current.pauseReading());
+    expect(fakeAudios[0].pause).toHaveBeenCalledTimes(1);
+    act(() => result.current.startReading());
+    expect(fakeAudios[0].play).toHaveBeenCalledTimes(2);
 
     unmount();
   });

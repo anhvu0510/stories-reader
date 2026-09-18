@@ -8,6 +8,19 @@ export interface EdgeVoice {
   desc?: string;
 }
 
+export interface EdgeWordBoundary {
+  text: string;
+  charIndex: number;
+  charLength: number;
+  startSeconds: number;
+  endSeconds: number;
+}
+
+export interface EdgeSpeechWithBoundaries {
+  audio: Blob;
+  wordBoundaries: EdgeWordBoundary[];
+}
+
 export const DEFAULT_GATEWAY_URL = 'https://api-anhvu0510.duckdns.org';
 
 export function getGatewayBaseUrl(): string {
@@ -88,5 +101,74 @@ export class EdgeTTSService {
     }
 
     return await response.blob();
+  }
+
+  public static async synthesizeSpeechWithBoundaries(
+    text: string,
+    voice: string = 'vi-VN-HoaiMyNeural',
+    speed: number = 1.0,
+    baseUrl?: string,
+    signal?: AbortSignal
+  ): Promise<EdgeSpeechWithBoundaries> {
+    if (!text || !text.trim()) {
+      throw new Error('Text to synthesize cannot be empty');
+    }
+
+    const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
+    const targetUrl = `${rootUrl}/tts/edge/synthesize`;
+    const ratePercentage =
+      speed !== 1.0
+        ? `${speed >= 1.0 ? '+' : ''}${Math.round((speed - 1.0) * 100)}%`
+        : '+0%';
+    const response = await fetch(targetUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'audio/mpeg',
+      },
+      body: JSON.stringify({
+        text: text.trim(),
+        voice,
+        rate: ratePercentage,
+        include_word_boundaries: true,
+      }),
+      signal,
+    });
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(`Edge TTS synthesis failed (${response.status}): ${errText}`);
+    }
+
+    const encodedBoundaries = response.headers.get('X-Word-Boundaries');
+    if (!encodedBoundaries) {
+      throw new Error('Edge TTS response did not include word boundaries');
+    }
+
+    const padded = encodedBoundaries
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+      .padEnd(Math.ceil(encodedBoundaries.length / 4) * 4, '=');
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const rawBoundaries = JSON.parse(new TextDecoder().decode(bytes)) as Array<{
+      text: string;
+      char_index: number;
+      char_length: number;
+      start_seconds: number;
+      end_seconds: number;
+    }>;
+    const wordBoundaries = rawBoundaries.map((boundary) => ({
+      text: boundary.text,
+      charIndex: boundary.char_index,
+      charLength: boundary.char_length,
+      startSeconds: boundary.start_seconds,
+      endSeconds: boundary.end_seconds,
+    }));
+
+    return {
+      audio: await response.blob(),
+      wordBoundaries,
+    };
   }
 }

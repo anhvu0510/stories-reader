@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useReaderConfigStore } from '../stores/useReaderConfigStore';
 import { TTSService, DEFAULT_VIENEU_SERVER_URL } from '../services/ttsService';
-import { EdgeTTSService } from '../services/edgeTtsService';
+import {
+  EdgeTTSService,
+  type EdgeSpeechWithBoundaries,
+} from '../services/edgeTtsService';
 import {
   buildSpeechSegments,
   GaplessTtsPlayer,
@@ -81,13 +84,37 @@ export function useReadAloud(paragraphs: string[]) {
   }, [isPlaying, isPaused, activeParagraphIndex]);
 
   const edgeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const edgeAudioUrlRef = useRef<string | null>(null);
+  const edgeBoundaryFrameRef = useRef<number | null>(null);
+
+  const stopEdgeBoundaryTracking = () => {
+    if (edgeBoundaryFrameRef.current !== null) {
+      window.cancelAnimationFrame(edgeBoundaryFrameRef.current);
+      edgeBoundaryFrameRef.current = null;
+    }
+  };
+
+  const releaseEdgeAudio = () => {
+    stopEdgeBoundaryTracking();
+    const audio = edgeAudioRef.current;
+    if (audio) {
+      audio.onplay = null;
+      audio.onpause = null;
+      audio.ontimeupdate = null;
+      audio.onended = null;
+      audio.onerror = null;
+      audio.pause();
+      edgeAudioRef.current = null;
+    }
+    if (edgeAudioUrlRef.current) {
+      URL.revokeObjectURL(edgeAudioUrlRef.current);
+      edgeAudioUrlRef.current = null;
+    }
+  };
 
   const stopAudioPlayer = () => {
     edgePrefetchCacheRef.current.clear();
-    if (edgeAudioRef.current) {
-      edgeAudioRef.current.pause();
-      edgeAudioRef.current = null;
-    }
+    releaseEdgeAudio();
     const player = gaplessPlayerRef.current;
     gaplessPlayerRef.current = null;
     if (player) {
@@ -97,7 +124,7 @@ export function useReadAloud(paragraphs: string[]) {
     }
   };
 
-  const edgePrefetchCacheRef = useRef<Map<number, Promise<Blob>>>(new Map());
+  const edgePrefetchCacheRef = useRef<Map<number, Promise<EdgeSpeechWithBoundaries>>>(new Map());
 
   const prefetchEdgeChunk = (index: number) => {
     if (index < 0 || index >= chunks.length) return;
@@ -105,7 +132,7 @@ export function useReadAloud(paragraphs: string[]) {
     const chunk = chunks[index];
     if (!chunk || !chunk.text.trim()) return;
 
-    const promise = EdgeTTSService.synthesizeSpeech(
+    const promise = EdgeTTSService.synthesizeSpeechWithBoundaries(
       chunk.text,
       edgeVoiceUri,
       speechRate,
@@ -133,12 +160,7 @@ export function useReadAloud(paragraphs: string[]) {
       return;
     }
 
-    updateWordHighlight(index, 0, chunk.length);
-
-    if (edgeAudioRef.current) {
-      edgeAudioRef.current.pause();
-      edgeAudioRef.current = null;
-    }
+    releaseEdgeAudio();
 
     // Prefetch upcoming chunks
     prefetchEdgeChunk(index + 1);
@@ -151,16 +173,73 @@ export function useReadAloud(paragraphs: string[]) {
 
     const fetchPromise =
       edgePrefetchCacheRef.current.get(index) ||
-      EdgeTTSService.synthesizeSpeech(chunk.text, edgeVoiceUri, speechRate, activeDomain?.url);
+      EdgeTTSService.synthesizeSpeechWithBoundaries(
+        chunk.text,
+        edgeVoiceUri,
+        speechRate,
+        activeDomain?.url
+      );
 
     fetchPromise
-      .then((blob) => {
+      .then(({ audio: blob, wordBoundaries }) => {
         if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
         edgeAudioRef.current = audio;
+        edgeAudioUrlRef.current = audioUrl;
+        let nextBoundaryIndex = 0;
+
+        const syncWordBoundary = () => {
+          if (
+            edgeAudioRef.current !== audio ||
+            !isPlayingRef.current ||
+            playSessionIdRef.current !== sessionId
+          ) {
+            return;
+          }
+
+          let activeBoundary = null as (typeof wordBoundaries)[number] | null;
+          while (
+            nextBoundaryIndex < wordBoundaries.length &&
+            wordBoundaries[nextBoundaryIndex].startSeconds <= audio.currentTime
+          ) {
+            activeBoundary = wordBoundaries[nextBoundaryIndex];
+            nextBoundaryIndex += 1;
+          }
+          if (activeBoundary) {
+            updateWordHighlight(
+              index,
+              activeBoundary.charIndex,
+              activeBoundary.charLength
+            );
+          }
+        };
+        const startBoundaryTracking = () => {
+          stopEdgeBoundaryTracking();
+          const tick = () => {
+            syncWordBoundary();
+            if (
+              edgeAudioRef.current === audio &&
+              !audio.paused &&
+              !audio.ended &&
+              playSessionIdRef.current === sessionId
+            ) {
+              edgeBoundaryFrameRef.current = window.requestAnimationFrame(tick);
+            } else {
+              edgeBoundaryFrameRef.current = null;
+            }
+          };
+          edgeBoundaryFrameRef.current = window.requestAnimationFrame(tick);
+        };
+
+        audio.ontimeupdate = syncWordBoundary;
+        audio.onplay = startBoundaryTracking;
+        audio.onpause = stopEdgeBoundaryTracking;
 
         audio.onended = () => {
+          stopEdgeBoundaryTracking();
+          if (edgeAudioRef.current === audio) edgeAudioRef.current = null;
+          if (edgeAudioUrlRef.current === audioUrl) edgeAudioUrlRef.current = null;
           URL.revokeObjectURL(audioUrl);
           if (isPlayingRef.current && playSessionIdRef.current === sessionId) {
             playChunkViaEdge(index + 1, sessionId);
@@ -168,12 +247,18 @@ export function useReadAloud(paragraphs: string[]) {
         };
 
         audio.onerror = (err) => {
+          if (playSessionIdRef.current !== sessionId) return;
+          stopEdgeBoundaryTracking();
+          if (edgeAudioRef.current === audio) edgeAudioRef.current = null;
+          if (edgeAudioUrlRef.current === audioUrl) edgeAudioUrlRef.current = null;
           URL.revokeObjectURL(audioUrl);
           console.warn('[Edge TTS] Playback error, fallback to browser voice:', err);
           playChunkViaBrowser(index, 0, sessionId);
         };
 
         audio.play().catch((err) => {
+          if (playSessionIdRef.current !== sessionId) return;
+          releaseEdgeAudio();
           console.warn('[Edge TTS] Audio play error:', err);
           playChunkViaBrowser(index, 0, sessionId);
         });
@@ -429,6 +514,8 @@ export function useReadAloud(paragraphs: string[]) {
           .catch(() => playChunk(currentChunkIdxRef.current));
       } else if (ttsEngine === 'browser' && synth) {
         synth.resume();
+      } else if (ttsEngine === 'edge' && edgeAudioRef.current) {
+        void edgeAudioRef.current.play().catch(() => playChunk(currentChunkIdxRef.current));
       } else {
         playChunk(currentChunkIdxRef.current);
       }
@@ -463,6 +550,8 @@ export function useReadAloud(paragraphs: string[]) {
     }
     if (ttsEngine === 'browser' && synth) {
       synth.pause();
+    } else if (ttsEngine === 'edge') {
+      edgeAudioRef.current?.pause();
     }
   };
 
