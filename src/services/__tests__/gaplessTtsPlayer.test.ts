@@ -317,6 +317,63 @@ describe('GaplessTtsPlayer', () => {
     await player.stop();
   });
 
+  it('prefetches the next PCM stream while the current response is still flowing', async () => {
+    let firstController: ReadableStreamDefaultController<Uint8Array> | undefined;
+    const engine: AudioPlaybackEngine = {
+      now: () => 0,
+      decode: vi.fn(async (): Promise<DecodedAudio> => ({ duration: 2, value: null })),
+      schedule: vi.fn(),
+      beginPcmStream: vi.fn((sampleRate, _channels, startAt): PcmStreamPlayback => {
+        let duration = 0;
+        return {
+          startAt,
+          get duration() {
+            return duration;
+          },
+          get endAt() {
+            return startAt + duration;
+          },
+          ended: createPendingPromise(),
+          append: (chunk: Uint8Array) => {
+            duration += chunk.byteLength / 2 / sampleRate;
+          },
+          finish: vi.fn(),
+          stop: vi.fn(),
+        };
+      }),
+      pause: vi.fn(async () => {}),
+      resume: vi.fn(async () => {}),
+      dispose: vi.fn(async () => {}),
+    };
+    const stream = vi.fn(async (segment: SpeechSegment) => ({
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([0, 0]));
+          if (segment.text === 'Segment 0.') {
+            firstController = controller;
+          } else {
+            controller.close();
+          }
+        },
+      }),
+      sampleRate: 24000,
+      channels: 1,
+      sampleFormat: 's16le' as const,
+    }));
+    const player = new GaplessTtsPlayer({
+      engine,
+      synthesize: vi.fn(async () => new Blob()),
+      stream,
+      startLeadSeconds: 0,
+    });
+
+    player.start([createSegment(0), createSegment(1)]);
+
+    await vi.waitFor(() => expect(stream).toHaveBeenCalledTimes(2));
+    firstController?.close();
+    await player.stop();
+  });
+
   it('falls back to decoded WAV when the PCM endpoint is unavailable', async () => {
     const engine: AudioPlaybackEngine = {
       now: () => 0,

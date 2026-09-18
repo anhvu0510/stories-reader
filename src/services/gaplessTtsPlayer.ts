@@ -440,13 +440,30 @@ export class GaplessTtsPlayer {
 
     try {
       let previousPlayback: PcmStreamPlayback | null = null;
+      const preparedStreams = new Map<number, Promise<PcmAudioStream>>();
+      const ensureStream = (index: number): Promise<PcmAudioStream> | undefined => {
+        if (!this.stream || index < 0 || index >= segments.length) return undefined;
+
+        let prepared = preparedStreams.get(index);
+        if (!prepared) {
+          prepared = this.stream(segments[index], session.controller.signal);
+          preparedStreams.set(index, prepared);
+          void prepared.catch(() => {});
+        }
+        return prepared;
+      };
+
+      ensureStream(0);
+      ensureStream(1);
 
       for (let index = 0; index < segments.length; index += 1) {
-        if (!this.stream || !this.engine.beginPcmStream) return;
+        if (!this.engine.beginPcmStream) return;
 
         const segment = segments[index];
-        const audioStream = await this.stream(segment, session.controller.signal);
+        const audioStream = await ensureStream(index)!;
         if (!this.isActive(session)) return;
+        preparedStreams.delete(index);
+        ensureStream(index + 1);
 
         const startAt = previousPlayback
           ? previousPlayback.endAt
