@@ -167,27 +167,16 @@ function splitLongSpeechChunk(
   let cursor = 0;
 
   while (chunk.text.length - cursor > maxCharacters) {
-    const minimumNaturalBreak = Math.floor(maxCharacters * 0.55);
-    const candidate = chunk.text.slice(cursor, cursor + maxCharacters + 1);
-    let breakAt = -1;
-
-    for (let index = maxCharacters; index >= minimumNaturalBreak; index -= 1) {
-      if (/[,;:]/u.test(candidate[index - 1] ?? '')) {
-        breakAt = index;
-        break;
-      }
+    const candidateEnd = Math.min(chunk.text.length, cursor + maxCharacters);
+    const candidate = chunk.text.slice(cursor, candidateEnd);
+    // Never split a word/token. Prefer the last whitespace inside the window;
+    // if one token exceeds the window, extend to its next boundary.
+    const whitespace = [...candidate.matchAll(/\s/gu)].at(-1);
+    let breakAt = whitespace ? cursor + whitespace.index! : -1;
+    if (breakAt <= cursor) {
+      const nextWhitespace = chunk.text.slice(candidateEnd).search(/\s/u);
+      breakAt = nextWhitespace >= 0 ? candidateEnd + nextWhitespace : chunk.text.length;
     }
-
-    if (breakAt === -1) {
-      for (let index = maxCharacters; index >= minimumNaturalBreak; index -= 1) {
-        if (/\s/u.test(candidate[index - 1] ?? '')) {
-          breakAt = index - 1;
-          break;
-        }
-      }
-    }
-
-    if (breakAt <= 0) breakAt = maxCharacters;
 
     const rawPhrase = chunk.text.slice(cursor, cursor + breakAt);
     const leadingWhitespace = rawPhrase.length - rawPhrase.trimStart().length;
