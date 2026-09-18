@@ -321,8 +321,9 @@ describe('GaplessTtsPlayer', () => {
     await player.stop();
   });
 
-  it('prefetches the next PCM stream while the current response is still flowing', async () => {
+  it('prefetches and drains upcoming PCM streams while the current response is still flowing', async () => {
     let firstController: ReadableStreamDefaultController<Uint8Array> | undefined;
+    let secondStreamPulls = 0;
     const engine: AudioPlaybackEngine = {
       now: () => 0,
       decode: vi.fn(async (): Promise<DecodedAudio> => ({ duration: 2, value: null })),
@@ -349,21 +350,26 @@ describe('GaplessTtsPlayer', () => {
       resume: vi.fn(async () => {}),
       dispose: vi.fn(async () => {}),
     };
-    const stream = vi.fn(async (segment: SpeechSegment) => ({
-      body: new ReadableStream<Uint8Array>({
-        start(controller) {
-          controller.enqueue(new Uint8Array([0, 0]));
-          if (segment.text === 'Segment 0.') {
-            firstController = controller;
-          } else {
+    const stream = vi.fn(async (segment: SpeechSegment) => {
+      const isFirstSegment = segment.text === 'Segment 0.';
+      return {
+        body: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new Uint8Array([0, 0]));
+            if (isFirstSegment) firstController = controller;
+          },
+          pull(controller) {
+            if (isFirstSegment) return;
+            secondStreamPulls += 1;
+            controller.enqueue(new Uint8Array([0, 0]));
             controller.close();
-          }
-        },
-      }),
-      sampleRate: 24000,
-      channels: 1,
-      sampleFormat: 's16le' as const,
-    }));
+          },
+        }),
+        sampleRate: 24000,
+        channels: 1,
+        sampleFormat: 's16le' as const,
+      };
+    });
     const player = new GaplessTtsPlayer({
       engine,
       synthesize: vi.fn(async () => new Blob()),
@@ -374,6 +380,58 @@ describe('GaplessTtsPlayer', () => {
     player.start([createSegment(0), createSegment(1)]);
 
     await vi.waitFor(() => expect(stream).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(secondStreamPulls).toBeGreaterThan(0));
+    firstController?.close();
+    await player.stop();
+  });
+
+  it('honors the configured streaming prefetch window', async () => {
+    let firstController: ReadableStreamDefaultController<Uint8Array> | undefined;
+    const engine: AudioPlaybackEngine = {
+      now: () => 0,
+      decode: vi.fn(async (): Promise<DecodedAudio> => ({ duration: 2, value: null })),
+      schedule: vi.fn(),
+      beginPcmStream: vi.fn((_sampleRate, _channels, startAt): PcmStreamPlayback => ({
+        startAt,
+        duration: 0,
+        endAt: startAt,
+        ended: createPendingPromise(),
+        append: vi.fn(),
+        finish: vi.fn(),
+        stop: vi.fn(),
+      })),
+      pause: vi.fn(async () => {}),
+      resume: vi.fn(async () => {}),
+      dispose: vi.fn(async () => {}),
+    };
+    const stream = vi.fn(async (segment: SpeechSegment) => ({
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([0, 0]));
+          if (segment.text === 'Segment 0.') firstController = controller;
+          else controller.close();
+        },
+      }),
+      sampleRate: 24000,
+      channels: 1,
+      sampleFormat: 's16le' as const,
+    }));
+    const player = new GaplessTtsPlayer({
+      engine,
+      synthesize: vi.fn(async () => new Blob()),
+      stream,
+      prefetchAhead: 2,
+    });
+
+    player.start([createSegment(0), createSegment(1), createSegment(2), createSegment(3)]);
+
+    await vi.waitFor(() => expect(stream).toHaveBeenCalledTimes(3));
+    expect(stream.mock.calls.map(([segment]) => segment.text)).toEqual([
+      'Segment 0.',
+      'Segment 1.',
+      'Segment 2.',
+    ]);
+
     firstController?.close();
     await player.stop();
   });
@@ -404,6 +462,55 @@ describe('GaplessTtsPlayer', () => {
     expect(stream).toHaveBeenCalledTimes(1);
     expect(synthesize).toHaveBeenCalledTimes(1);
     expect(engine.decode).toHaveBeenCalledTimes(1);
+
+    await player.stop();
+  });
+
+  it('cleans up an empty PCM playback before falling back to decoded WAV', async () => {
+    const stopPcm = vi.fn();
+    let fallbackSignal: AbortSignal | undefined;
+    const engine: AudioPlaybackEngine = {
+      now: () => 0,
+      decode: vi.fn(async (): Promise<DecodedAudio> => ({ duration: 1, value: null })),
+      schedule: vi.fn((_audio, startAt): ScheduledAudio => ({
+        endAt: startAt + 1,
+        ended: createPendingPromise(),
+        stop: vi.fn(),
+      })),
+      beginPcmStream: vi.fn((_sampleRate, _channels, startAt): PcmStreamPlayback => ({
+        startAt,
+        duration: 0,
+        endAt: startAt,
+        ended: createPendingPromise(),
+        append: vi.fn(),
+        finish: vi.fn(),
+        stop: stopPcm,
+      })),
+      pause: vi.fn(async () => {}),
+      resume: vi.fn(async () => {}),
+      dispose: vi.fn(async () => {}),
+    };
+    const stream = vi.fn(async () => ({
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.error(new Error('stream body failed'));
+        },
+      }),
+      sampleRate: 24000,
+      channels: 1,
+      sampleFormat: 's16le' as const,
+    }));
+    const synthesize = vi.fn(async (_segment: SpeechSegment, signal: AbortSignal) => {
+      fallbackSignal = signal;
+      return new Blob(['wav fallback']);
+    });
+    const player = new GaplessTtsPlayer({ engine, synthesize, stream, startLeadSeconds: 0 });
+
+    player.start([createSegment(0)]);
+    await vi.waitFor(() => expect(engine.schedule).toHaveBeenCalledTimes(1));
+
+    expect(stopPcm).toHaveBeenCalledTimes(1);
+    expect(fallbackSignal?.aborted).toBe(false);
 
     await player.stop();
   });
@@ -509,11 +616,11 @@ describe('WebAudioPlaybackEngine', () => {
     playback.append(new Uint8Array([127]));
     playback.finish();
 
-    expect(context.createBuffer).toHaveBeenCalledTimes(2);
-    expect(starts).toEqual([2, 2 + 1 / 24000]);
+    expect(context.createBuffer).toHaveBeenCalledTimes(1);
+    expect(starts).toEqual([2]);
     expect(playback.duration).toBeCloseTo(2 / 24000, 10);
     expect(playback.endAt).toBeCloseTo(2 + 2 / 24000, 10);
-    expect(sources).toHaveLength(2);
+    expect(sources).toHaveLength(1);
   });
 
   it('starts a delayed first PCM chunk from the current audio clock instead of the past', () => {
@@ -542,9 +649,40 @@ describe('WebAudioPlaybackEngine', () => {
 
     Object.defineProperty(context, 'currentTime', { value: 5 });
     playback.append(new Uint8Array([0, 0]));
+    playback.finish();
 
     expect(starts[0]).toBeCloseTo(5.03, 10);
     expect(playback.startAt).toBeCloseTo(5.03, 10);
+  });
+
+  it('holds the first PCM samples until the startup jitter buffer is ready', () => {
+    const starts: number[] = [];
+    const context = {
+      currentTime: 0,
+      destination: {},
+      createBuffer: vi.fn((_channels: number, frameCount: number, sampleRate: number) => ({
+        duration: frameCount / sampleRate,
+        copyToChannel: vi.fn(),
+      })),
+      createBufferSource: vi.fn(() => ({
+        buffer: null as AudioBuffer | null,
+        playbackRate: { value: 1 },
+        onended: null as (() => void) | null,
+        connect: vi.fn(),
+        start: (at: number) => starts.push(at),
+        stop: vi.fn(),
+      })),
+      suspend: vi.fn(async () => {}),
+      resume: vi.fn(async () => {}),
+      close: vi.fn(async () => {}),
+    } as unknown as AudioContext;
+    const playback = new WebAudioPlaybackEngine(context).beginPcmStream(10, 1, 0);
+
+    playback.append(new Uint8Array([0, 0]));
+    expect(starts).toEqual([]);
+
+    playback.append(new Uint8Array([0, 0]));
+    expect(starts).toEqual([0.03]);
   });
 
   it('rebases a late PCM chunk onto the current audio clock instead of overlapping elapsed audio', () => {

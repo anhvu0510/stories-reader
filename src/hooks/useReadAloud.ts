@@ -470,6 +470,7 @@ export function useReadAloud(paragraphs: string[]) {
     lastInteractionTime.current = 0;
     if (currentChunkIdxRef.current < chunks.length - 1) {
       const nextIdx = currentChunkIdxRef.current + 1;
+      playSessionIdRef.current += 1;
       stopAudioPlayer();
       if (synth) synth.cancel();
 
@@ -477,6 +478,7 @@ export function useReadAloud(paragraphs: string[]) {
       setIsPaused(false);
       isPlayingRef.current = true;
       isPausedRef.current = false;
+      currentChunkIdxRef.current = nextIdx;
       playChunk(nextIdx);
     } else {
       stopReading();
@@ -487,6 +489,7 @@ export function useReadAloud(paragraphs: string[]) {
     lastInteractionTime.current = 0;
     if (currentChunkIdxRef.current > 0) {
       const prevIdx = currentChunkIdxRef.current - 1;
+      playSessionIdRef.current += 1;
       stopAudioPlayer();
       if (synth) synth.cancel();
 
@@ -494,6 +497,7 @@ export function useReadAloud(paragraphs: string[]) {
       setIsPaused(false);
       isPlayingRef.current = true;
       isPausedRef.current = false;
+      currentChunkIdxRef.current = prevIdx;
       playChunk(prevIdx);
     } else {
       stopReading();
@@ -509,6 +513,7 @@ export function useReadAloud(paragraphs: string[]) {
     }
 
     if (targetIndex !== -1) {
+      playSessionIdRef.current += 1;
       stopAudioPlayer();
       if (synth) synth.cancel();
 

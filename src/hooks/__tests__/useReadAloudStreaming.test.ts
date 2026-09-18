@@ -127,7 +127,7 @@ describe('useReadAloud VieNeu streaming speed', () => {
       channels: 1,
       sampleFormat: 's16le',
     });
-    vi.spyOn(TTSService, 'synthesizeSpeech').mockResolvedValue(new Blob());
+    const synthesizeSpeech = vi.spyOn(TTSService, 'synthesizeSpeech').mockResolvedValue(new Blob());
 
     const paragraphs = ['Câu đầu tiên. Câu thứ hai tiếp tục nội dung.'];
     const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
@@ -146,6 +146,7 @@ describe('useReadAloud VieNeu streaming speed', () => {
     await waitFor(() =>
       expect(fakeAudioContexts[0].sources[0]?.playbackRate.value).toBe(1)
     );
+    expect(synthesizeSpeech).not.toHaveBeenCalled();
 
     unmount();
   });
