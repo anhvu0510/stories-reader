@@ -421,6 +421,25 @@ describe('useReadAloud browser speech ownership', () => {
     expect(speechSynthesis.cancel).not.toHaveBeenCalled();
   });
 
+  it('does not claim the operating-system media session while this tab is idle', () => {
+    const mediaSession = { setActionHandler: vi.fn() };
+    Object.defineProperty(navigator, 'mediaSession', {
+      configurable: true,
+      value: mediaSession,
+    });
+    vi.stubGlobal('MediaMetadata', class {
+      public constructor(_metadata: MediaMetadataInit) {}
+    });
+    useReaderConfigStore.setState({ ttsEngine: 'browser' });
+
+    const { unmount } = renderHook(() =>
+      useReadAloud(['Tab này chỉ vừa mở một quyển truyện khác.'])
+    );
+
+    expect(mediaSession.setActionHandler).not.toHaveBeenCalled();
+    unmount();
+  });
+
   it('still cancels the native queue when this tab started the utterance', () => {
     const speechSynthesis = createSpeechSynthesis();
     vi.stubGlobal('speechSynthesis', speechSynthesis);

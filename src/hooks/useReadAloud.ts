@@ -460,6 +460,11 @@ export function useReadAloud(
   }, [ttsEngine, synth]);
 
   useEffect(() => {
+    if (
+      !isPlaying &&
+      !isPaused &&
+      !isLoading
+    ) return;
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
 
     const mediaSession = navigator.mediaSession;
@@ -486,7 +491,7 @@ export function useReadAloud(
         }
       });
     };
-  }, [chunks.length]);
+  }, [chunks.length, isLoading, isPaused, isPlaying]);
 
   const updateWordHighlight = (chunkIndex: number, nextCharIndex: number, nextCharLength: number) => {
     const highlighter = wordHighlighterRef.current;
