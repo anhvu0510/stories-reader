@@ -10,6 +10,7 @@ import {
   WebAudioPlaybackEngine,
 } from '../services/gaplessTtsPlayer';
 import { DomWordHighlighter } from '../services/domWordHighlighter';
+import { useAppStore } from '../stores/useAppStore';
 import { ReadAloudScrollFollower } from '../services/readAloudScrollFollower';
 import { useTTSStore } from '../features/reader/stores/useTTSStore';
 
@@ -18,6 +19,7 @@ export { splitParagraphIntoSentences } from '../services/gaplessTtsPlayer';
 const WORD_HIGHLIGHT_CLASS = 'msreadout-word-highlight';
 
 export function useReadAloud(paragraphs: string[]) {
+  const activeDomain = useAppStore((state) => state.activeDomain);
   const voiceUri = useReaderConfigStore((state) => state.voiceUri);
   const edgeVoiceUri = useReaderConfigStore((state) => state.edgeVoiceUri || 'vi-VN-HoaiMyNeural');
   const speechRate = useReaderConfigStore((state) => state.speechRate);
@@ -117,7 +119,7 @@ export function useReadAloud(paragraphs: string[]) {
       edgeAudioRef.current = null;
     }
 
-    EdgeTTSService.synthesizeSpeech(chunk.text, edgeVoiceUri, speechRate)
+    EdgeTTSService.synthesizeSpeech(chunk.text, edgeVoiceUri, speechRate, activeDomain?.url)
       .then((blob) => {
         if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
         const audioUrl = URL.createObjectURL(blob);

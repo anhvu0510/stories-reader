@@ -13,11 +13,13 @@ import {
   Radio,
 } from 'lucide-react';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
+import { useAppStore } from '../../../stores/useAppStore';
 import { TTSService, VieNeuVoice, DEFAULT_VIENEU_SERVER_URL } from '../../../services/ttsService';
 import { EdgeTTSService, EdgeVoice } from '../../../services/edgeTtsService';
 import { showToast } from '../../../stores/useToastStore';
 
 export function VoiceSettingsTab() {
+  const activeDomain = useAppStore((state) => state.activeDomain);
   const {
     voiceUri,
     setVoiceUri,
@@ -68,7 +70,7 @@ export function VoiceSettingsTab() {
     let isMounted = true;
     if (ttsEngine === 'edge') {
       setIsLoadingVoices(true);
-      EdgeTTSService.fetchVoices()
+      EdgeTTSService.fetchVoices(activeDomain?.url)
         .then((voices) => {
           if (isMounted) {
             setEdgeVoices(voices);
@@ -83,7 +85,7 @@ export function VoiceSettingsTab() {
     return () => {
       isMounted = false;
     };
-  }, [ttsEngine]);
+  }, [ttsEngine, activeDomain?.url]);
 
   // Fetch Browser Web Speech Synthesis Voices
   useEffect(() => {
@@ -127,7 +129,7 @@ export function VoiceSettingsTab() {
         }
 
         const sampleText = 'Xin chào bạn, đây là bản đọc thử nghiệm từ Microsoft Edge TTS AI.';
-        const blob = await EdgeTTSService.synthesizeSpeech(sampleText, targetVoice, speechRate);
+        const blob = await EdgeTTSService.synthesizeSpeech(sampleText, targetVoice, speechRate, activeDomain?.url);
         const audioUrl = URL.createObjectURL(blob);
 
         const audio = new Audio(audioUrl);

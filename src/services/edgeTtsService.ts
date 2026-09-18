@@ -1,9 +1,23 @@
+import { useAppStore } from '../stores/useAppStore';
+
 export interface EdgeVoice {
   id: string;
   name: string;
   language: string;
   gender: 'male' | 'female';
   desc?: string;
+}
+
+export const DEFAULT_GATEWAY_URL = 'https://api-anhvu0510.duckdns.org';
+
+export function getGatewayBaseUrl(): string {
+  try {
+    const activeDomain = useAppStore.getState().activeDomain;
+    if (activeDomain && activeDomain.url) {
+      return activeDomain.url.replace(/\/+$/, '');
+    }
+  } catch {}
+  return DEFAULT_GATEWAY_URL;
 }
 
 export const DEFAULT_EDGE_VOICES: EdgeVoice[] = [
@@ -18,8 +32,8 @@ export const DEFAULT_EDGE_VOICES: EdgeVoice[] = [
 export class EdgeTTSService {
   public static async fetchVoices(baseUrl?: string): Promise<EdgeVoice[]> {
     try {
-      const cleanUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : '';
-      const targetUrl = cleanUrl ? `${cleanUrl}/api/edge-tts/voices` : '/api/edge-tts/voices';
+      const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
+      const targetUrl = `${rootUrl}/api/edge-tts/voices`;
       const response = await fetch(targetUrl, {
         method: 'GET',
         headers: { Accept: 'application/json' },
@@ -48,8 +62,8 @@ export class EdgeTTSService {
       throw new Error('Text to synthesize cannot be empty');
     }
 
-    const cleanUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : '';
-    const targetUrl = cleanUrl ? `${cleanUrl}/api/edge-tts/synthesize` : '/api/edge-tts/synthesize';
+    const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
+    const targetUrl = `${rootUrl}/api/edge-tts/synthesize`;
 
     // Convert speed factor (e.g. 1.2 => '+20%', 0.8 => '-20%')
     const ratePercentage = speed !== 1.0 ? `${speed >= 1.0 ? '+' : ''}${Math.round((speed - 1.0) * 100)}%` : '+0%';
