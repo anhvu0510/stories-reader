@@ -13,8 +13,7 @@ import { useTTSStore } from '../features/reader/stores/useTTSStore';
 
 export { splitParagraphIntoSentences } from '../services/gaplessTtsPlayer';
 
-const WORD_HIGHLIGHT_CLASS =
-  'msreadout-word-highlight bg-yellow-400 text-black box-decoration-clone rounded-sm px-0.5 mx-[-2px]';
+const WORD_HIGHLIGHT_CLASS = 'msreadout-word-highlight';
 
 export function useReadAloud(paragraphs: string[]) {
   const voiceUri = useReaderConfigStore((state) => state.voiceUri);
@@ -152,11 +151,19 @@ export function useReadAloud(paragraphs: string[]) {
     const offset = charIndex + match.index;
     highlighter.highlight(pNode, chunk.startOffset + offset, match[0].length);
 
-    const highlight = pNode.querySelector('.msreadout-word-highlight');
-    if (highlight && Date.now() - lastInteractionTime.current > 3000) {
-      const rect = highlight.getBoundingClientRect();
-      if (rect.top < 120 || rect.bottom > window.innerHeight - 120) {
-        highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const activeLine = document.querySelector<HTMLElement>('.msreadout-line-highlight');
+    if (activeLine && Date.now() - lastInteractionTime.current > 3000) {
+      const rect = activeLine.getBoundingClientRect();
+      const safeBandTop = window.innerHeight * 0.25;
+      const safeBandBottom = window.innerHeight * 0.75;
+      if (rect.top < safeBandTop || rect.bottom > safeBandBottom) {
+        const prefersReducedMotion = window.matchMedia?.(
+          '(prefers-reduced-motion: reduce)'
+        ).matches;
+        activeLine.scrollIntoView({
+          behavior: prefersReducedMotion ? 'auto' : 'smooth',
+          block: 'center',
+        });
       }
     }
   }, [currentChunkIndex, charIndex, charLength, chunks]);

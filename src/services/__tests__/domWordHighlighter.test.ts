@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { DomWordHighlighter } from '../domWordHighlighter';
 
 describe('DomWordHighlighter', () => {
@@ -30,5 +30,51 @@ describe('DomWordHighlighter', () => {
 
     expect(root.querySelector('msreadoutspan')).toBeNull();
     expect(root.textContent).toBe('Xin chào');
+  });
+
+  it('keeps one reusable highlight on the rendered line containing the active word', () => {
+    const root = document.createElement('div');
+    root.textContent = 'Dòng đầu tiên và dòng thứ hai';
+    document.body.appendChild(root);
+
+    const originalCreateRange = document.createRange.bind(document);
+    const createRange = vi.spyOn(document, 'createRange').mockImplementation(() => {
+      const range = originalCreateRange();
+      Object.defineProperty(range, 'getClientRects', {
+        value: () => [
+          new DOMRect(24, 20, 210, 32),
+          new DOMRect(24, 52, 178, 32),
+        ],
+      });
+      return range;
+    });
+    const getBoundingClientRect = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function () {
+        return this.tagName === 'MSREADOUTSPAN'
+          ? new DOMRect(96, 52, 42, 32)
+          : new DOMRect();
+      });
+    const highlighter = new DomWordHighlighter('active-word');
+
+    highlighter.highlight(root, 19, 4);
+
+    const firstLineHighlight = document.querySelector<HTMLElement>('.msreadout-line-highlight');
+    expect(firstLineHighlight).not.toBeNull();
+    expect(firstLineHighlight?.style.transform).toBe('translate3d(24px, 52px, 0)');
+    expect(firstLineHighlight?.style.width).toBe('178px');
+    expect(firstLineHighlight?.style.height).toBe('32px');
+
+    highlighter.highlight(root, 24, 3);
+
+    expect(document.querySelectorAll('.msreadout-line-highlight')).toHaveLength(1);
+    expect(document.querySelector('.msreadout-line-highlight')).toBe(firstLineHighlight);
+
+    highlighter.clear();
+    expect(document.querySelector('.msreadout-line-highlight')).toBeNull();
+
+    getBoundingClientRect.mockRestore();
+    createRange.mockRestore();
+    root.remove();
   });
 });

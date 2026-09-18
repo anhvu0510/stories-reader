@@ -153,7 +153,7 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
         element.getAttribute('data-paragraph-index')
       )
     ).toEqual(['0', '1', '2', '3']);
-    expect(container.querySelectorAll('article > div.ring-2')).toHaveLength(1);
+    expect(container.querySelectorAll('article > div.ring-2')).toHaveLength(0);
   });
 
   it('QC-6 [Tier 3 - Offline Mode Support]: preserves batchChapterSize when offline mode is active', async () => {
