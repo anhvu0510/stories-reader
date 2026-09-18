@@ -156,6 +156,7 @@ export function ReaderScreen() {
   const {
     isPlaying,
     isPaused,
+    isLoading: isTTSLoading,
     currentChunkIndex,
     activeParagraphIndex,
     startReading,
@@ -479,7 +480,7 @@ export function ReaderScreen() {
           progress={scrollProgress}
           isVisible={true}
           isTTSActive={isPlaying || isPaused}
-          onToggleTTS={() => (isPlaying || isPaused ? stopReading() : startReading())}
+          onToggleTTS={() => (isPlaying || isPaused || isTTSLoading ? stopReading() : startReading())}
           onOpenHistory={handleOpenHistory}
         />
       </div>
@@ -488,11 +489,12 @@ export function ReaderScreen() {
       <VerticalBatchChapterNav
         chapters={displayChapters}
         activeChapterId={activeChapter?.chapterId}
-        isVisible={showZenControls && (showTTSControlOnReader || isPlaying || isPaused)}
+        isVisible={showZenControls && (showTTSControlOnReader || isPlaying || isPaused || isTTSLoading)}
         isTTSActive={isPlaying || isPaused}
+        isTTSLoading={isTTSLoading}
         isTTSPlaying={isPlaying}
         currentParagraphIndex={activeParagraphIndex}
-        onToggleTTS={() => (isPlaying || isPaused ? stopReading() : startReading())}
+        onToggleTTS={() => (isPlaying || isPaused || isTTSLoading ? stopReading() : startReading())}
         onTTSPlay={startReading}
         onTTSPause={pauseReading}
         onTTSStop={stopReading}

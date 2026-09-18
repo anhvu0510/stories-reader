@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LocateFixed, Volume2, Play, Pause, Square, SkipBack, SkipForward } from 'lucide-react';
+import { LocateFixed, Volume2, Play, Pause, Square, SkipBack, SkipForward, Loader2 } from 'lucide-react';
 import { ChapterDetailItem } from '../../../shared/types';
 
 export interface VerticalBatchChapterNavProps {
@@ -7,6 +7,7 @@ export interface VerticalBatchChapterNavProps {
   activeChapterId?: string;
   isVisible?: boolean;
   isTTSActive?: boolean;
+  isTTSLoading?: boolean;
   isTTSPlaying?: boolean;
   currentParagraphIndex?: number;
   onToggleTTS?: () => void;
@@ -22,6 +23,7 @@ export function VerticalBatchChapterNav({
   activeChapterId,
   isVisible = true,
   isTTSActive = false,
+  isTTSLoading = false,
   isTTSPlaying = false,
   currentParagraphIndex = 0,
   onToggleTTS,
@@ -97,10 +99,14 @@ export function VerticalBatchChapterNav({
               else if (onTTSPlay) onTTSPlay();
             }}
             className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer bg-black/10 dark:bg-black/20 backdrop-blur-[1.5px] border border-primary/50 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 active:scale-90"
-            title="Bật đọc thành tiếng (Read Aloud)"
-            aria-label="Bật đọc thành tiếng"
+            title={isTTSLoading ? 'Đang chuẩn bị âm thanh... (Bấm để hủy)' : 'Bật đọc thành tiếng (Read Aloud)'}
+            aria-label={isTTSLoading ? 'Đang chuẩn bị âm thanh' : 'Bật đọc thành tiếng'}
           >
-            <Volume2 size={13.5} />
+            {isTTSLoading ? (
+              <Loader2 size={13.5} className="animate-spin text-primary" />
+            ) : (
+              <Volume2 size={13.5} />
+            )}
           </button>
         ) : (
           /* Active State: Vertical Stack of Independent Floating 3D Circle Buttons (No Capsule Shell) */

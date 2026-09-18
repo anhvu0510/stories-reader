@@ -169,4 +169,42 @@ describe('VerticalBatchChapterNav Component', () => {
     expect(nav.className).toContain('-translate-x-14');
     expect(nav.className).toContain('opacity-0');
   });
+
+  it('QC-8 [Loading State]: Displays loading spinner on single circle speaker button and no control bar when isTTSLoading is true', () => {
+    render(
+      <VerticalBatchChapterNav
+        chapters={mockChapters}
+        activeChapterId="c1"
+        isVisible={true}
+        isTTSActive={false}
+        isTTSLoading={true}
+      />
+    );
+
+    const loadingBtn = screen.getByLabelText('Đang chuẩn bị âm thanh');
+    expect(loadingBtn).toBeDefined();
+
+    // Verify control bar buttons are NOT rendered during loading
+    expect(screen.queryByLabelText('Tạm dừng đọc')).toBeNull();
+    expect(screen.queryByLabelText('Dừng đọc')).toBeNull();
+  });
+
+  it('QC-9 [Cancel Loading]: Calls onToggleTTS when clicking loading speaker button', () => {
+    const mockOnToggleTTS = vi.fn();
+    render(
+      <VerticalBatchChapterNav
+        chapters={mockChapters}
+        activeChapterId="c1"
+        isVisible={true}
+        isTTSActive={false}
+        isTTSLoading={true}
+        onToggleTTS={mockOnToggleTTS}
+      />
+    );
+
+    const loadingBtn = screen.getByLabelText('Đang chuẩn bị âm thanh');
+    fireEvent.click(loadingBtn);
+
+    expect(mockOnToggleTTS).toHaveBeenCalledTimes(1);
+  });
 });

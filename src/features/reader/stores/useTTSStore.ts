@@ -3,10 +3,12 @@ import { create } from 'zustand';
 interface TTSStore {
   isPlaying: boolean;
   isPaused: boolean;
+  isLoading: boolean;
   currentParagraphIndex: number;
   currentCharIndex: number;
   currentCharLength: number;
 
+  setIsLoading: (isLoading: boolean) => void;
   setIsPlaying: (playing: boolean) => void;
   setIsPaused: (paused: boolean) => void;
   setTTSPosition: (pIdx: number, charIdx: number, charLen: number) => void;
@@ -16,10 +18,12 @@ interface TTSStore {
 export const useTTSStore = create<TTSStore>((set) => ({
   isPlaying: false,
   isPaused: false,
+  isLoading: false,
   currentParagraphIndex: -1,
   currentCharIndex: -1,
   currentCharLength: 0,
 
+  setIsLoading: (isLoading) => set({ isLoading }),
   setIsPlaying: (isPlaying) => set({ isPlaying }),
   setIsPaused: (isPaused) => set({ isPaused }),
   setTTSPosition: (currentParagraphIndex, currentCharIndex, currentCharLength) =>
@@ -28,6 +32,7 @@ export const useTTSStore = create<TTSStore>((set) => ({
     set({
       isPlaying: false,
       isPaused: false,
+      isLoading: false,
       currentParagraphIndex: -1,
       currentCharIndex: -1,
       currentCharLength: 0,
