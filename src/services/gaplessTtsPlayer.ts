@@ -95,6 +95,19 @@ const MAX_PHRASE_CHARACTERS = 180;
 const DEFAULT_TARGET_CHARACTERS = 160;
 const DEFAULT_MAX_CHARACTERS = MAX_PHRASE_CHARACTERS;
 const WORD_PATTERN = /[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/gu;
+const SPEECH_BATCH_PAUSE_SECONDS = 0.16;
+const PARAGRAPH_PAUSE_SECONDS = 0.4;
+const CLAUSE_PAUSE_SECONDS = 0.08;
+const SOFT_BREAK_PAUSE_SECONDS = 0.06;
+
+function getBoundaryPauseSeconds(previous: SpeechSegment, next: SpeechSegment): number {
+  if (previous.pIdx !== next.pIdx) return PARAGRAPH_PAUSE_SECONDS;
+
+  const ending = previous.text.trimEnd();
+  if (/[.!?…]["'”’)\]]*$/u.test(ending)) return SPEECH_BATCH_PAUSE_SECONDS;
+  if (/[,;:]["'”’)\]]*$/u.test(ending)) return CLAUSE_PAUSE_SECONDS;
+  return SOFT_BREAK_PAUSE_SECONDS;
+}
 
 function joinChunksPreservingOffsets(previous: SentenceChunk, next: SentenceChunk): string {
   const previousEndOffset = previous.startOffset + previous.length;
@@ -402,7 +415,7 @@ export class GaplessTtsPlayer {
         preparedAudio.delete(index);
 
         const nextStartAt = Math.max(
-          currentPlayback.endAt,
+          currentPlayback.endAt + getBoundaryPauseSeconds(segments[index - 1], segments[index]),
           this.engine.now() + this.startLeadSeconds
         );
         const nextPlayback = this.scheduleAudio(nextAudio, nextStartAt);
@@ -466,7 +479,7 @@ export class GaplessTtsPlayer {
         ensureStream(index + 1);
 
         const startAt = previousPlayback
-          ? previousPlayback.endAt
+          ? previousPlayback.endAt + getBoundaryPauseSeconds(segments[index - 1], segment)
           : this.engine.now() + this.startLeadSeconds;
         const playback = this.engine.beginPcmStream(
           audioStream.sampleRate,

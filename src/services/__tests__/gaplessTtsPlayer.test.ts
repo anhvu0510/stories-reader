@@ -149,7 +149,10 @@ describe('buildWordTimeline', () => {
 });
 
 describe('GaplessTtsPlayer', () => {
-  it('schedules a ready segment exactly when the previous segment ends', async () => {
+  it.each([
+    { nextParagraphIndex: 0, expectedStart: 2.16, boundary: 'speech batch' },
+    { nextParagraphIndex: 1, expectedStart: 2.4, boundary: 'paragraph' },
+  ])('adds a natural pause at a $boundary boundary', async ({ nextParagraphIndex, expectedStart }) => {
     const scheduledStarts: number[] = [];
     const engine: AudioPlaybackEngine = {
       now: () => 0,
@@ -177,7 +180,7 @@ describe('GaplessTtsPlayer', () => {
         sentenceEndIndex: 0,
       },
       {
-        pIdx: 0,
+        pIdx: nextParagraphIndex,
         text: 'Segment hai.',
         startOffset: 13,
         length: 12,
@@ -190,7 +193,7 @@ describe('GaplessTtsPlayer', () => {
     player.start(segments);
     await vi.waitFor(() => expect(scheduledStarts).toHaveLength(2));
 
-    expect(scheduledStarts).toEqual([0, 2]);
+    expect(scheduledStarts).toEqual([0, expectedStart]);
     expect(synthesize).toHaveBeenCalledTimes(2);
 
     await player.stop();
@@ -256,7 +259,7 @@ describe('GaplessTtsPlayer', () => {
     expect(engine.schedule).not.toHaveBeenCalled();
   });
 
-  it('feeds PCM response chunks into one continuous scheduler without using WAV fallback', async () => {
+  it('streams PCM with a paragraph pause without using WAV fallback', async () => {
     const streamStarts: number[] = [];
     const appendedChunks: number[][] = [];
     const engine: AudioPlaybackEngine = {
@@ -306,13 +309,14 @@ describe('GaplessTtsPlayer', () => {
       startLeadSeconds: 0,
     });
 
-    player.start([createSegment(0), createSegment(1)]);
+    const nextParagraph = { ...createSegment(1), pIdx: 1 };
+    player.start([createSegment(0), nextParagraph]);
     await vi.waitFor(() => expect(stream).toHaveBeenCalledTimes(2));
 
     expect(synthesize).not.toHaveBeenCalled();
     expect(appendedChunks).toEqual([[0, 0], [0, 0]]);
     expect(streamStarts[0]).toBe(0);
-    expect(streamStarts[1]).toBeCloseTo(1 / 24000, 10);
+    expect(streamStarts[1]).toBeCloseTo(1 / 24000 + 0.4, 10);
 
     await player.stop();
   });
