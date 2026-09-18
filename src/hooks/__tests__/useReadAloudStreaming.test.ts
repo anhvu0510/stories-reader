@@ -2,6 +2,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { splitParagraphIntoSentences } from '../../services/gaplessTtsPlayer';
+import { DomWordHighlighter } from '../../services/domWordHighlighter';
 import { TTSService } from '../../services/ttsService';
 import { useReaderConfigStore } from '../../stores/useReaderConfigStore';
 import { useReadAloud } from '../useReadAloud';
@@ -145,6 +146,36 @@ describe('useReadAloud VieNeu streaming speed', () => {
     await waitFor(() =>
       expect(fakeAudioContexts[0].sources[0]?.playbackRate.value).toBe(1)
     );
+
+    unmount();
+  });
+
+  it('keeps the visual highlight mounted until the next spoken word begins', async () => {
+    const clearHighlight = vi.spyOn(DomWordHighlighter.prototype, 'clear');
+    const streamSpeech = vi.spyOn(TTSService, 'streamSpeech').mockResolvedValue({
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([0, 0, 0, 0]));
+          controller.close();
+        },
+      }),
+      sampleRate: 24000,
+      channels: 1,
+      sampleFormat: 's16le',
+    });
+    vi.spyOn(TTSService, 'synthesizeSpeech').mockResolvedValue(new Blob());
+
+    const paragraphs = ['Câu đầu tiên đủ dài để bắt đầu một lượt đọc.'];
+    const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
+    const clearsBeforePlayback = clearHighlight.mock.calls.length;
+
+    act(() => result.current.startReading());
+    await waitFor(() => expect(streamSpeech).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(clearHighlight).toHaveBeenCalledTimes(clearsBeforePlayback);
 
     unmount();
   });

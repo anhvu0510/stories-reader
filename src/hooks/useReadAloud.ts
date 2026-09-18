@@ -276,14 +276,9 @@ export function useReadAloud(paragraphs: string[]) {
     gaplessPlayerRef.current = player;
 
     player.start(chunks.slice(index), {
-      onSegmentStart: (relativeIndex, segment) => {
+      onSegmentStart: (relativeIndex) => {
         if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
         activeIndex = index + relativeIndex;
-        currentChunkIdxRef.current = activeIndex;
-        setCurrentChunkIndex(activeIndex);
-        charIndexRef.current = -1;
-        charLengthRef.current = 0;
-        wordHighlighterRef.current?.clear();
       },
       onWordBoundary: (relativeIndex, _segment, cue) => {
         if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
