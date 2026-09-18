@@ -42,6 +42,15 @@ export interface VieNeuSynthesisOptions {
   output_sample_rate?: 24000 | 48000;
 }
 
+export interface VieNeuRequestContext {
+  book_id?: string;
+  chapter_id?: string;
+  chapter_number?: number;
+  segment_index?: number;
+  segment_count?: number;
+  is_final_segment?: boolean;
+}
+
 export const DEFAULT_VIENEU_SERVER_URL = 'https://api-anhvu0510.duckdns.org/vieneu-tts';
 
 export class TTSService {
@@ -83,7 +92,8 @@ export class TTSService {
     baseUrl: string = DEFAULT_VIENEU_SERVER_URL,
     signal?: AbortSignal,
     model?: string,
-    options: VieNeuSynthesisOptions = {}
+    options: VieNeuSynthesisOptions = {},
+    context: VieNeuRequestContext = {}
   ): Promise<Blob> {
     if (!text || !text.trim()) {
       throw new Error('Input text cannot be empty');
@@ -104,6 +114,7 @@ export class TTSService {
         response_format: 'wav',
         speed: speed,
         ...options,
+        ...context,
       }),
     });
 
@@ -122,7 +133,8 @@ export class TTSService {
     baseUrl: string = DEFAULT_VIENEU_SERVER_URL,
     signal?: AbortSignal,
     model?: string,
-    options: VieNeuSynthesisOptions = {}
+    options: VieNeuSynthesisOptions = {},
+    context: VieNeuRequestContext = {}
   ): Promise<PcmAudioStream> {
     if (!text || !text.trim()) {
       throw new Error('Input text cannot be empty');
@@ -143,6 +155,7 @@ export class TTSService {
         response_format: 'pcm',
         speed,
         ...options,
+        ...context,
       }),
     });
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useReaderConfigStore } from '../stores/useReaderConfigStore';
-import { TTSService, DEFAULT_VIENEU_SERVER_URL } from '../services/ttsService';
+import { TTSService, DEFAULT_VIENEU_SERVER_URL, type VieNeuRequestContext } from '../services/ttsService';
 import {
   EdgeTTSService,
   type EdgeSpeechWithBoundaries,
@@ -23,7 +23,13 @@ const WORD_HIGHLIGHT_CLASS = 'msreadout-word-highlight';
 // Keep a grouped source line in one request whenever possible. The API accepts
 // up to 512 chars; 480 leaves headroom for request normalization.
 
-export function useReadAloud(paragraphs: string[]) {
+export interface ReadAloudChapterContext {
+  bookId?: string;
+  chapterId?: string;
+  chapterNumber?: number;
+}
+
+export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChapterContext = {}) {
   const activeDomain = useAppStore((state) => state.activeDomain);
   const voiceUri = useReaderConfigStore((state) => state.voiceUri);
   const edgeVoiceUri = useReaderConfigStore((state) => state.edgeVoiceUri || 'vi-VN-HoaiMyNeural');
@@ -576,30 +582,48 @@ export function useReadAloud(paragraphs: string[]) {
     // so let VieNeu apply the rate and keep the PCM player at neutral speed.
     // A true FE-only speed change needs an AudioWorklet time-stretcher.
     const vieneuSynthesisSpeed = speechRate;
+    const requestContextForSegment = (segment: SentenceChunk): VieNeuRequestContext => ({
+      book_id: chapterContext.bookId,
+      chapter_id: chapterContext.chapterId,
+      chapter_number: chapterContext.chapterNumber,
+      segment_index: (segment as SentenceChunk & { sentenceStartIndex?: number }).sentenceStartIndex ?? index,
+      segment_count: chunks.length,
+      is_final_segment:
+        ((segment as SentenceChunk & { sentenceStartIndex?: number }).sentenceStartIndex ?? index) === chunks.length - 1,
+    });
+    const hasChapterContext = Boolean(chapterContext.bookId && chapterContext.chapterId);
     let activeIndex = index;
     const player = new GaplessTtsPlayer({
       engine: new WebAudioPlaybackEngine(audioContext, 1.0),
       speechRate,
-      synthesize: (segment, signal) =>
-        TTSService.synthesizeSpeech(
+      synthesize: (segment, signal) => {
+        const args = [
           segment.text,
           activeVoice,
           vieneuSynthesisSpeed,
           vieneuServerUrl,
           signal,
           vieneuModel,
-          getVieneuOptionsForSegment(segment.text)
-        ),
-      stream: (segment, signal) =>
-        TTSService.streamSpeech(
+          getVieneuOptionsForSegment(segment.text),
+        ] as const;
+        return hasChapterContext
+          ? TTSService.synthesizeSpeech(...args, requestContextForSegment(segment))
+          : TTSService.synthesizeSpeech(...args);
+      },
+      stream: (segment, signal) => {
+        const args = [
           segment.text,
           activeVoice,
           vieneuSynthesisSpeed,
           vieneuServerUrl,
           signal,
           vieneuModel,
-          getVieneuOptionsForSegment(segment.text)
-        ),
+          getVieneuOptionsForSegment(segment.text),
+        ] as const;
+        return hasChapterContext
+          ? TTSService.streamSpeech(...args, requestContextForSegment(segment))
+          : TTSService.streamSpeech(...args);
+      },
       // Warm the complete next source paragraph while the current one plays.
       // This avoids waiting on sentence 2+ without issuing requests for the
       // entire chapter at startup. The second paragraph provides a safety

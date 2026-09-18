@@ -164,7 +164,11 @@ export function ReaderScreen() {
     stopReading,
     nextSection,
     prevSection,
-  } = useReadAloud(allParagraphs);
+  } = useReadAloud(allParagraphs, {
+    bookId: bookId || displayChapters[0]?.bookId,
+    chapterId: chapterId || displayChapters[0]?.chapterId,
+    chapterNumber: displayChapters[0]?.chapterNumber,
+  });
 
   // Keep single global LoadingOverlay active until chapter data is rendered in React state
   useGlobalLoading(loading);
