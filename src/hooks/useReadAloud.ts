@@ -20,7 +20,9 @@ import { useTTSStore } from '../features/reader/stores/useTTSStore';
 export { splitParagraphIntoSentences } from '../services/gaplessTtsPlayer';
 
 const WORD_HIGHLIGHT_CLASS = 'msreadout-word-highlight';
-const VIENEU_SEGMENT_MAX_CHARACTERS = 120;
+// Keep a grouped source line in one request whenever possible. The API accepts
+// up to 512 chars; 480 leaves headroom for request normalization.
+const VIENEU_SEGMENT_MAX_CHARACTERS = 480;
 
 export function useReadAloud(paragraphs: string[]) {
   const activeDomain = useAppStore((state) => state.activeDomain);
@@ -52,6 +54,13 @@ export function useReadAloud(paragraphs: string[]) {
     use_ref_codes: vieneuUseRefCodes, apply_watermark: vieneuApplyWatermark,
     ...(vieneuOutputSampleRate ? { output_sample_rate: vieneuOutputSampleRate as 24000 | 48000 } : {}),
   }), [vieneuTemperature, vieneuTopK, vieneuTopP, vieneuMaxNewFrames, vieneuRepetitionPenalty, vieneuRepetitionWindow, vieneuSteps, vieneuCfg, vieneuSway, vieneuMaxChars, vieneuDenoise, vieneuUseRefCodes, vieneuApplyWatermark, vieneuOutputSampleRate]);
+
+  const getVieneuOptionsForSegment = (text: string) => ({
+    ...vieneuOptions,
+    // max_chars is also used by the model as its text budget. Never let the
+    // configured default truncate a complete source line selected by marker.
+    max_chars: Math.min(512, Math.max(vieneuOptions.max_chars ?? 140, text.length)),
+  });
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -528,7 +537,7 @@ export function useReadAloud(paragraphs: string[]) {
           vieneuServerUrl,
           signal,
           vieneuModel,
-          vieneuOptions
+          getVieneuOptionsForSegment(segment.text)
         ),
       stream: (segment, signal) =>
         TTSService.streamSpeech(
@@ -538,7 +547,7 @@ export function useReadAloud(paragraphs: string[]) {
           vieneuServerUrl,
           signal,
           vieneuModel,
-          vieneuOptions
+          getVieneuOptionsForSegment(segment.text)
         ),
     });
     gaplessPlayerRef.current = player;

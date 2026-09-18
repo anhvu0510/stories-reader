@@ -189,7 +189,7 @@ describe('useReadAloud VieNeu streaming speed', () => {
     unmount();
   });
 
-  it('keeps every VieNeu request below the backend single-inference limit', async () => {
+  it('keeps each VieNeu request aligned to an API sentence boundary', async () => {
     const streamSpeech = vi.spyOn(TTSService, 'streamSpeech').mockImplementation(async () => ({
       body: new ReadableStream<Uint8Array>({
         start(controller) {
@@ -204,15 +204,15 @@ describe('useReadAloud VieNeu streaming speed', () => {
     const paragraph = [
       'Ngày hôm sau, Tần Thành lại tới, sau khi gửi thiệp cưới và bình tâm lại,',
       'nhìn thấy mấy chục sợi tóc bạc bên thái dương Vương Huyên, hắn không khỏi lo lắng.',
-    ].join(' ');
+    ].join(' \u2063 ');
     const { result, unmount } = renderHook(() => useReadAloud([paragraph]));
 
     act(() => result.current.startReading());
-    await waitFor(() => expect(streamSpeech.mock.calls.length).toBeGreaterThan(1));
+    await waitFor(() => expect(streamSpeech.mock.calls.length).toBe(2));
 
     const requestedTexts = streamSpeech.mock.calls.map(([text]) => text);
-    expect(requestedTexts.every((text) => text.length <= 120)).toBe(true);
-    expect(requestedTexts.join(' ')).toBe(paragraph);
+    expect(requestedTexts.every((text) => text.length <= 480)).toBe(true);
+    expect(requestedTexts.join(' ')).toBe(paragraph.replace(/\s*\u2063\s*/g, ' '));
 
     unmount();
   });
