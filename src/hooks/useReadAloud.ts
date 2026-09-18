@@ -572,15 +572,19 @@ export function useReadAloud(paragraphs: string[]) {
     stopAudioPlayer();
     const audioContext = new AudioContextConstructor();
     const activeVoice = voiceUri || undefined;
+    // Keep VieNeu inference at neutral speed. The listener's speed is applied
+    // once, locally, by WebAudioPlaybackEngine so synthesis quality and
+    // server latency stay stable across 1.0x–2.0x playback settings.
+    const vieneuSynthesisSpeed = 1.0;
     let activeIndex = index;
     const player = new GaplessTtsPlayer({
-      engine: new WebAudioPlaybackEngine(audioContext),
+      engine: new WebAudioPlaybackEngine(audioContext, speechRate),
       speechRate,
       synthesize: (segment, signal) =>
         TTSService.synthesizeSpeech(
           segment.text,
           activeVoice,
-          speechRate,
+          vieneuSynthesisSpeed,
           vieneuServerUrl,
           signal,
           vieneuModel,
@@ -590,7 +594,7 @@ export function useReadAloud(paragraphs: string[]) {
         TTSService.streamSpeech(
           segment.text,
           activeVoice,
-          speechRate,
+          vieneuSynthesisSpeed,
           vieneuServerUrl,
           signal,
           vieneuModel,
