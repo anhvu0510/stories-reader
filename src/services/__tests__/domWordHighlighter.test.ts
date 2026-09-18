@@ -75,7 +75,7 @@ describe('DomWordHighlighter', () => {
 
     highlighter.highlight(root, 19, 4);
 
-    const firstLineHighlight = document.querySelector<HTMLElement>('.msreadout-line-highlight');
+    const firstLineHighlight = document.querySelector<HTMLElement>('.stories-tts-line-wash');
     expect(firstLineHighlight).not.toBeNull();
     expect(firstLineHighlight?.style.transform).toBe('translate3d(24px, 52px, 0)');
     expect(firstLineHighlight?.style.width).toBe('178px');
@@ -83,11 +83,11 @@ describe('DomWordHighlighter', () => {
 
     highlighter.highlight(root, 24, 3);
 
-    expect(document.querySelectorAll('.msreadout-line-highlight')).toHaveLength(1);
-    expect(document.querySelector('.msreadout-line-highlight')).toBe(firstLineHighlight);
+    expect(document.querySelectorAll('.stories-tts-line-wash')).toHaveLength(1);
+    expect(document.querySelector('.stories-tts-line-wash')).toBe(firstLineHighlight);
 
     highlighter.clear();
-    expect(document.querySelector('.msreadout-line-highlight')).toBeNull();
+    expect(document.querySelector('.stories-tts-line-wash')).toBeNull();
 
     getBoundingClientRect.mockRestore();
     createRange.mockRestore();

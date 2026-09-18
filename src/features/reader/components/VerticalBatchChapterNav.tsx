@@ -16,13 +16,13 @@ export function VerticalBatchChapterNav({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [hasHighlight, setHasHighlight] = useState(false);
 
-  // Monitor DOM for presence of .msreadout-line-highlight element
+  // Monitor DOM for presence of .stories-tts-line-wash element
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
     const checkHighlight = () => {
       if (typeof document === 'undefined') return;
-      const el = document.querySelector('.msreadout-line-highlight');
+      const el = document.querySelector('.stories-tts-line-wash');
       setHasHighlight(Boolean(el));
     };
 
@@ -51,7 +51,7 @@ export function VerticalBatchChapterNav({
 
   const handleJumpToHighlight = () => {
     if (typeof document === 'undefined') return;
-    const highlightEl = document.querySelector('.msreadout-line-highlight');
+    const highlightEl = document.querySelector('.stories-tts-line-wash');
     if (highlightEl && typeof highlightEl.scrollIntoView === 'function') {
       highlightEl.scrollIntoView({
         behavior: 'smooth',

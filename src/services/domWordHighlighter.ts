@@ -235,7 +235,7 @@ export class DomWordHighlighter {
   private updateLineHighlight(lineRect: DOMRect): void {
     if (!this.lineHighlight) {
       this.lineHighlight = document.createElement('span');
-      this.lineHighlight.className = 'msreadout-line-highlight';
+      this.lineHighlight.className = 'stories-tts-line-wash';
       this.lineHighlight.setAttribute('aria-hidden', 'true');
       document.body.appendChild(this.lineHighlight);
     }

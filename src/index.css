@@ -237,7 +237,7 @@
 }
 
 /* Edge-style Read Aloud: one quiet rendered line plus one strongly focused word. */
-.msreadout-line-highlight {
+.stories-tts-line-wash {
   position: absolute;
   top: 0;
   left: 0;
@@ -272,7 +272,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .msreadout-line-highlight {
+  .stories-tts-line-wash {
     transition: none;
   }
 }
