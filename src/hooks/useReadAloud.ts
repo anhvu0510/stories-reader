@@ -29,7 +29,11 @@ export interface ReadAloudChapterContext {
   chapterNumber?: number;
 }
 
-export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChapterContext = {}) {
+export function useReadAloud(
+  paragraphs: string[],
+  chapterContext: ReadAloudChapterContext = {},
+  paragraphContexts: ReadAloudChapterContext[] = []
+) {
   const activeDomain = useAppStore((state) => state.activeDomain);
   const voiceUri = useReaderConfigStore((state) => state.voiceUri);
   const edgeVoiceUri = useReaderConfigStore((state) => state.edgeVoiceUri || 'vi-VN-HoaiMyNeural');
@@ -115,6 +119,28 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
       sentenceEndIndex: sentenceIndex,
     }));
   }, [paragraphs]);
+
+  const segmentMetadata = useMemo(() => {
+    const totals = new Map<string, number>();
+    const indexes = new Map<string, number>();
+    const contextForChunk = (chunk: SentenceChunk) => paragraphContexts[chunk.pIdx] || chapterContext;
+    for (const chunk of chunks) {
+      const context = contextForChunk(chunk);
+      const key = `${context.bookId || ''}:${context.chapterId || ''}:${context.chapterNumber || 0}`;
+      totals.set(key, (totals.get(key) || 0) + 1);
+    }
+    return chunks.map((chunk) => {
+      const context = contextForChunk(chunk);
+      const key = `${context.bookId || ''}:${context.chapterId || ''}:${context.chapterNumber || 0}`;
+      const segmentIndex = indexes.get(key) || 0;
+      indexes.set(key, segmentIndex + 1);
+      return {
+        context,
+        segmentIndex,
+        segmentCount: totals.get(key) || chunks.length,
+      };
+    });
+  }, [chapterContext, chunks, paragraphContexts]);
 
   const activeParagraphIndex =
     currentChunkIndex >= 0 && chunks[currentChunkIndex]
@@ -582,16 +608,20 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
     // so let VieNeu apply the rate and keep the PCM player at neutral speed.
     // A true FE-only speed change needs an AudioWorklet time-stretcher.
     const vieneuSynthesisSpeed = speechRate;
-    const requestContextForSegment = (segment: SentenceChunk): VieNeuRequestContext => ({
-      book_id: chapterContext.bookId,
-      chapter_id: chapterContext.chapterId,
-      chapter_number: chapterContext.chapterNumber,
-      segment_index: (segment as SentenceChunk & { sentenceStartIndex?: number }).sentenceStartIndex ?? index,
-      segment_count: chunks.length,
-      is_final_segment:
-        ((segment as SentenceChunk & { sentenceStartIndex?: number }).sentenceStartIndex ?? index) === chunks.length - 1,
-    });
-    const hasChapterContext = Boolean(chapterContext.bookId && chapterContext.chapterId);
+    const requestContextForSegment = (segment: SentenceChunk): VieNeuRequestContext => {
+      const absoluteIndex = (segment as SentenceChunk & { sentenceStartIndex?: number }).sentenceStartIndex ?? index;
+      const metadata = segmentMetadata[absoluteIndex];
+      const context = metadata?.context || chapterContext;
+      return {
+        book_id: context.bookId,
+        chapter_id: context.chapterId,
+        chapter_number: context.chapterNumber,
+        segment_index: metadata?.segmentIndex ?? absoluteIndex,
+        segment_count: metadata?.segmentCount ?? chunks.length,
+        is_final_segment: (metadata?.segmentIndex ?? absoluteIndex) === (metadata?.segmentCount ?? chunks.length) - 1,
+      };
+    };
+    const hasChapterContext = Boolean(chapterContext.bookId && chapterContext.chapterId) || paragraphContexts.some((context) => context.bookId && context.chapterId);
     let activeIndex = index;
     const player = new GaplessTtsPlayer({
       engine: new WebAudioPlaybackEngine(audioContext, 1.0),

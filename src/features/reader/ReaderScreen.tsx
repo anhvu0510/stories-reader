@@ -153,6 +153,16 @@ export function ReaderScreen() {
     return displayChapters.flatMap((chap) => chap.content || []);
   }, [displayChapters]);
 
+  const paragraphChapterContexts = useMemo(() => {
+    return displayChapters.flatMap((chap) =>
+      (chap.content || []).map(() => ({
+        bookId: bookId || chap.bookId,
+        chapterId: chap.chapterId,
+        chapterNumber: chap.chapterNumber,
+      }))
+    );
+  }, [bookId, displayChapters]);
+
   const {
     isPlaying,
     isPaused,
@@ -168,7 +178,7 @@ export function ReaderScreen() {
     bookId: bookId || displayChapters[0]?.bookId,
     chapterId: chapterId || displayChapters[0]?.chapterId,
     chapterNumber: displayChapters[0]?.chapterNumber,
-  });
+  }, paragraphChapterContexts);
 
   // Keep single global LoadingOverlay active until chapter data is rendered in React state
   useGlobalLoading(loading);
