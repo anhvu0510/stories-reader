@@ -1,5 +1,5 @@
 import React from 'react';
-import { Palette, Type, Sliders, Layers, Plus, Minus, BookOpen } from 'lucide-react';
+import { Palette, Type, Sliders, Layers, Plus, Minus, BookOpen, Volume2, RefreshCw } from 'lucide-react';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { ThemeType, FontType } from '../../../shared/types';
 
@@ -103,12 +103,61 @@ export function ReaderSettingsTab() {
     groupLines, setGroupLines,
     batchChapterSize, setBatchChapterSize,
     isEnabledReplace, setIsEnabledReplace,
+    showTTSControlOnReader = true, setShowTTSControlOnReader,
     bookLimit, setBookLimit,
     chapterLimit, setChapterLimit,
   } = useReaderConfigStore();
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 text-on-surface">
+      {/* Top Controls: Compact Toggle Chips with Icons */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Toggle Nút Đọc TTS */}
+        <div className="p-2 px-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-1.5 shadow-xs">
+          <span className="text-xs font-bold text-on-surface flex items-center gap-1.5 min-w-0">
+            <Volume2 size={13} className="text-primary shrink-0" />
+            <span className="truncate">Nút Đọc</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowTTSControlOnReader(!showTTSControlOnReader)}
+            className={`w-8 h-4.5 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${
+              showTTSControlOnReader ? 'bg-primary' : 'bg-white/20'
+            }`}
+            title={showTTSControlOnReader ? 'Tắt nút Đọc ngoài màn hình' : 'Bật nút Đọc ngoài màn hình'}
+            aria-label="Chuyển đổi hiển thị nút Đọc ngoài màn hình"
+          >
+            <div
+              className={`w-3.5 h-3.5 rounded-full bg-white shadow-xs transition-transform ${
+                showTTSControlOnReader ? 'translate-x-3.5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* Toggle Từ điển thay thế */}
+        <div className="p-2 px-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-1.5 shadow-xs">
+          <span className="text-xs font-bold text-on-surface flex items-center gap-1.5 min-w-0">
+            <RefreshCw size={13} className="text-primary shrink-0" />
+            <span className="truncate">Thay thế từ</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsEnabledReplace(!isEnabledReplace)}
+            className={`w-8 h-4.5 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${
+              isEnabledReplace ? 'bg-primary' : 'bg-white/20'
+            }`}
+            title={isEnabledReplace ? 'Tắt thay thế từ' : 'Bật thay thế từ'}
+            aria-label="Chuyển đổi từ điển thay thế"
+          >
+            <div
+              className={`w-3.5 h-3.5 rounded-full bg-white shadow-xs transition-transform ${
+                isEnabledReplace ? 'translate-x-3.5' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
       {/* Themes (2 cột) */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
@@ -243,19 +292,6 @@ export function ReaderSettingsTab() {
             step={10}
             unit="chương"
             onChange={setChapterLimit}
-          />
-        </div>
-      </div>
-
-      {/* Toggle Từ điển thay thế */}
-      <div className="pt-0.5">
-        <div className="flex items-center justify-between p-2.5 px-3.5 rounded-2xl bg-white/5 border border-white/10">
-          <span className="text-xs font-bold text-on-surface">Từ điển thay thế</span>
-          <input
-            type="checkbox"
-            checked={isEnabledReplace}
-            onChange={(e) => setIsEnabledReplace(e.target.checked)}
-            className="w-4 h-4 accent-primary rounded cursor-pointer"
           />
         </div>
       </div>

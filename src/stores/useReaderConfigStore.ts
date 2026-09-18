@@ -19,6 +19,7 @@ const defaultSettings: ReaderConfig = {
   chapterLimit: 50,
   ttsEngine: 'vieneu',
   vieneuServerUrl: 'https://api-anhvu0510.duckdns.org/vieneu-tts',
+  showTTSControlOnReader: true,
 };
 
 function getInitialSettings(isOffline: boolean): ReaderConfig {
@@ -44,6 +45,7 @@ interface ReaderConfigStore extends ReaderConfig {
   setSpeechRate: (speechRate: number) => void;
   setTTSEngine: (engine: 'vieneu' | 'browser') => void;
   setVieneuServerUrl: (url: string) => void;
+  setShowTTSControlOnReader: (enabled: boolean) => void;
   setBookLimit: (limit: number) => void;
   setChapterLimit: (limit: number) => void;
   updateSettings: (partial: Partial<ReaderConfig>) => void;
@@ -160,6 +162,13 @@ export const useReaderConfigStore = create<ReaderConfigStore>((set, get) => {
         const next = { ...state, vieneuServerUrl };
         persist(next);
         return { vieneuServerUrl };
+      });
+    },
+    setShowTTSControlOnReader: (showTTSControlOnReader) => {
+      set((state) => {
+        const next = { ...state, showTTSControlOnReader };
+        persist(next);
+        return { showTTSControlOnReader };
       });
     },
     setBookLimit: (bookLimit) => {

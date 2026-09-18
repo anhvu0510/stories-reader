@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Home, Clock, Volume2 } from 'lucide-react';
+import { Home, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface ReaderHeaderProps {
@@ -56,20 +56,8 @@ export const ReaderHeader = memo(function ReaderHeader({
           </div>
         </div>
 
-        {/* Right: Quick TTS Toggle & History Swap */}
+        {/* Right: Reading History */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <button
-            onClick={onToggleTTS}
-            className={`p-2 rounded-full border transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] cursor-pointer ${
-              isTTSActive
-                ? 'bg-primary text-on-primary border-primary animate-pulse'
-                : 'bg-white/10 dark:bg-white/10 border-white/30 text-on-surface hover:text-primary hover:bg-white/20'
-            }`}
-            title={isTTSActive ? 'Tắt đọc thành tiếng' : 'Bật đọc thành tiếng (VieNeu AI TTS)'}
-          >
-            <Volume2 size={16} />
-          </button>
-
           <button
             onClick={onOpenHistory}
             className="p-2 rounded-full bg-white/10 dark:bg-white/10 border border-white/30 text-primary hover:bg-white/20 transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] cursor-pointer"

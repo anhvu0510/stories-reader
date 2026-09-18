@@ -132,6 +132,7 @@ export function ReaderScreen() {
   const groupLines = useReaderConfigStore((state) => state.groupLines);
   const batchChapterSize = useReaderConfigStore((state) => state.batchChapterSize || 1);
   const isEnabledReplace = useReaderConfigStore((state) => state.isEnabledReplace);
+  const showTTSControlOnReader = useReaderConfigStore((state) => state.showTTSControlOnReader ?? true);
 
   const [contentData, setContentData] = useState<ChapterContent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -487,7 +488,7 @@ export function ReaderScreen() {
       <VerticalBatchChapterNav
         chapters={displayChapters}
         activeChapterId={activeChapter?.chapterId}
-        isVisible={showZenControls}
+        isVisible={showZenControls && (showTTSControlOnReader || isPlaying || isPaused)}
         isTTSActive={isPlaying || isPaused}
         isTTSPlaying={isPlaying}
         currentParagraphIndex={activeParagraphIndex}
