@@ -33,7 +33,7 @@ export class EdgeTTSService {
   public static async fetchVoices(baseUrl?: string): Promise<EdgeVoice[]> {
     try {
       const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
-      const targetUrl = `${rootUrl}/api/edge-tts/voices`;
+      const targetUrl = `${rootUrl}/tts/edge/voices`;
       const response = await fetch(targetUrl, {
         method: 'GET',
         headers: { Accept: 'application/json' },
@@ -63,7 +63,7 @@ export class EdgeTTSService {
     }
 
     const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
-    const targetUrl = `${rootUrl}/api/edge-tts/synthesize`;
+    const targetUrl = `${rootUrl}/tts/edge/synthesize`;
 
     // Convert speed factor (e.g. 1.2 => '+20%', 0.8 => '-20%')
     const ratePercentage = speed !== 1.0 ? `${speed >= 1.0 ? '+' : ''}${Math.round((speed - 1.0) * 100)}%` : '+0%';
