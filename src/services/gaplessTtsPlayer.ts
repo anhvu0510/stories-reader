@@ -1,5 +1,4 @@
 import { INVISIBLE_SENTENCE_DELIMITER } from '../shared/constants/textBoundaries';
-import soundTouchProcessorUrl from '@soundtouchjs/audio-worklet/processor?url';
 
 export { INVISIBLE_SENTENCE_DELIMITER } from '../shared/constants/textBoundaries';
 
@@ -74,8 +73,6 @@ export interface AudioPlaybackEngine {
   ) => PcmStreamPlayback;
   watchTime?: (callback: (currentTime: number) => void) => () => void;
   playbackRate?: number;
-  /** True when decode() already time-stretched the returned audio. */
-  playbackRateAppliedToAudio?: boolean;
 }
 
 export interface GaplessTtsPlayerOptions {
@@ -766,9 +763,7 @@ export class GaplessTtsPlayer {
     startAt: number
   ): void {
     const rate = this.engine.playbackRate && this.engine.playbackRate > 0 ? this.engine.playbackRate : 1.0;
-    const effectiveDuration = this.engine.playbackRateAppliedToAudio
-      ? audio.duration
-      : audio.duration / rate;
+    const effectiveDuration = audio.duration / rate;
     this.queueWordCuesForDuration(
       session,
       segmentIndex,
@@ -835,15 +830,9 @@ export class GaplessTtsPlayer {
 export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
   public readonly playbackRate: number;
 
-  constructor(
-    private readonly context: AudioContext,
-    playbackRate: number = 1.0,
-  private readonly preservePitch: boolean = false
-  ) {
+  constructor(private readonly context: AudioContext, playbackRate: number = 1.0) {
     this.playbackRate = Math.max(0.25, Math.min(playbackRate, 4.0));
   }
-
-  public readonly playbackRateAppliedToAudio = this.preservePitch;
 
   public now(): number {
     return this.context.currentTime;
@@ -851,30 +840,6 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
 
   public async decode(blob: Blob): Promise<DecodedAudio> {
     const buffer = await this.context.decodeAudioData(await blob.arrayBuffer());
-    if (this.preservePitch && this.playbackRate !== 1) {
-      // Load SoundTouch lazily so browsers without AudioWorklet (and test
-      // environments such as jsdom) can still use the normal server pipeline.
-      const { processOffline } = await import('@soundtouchjs/audio-worklet');
-      // SoundTouch needs a small tail to flush its overlap window. Without
-      // this padding, the last words of fast segments can be truncated.
-      const paddedInput = this.context.createBuffer(
-        buffer.numberOfChannels,
-        buffer.length + Math.ceil(buffer.sampleRate * 0.75),
-        buffer.sampleRate
-      );
-      for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
-        paddedInput.copyToChannel(buffer.getChannelData(channel), channel);
-      }
-      const processed = await processOffline({
-        input: paddedInput,
-        processorUrl: soundTouchProcessorUrl,
-        playbackRate: this.playbackRate,
-        pitch: 1,
-      });
-      const trimmed = trimTrailingAudio(processed);
-      return { duration: trimmed.duration, value: trimmed };
-    }
-
     return {
       duration: buffer.duration,
       value: buffer,
@@ -884,7 +849,7 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
   public schedule(audio: DecodedAudio, startAt: number): ScheduledAudio {
     const source = this.context.createBufferSource();
     source.buffer = audio.value as AudioBuffer;
-    if (this.playbackRate !== 1.0 && !this.preservePitch) {
+    if (this.playbackRate !== 1.0) {
       source.playbackRate.value = this.playbackRate;
     }
     source.connect(this.context.destination);
@@ -903,7 +868,7 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
     source.onended = settle;
     source.start(startAt);
 
-    const scaledDuration = this.preservePitch ? audio.duration : audio.duration / this.playbackRate;
+    const scaledDuration = audio.duration / this.playbackRate;
     return {
       endAt: startAt + scaledDuration,
       ended,
@@ -1102,30 +1067,4 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
       cancelAnimationFrame(animationFrameId);
     };
   }
-}
-
-function trimTrailingAudio(buffer: AudioBuffer): AudioBuffer {
-  const threshold = 0.0005;
-  const keepTailFrames = Math.ceil(buffer.sampleRate * 0.08);
-  let lastAudibleFrame = 0;
-  for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
-    const data = buffer.getChannelData(channel);
-    for (let index = data.length - 1; index >= 0; index -= 1) {
-      if (Math.abs(data[index]) > threshold) {
-        lastAudibleFrame = Math.max(lastAudibleFrame, index + 1);
-        break;
-      }
-    }
-  }
-  const frameLength = Math.max(1, Math.min(buffer.length, lastAudibleFrame + keepTailFrames));
-  if (frameLength === buffer.length) return buffer;
-  const trimmed = new AudioBuffer({
-    numberOfChannels: buffer.numberOfChannels,
-    length: frameLength,
-    sampleRate: buffer.sampleRate,
-  });
-  for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
-    trimmed.copyToChannel(buffer.getChannelData(channel).subarray(0, frameLength), channel);
-  }
-  return trimmed;
 }

@@ -146,7 +146,6 @@ export interface ReaderConfig {
   isEnabledReplace: boolean;
   voiceUri: string;
   speechRate: number;
-  vieneuSpeedMode?: 'server' | 'frontend';
   bookLimit: number;
   chapterLimit: number;
   ttsEngine?: 'vieneu' | 'edge' | 'browser';
