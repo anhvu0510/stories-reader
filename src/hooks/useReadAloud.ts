@@ -20,6 +20,8 @@ import { useTTSStore } from '../features/reader/stores/useTTSStore';
 export { splitParagraphIntoSentences } from '../services/gaplessTtsPlayer';
 
 const WORD_HIGHLIGHT_CLASS = 'msreadout-word-highlight';
+const VIENEU_SEGMENT_TARGET_CHARACTERS = 108;
+const VIENEU_SEGMENT_MAX_CHARACTERS = 120;
 
 export function useReadAloud(paragraphs: string[]) {
   const activeDomain = useAppStore((state) => state.activeDomain);
@@ -53,6 +55,10 @@ export function useReadAloud(paragraphs: string[]) {
 
   const chunks = useMemo(() => {
     const res: SentenceChunk[] = [];
+    const isVieneu = ttsEngine === 'vieneu';
+    const splitOptions = isVieneu
+      ? { maxCharacters: VIENEU_SEGMENT_MAX_CHARACTERS }
+      : undefined;
     paragraphs.forEach((html, pIdx) => {
       if (!html) return;
       const tmp = document.createElement('div');
@@ -60,12 +66,20 @@ export function useReadAloud(paragraphs: string[]) {
       const text = tmp.textContent || tmp.innerText || '';
 
       if (text.trim()) {
-        const sentenceChunks = splitParagraphIntoSentences(text, pIdx);
+        const sentenceChunks = splitParagraphIntoSentences(text, pIdx, splitOptions);
         res.push(...sentenceChunks);
       }
     });
-    return buildSpeechSegments(res);
-  }, [paragraphs]);
+    return buildSpeechSegments(
+      res,
+      isVieneu
+        ? {
+            targetCharacters: VIENEU_SEGMENT_TARGET_CHARACTERS,
+            maxCharacters: VIENEU_SEGMENT_MAX_CHARACTERS,
+          }
+        : undefined
+    );
+  }, [paragraphs, ttsEngine]);
 
   const activeParagraphIndex =
     currentChunkIndex >= 0 && chunks[currentChunkIndex]

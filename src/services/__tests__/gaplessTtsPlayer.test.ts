@@ -110,6 +110,35 @@ describe('buildSpeechSegments', () => {
     expect(segments.every((segment) => segment.length <= 480)).toBe(true);
   });
 
+  it('keeps VieNeu phrases within one backend inference without dropping source text', () => {
+    const paragraph = [
+      'Ngày hôm sau, Tần Thành lại tới, sau khi gửi thiệp cưới và bình tâm lại,',
+      'nhìn thấy mấy chục sợi tóc bạc bên thái dương Vương Huyên, hắn không khỏi lo lắng.',
+      'Cơ thể ngươi sẽ không để lại di chứng gì chứ.',
+    ].join(' ');
+
+    const phrases = splitParagraphIntoSentences(paragraph, 0, {
+      maxCharacters: 120,
+    });
+    const segments = buildSpeechSegments(phrases, {
+      targetCharacters: 108,
+      maxCharacters: 120,
+    });
+
+    expect(phrases.every((phrase) => phrase.length <= 120)).toBe(true);
+    expect(segments.every((segment) => segment.length <= 120)).toBe(true);
+
+    let sourceCursor = 0;
+    phrases.forEach((phrase) => {
+      expect(paragraph.slice(sourceCursor, phrase.startOffset).trim()).toBe('');
+      expect(paragraph.slice(phrase.startOffset, phrase.startOffset + phrase.length)).toBe(
+        phrase.text
+      );
+      sourceCursor = phrase.startOffset + phrase.length;
+    });
+    expect(paragraph.slice(sourceCursor).trim()).toBe('');
+  });
+
   it('does not merge a short trailing sentence past the phrase limit', () => {
     const longSentence = `${'một '.repeat(44).trim()}.`;
     const paragraph = `${longSentence} Ừm nhé.`;

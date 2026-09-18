@@ -15,6 +15,10 @@ export interface SpeechSegmentOptions {
   maxCharacters?: number;
 }
 
+export interface SentenceSplitOptions {
+  maxCharacters?: number;
+}
+
 export interface DecodedAudio {
   duration: number;
   value: unknown;
@@ -235,18 +239,21 @@ function joinChunksPreservingOffsets(previous: SentenceChunk, next: SentenceChun
   return `${previous.text}${' '.repeat(gapLength)}${next.text}`;
 }
 
-function splitLongSpeechChunk(chunk: SentenceChunk): SentenceChunk[] {
-  if (chunk.length <= MAX_PHRASE_CHARACTERS) return [chunk];
+function splitLongSpeechChunk(
+  chunk: SentenceChunk,
+  maxCharacters: number
+): SentenceChunk[] {
+  if (chunk.length <= maxCharacters) return [chunk];
 
   const phrases: SentenceChunk[] = [];
   let cursor = 0;
 
-  while (chunk.text.length - cursor > MAX_PHRASE_CHARACTERS) {
-    const minimumNaturalBreak = Math.floor(MAX_PHRASE_CHARACTERS * 0.55);
-    const candidate = chunk.text.slice(cursor, cursor + MAX_PHRASE_CHARACTERS + 1);
+  while (chunk.text.length - cursor > maxCharacters) {
+    const minimumNaturalBreak = Math.floor(maxCharacters * 0.55);
+    const candidate = chunk.text.slice(cursor, cursor + maxCharacters + 1);
     let breakAt = -1;
 
-    for (let index = MAX_PHRASE_CHARACTERS; index >= minimumNaturalBreak; index -= 1) {
+    for (let index = maxCharacters; index >= minimumNaturalBreak; index -= 1) {
       if (/[,;:]/u.test(candidate[index - 1] ?? '')) {
         breakAt = index;
         break;
@@ -254,7 +261,7 @@ function splitLongSpeechChunk(chunk: SentenceChunk): SentenceChunk[] {
     }
 
     if (breakAt === -1) {
-      for (let index = MAX_PHRASE_CHARACTERS; index >= minimumNaturalBreak; index -= 1) {
+      for (let index = maxCharacters; index >= minimumNaturalBreak; index -= 1) {
         if (/\s/u.test(candidate[index - 1] ?? '')) {
           breakAt = index - 1;
           break;
@@ -262,7 +269,7 @@ function splitLongSpeechChunk(chunk: SentenceChunk): SentenceChunk[] {
       }
     }
 
-    if (breakAt <= 0) breakAt = MAX_PHRASE_CHARACTERS;
+    if (breakAt <= 0) breakAt = maxCharacters;
 
     const rawPhrase = chunk.text.slice(cursor, cursor + breakAt);
     const leadingWhitespace = rawPhrase.length - rawPhrase.trimStart().length;
@@ -293,8 +300,14 @@ function splitLongSpeechChunk(chunk: SentenceChunk): SentenceChunk[] {
   return phrases;
 }
 
-export function splitParagraphIntoSentences(text: string, pIdx: number): SentenceChunk[] {
+export function splitParagraphIntoSentences(
+  text: string,
+  pIdx: number,
+  options: SentenceSplitOptions = {}
+): SentenceChunk[] {
   if (!text || !text.trim()) return [];
+
+  const maxCharacters = Math.max(1, options.maxCharacters ?? MAX_PHRASE_CHARACTERS);
 
   const sentenceRegex = /[^.!?…\n]+[.!?…\n]*/g;
   const sentences: SentenceChunk[] = [];
@@ -312,7 +325,7 @@ export function splitParagraphIntoSentences(text: string, pIdx: number): Sentenc
       startOffset: match.index + leadingSpaces,
       length: trimmedSentence.length,
     };
-    sentences.push(...splitLongSpeechChunk(sentence));
+    sentences.push(...splitLongSpeechChunk(sentence, maxCharacters));
   }
 
   if (sentences.length === 0 && text.trim()) {
@@ -330,7 +343,7 @@ export function splitParagraphIntoSentences(text: string, pIdx: number): Sentenc
     const previous = mergedSentences.at(-1);
     if (previous && previous.pIdx === sentence.pIdx && sentence.text.length < 10) {
       const combinedText = joinChunksPreservingOffsets(previous, sentence);
-      if (combinedText.length <= MAX_PHRASE_CHARACTERS) {
+      if (combinedText.length <= maxCharacters) {
         previous.text = combinedText;
         previous.length = previous.text.length;
         return;

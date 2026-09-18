@@ -181,6 +181,34 @@ describe('useReadAloud VieNeu streaming speed', () => {
 
     unmount();
   });
+
+  it('keeps every VieNeu request below the backend single-inference limit', async () => {
+    const streamSpeech = vi.spyOn(TTSService, 'streamSpeech').mockImplementation(async () => ({
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([0, 0, 0, 0]));
+        },
+      }),
+      sampleRate: 24000,
+      channels: 1,
+      sampleFormat: 's16le',
+    }));
+    vi.spyOn(TTSService, 'synthesizeSpeech').mockResolvedValue(new Blob());
+    const paragraph = [
+      'Ngày hôm sau, Tần Thành lại tới, sau khi gửi thiệp cưới và bình tâm lại,',
+      'nhìn thấy mấy chục sợi tóc bạc bên thái dương Vương Huyên, hắn không khỏi lo lắng.',
+    ].join(' ');
+    const { result, unmount } = renderHook(() => useReadAloud([paragraph]));
+
+    act(() => result.current.startReading());
+    await waitFor(() => expect(streamSpeech.mock.calls.length).toBeGreaterThan(1));
+
+    const requestedTexts = streamSpeech.mock.calls.map(([text]) => text);
+    expect(requestedTexts.every((text) => text.length <= 120)).toBe(true);
+    expect(requestedTexts.join(' ')).toBe(paragraph);
+
+    unmount();
+  });
 });
 
 describe('useReadAloud Edge word boundaries', () => {
