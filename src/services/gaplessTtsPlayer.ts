@@ -74,6 +74,8 @@ export interface AudioPlaybackEngine {
   ) => PcmStreamPlayback;
   watchTime?: (callback: (currentTime: number) => void) => () => void;
   playbackRate?: number;
+  /** True when decode() already time-stretched the returned audio. */
+  playbackRateAppliedToAudio?: boolean;
 }
 
 export interface GaplessTtsPlayerOptions {
@@ -764,7 +766,9 @@ export class GaplessTtsPlayer {
     startAt: number
   ): void {
     const rate = this.engine.playbackRate && this.engine.playbackRate > 0 ? this.engine.playbackRate : 1.0;
-    const effectiveDuration = audio.duration / rate;
+    const effectiveDuration = this.engine.playbackRateAppliedToAudio
+      ? audio.duration
+      : audio.duration / rate;
     this.queueWordCuesForDuration(
       session,
       segmentIndex,
@@ -834,10 +838,12 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
   constructor(
     private readonly context: AudioContext,
     playbackRate: number = 1.0,
-    private readonly preservePitch: boolean = false
+  private readonly preservePitch: boolean = false
   ) {
     this.playbackRate = Math.max(0.25, Math.min(playbackRate, 4.0));
   }
+
+  public readonly playbackRateAppliedToAudio = this.preservePitch;
 
   public now(): number {
     return this.context.currentTime;
@@ -849,13 +855,24 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
       // Load SoundTouch lazily so browsers without AudioWorklet (and test
       // environments such as jsdom) can still use the normal server pipeline.
       const { processOffline } = await import('@soundtouchjs/audio-worklet');
+      // SoundTouch needs a small tail to flush its overlap window. Without
+      // this padding, the last words of fast segments can be truncated.
+      const paddedInput = this.context.createBuffer(
+        buffer.numberOfChannels,
+        buffer.length + Math.ceil(buffer.sampleRate * 0.75),
+        buffer.sampleRate
+      );
+      for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+        paddedInput.copyToChannel(buffer.getChannelData(channel), channel);
+      }
       const processed = await processOffline({
-        input: buffer,
+        input: paddedInput,
         processorUrl: soundTouchProcessorUrl,
         playbackRate: this.playbackRate,
         pitch: 1,
       });
-      return { duration: processed.duration, value: processed };
+      const trimmed = trimTrailingAudio(processed);
+      return { duration: trimmed.duration, value: trimmed };
     }
 
     return {
@@ -1085,4 +1102,30 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
       cancelAnimationFrame(animationFrameId);
     };
   }
+}
+
+function trimTrailingAudio(buffer: AudioBuffer): AudioBuffer {
+  const threshold = 0.0005;
+  const keepTailFrames = Math.ceil(buffer.sampleRate * 0.08);
+  let lastAudibleFrame = 0;
+  for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+    const data = buffer.getChannelData(channel);
+    for (let index = data.length - 1; index >= 0; index -= 1) {
+      if (Math.abs(data[index]) > threshold) {
+        lastAudibleFrame = Math.max(lastAudibleFrame, index + 1);
+        break;
+      }
+    }
+  }
+  const frameLength = Math.max(1, Math.min(buffer.length, lastAudibleFrame + keepTailFrames));
+  if (frameLength === buffer.length) return buffer;
+  const trimmed = new AudioBuffer({
+    numberOfChannels: buffer.numberOfChannels,
+    length: frameLength,
+    sampleRate: buffer.sampleRate,
+  });
+  for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+    trimmed.copyToChannel(buffer.getChannelData(channel).subarray(0, frameLength), channel);
+  }
+  return trimmed;
 }
