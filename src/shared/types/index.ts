@@ -150,6 +150,7 @@ export interface ReaderConfig {
   chapterLimit: number;
   ttsEngine?: 'vieneu' | 'edge' | 'browser';
   vieneuServerUrl?: string;
+  vieneuModel?: string;
   edgeVoiceUri?: string;
   showTTSControlOnReader?: boolean;
 }

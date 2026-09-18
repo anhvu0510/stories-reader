@@ -30,6 +30,7 @@ export function useReadAloud(paragraphs: string[]) {
   const speechRate = useReaderConfigStore((state) => state.speechRate);
   const ttsEngine = useReaderConfigStore((state) => state.ttsEngine || 'vieneu');
   const vieneuServerUrl = useReaderConfigStore((state) => state.vieneuServerUrl || DEFAULT_VIENEU_SERVER_URL);
+  const vieneuModel = useReaderConfigStore((state) => state.vieneuModel || undefined);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -480,7 +481,8 @@ export function useReadAloud(paragraphs: string[]) {
           activeVoice,
           speechRate,
           vieneuServerUrl,
-          signal
+          signal,
+          vieneuModel
         ),
       stream: (segment, signal) =>
         TTSService.streamSpeech(
@@ -488,7 +490,8 @@ export function useReadAloud(paragraphs: string[]) {
           activeVoice,
           speechRate,
           vieneuServerUrl,
-          signal
+          signal,
+          vieneuModel
         ),
     });
     gaplessPlayerRef.current = player;

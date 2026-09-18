@@ -97,3 +97,16 @@ describe('TTSService.fetchVoices', () => {
     await expect(TTSService.fetchVoices('https://tts.example.test')).rejects.toThrow('HTTP error 503');
   });
 });
+
+describe('TTSService.fetchModels', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('loads model capabilities from the server', async () => {
+    const models = [{ id: 'vieneu-v3-nano', active: true, capabilities: { speed: { min: 0.25, max: 4 } } }];
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ data: models }), { status: 200 })));
+
+    await expect(TTSService.fetchModels('https://tts.example.test')).resolves.toEqual(models);
+  });
+});

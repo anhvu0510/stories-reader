@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { useAppStore } from '../../../stores/useAppStore';
-import { TTSService, VieNeuVoice, DEFAULT_VIENEU_SERVER_URL } from '../../../services/ttsService';
+import { TTSService, VieNeuVoice, VieNeuModel, DEFAULT_VIENEU_SERVER_URL } from '../../../services/ttsService';
 import { EdgeTTSService, EdgeVoice } from '../../../services/edgeTtsService';
 import { showToast } from '../../../stores/useToastStore';
 
@@ -31,9 +31,12 @@ export function VoiceSettingsTab() {
     setTTSEngine,
     vieneuServerUrl = DEFAULT_VIENEU_SERVER_URL,
     setVieneuServerUrl,
+    vieneuModel = '',
+    setVieneuModel,
   } = useReaderConfigStore();
 
   const [vieneuVoices, setVieneuVoices] = useState<VieNeuVoice[]>([]);
+  const [vieneuModels, setVieneuModels] = useState<VieNeuModel[]>([]);
   const [edgeVoices, setEdgeVoices] = useState<EdgeVoice[]>([]);
   const [browserVoices, setBrowserVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [isLoadingVoices, setIsLoadingVoices] = useState(false);
@@ -43,13 +46,33 @@ export function VoiceSettingsTab() {
   const [isPingTesting, setIsPingTesting] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  useEffect(() => {
+    if (ttsEngine !== 'vieneu') return;
+    let isMounted = true;
+    TTSService.fetchModels(vieneuServerUrl)
+      .then((models) => {
+        if (!isMounted) return;
+        setVieneuModels(models);
+        const selected = models.find((model) => model.id === vieneuModel)
+          || models.find((model) => model.active)
+          || models[0];
+        if (selected && selected.id !== vieneuModel) setVieneuModel(selected.id);
+      })
+      .catch(() => {
+        if (isMounted) setVieneuModels([]);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [vieneuServerUrl, ttsEngine, vieneuModel, setVieneuModel]);
+
   // Fetch VieNeu AI Voices
   useEffect(() => {
     let isMounted = true;
     if (ttsEngine === 'vieneu') {
       setVieneuVoices([]);
       setIsLoadingVoices(true);
-      TTSService.fetchVoices(vieneuServerUrl)
+      TTSService.fetchVoices(vieneuServerUrl, vieneuModel || undefined)
         .then((voices) => {
           if (isMounted) {
             setVieneuVoices(voices);
@@ -70,7 +93,7 @@ export function VoiceSettingsTab() {
     return () => {
       isMounted = false;
     };
-  }, [vieneuServerUrl, ttsEngine, setVoiceUri, voiceUri]);
+  }, [vieneuServerUrl, ttsEngine, vieneuModel, setVoiceUri, voiceUri]);
 
   // Fetch Edge TTS Voices
   useEffect(() => {
@@ -175,7 +198,7 @@ export function VoiceSettingsTab() {
       }
 
       const sampleText = 'Xin chào bạn, đây là bản đọc thử nghiệm từ máy chủ VieNeu TTS.';
-      const blob = await TTSService.synthesizeSpeech(sampleText, targetVoice, speechRate, vieneuServerUrl);
+      const blob = await TTSService.synthesizeSpeech(sampleText, targetVoice, speechRate, vieneuServerUrl, undefined, vieneuModel || undefined);
       const audioUrl = TTSService.createAudioUrl(blob);
 
       const audio = new Audio(audioUrl);
@@ -314,6 +337,24 @@ export function VoiceSettingsTab() {
               )}
             </button>
           </div>
+
+          <label className="block text-[10px] font-bold text-on-surface-variant px-0.5 pt-1">Model VieNeu</label>
+          <select
+            value={vieneuModel}
+            onChange={(event) => {
+              setVieneuModel(event.target.value);
+              setVoiceUri('');
+            }}
+            disabled={vieneuModels.length === 0}
+            className="w-full px-2 py-1.5 rounded-xl bg-white/10 border border-white/15 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/60 font-bold disabled:opacity-50"
+          >
+            {vieneuModels.length === 0 && <option value="">Đang tải model...</option>}
+            {vieneuModels.map((model) => (
+              <option key={model.id} value={model.id} className="bg-background text-on-background">
+                {model.id}{model.active ? ' (đang chạy)' : ''}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
@@ -331,8 +372,16 @@ export function VoiceSettingsTab() {
         </div>
 
         {ttsEngine === 'vieneu' && (
-          <div className="grid grid-cols-3 gap-1.5 max-h-[210px] overflow-y-auto no-scrollbar pr-0.5">
-            {vieneuVoices.map((v) => {
+          <div className="space-y-2 max-h-[260px] overflow-y-auto no-scrollbar pr-0.5">
+            {(['male', 'female', 'unknown'] as const).map((gender) => {
+              const groupedVoices = vieneuVoices.filter((voice) => (voice.gender || 'unknown') === gender);
+              if (groupedVoices.length === 0) return null;
+              const label = gender === 'male' ? 'Nam' : gender === 'female' ? 'Nữ' : 'Khác';
+              return (
+                <div key={gender}>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-on-surface-variant mb-1">{label}</div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {groupedVoices.map((v) => {
               const isSelected = (voiceUri || vieneuVoices[0]?.id) === v.id;
               return (
                 <button
@@ -364,9 +413,13 @@ export function VoiceSettingsTab() {
                         : 'bg-pink-500/15 text-pink-400 border-pink-500/30'
                     }`}
                   >
-                    {v.gender === 'male' ? 'Nam' : 'Nữ'}
+                    {v.gender === 'male' ? 'Nam' : v.gender === 'female' ? 'Nữ' : 'Khác'}
                   </span>
                 </button>
+              );
+                    })}
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -440,9 +493,9 @@ export function VoiceSettingsTab() {
         <div className="flex-1 flex items-center gap-2">
           <input
             type="range"
-            min="0.5"
-            max="2.0"
-            step="0.1"
+            min={vieneuModels.find((model) => model.id === vieneuModel)?.capabilities?.speed?.min ?? 0.25}
+            max={vieneuModels.find((model) => model.id === vieneuModel)?.capabilities?.speed?.max ?? 4.0}
+            step="0.05"
             value={speechRate}
             onChange={(e) => setSpeechRate(Number(e.target.value))}
             className="w-full accent-primary cursor-pointer"
@@ -451,20 +504,20 @@ export function VoiceSettingsTab() {
           <div className="flex items-center gap-1 bg-white/10 p-0.5 rounded-xl border border-white/15 shrink-0">
             <button
               type="button"
-              onClick={() => setSpeechRate(Math.max(0.5, Number((speechRate - 0.1).toFixed(2))))}
-              disabled={speechRate <= 0.5}
+              onClick={() => setSpeechRate(Math.max(0.25, Number((speechRate - 0.05).toFixed(2))))}
+              disabled={speechRate <= 0.25}
               className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 disabled:opacity-30 text-on-surface flex items-center justify-center font-bold cursor-pointer"
               title="Giảm tốc độ"
             >
               <Minus size={11} />
             </button>
             <span className="px-1 text-xs font-mono font-extrabold text-primary min-w-[36px] text-center select-none">
-              {speechRate.toFixed(1)}x
+              {speechRate.toFixed(2)}x
             </span>
             <button
               type="button"
-              onClick={() => setSpeechRate(Math.min(2.0, Number((speechRate + 0.1).toFixed(2))))}
-              disabled={speechRate >= 2.0}
+              onClick={() => setSpeechRate(Math.min(4.0, Number((speechRate + 0.05).toFixed(2))))}
+              disabled={speechRate >= 4.0}
               className="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 disabled:opacity-30 text-on-surface flex items-center justify-center font-bold cursor-pointer"
               title="Tăng tốc độ"
             >

@@ -6,6 +6,18 @@ export interface VieNeuVoice {
   desc?: string;
 }
 
+export interface VieNeuModel {
+  id: string;
+  object?: string;
+  owned_by?: string;
+  active?: boolean;
+  capabilities?: {
+    streaming?: boolean;
+    voice_metadata?: boolean;
+    speed?: { min: number; max: number };
+  };
+}
+
 export interface PcmAudioStream {
   body: ReadableStream<Uint8Array>;
   sampleRate: number;
@@ -16,10 +28,20 @@ export interface PcmAudioStream {
 export const DEFAULT_VIENEU_SERVER_URL = 'https://api-anhvu0510.duckdns.org/vieneu-tts';
 
 export class TTSService {
-  public static async fetchVoices(baseUrl: string = DEFAULT_VIENEU_SERVER_URL): Promise<VieNeuVoice[]> {
+  public static async fetchModels(baseUrl: string = DEFAULT_VIENEU_SERVER_URL): Promise<VieNeuModel[]> {
+    const cleanUrl = baseUrl.replace(/\/+$/, '');
+    const response = await fetch(`${cleanUrl}/v1/models`, { headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+    const data = await response.json();
+    if (!Array.isArray(data?.data)) throw new Error('VieNeu server returned an invalid model list');
+    return data.data;
+  }
+
+  public static async fetchVoices(baseUrl: string = DEFAULT_VIENEU_SERVER_URL, model?: string): Promise<VieNeuVoice[]> {
     try {
       const cleanUrl = baseUrl.replace(/\/+$/, '');
-      const response = await fetch(`${cleanUrl}/v1/voices`, {
+      const query = model ? `?model=${encodeURIComponent(model)}` : '';
+      const response = await fetch(`${cleanUrl}/v1/voices${query}`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
       });
@@ -42,7 +64,8 @@ export class TTSService {
     voice?: string,
     speed: number = 1.0,
     baseUrl: string = DEFAULT_VIENEU_SERVER_URL,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    model?: string
   ): Promise<Blob> {
     if (!text || !text.trim()) {
       throw new Error('Input text cannot be empty');
@@ -57,7 +80,7 @@ export class TTSService {
       },
       signal,
       body: JSON.stringify({
-        model: 'vieneu-v3-turbo',
+        model,
         input: text.trim(),
         ...(voice ? { voice } : {}),
         response_format: 'wav',
@@ -78,7 +101,8 @@ export class TTSService {
     voice?: string,
     speed: number = 1.0,
     baseUrl: string = DEFAULT_VIENEU_SERVER_URL,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    model?: string
   ): Promise<PcmAudioStream> {
     if (!text || !text.trim()) {
       throw new Error('Input text cannot be empty');
@@ -93,7 +117,7 @@ export class TTSService {
       },
       signal,
       body: JSON.stringify({
-        model: 'vieneu-v3-turbo',
+        model,
         input: text.trim(),
         ...(voice ? { voice } : {}),
         response_format: 'pcm',
