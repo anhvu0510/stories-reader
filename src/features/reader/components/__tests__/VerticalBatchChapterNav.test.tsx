@@ -27,7 +27,7 @@ describe('VerticalBatchChapterNav Component', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('QC-1 [Locate Button Render]: Ẩn mặc định khi không có class .stories-tts-line-wash, chỉ hiện khi có class highlight', () => {
+  it('QC-1 [Locate Button Render]: Chỉ hiện khi Edge Read Aloud tạo class .msreadout-line-highlight', () => {
     const { container } = render(
       <VerticalBatchChapterNav
         chapters={mockChapters}
@@ -39,7 +39,7 @@ describe('VerticalBatchChapterNav Component', () => {
 
     // Add highlight element to DOM
     const highlightEl = document.createElement('span');
-    highlightEl.className = 'stories-tts-line-wash';
+    highlightEl.className = 'msreadout-line-highlight';
     document.body.appendChild(highlightEl);
 
     render(
@@ -58,7 +58,7 @@ describe('VerticalBatchChapterNav Component', () => {
 
   it('QC-4 [Sync Dock Hide/Show]: Áp dụng class trượt ẩn khi isVisible === false', () => {
     const highlightEl = document.createElement('span');
-    highlightEl.className = 'stories-tts-line-wash';
+    highlightEl.className = 'msreadout-line-highlight';
     document.body.appendChild(highlightEl);
 
     const { container } = render(
@@ -76,10 +76,10 @@ describe('VerticalBatchChapterNav Component', () => {
     document.body.removeChild(highlightEl);
   });
 
-  it('QC-6 [Highlight Line Jump]: Cuộn tới dòng có class .stories-tts-line-wash khi click nút LocateFixed', () => {
+  it('QC-6 [Highlight Line Jump]: Cuộn tới dòng Edge Read Aloud khi click nút LocateFixed', () => {
     const mockScrollIntoView = vi.fn();
     const highlightEl = document.createElement('span');
-    highlightEl.className = 'stories-tts-line-wash';
+    highlightEl.className = 'msreadout-line-highlight';
     highlightEl.scrollIntoView = mockScrollIntoView;
     document.body.appendChild(highlightEl);
 

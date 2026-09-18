@@ -14,16 +14,16 @@ export function VerticalBatchChapterNav({
   isVisible = true,
 }: VerticalBatchChapterNavProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [hasHighlight, setHasHighlight] = useState(false);
+  const [hasBrowserReadAloudHighlight, setHasBrowserReadAloudHighlight] = useState(false);
 
-  // Monitor DOM for presence of .stories-tts-line-wash element
+  // Edge Read Aloud owns this class; the app TTS uses a separate namespace.
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
     const checkHighlight = () => {
       if (typeof document === 'undefined') return;
-      const el = document.querySelector('.stories-tts-line-wash');
-      setHasHighlight(Boolean(el));
+      const el = document.querySelector('.msreadout-line-highlight');
+      setHasBrowserReadAloudHighlight(Boolean(el));
     };
 
     checkHighlight();
@@ -47,11 +47,11 @@ export function VerticalBatchChapterNav({
   }, []);
 
   if (!chapters || chapters.length <= 1) return null;
-  if (!hasHighlight) return null;
+  if (!hasBrowserReadAloudHighlight) return null;
 
   const handleJumpToHighlight = () => {
     if (typeof document === 'undefined') return;
-    const highlightEl = document.querySelector('.stories-tts-line-wash');
+    const highlightEl = document.querySelector('.msreadout-line-highlight');
     if (highlightEl && typeof highlightEl.scrollIntoView === 'function') {
       highlightEl.scrollIntoView({
         behavior: 'smooth',
