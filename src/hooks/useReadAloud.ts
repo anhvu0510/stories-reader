@@ -596,6 +596,10 @@ export function useReadAloud(paragraphs: string[]) {
           vieneuModel,
           getVieneuOptionsForSegment(segment.text)
         ),
+      // Warm the complete next source paragraph while the current one plays.
+      // This avoids waiting on sentence 2+ without issuing requests for the
+      // entire chapter at startup.
+      prefetchByParagraph: true,
     });
     gaplessPlayerRef.current = player;
 

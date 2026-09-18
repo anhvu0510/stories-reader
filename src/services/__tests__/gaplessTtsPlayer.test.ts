@@ -329,6 +329,46 @@ describe('GaplessTtsPlayer', () => {
     await player.stop();
   });
 
+  it('waits for the full first paragraph, then prefetches the next paragraph', async () => {
+    const synthesizeResolvers: Array<() => void> = [];
+    const scheduledStarts: number[] = [];
+    const engine: AudioPlaybackEngine = {
+      now: () => 0,
+      decode: vi.fn(async (): Promise<DecodedAudio> => ({ duration: 1, value: null })),
+      schedule: vi.fn((_audio, startAt): ScheduledAudio => {
+        scheduledStarts.push(startAt);
+        return { endAt: startAt + 1, ended: createPendingPromise(), stop: vi.fn() };
+      }),
+      pause: vi.fn(async () => {}),
+      resume: vi.fn(async () => {}),
+      dispose: vi.fn(async () => {}),
+    };
+    const synthesize = vi.fn(
+      async () => new Promise<Blob>((resolve) => synthesizeResolvers.push(() => resolve(new Blob(['audio']))))
+    );
+    const player = new GaplessTtsPlayer({
+      engine,
+      synthesize,
+      startLeadSeconds: 0,
+      prefetchByParagraph: true,
+    });
+    const segments = [0, 1, 2, 3].map((index) => ({
+      ...createSegment(index),
+      pIdx: index < 2 ? 0 : 1,
+    }));
+
+    player.start(segments);
+    await vi.waitFor(() => expect(synthesize).toHaveBeenCalledTimes(2));
+    expect(scheduledStarts).toEqual([]);
+
+    synthesizeResolvers[0]?.();
+    synthesizeResolvers[1]?.();
+    await vi.waitFor(() => expect(scheduledStarts.length).toBeGreaterThanOrEqual(1));
+    await vi.waitFor(() => expect(synthesize).toHaveBeenCalledTimes(4));
+
+    await player.stop();
+  });
+
   it('aborts an in-flight synthesis request when playback stops', async () => {
     let requestSignal: AbortSignal | undefined;
     const engine: AudioPlaybackEngine = {

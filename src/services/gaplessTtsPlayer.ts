@@ -82,6 +82,8 @@ export interface GaplessTtsPlayerOptions {
   speechRate?: number;
   startLeadSeconds?: number;
   prefetchAhead?: number;
+  /** Prefetch complete source paragraphs instead of a fixed number of segments. */
+  prefetchByParagraph?: boolean;
 }
 
 export interface GaplessPlaybackCallbacks {
@@ -415,6 +417,7 @@ export class GaplessTtsPlayer {
   private readonly stream?: GaplessTtsPlayerOptions['stream'];
   private readonly startLeadSeconds: number;
   private readonly prefetchAhead: number;
+  private readonly prefetchByParagraph: boolean;
   private readonly scheduledAudio = new Set<ScheduledAudio>();
   private activeSession: PlaybackSession | null = null;
   private nextSessionId = 1;
@@ -425,6 +428,7 @@ export class GaplessTtsPlayer {
     this.stream = options.stream;
     this.startLeadSeconds = Math.max(0, options.startLeadSeconds ?? 0.03);
     this.prefetchAhead = Math.max(1, Math.floor(options.prefetchAhead ?? 2));
+    this.prefetchByParagraph = options.prefetchByParagraph ?? false;
   }
 
   public start(segments: SpeechSegment[], callbacks: GaplessPlaybackCallbacks = {}): void {
@@ -491,13 +495,32 @@ export class GaplessTtsPlayer {
         }
         return prepared;
       };
+      const paragraphEnd = (index: number): number => {
+        if (!this.prefetchByParagraph || index < 0 || index >= segments.length) return index + 1;
+        const paragraphIndex = segments[index].pIdx;
+        let end = index + 1;
+        while (end < segments.length && segments[end].pIdx === paragraphIndex) end += 1;
+        return end;
+      };
+      const ensurePreparedParagraph = (index: number): Promise<DecodedAudio[]> => {
+        const end = paragraphEnd(index);
+        return Promise.all(
+          Array.from({ length: end - index }, (_, offset) => ensurePrepared(index + offset)!)
+        );
+      };
       const prefetchAfter = (index: number) => {
+        if (this.prefetchByParagraph) {
+          const nextIndex = paragraphEnd(index);
+          if (nextIndex < segments.length) void ensurePreparedParagraph(nextIndex).catch(() => {});
+          return;
+        }
         for (let offset = 1; offset <= this.prefetchAhead; offset += 1) {
           ensurePrepared(index + offset);
         }
       };
 
-      const firstAudio = await ensurePrepared(0)!;
+      const firstParagraph = await ensurePreparedParagraph(0);
+      const firstAudio = firstParagraph[0];
       if (!this.isActive(session)) return;
 
       const firstStartAt = this.engine.now() + this.startLeadSeconds;
@@ -564,13 +587,37 @@ export class GaplessTtsPlayer {
         }
         return prepared;
       };
+      const paragraphEnd = (index: number): number => {
+        if (!this.prefetchByParagraph || index < 0 || index >= segments.length) return index + 1;
+        const paragraphIndex = segments[index].pIdx;
+        let end = index + 1;
+        while (end < segments.length && segments[end].pIdx === paragraphIndex) end += 1;
+        return end;
+      };
+      const ensureStreamParagraph = (index: number): Promise<PrefetchedPcmStream[]> => {
+        const end = paragraphEnd(index);
+        return Promise.all(
+          Array.from({ length: end - index }, (_, offset) => ensureStream(index + offset)!)
+        );
+      };
       const prefetchAfter = (index: number) => {
+        if (this.prefetchByParagraph) {
+          const nextIndex = paragraphEnd(index);
+          if (nextIndex < segments.length) void ensureStreamParagraph(nextIndex).catch(() => {});
+          return;
+        }
         for (let offset = 1; offset <= this.prefetchAhead; offset += 1) {
           ensureStream(index + offset);
         }
       };
 
-      ensureStream(0);
+      if (this.prefetchByParagraph) {
+        // The first paragraph is a startup barrier: every sentence must be
+        // ready before playback begins so the first paragraph cannot stall.
+        await ensureStreamParagraph(0);
+      } else {
+        ensureStream(0);
+      }
       prefetchAfter(0);
 
       for (let index = 0; index < segments.length; index += 1) {
