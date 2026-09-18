@@ -83,6 +83,7 @@ export function useReadAloud(paragraphs: string[]) {
   const edgeAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const stopAudioPlayer = () => {
+    edgePrefetchCacheRef.current.clear();
     if (edgeAudioRef.current) {
       edgeAudioRef.current.pause();
       edgeAudioRef.current = null;
@@ -94,6 +95,26 @@ export function useReadAloud(paragraphs: string[]) {
         console.warn('Failed to dispose VieNeu audio player:', error);
       });
     }
+  };
+
+  const edgePrefetchCacheRef = useRef<Map<number, Promise<Blob>>>(new Map());
+
+  const prefetchEdgeChunk = (index: number) => {
+    if (index < 0 || index >= chunks.length) return;
+    if (edgePrefetchCacheRef.current.has(index)) return;
+    const chunk = chunks[index];
+    if (!chunk || !chunk.text.trim()) return;
+
+    const promise = EdgeTTSService.synthesizeSpeech(
+      chunk.text,
+      edgeVoiceUri,
+      speechRate,
+      activeDomain?.url
+    ).catch((err) => {
+      edgePrefetchCacheRef.current.delete(index);
+      throw err;
+    });
+    edgePrefetchCacheRef.current.set(index, promise);
   };
 
   const playChunkViaEdge = (index: number, sessionId: number) => {
@@ -119,7 +140,20 @@ export function useReadAloud(paragraphs: string[]) {
       edgeAudioRef.current = null;
     }
 
-    EdgeTTSService.synthesizeSpeech(chunk.text, edgeVoiceUri, speechRate, activeDomain?.url)
+    // Prefetch upcoming chunks
+    prefetchEdgeChunk(index + 1);
+    prefetchEdgeChunk(index + 2);
+
+    // Clean old prefetch entries
+    for (const k of edgePrefetchCacheRef.current.keys()) {
+      if (k < index) edgePrefetchCacheRef.current.delete(k);
+    }
+
+    const fetchPromise =
+      edgePrefetchCacheRef.current.get(index) ||
+      EdgeTTSService.synthesizeSpeech(chunk.text, edgeVoiceUri, speechRate, activeDomain?.url);
+
+    fetchPromise
       .then((blob) => {
         if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
         const audioUrl = URL.createObjectURL(blob);
