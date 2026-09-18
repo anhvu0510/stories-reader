@@ -7,6 +7,10 @@ export interface SentenceChunk {
   text: string;
   startOffset: number;
   length: number;
+  /** True when the chunk was split only to satisfy the TTS request limit. */
+  artificialSplit?: boolean;
+  /** True when the API explicitly ended a grouped source line here. */
+  explicitBoundary?: boolean;
 }
 
 export interface SpeechSegment extends SentenceChunk {
@@ -138,6 +142,12 @@ const PCM_SCHEDULE_LEAD_SECONDS = 0.03;
 function getBoundaryPauseSeconds(previous: SpeechSegment, next: SpeechSegment): number {
   if (previous.pIdx !== next.pIdx) return NATURAL_FAST_PAUSE_PROFILE.paragraph;
 
+  // A delimiter is a source boundary; an artificial max-length split is not.
+  // This prevents a long sentence ending near a comma from sounding like it
+  // was intentionally cut at a clause.
+  if (previous.explicitBoundary) return NATURAL_FAST_PAUSE_PROFILE.sentence;
+  if (previous.artificialSplit) return NATURAL_FAST_PAUSE_PROFILE.softBreak;
+
   const ending = previous.text.trimEnd();
   if (ELLIPSIS_ENDING_PATTERN.test(ending)) {
     return NATURAL_FAST_PAUSE_PROFILE.ellipsis;
@@ -191,6 +201,7 @@ function splitLongSpeechChunk(
         text: phraseText,
         startOffset: chunk.startOffset + cursor + leadingWhitespace,
         length: phraseText.length,
+        artificialSplit: true,
       });
     }
     cursor += breakAt;
@@ -205,6 +216,7 @@ function splitLongSpeechChunk(
       text: remainderText,
       startOffset: chunk.startOffset + cursor + leadingWhitespace,
       length: remainderText.length,
+      artificialSplit: true,
     });
   }
 
@@ -225,13 +237,16 @@ export function splitParagraphIntoSentences(
     const markedParts = text.split(INVISIBLE_SENTENCE_DELIMITER);
     const chunks: SentenceChunk[] = [];
     let partOffset = 0;
-    markedParts.forEach((part) => {
-      chunks.push(
-        ...splitParagraphIntoSentences(part, pIdx, options).map((chunk) => ({
-          ...chunk,
-          startOffset: chunk.startOffset + partOffset,
-        }))
-      );
+    markedParts.forEach((part, partIndex) => {
+      const partChunks = splitParagraphIntoSentences(part, pIdx, options).map((chunk) => ({
+        ...chunk,
+        startOffset: chunk.startOffset + partOffset,
+      }));
+      if (partIndex < markedParts.length - 1 && partChunks.length > 0) {
+        const lastChunk = partChunks[partChunks.length - 1];
+        partChunks[partChunks.length - 1] = { ...lastChunk, explicitBoundary: true };
+      }
+      chunks.push(...partChunks);
       partOffset += part.length + INVISIBLE_SENTENCE_DELIMITER.length;
     });
     return chunks;

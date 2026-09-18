@@ -110,6 +110,15 @@ describe('buildSpeechSegments', () => {
     expect(segments.every((segment) => segment.length <= 480)).toBe(true);
   });
 
+  it('marks max-length splits as soft boundaries instead of comma clauses', () => {
+    const paragraph = `${'một từ, '.repeat(50)}phần kết thúc.`;
+    const phrases = splitParagraphIntoSentences(paragraph, 0, { maxCharacters: 120 });
+
+    expect(phrases.length).toBeGreaterThan(1);
+    expect(phrases.slice(0, -1).every((phrase) => phrase.artificialSplit)).toBe(true);
+    expect(phrases.some((phrase) => phrase.explicitBoundary)).toBe(false);
+  });
+
   it('keeps VieNeu phrases within one backend inference without dropping source text', () => {
     const paragraph = [
       'Ngày hôm sau, Tần Thành lại tới, sau khi gửi thiệp cưới và bình tâm lại,',
