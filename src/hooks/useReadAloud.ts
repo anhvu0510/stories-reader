@@ -9,6 +9,7 @@ import {
   WebAudioPlaybackEngine,
 } from '../services/gaplessTtsPlayer';
 import { DomWordHighlighter } from '../services/domWordHighlighter';
+import { ReadAloudScrollFollower } from '../services/readAloudScrollFollower';
 import { useTTSStore } from '../features/reader/stores/useTTSStore';
 
 export { splitParagraphIntoSentences } from '../services/gaplessTtsPlayer';
@@ -24,13 +25,14 @@ export function useReadAloud(paragraphs: string[]) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(-1);
-  const [charIndex, setCharIndex] = useState(-1);
-  const [charLength, setCharLength] = useState(0);
-
   const gaplessPlayerRef = useRef<GaplessTtsPlayer | null>(null);
   const wordHighlighterRef = useRef<DomWordHighlighter | null>(null);
   if (!wordHighlighterRef.current) {
     wordHighlighterRef.current = new DomWordHighlighter(WORD_HIGHLIGHT_CLASS);
+  }
+  const scrollFollowerRef = useRef<ReadAloudScrollFollower | null>(null);
+  if (!scrollFollowerRef.current) {
+    scrollFollowerRef.current = new ReadAloudScrollFollower();
   }
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -39,6 +41,8 @@ export function useReadAloud(paragraphs: string[]) {
   const isPlayingRef = useRef(false);
   const isPausedRef = useRef(false);
   const playSessionIdRef = useRef<number>(0);
+  const charIndexRef = useRef(-1);
+  const charLengthRef = useRef(0);
 
   const chunks = useMemo(() => {
     const res: SentenceChunk[] = [];
@@ -67,10 +71,10 @@ export function useReadAloud(paragraphs: string[]) {
       isPlaying,
       isPaused,
       currentParagraphIndex: activeParagraphIndex,
-      currentCharIndex: charIndex,
-      currentCharLength: charLength,
+      currentCharIndex: charIndexRef.current,
+      currentCharLength: charLengthRef.current,
     });
-  }, [isPlaying, isPaused, activeParagraphIndex, charIndex, charLength]);
+  }, [isPlaying, isPaused, activeParagraphIndex]);
 
   const stopAudioPlayer = () => {
     const player = gaplessPlayerRef.current;
@@ -91,12 +95,14 @@ export function useReadAloud(paragraphs: string[]) {
 
     stopAudioPlayer();
     wordHighlighterRef.current?.clear();
+    scrollFollowerRef.current?.cancel();
     if (synth) synth.cancel();
 
     currentChunkIdxRef.current = 0;
     setCurrentChunkIndex(-1);
-    setCharIndex(-1);
-    setCharLength(0);
+    charIndexRef.current = -1;
+    charLengthRef.current = 0;
+    useTTSStore.setState({ currentCharIndex: -1, currentCharLength: 0 });
   };
 
   useEffect(() => {
@@ -108,6 +114,7 @@ export function useReadAloud(paragraphs: string[]) {
   useEffect(() => {
     const onInteraction = () => {
       lastInteractionTime.current = Date.now();
+      scrollFollowerRef.current?.cancel();
     };
     window.addEventListener('wheel', onInteraction, { passive: true });
     window.addEventListener('touchmove', onInteraction, { passive: true });
@@ -121,56 +128,50 @@ export function useReadAloud(paragraphs: string[]) {
     };
   }, []);
 
-  // Handle Highlighting directly on the ReaderScreen DOM elements
-  useEffect(() => {
+  const updateWordHighlight = (chunkIndex: number, nextCharIndex: number, nextCharLength: number) => {
     const highlighter = wordHighlighterRef.current;
-    if (!highlighter) return;
+    if (!highlighter || !chunks[chunkIndex]) return;
 
     const readerContent = document.querySelector('#main-story-content');
-    if (!readerContent || currentChunkIndex === -1 || !chunks[currentChunkIndex]) {
+    if (!readerContent) {
       highlighter.clear();
       return;
     }
 
-    const chunk = chunks[currentChunkIndex];
+    const chunk = chunks[chunkIndex];
     const pNode = readerContent.querySelector<HTMLElement>(
       `article > div[data-paragraph-index="${chunk.pIdx}"]`
     );
-    if (!pNode || charIndex < 0 || charLength <= 0) {
+    if (!pNode || nextCharIndex < 0 || nextCharLength <= 0) {
       highlighter.clear();
       return;
     }
 
-    const wordText = chunk.text.substring(charIndex, charIndex + charLength);
+    const wordText = chunk.text.substring(nextCharIndex, nextCharIndex + nextCharLength);
     const match = wordText.match(/[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
     if (!match || match.index === undefined) {
-      highlighter.clear();
       return;
     }
 
-    const offset = charIndex + match.index;
-    highlighter.highlight(pNode, chunk.startOffset + offset, match[0].length);
+    charIndexRef.current = nextCharIndex;
+    charLengthRef.current = nextCharLength;
+    useTTSStore.setState({
+      currentParagraphIndex: chunk.pIdx,
+      currentCharIndex: nextCharIndex,
+      currentCharLength: nextCharLength,
+    });
 
-    const activeLine = document.querySelector<HTMLElement>('.msreadout-line-highlight');
-    if (activeLine && Date.now() - lastInteractionTime.current > 3000) {
-      const rect = activeLine.getBoundingClientRect();
-      const safeBandTop = window.innerHeight * 0.25;
-      const safeBandBottom = window.innerHeight * 0.75;
-      if (rect.top < safeBandTop || rect.bottom > safeBandBottom) {
-        const prefersReducedMotion = window.matchMedia?.(
-          '(prefers-reduced-motion: reduce)'
-        ).matches;
-        activeLine.scrollIntoView({
-          behavior: prefersReducedMotion ? 'auto' : 'smooth',
-          block: 'center',
-        });
-      }
+    const offset = nextCharIndex + match.index;
+    const geometry = highlighter.highlight(pNode, chunk.startOffset + offset, match[0].length);
+    if (geometry && Date.now() - lastInteractionTime.current > 3000) {
+      scrollFollowerRef.current?.follow(geometry.line);
     }
-  }, [currentChunkIndex, charIndex, charLength, chunks]);
+  };
 
   useEffect(() => {
     return () => {
-      wordHighlighterRef.current?.clear();
+      wordHighlighterRef.current?.dispose();
+      scrollFollowerRef.current?.cancel();
       stopReading();
     };
   }, []);
@@ -184,8 +185,9 @@ export function useReadAloud(paragraphs: string[]) {
 
     currentChunkIdxRef.current = index;
     setCurrentChunkIndex(index);
-    setCharIndex(startOffset);
-    setCharLength(0);
+    charIndexRef.current = startOffset;
+    charLengthRef.current = 0;
+    wordHighlighterRef.current?.clear();
 
     const chunk = chunks[index];
     const textToSpeak = startOffset > 0 ? chunk.text.substring(startOffset) : chunk.text;
@@ -207,8 +209,7 @@ export function useReadAloud(paragraphs: string[]) {
     utterance.onboundary = (e) => {
       if (playSessionIdRef.current !== sessionId) return;
       if (e.name === 'word') {
-        setCharIndex(startOffset + e.charIndex);
-        setCharLength(e.charLength);
+        updateWordHighlight(index, startOffset + e.charIndex, e.charLength);
       }
     };
 
@@ -280,16 +281,18 @@ export function useReadAloud(paragraphs: string[]) {
         activeIndex = index + relativeIndex;
         currentChunkIdxRef.current = activeIndex;
         setCurrentChunkIndex(activeIndex);
-        setCharIndex(-1);
-        setCharLength(0);
+        charIndexRef.current = -1;
+        charLengthRef.current = 0;
+        wordHighlighterRef.current?.clear();
       },
       onWordBoundary: (relativeIndex, _segment, cue) => {
         if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
         activeIndex = index + relativeIndex;
-        currentChunkIdxRef.current = activeIndex;
-        setCurrentChunkIndex(activeIndex);
-        setCharIndex(cue.charIndex);
-        setCharLength(cue.charLength);
+        if (currentChunkIdxRef.current !== activeIndex) {
+          currentChunkIdxRef.current = activeIndex;
+          setCurrentChunkIndex(activeIndex);
+        }
+        updateWordHighlight(activeIndex, cue.charIndex, cue.charLength);
       },
       onFinished: () => {
         if (playSessionIdRef.current !== sessionId) return;

@@ -1,6 +1,22 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DomWordHighlighter } from '../domWordHighlighter';
+
+const originalHighlight = Reflect.get(globalThis, 'Highlight');
+const originalCss = globalThis.CSS;
+
+afterEach(() => {
+  Object.defineProperty(globalThis, 'Highlight', {
+    configurable: true,
+    value: originalHighlight,
+  });
+  Object.defineProperty(globalThis, 'CSS', {
+    configurable: true,
+    value: originalCss,
+  });
+  vi.restoreAllMocks();
+  document.body.innerHTML = '';
+});
 
 describe('DomWordHighlighter', () => {
   it('moves the highlight without rebuilding unrelated formatted DOM', () => {
@@ -76,5 +92,53 @@ describe('DomWordHighlighter', () => {
     getBoundingClientRect.mockRestore();
     createRange.mockRestore();
     root.remove();
+  });
+
+  it('uses the CSS Highlights API without mutating text DOM and caches paragraph line layout', () => {
+    const root = document.createElement('div');
+    root.textContent = 'Một hai ba bốn năm sáu bảy tám chín mười';
+    document.body.appendChild(root);
+    const originalHtml = root.innerHTML;
+    const highlights = { set: vi.fn(), delete: vi.fn() };
+    const FakeHighlight = vi.fn(function (this: { ranges: Range[] }, ...ranges: Range[]) {
+      this.ranges = ranges;
+    });
+    Object.defineProperty(globalThis, 'Highlight', {
+      configurable: true,
+      value: FakeHighlight,
+    });
+    Object.defineProperty(globalThis, 'CSS', {
+      configurable: true,
+      value: { ...originalCss, highlights },
+    });
+
+    let paragraphLayoutReads = 0;
+    const originalCreateRange = document.createRange.bind(document);
+    vi.spyOn(document, 'createRange').mockImplementation(() => {
+      const range = originalCreateRange();
+      Object.defineProperty(range, 'getClientRects', {
+        value: () => {
+          if (range.toString() === root.textContent) {
+            paragraphLayoutReads += 1;
+            return [new DOMRect(20, 40, 260, 30), new DOMRect(20, 70, 240, 30)];
+          }
+          return [new DOMRect(40, 40, 30, 30)];
+        },
+      });
+      return range;
+    });
+
+    const highlighter = new DomWordHighlighter('active-word');
+    for (let index = 0; index < 30; index += 1) {
+      highlighter.highlight(root, index % 20, 3);
+    }
+
+    expect(root.innerHTML).toBe(originalHtml);
+    expect(root.querySelector('msreadoutspan')).toBeNull();
+    expect(highlights.set).toHaveBeenCalledTimes(30);
+    expect(paragraphLayoutReads).toBe(1);
+
+    highlighter.clear();
+    expect(highlights.delete).toHaveBeenCalled();
   });
 });
