@@ -15,6 +15,7 @@ import { DomWordHighlighter } from '../services/domWordHighlighter';
 import { useAppStore } from '../stores/useAppStore';
 import { ReadAloudScrollFollower } from '../services/readAloudScrollFollower';
 import { useTTSStore } from '../features/reader/stores/useTTSStore';
+import { BackgroundAudioKeepAlive } from '../services/backgroundAudioKeepAlive';
 
 export { splitParagraphIntoSentences } from '../services/gaplessTtsPlayer';
 
@@ -75,6 +76,10 @@ export function useReadAloud(paragraphs: string[]) {
   }
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const backgroundAudioRef = useRef<BackgroundAudioKeepAlive | null>(null);
+  if (!backgroundAudioRef.current) {
+    backgroundAudioRef.current = new BackgroundAudioKeepAlive();
+  }
 
   const currentChunkIdxRef = useRef<number>(0);
   const isPlayingRef = useRef(false);
@@ -344,6 +349,7 @@ export function useReadAloud(paragraphs: string[]) {
     playSessionIdRef.current += 1;
 
     stopAudioPlayer();
+    backgroundAudioRef.current?.stop();
     wordHighlighterRef.current?.clear();
     scrollFollowerRef.current?.cancel();
     if (synth) synth.cancel();
@@ -383,6 +389,57 @@ export function useReadAloud(paragraphs: string[]) {
       window.removeEventListener('keydown', onInteraction);
     };
   }, []);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (!isPlayingRef.current || isPausedRef.current) return;
+
+      backgroundAudioRef.current?.resume();
+      if (ttsEngine === 'vieneu') {
+        void gaplessPlayerRef.current?.resume().catch(() => {});
+      } else if (ttsEngine === 'edge') {
+        void edgeAudioRef.current?.play().catch(() => {});
+      } else {
+        synth?.resume();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pageshow', onVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pageshow', onVisibilityChange);
+    };
+  }, [ttsEngine, synth]);
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
+
+    const mediaSession = navigator.mediaSession;
+    mediaSession.metadata = new MediaMetadata({ title: 'VietNeu Read Aloud' });
+    const handlers: Array<[MediaSessionAction, MediaSessionActionHandler]> = [
+      ['play', () => startReading()],
+      ['pause', () => pauseReading()],
+      ['nexttrack', () => nextSection()],
+      ['previoustrack', () => prevSection()],
+    ];
+    handlers.forEach(([action, handler]) => {
+      try {
+        mediaSession.setActionHandler(action, handler);
+      } catch {
+        // Some browsers expose Media Session but do not support every action.
+      }
+    });
+    return () => {
+      handlers.forEach(([action]) => {
+        try {
+          mediaSession.setActionHandler(action, null);
+        } catch {
+          // Ignore unsupported action cleanup.
+        }
+      });
+    };
+  }, [chunks.length]);
 
   const updateWordHighlight = (chunkIndex: number, nextCharIndex: number, nextCharLength: number) => {
     const highlighter = wordHighlighterRef.current;
@@ -585,6 +642,7 @@ export function useReadAloud(paragraphs: string[]) {
       setIsLoading(false);
       isPlayingRef.current = true;
       isPausedRef.current = false;
+      backgroundAudioRef.current?.start();
 
       if (ttsEngine === 'vieneu' && gaplessPlayerRef.current) {
         void gaplessPlayerRef.current
@@ -611,6 +669,7 @@ export function useReadAloud(paragraphs: string[]) {
     setIsPaused(false);
     isPlayingRef.current = true;
     isPausedRef.current = false;
+    backgroundAudioRef.current?.start();
 
     if (currentChunkIdxRef.current >= chunks.length) {
       currentChunkIdxRef.current = 0;
@@ -624,6 +683,7 @@ export function useReadAloud(paragraphs: string[]) {
     setIsLoading(false);
     isPlayingRef.current = false;
     isPausedRef.current = true;
+    backgroundAudioRef.current?.stop();
 
     if (gaplessPlayerRef.current) {
       void gaplessPlayerRef.current.pause();
