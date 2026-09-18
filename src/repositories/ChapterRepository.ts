@@ -2,6 +2,7 @@ import { Chapter, ChapterContent } from '../shared/types';
 import { apiClient } from '../services/apiClient';
 import { offlineDb } from '../lib/offlineDb';
 import { useAppStore } from '../stores/useAppStore';
+import { INVISIBLE_SENTENCE_DELIMITER } from '../shared/constants/textBoundaries';
 
 export const ChapterRepository = {
   async getChapters(
@@ -187,11 +188,11 @@ export const ChapterRepository = {
             if (!line.trim()) continue;
             currentGroup.push(line);
             if (currentGroup.length >= groupLines) {
-              grouped.push(currentGroup.join(' '));
+              grouped.push(currentGroup.join(` ${INVISIBLE_SENTENCE_DELIMITER} `));
               currentGroup = [];
             }
           }
-          if (currentGroup.length > 0) grouped.push(currentGroup.join(' '));
+          if (currentGroup.length > 0) grouped.push(currentGroup.join(` ${INVISIBLE_SENTENCE_DELIMITER} `));
           lines = grouped;
         }
 

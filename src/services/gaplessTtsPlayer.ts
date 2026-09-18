@@ -1,3 +1,7 @@
+import { INVISIBLE_SENTENCE_DELIMITER } from '../shared/constants/textBoundaries';
+
+export { INVISIBLE_SENTENCE_DELIMITER } from '../shared/constants/textBoundaries';
+
 export interface SentenceChunk {
   pIdx: number;
   text: string;
@@ -213,6 +217,25 @@ export function splitParagraphIntoSentences(
   options: SentenceSplitOptions = {}
 ): SentenceChunk[] {
   if (!text || !text.trim()) return [];
+
+  // The chapter API uses an invisible separator when it groups source lines.
+  // Split at that hard boundary before punctuation heuristics and preserve
+  // offsets so word highlighting still maps to the rendered text.
+  if (text.includes(INVISIBLE_SENTENCE_DELIMITER)) {
+    const markedParts = text.split(INVISIBLE_SENTENCE_DELIMITER);
+    const chunks: SentenceChunk[] = [];
+    let partOffset = 0;
+    markedParts.forEach((part) => {
+      chunks.push(
+        ...splitParagraphIntoSentences(part, pIdx, options).map((chunk) => ({
+          ...chunk,
+          startOffset: chunk.startOffset + partOffset,
+        }))
+      );
+      partOffset += part.length + INVISIBLE_SENTENCE_DELIMITER.length;
+    });
+    return chunks;
+  }
 
   const maxCharacters = Math.max(1, options.maxCharacters ?? MAX_PHRASE_CHARACTERS);
 

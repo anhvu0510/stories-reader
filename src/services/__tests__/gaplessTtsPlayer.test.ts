@@ -139,6 +139,20 @@ describe('buildSpeechSegments', () => {
     expect(paragraph.slice(sourceCursor).trim()).toBe('');
   });
 
+  it('splits grouped API lines at the invisible delimiter and preserves source offsets', () => {
+    const paragraph = `Câu đầu tiên đủ dài để không bị gộp. \u2063 Câu thứ hai tiếp tục.`;
+
+    const chunks = splitParagraphIntoSentences(paragraph, 2);
+
+    expect(chunks.map((chunk) => chunk.text)).toEqual([
+      'Câu đầu tiên đủ dài để không bị gộp.',
+      'Câu thứ hai tiếp tục.',
+    ]);
+    chunks.forEach((chunk) => {
+      expect(paragraph.slice(chunk.startOffset, chunk.startOffset + chunk.length)).toBe(chunk.text);
+    });
+  });
+
   it('does not merge a short trailing sentence past the phrase limit', () => {
     const longSentence = `${'một '.repeat(44).trim()}.`;
     const paragraph = `${longSentence} Ừm nhé.`;
