@@ -1,4 +1,5 @@
 import { INVISIBLE_SENTENCE_DELIMITER } from '../shared/constants/textBoundaries';
+import soundTouchProcessorUrl from '@soundtouchjs/audio-worklet/processor?url';
 
 export { INVISIBLE_SENTENCE_DELIMITER } from '../shared/constants/textBoundaries';
 
@@ -830,7 +831,11 @@ export class GaplessTtsPlayer {
 export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
   public readonly playbackRate: number;
 
-  constructor(private readonly context: AudioContext, playbackRate: number = 1.0) {
+  constructor(
+    private readonly context: AudioContext,
+    playbackRate: number = 1.0,
+    private readonly preservePitch: boolean = false
+  ) {
     this.playbackRate = Math.max(0.25, Math.min(playbackRate, 4.0));
   }
 
@@ -840,6 +845,19 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
 
   public async decode(blob: Blob): Promise<DecodedAudio> {
     const buffer = await this.context.decodeAudioData(await blob.arrayBuffer());
+    if (this.preservePitch && this.playbackRate !== 1) {
+      // Load SoundTouch lazily so browsers without AudioWorklet (and test
+      // environments such as jsdom) can still use the normal server pipeline.
+      const { processOffline } = await import('@soundtouchjs/audio-worklet');
+      const processed = await processOffline({
+        input: buffer,
+        processorUrl: soundTouchProcessorUrl,
+        playbackRate: this.playbackRate,
+        pitch: 1,
+      });
+      return { duration: processed.duration, value: processed };
+    }
+
     return {
       duration: buffer.duration,
       value: buffer,
@@ -849,7 +867,7 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
   public schedule(audio: DecodedAudio, startAt: number): ScheduledAudio {
     const source = this.context.createBufferSource();
     source.buffer = audio.value as AudioBuffer;
-    if (this.playbackRate !== 1.0) {
+    if (this.playbackRate !== 1.0 && !this.preservePitch) {
       source.playbackRate.value = this.playbackRate;
     }
     source.connect(this.context.destination);
@@ -868,7 +886,7 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
     source.onended = settle;
     source.start(startAt);
 
-    const scaledDuration = audio.duration / this.playbackRate;
+    const scaledDuration = this.preservePitch ? audio.duration : audio.duration / this.playbackRate;
     return {
       endAt: startAt + scaledDuration,
       ended,

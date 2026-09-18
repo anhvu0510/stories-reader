@@ -8,6 +8,7 @@ import {
 import {
   GaplessTtsPlayer,
   splitByDatabaseBoundaries,
+  type SpeechSegment,
   type SentenceChunk,
   WebAudioPlaybackEngine,
 } from '../services/gaplessTtsPlayer';
@@ -578,7 +579,7 @@ export function useReadAloud(paragraphs: string[]) {
     const { synthesisSpeed, playbackRate } = vieneuSpeedProfile;
     let activeIndex = index;
     const player = new GaplessTtsPlayer({
-      engine: new WebAudioPlaybackEngine(audioContext, playbackRate),
+      engine: new WebAudioPlaybackEngine(audioContext, playbackRate, vieneuSpeedMode === 'frontend'),
       speechRate,
       synthesize: (segment, signal) =>
         TTSService.synthesizeSpeech(
@@ -590,16 +591,20 @@ export function useReadAloud(paragraphs: string[]) {
           vieneuModel,
           getVieneuOptionsForSegment(segment.text)
         ),
-      stream: (segment, signal) =>
-        TTSService.streamSpeech(
-          segment.text,
-          activeVoice,
-          synthesisSpeed,
-          vieneuServerUrl,
-          signal,
-          vieneuModel,
-          getVieneuOptionsForSegment(segment.text)
-        ),
+      ...(vieneuSpeedMode === 'server'
+        ? {
+            stream: (segment: Parameters<typeof TTSService.streamSpeech>[0] extends string ? SpeechSegment : never, signal: AbortSignal) =>
+              TTSService.streamSpeech(
+                segment.text,
+                activeVoice,
+                synthesisSpeed,
+                vieneuServerUrl,
+                signal,
+                vieneuModel,
+                getVieneuOptionsForSegment(segment.text)
+              ),
+          }
+        : {}),
       // Warm the complete next source paragraph while the current one plays.
       // This avoids waiting on sentence 2+ without issuing requests for the
       // entire chapter at startup. The second paragraph provides a safety
