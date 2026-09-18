@@ -16,7 +16,6 @@ import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { useAppStore } from '../../../stores/useAppStore';
 import { TTSService, VieNeuVoice, DEFAULT_VIENEU_SERVER_URL } from '../../../services/ttsService';
 import { EdgeTTSService, EdgeVoice } from '../../../services/edgeTtsService';
-import { GTTSService, GTTSVoice } from '../../../services/gttsService';
 import { showToast } from '../../../stores/useToastStore';
 
 export function VoiceSettingsTab() {
@@ -26,8 +25,6 @@ export function VoiceSettingsTab() {
     setVoiceUri,
     edgeVoiceUri = 'vi-VN-HoaiMyNeural',
     setEdgeVoiceUri,
-    gttsVoiceUri = 'vi',
-    setGttsVoiceUri,
     speechRate,
     setSpeechRate,
     ttsEngine = 'vieneu',
@@ -38,7 +35,6 @@ export function VoiceSettingsTab() {
 
   const [vieneuVoices, setVieneuVoices] = useState<VieNeuVoice[]>([]);
   const [edgeVoices, setEdgeVoices] = useState<EdgeVoice[]>([]);
-  const [gttsVoices, setGttsVoices] = useState<GTTSVoice[]>([]);
   const [browserVoices, setBrowserVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [isLoadingVoices, setIsLoadingVoices] = useState(false);
   const [isTestingAudio, setIsTestingAudio] = useState(false);
@@ -91,28 +87,6 @@ export function VoiceSettingsTab() {
     };
   }, [ttsEngine, activeDomain?.url]);
 
-  // Fetch gTTS Voices
-  useEffect(() => {
-    let isMounted = true;
-    if (ttsEngine === 'gtts') {
-      setIsLoadingVoices(true);
-      GTTSService.fetchVoices(activeDomain?.url)
-        .then((voices) => {
-          if (isMounted) {
-            setGttsVoices(voices);
-            setIsLoadingVoices(false);
-          }
-        })
-        .catch(() => {
-          if (isMounted) setIsLoadingVoices(false);
-        });
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [ttsEngine, activeDomain?.url]);
-
   // Fetch Browser Web Speech Synthesis Voices
   useEffect(() => {
     const updateBrowserVoices = () => {
@@ -143,41 +117,6 @@ export function VoiceSettingsTab() {
         if (v) utterance.voice = v;
       }
       window.speechSynthesis.speak(utterance);
-      return;
-    }
-
-    if (ttsEngine === 'gtts') {
-      const targetVoice = overrideVoice || gttsVoiceUri || 'vi';
-      try {
-        setIsTestingAudio(true);
-        if (audioRef.current) {
-          audioRef.current.pause();
-        }
-
-        const sampleText = 'Xin chào bạn, đây là bản đọc thử nghiệm từ Google Text-to-Speech AI.';
-        const blob = await GTTSService.synthesizeSpeech(sampleText, targetVoice, speechRate, activeDomain?.url);
-        const audioUrl = URL.createObjectURL(blob);
-
-        const audio = new Audio(audioUrl);
-        audioRef.current = audio;
-
-        audio.onended = () => {
-          setIsTestingAudio(false);
-          URL.revokeObjectURL(audioUrl);
-        };
-
-        audio.onerror = () => {
-          setIsTestingAudio(false);
-          setTestError('Không thể phát âm thanh Google TTS AI');
-          URL.revokeObjectURL(audioUrl);
-        };
-
-        await audio.play();
-      } catch (err: any) {
-        console.error('[VoiceSettingsTab] Error testing gTTS voice:', err);
-        setTestError(err.message || 'Lỗi kết nối Google TTS API');
-        setIsTestingAudio(false);
-      }
       return;
     }
 
@@ -309,21 +248,6 @@ export function VoiceSettingsTab() {
 
         <button
           type="button"
-          onClick={() => {
-            setTTSEngine('gtts');
-          }}
-          className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 ${
-            ttsEngine === 'gtts'
-              ? 'bg-primary/20 hover:bg-primary/25 border border-primary/60 text-primary font-black shadow-xs'
-              : 'text-on-surface-variant hover:text-on-surface border border-transparent'
-          }`}
-        >
-          <Volume2 size={12} className={ttsEngine === 'gtts' ? 'text-primary' : 'opacity-70'} />
-          <span>gTTS AI</span>
-        </button>
-
-        <button
-          type="button"
           onClick={() => setTTSEngine('browser')}
           className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 ${
             ttsEngine === 'browser'
@@ -447,40 +371,6 @@ export function VoiceSettingsTab() {
                   type="button"
                   onClick={() => {
                     setEdgeVoiceUri(v.id);
-                    handleTestVoice(v.id);
-                  }}
-                  title={v.desc || v.name}
-                  className={`py-2 px-2 rounded-xl border text-left transition-all active:scale-95 flex flex-col justify-center gap-0.5 cursor-pointer min-w-0 ${
-                    isSelected
-                      ? 'bg-primary/20 hover:bg-primary/25 border-primary/60 text-primary font-black shadow-xs'
-                      : 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface font-bold'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 w-full min-w-0">
-                    {isSelected && isTestingAudio ? (
-                      <Loader2 size={11} className="animate-spin text-primary shrink-0" />
-                    ) : isSelected ? (
-                      <Volume2 size={11} className="text-primary shrink-0 animate-pulse" />
-                    ) : null}
-                    <span className="text-xs truncate font-bold">{v.name}</span>
-                  </div>
-                  <span className="text-[9px] text-on-surface-variant/70 truncate">{v.desc || v.language}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {ttsEngine === 'gtts' && (
-          <div className="grid grid-cols-2 gap-1.5 max-h-[210px] overflow-y-auto no-scrollbar pr-0.5">
-            {gttsVoices.map((v) => {
-              const isSelected = (gttsVoiceUri || 'vi') === v.id;
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => {
-                    setGttsVoiceUri(v.id);
                     handleTestVoice(v.id);
                   }}
                   title={v.desc || v.name}
