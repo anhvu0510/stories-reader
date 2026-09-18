@@ -14,12 +14,15 @@ import {
 } from 'lucide-react';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { TTSService, VieNeuVoice, DEFAULT_VIENEU_SERVER_URL } from '../../../services/ttsService';
+import { EdgeTTSService, EdgeVoice } from '../../../services/edgeTtsService';
 import { showToast } from '../../../stores/useToastStore';
 
 export function VoiceSettingsTab() {
   const {
     voiceUri,
     setVoiceUri,
+    edgeVoiceUri = 'vi-VN-HoaiMyNeural',
+    setEdgeVoiceUri,
     speechRate,
     setSpeechRate,
     ttsEngine = 'vieneu',
@@ -29,35 +32,58 @@ export function VoiceSettingsTab() {
   } = useReaderConfigStore();
 
   const [vieneuVoices, setVieneuVoices] = useState<VieNeuVoice[]>([]);
+  const [edgeVoices, setEdgeVoices] = useState<EdgeVoice[]>([]);
   const [browserVoices, setBrowserVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [isLoadingVoices, setIsLoadingVoices] = useState(false);
   const [isTestingAudio, setIsTestingAudio] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
 
   const [isPingTesting, setIsPingTesting] = useState(false);
-
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Fetch VieNeu AI Voices
   useEffect(() => {
     let isMounted = true;
-    setIsLoadingVoices(true);
-
-    TTSService.fetchVoices(vieneuServerUrl)
-      .then((voices) => {
-        if (isMounted) {
-          setVieneuVoices(voices);
-          setIsLoadingVoices(false);
-        }
-      })
-      .catch(() => {
-        if (isMounted) setIsLoadingVoices(false);
-      });
+    if (ttsEngine === 'vieneu') {
+      setIsLoadingVoices(true);
+      TTSService.fetchVoices(vieneuServerUrl)
+        .then((voices) => {
+          if (isMounted) {
+            setVieneuVoices(voices);
+            setIsLoadingVoices(false);
+          }
+        })
+        .catch(() => {
+          if (isMounted) setIsLoadingVoices(false);
+        });
+    }
 
     return () => {
       isMounted = false;
     };
-  }, [vieneuServerUrl]);
+  }, [vieneuServerUrl, ttsEngine]);
+
+  // Fetch Edge TTS Voices
+  useEffect(() => {
+    let isMounted = true;
+    if (ttsEngine === 'edge') {
+      setIsLoadingVoices(true);
+      EdgeTTSService.fetchVoices()
+        .then((voices) => {
+          if (isMounted) {
+            setEdgeVoices(voices);
+            setIsLoadingVoices(false);
+          }
+        })
+        .catch(() => {
+          if (isMounted) setIsLoadingVoices(false);
+        });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [ttsEngine]);
 
   // Fetch Browser Web Speech Synthesis Voices
   useEffect(() => {
@@ -77,12 +103,12 @@ export function VoiceSettingsTab() {
 
   const handleTestVoice = async (overrideVoice?: string) => {
     setTestError(null);
-    const targetVoice = overrideVoice || voiceUri || 'Minh Quân';
 
     if (ttsEngine === 'browser') {
+      const targetVoice = overrideVoice || voiceUri;
       if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance('Xin chào, đây là giọng đọc thử nghiệm.');
+      const utterance = new SpeechSynthesisUtterance('Xin chào, đây là giọng đọc thử nghiệm từ trình duyệt.');
       utterance.rate = speechRate;
       if (targetVoice) {
         const v = browserVoices.find((item) => item.voiceURI === targetVoice);
@@ -92,8 +118,44 @@ export function VoiceSettingsTab() {
       return;
     }
 
+    if (ttsEngine === 'edge') {
+      const targetVoice = overrideVoice || edgeVoiceUri || 'vi-VN-HoaiMyNeural';
+      try {
+        setIsTestingAudio(true);
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+
+        const sampleText = 'Xin chào bạn, đây là bản đọc thử nghiệm từ Microsoft Edge TTS AI.';
+        const blob = await EdgeTTSService.synthesizeSpeech(sampleText, targetVoice, speechRate);
+        const audioUrl = URL.createObjectURL(blob);
+
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+
+        audio.onended = () => {
+          setIsTestingAudio(false);
+          URL.revokeObjectURL(audioUrl);
+        };
+
+        audio.onerror = () => {
+          setIsTestingAudio(false);
+          setTestError('Không thể phát âm thanh Microsoft Edge TTS');
+          URL.revokeObjectURL(audioUrl);
+        };
+
+        await audio.play();
+      } catch (err: any) {
+        console.error('[VoiceSettingsTab] Error testing Edge TTS voice:', err);
+        setTestError(err.message || 'Lỗi kết nối Microsoft Edge TTS API');
+        setIsTestingAudio(false);
+      }
+      return;
+    }
+
     // Test VieNeu AI Voice
     try {
+      const targetVoice = overrideVoice || voiceUri || 'Minh Quân';
       setIsTestingAudio(true);
       if (audioRef.current) {
         audioRef.current.pause();
@@ -147,8 +209,8 @@ export function VoiceSettingsTab() {
 
   return (
     <div className="space-y-3 text-on-surface">
-      {/* 1. TTS Engine Switcher (Compact Chips - Always On Top) */}
-      <div className="flex items-center gap-1.5 p-1 bg-white/5 border border-white/10 rounded-2xl">
+      {/* 1. Supplier Tabs Switcher (3 Supplier Options) */}
+      <div className="flex items-center gap-1 p-1 bg-white/5 border border-white/10 rounded-2xl">
         <button
           type="button"
           onClick={() => {
@@ -157,31 +219,46 @@ export function VoiceSettingsTab() {
               setVoiceUri('Minh Quân');
             }
           }}
-          className={`flex-1 py-1.5 px-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
+          className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 ${
             ttsEngine === 'vieneu'
               ? 'bg-primary/20 hover:bg-primary/25 border border-primary/60 text-primary font-black shadow-xs'
               : 'text-on-surface-variant hover:text-on-surface border border-transparent'
           }`}
         >
-          <Sparkles size={13} className={ttsEngine === 'vieneu' ? 'text-primary' : 'opacity-70'} />
+          <Sparkles size={12} className={ttsEngine === 'vieneu' ? 'text-primary' : 'opacity-70'} />
           <span>VieNeu AI</span>
         </button>
 
         <button
           type="button"
+          onClick={() => {
+            setTTSEngine('edge');
+          }}
+          className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 ${
+            ttsEngine === 'edge'
+              ? 'bg-primary/20 hover:bg-primary/25 border border-primary/60 text-primary font-black shadow-xs'
+              : 'text-on-surface-variant hover:text-on-surface border border-transparent'
+          }`}
+        >
+          <Cpu size={12} className={ttsEngine === 'edge' ? 'text-primary' : 'opacity-70'} />
+          <span>Edge TTS</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setTTSEngine('browser')}
-          className={`flex-1 py-1.5 px-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
+          className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 ${
             ttsEngine === 'browser'
               ? 'bg-primary/20 hover:bg-primary/25 border border-primary/60 text-primary font-black shadow-xs'
               : 'text-on-surface-variant hover:text-on-surface border border-transparent'
           }`}
         >
-          <Globe size={13} className={ttsEngine === 'browser' ? 'text-primary' : 'opacity-70'} />
-          <span>Trình duyệt</span>
+          <Globe size={12} className={ttsEngine === 'browser' ? 'text-primary' : 'opacity-70'} />
+          <span>Native</span>
         </button>
       </div>
 
-      {/* 2. VieNeu TTS Server Endpoint (Positioned below TTS Engine Switcher) */}
+      {/* 2. VieNeu TTS Server Endpoint */}
       {ttsEngine === 'vieneu' && (
         <div className="p-2 rounded-2xl bg-white/5 border border-white/10 shadow-xs space-y-1.5">
           <div className="flex items-center justify-between px-0.5">
@@ -227,11 +304,11 @@ export function VoiceSettingsTab() {
         </div>
       )}
 
-      {/* 3. Voice Selection Grid (Compact 3-Column Grid, Name-Only + Active Indicator) */}
+      {/* 3. Voice Selection Section */}
       <div>
         <div className="flex items-center justify-between mb-1.5 px-0.5">
           <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-            <Volume2 size={13} className="text-primary" /> Chọn Giọng đọc
+            <Volume2 size={13} className="text-primary" /> Chọn Giọng đọc Supplier
           </span>
           {isLoadingVoices && (
             <span className="flex items-center gap-1 text-[10px] text-primary font-bold">
@@ -240,7 +317,7 @@ export function VoiceSettingsTab() {
           )}
         </div>
 
-        {ttsEngine === 'vieneu' ? (
+        {ttsEngine === 'vieneu' && (
           <div className="grid grid-cols-3 gap-1.5 max-h-[210px] overflow-y-auto no-scrollbar pr-0.5">
             {vieneuVoices.map((v) => {
               const isSelected = (voiceUri || 'Minh Quân') === v.id;
@@ -280,7 +357,43 @@ export function VoiceSettingsTab() {
               );
             })}
           </div>
-        ) : (
+        )}
+
+        {ttsEngine === 'edge' && (
+          <div className="grid grid-cols-2 gap-1.5 max-h-[210px] overflow-y-auto no-scrollbar pr-0.5">
+            {edgeVoices.map((v) => {
+              const isSelected = (edgeVoiceUri || 'vi-VN-HoaiMyNeural') === v.id;
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => {
+                    setEdgeVoiceUri(v.id);
+                    handleTestVoice(v.id);
+                  }}
+                  title={v.desc || v.name}
+                  className={`py-2 px-2 rounded-xl border text-left transition-all active:scale-95 flex flex-col justify-center gap-0.5 cursor-pointer min-w-0 ${
+                    isSelected
+                      ? 'bg-primary/20 hover:bg-primary/25 border-primary/60 text-primary font-black shadow-xs'
+                      : 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface font-bold'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 w-full min-w-0">
+                    {isSelected && isTestingAudio ? (
+                      <Loader2 size={11} className="animate-spin text-primary shrink-0" />
+                    ) : isSelected ? (
+                      <Volume2 size={11} className="text-primary shrink-0 animate-pulse" />
+                    ) : null}
+                    <span className="text-xs truncate font-bold">{v.name}</span>
+                  </div>
+                  <span className="text-[9px] text-on-surface-variant/70 truncate">{v.desc || v.language}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {ttsEngine === 'browser' && (
           <div className="p-1.5 rounded-2xl bg-white/5 border border-white/10 shadow-xs">
             <select
               value={voiceUri}
@@ -304,7 +417,7 @@ export function VoiceSettingsTab() {
         )}
       </div>
 
-      {/* 4. Speech Rate Stepper & Slider (Compact Single Row) */}
+      {/* 4. Speech Rate Stepper & Slider */}
       <div className="p-2 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-2 shadow-xs">
         <div className="flex items-center gap-1.5 text-xs font-bold text-on-surface shrink-0">
           <Sliders size={13} className="text-primary" />

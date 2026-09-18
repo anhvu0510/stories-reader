@@ -19,6 +19,7 @@ const defaultSettings: ReaderConfig = {
   chapterLimit: 50,
   ttsEngine: 'vieneu',
   vieneuServerUrl: 'https://api-anhvu0510.duckdns.org/vieneu-tts',
+  edgeVoiceUri: 'vi-VN-HoaiMyNeural',
   showTTSControlOnReader: true,
 };
 
@@ -43,8 +44,9 @@ interface ReaderConfigStore extends ReaderConfig {
   setIsEnabledReplace: (enabled: boolean) => void;
   setVoiceUri: (voiceUri: string) => void;
   setSpeechRate: (speechRate: number) => void;
-  setTTSEngine: (engine: 'vieneu' | 'browser') => void;
+  setTTSEngine: (engine: 'vieneu' | 'edge' | 'browser') => void;
   setVieneuServerUrl: (url: string) => void;
+  setEdgeVoiceUri: (uri: string) => void;
   setShowTTSControlOnReader: (enabled: boolean) => void;
   setBookLimit: (limit: number) => void;
   setChapterLimit: (limit: number) => void;
@@ -162,6 +164,13 @@ export const useReaderConfigStore = create<ReaderConfigStore>((set, get) => {
         const next = { ...state, vieneuServerUrl };
         persist(next);
         return { vieneuServerUrl };
+      });
+    },
+    setEdgeVoiceUri: (edgeVoiceUri) => {
+      set((state) => {
+        const next = { ...state, edgeVoiceUri };
+        persist(next);
+        return { edgeVoiceUri };
       });
     },
     setShowTTSControlOnReader: (showTTSControlOnReader) => {

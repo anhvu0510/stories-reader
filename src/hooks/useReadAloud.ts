@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useReaderConfigStore } from '../stores/useReaderConfigStore';
 import { TTSService, DEFAULT_VIENEU_SERVER_URL } from '../services/ttsService';
+import { EdgeTTSService } from '../services/edgeTtsService';
 import {
   buildSpeechSegments,
   GaplessTtsPlayer,
@@ -18,6 +19,7 @@ const WORD_HIGHLIGHT_CLASS = 'msreadout-word-highlight';
 
 export function useReadAloud(paragraphs: string[]) {
   const voiceUri = useReaderConfigStore((state) => state.voiceUri);
+  const edgeVoiceUri = useReaderConfigStore((state) => state.edgeVoiceUri || 'vi-VN-HoaiMyNeural');
   const speechRate = useReaderConfigStore((state) => state.speechRate);
   const ttsEngine = useReaderConfigStore((state) => state.ttsEngine || 'vieneu');
   const vieneuServerUrl = useReaderConfigStore((state) => state.vieneuServerUrl || DEFAULT_VIENEU_SERVER_URL);
@@ -76,13 +78,84 @@ export function useReadAloud(paragraphs: string[]) {
     });
   }, [isPlaying, isPaused, activeParagraphIndex]);
 
+  const edgeAudioRef = useRef<HTMLAudioElement | null>(null);
+
   const stopAudioPlayer = () => {
+    if (edgeAudioRef.current) {
+      edgeAudioRef.current.pause();
+      edgeAudioRef.current = null;
+    }
     const player = gaplessPlayerRef.current;
     gaplessPlayerRef.current = null;
     if (player) {
       void player.dispose().catch((error: unknown) => {
         console.warn('Failed to dispose VieNeu audio player:', error);
       });
+    }
+  };
+
+  const playChunkViaEdge = (index: number, sessionId: number) => {
+    if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
+    if (index >= chunks.length) {
+      stopReading();
+      return;
+    }
+
+    currentChunkIdxRef.current = index;
+    setCurrentChunkIndex(index);
+
+    const chunk = chunks[index];
+    if (!chunk || !chunk.text.trim()) {
+      playChunkViaEdge(index + 1, sessionId);
+      return;
+    }
+
+    updateWordHighlight(index, 0, chunk.length);
+
+    if (edgeAudioRef.current) {
+      edgeAudioRef.current.pause();
+      edgeAudioRef.current = null;
+    }
+
+    EdgeTTSService.synthesizeSpeech(chunk.text, edgeVoiceUri, speechRate)
+      .then((blob) => {
+        if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        edgeAudioRef.current = audio;
+
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          if (isPlayingRef.current && playSessionIdRef.current === sessionId) {
+            playChunkViaEdge(index + 1, sessionId);
+          }
+        };
+
+        audio.onerror = (err) => {
+          URL.revokeObjectURL(audioUrl);
+          console.warn('[Edge TTS] Playback error, fallback to browser voice:', err);
+          playChunkViaBrowser(index, 0, sessionId);
+        };
+
+        audio.play().catch((err) => {
+          console.warn('[Edge TTS] Audio play error:', err);
+          playChunkViaBrowser(index, 0, sessionId);
+        });
+      })
+      .catch((err) => {
+        console.warn('[Edge TTS] Synthesis error, fallback to browser voice:', err);
+        playChunkViaBrowser(index, 0, sessionId);
+      });
+  };
+
+  const playChunk = (index: number, startOffset: number = 0) => {
+    const sessionId = playSessionIdRef.current;
+    if (ttsEngine === 'browser') {
+      playChunkViaBrowser(index, startOffset, sessionId);
+    } else if (ttsEngine === 'edge') {
+      playChunkViaEdge(index, sessionId);
+    } else {
+      playChunkViaVieNeu(index, sessionId);
     }
   };
 
@@ -305,14 +378,7 @@ export function useReadAloud(paragraphs: string[]) {
     });
   };
 
-  const playChunk = (index: number, startOffset: number = 0) => {
-    const sessionId = playSessionIdRef.current;
-    if (ttsEngine === 'browser') {
-      playChunkViaBrowser(index, startOffset, sessionId);
-    } else {
-      playChunkViaVieNeu(index, sessionId);
-    }
-  };
+
 
   const startReading = () => {
     if (isPaused) {
