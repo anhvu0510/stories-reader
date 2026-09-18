@@ -117,7 +117,7 @@ describe('useReadAloud VieNeu streaming speed', () => {
   });
 
   it('asks VieNeu to synthesize at the selected rate without speeding PCM up a second time', async () => {
-    const streamSpeech = vi.spyOn(TTSService, 'streamSpeech').mockResolvedValue({
+    const streamSpeech = vi.spyOn(TTSService, 'streamSpeech').mockImplementation(async () => ({
       body: new ReadableStream<Uint8Array>({
         start(controller) {
           controller.enqueue(new Uint8Array([0, 0, 0, 0]));
@@ -127,7 +127,7 @@ describe('useReadAloud VieNeu streaming speed', () => {
       sampleRate: 24000,
       channels: 1,
       sampleFormat: 's16le',
-    });
+    }));
     const synthesizeSpeech = vi.spyOn(TTSService, 'synthesizeSpeech').mockResolvedValue(new Blob());
 
     const paragraphs = ['Câu đầu tiên. Câu thứ hai tiếp tục nội dung.'];
@@ -135,9 +135,10 @@ describe('useReadAloud VieNeu streaming speed', () => {
 
     act(() => result.current.startReading());
 
-    await waitFor(() => expect(streamSpeech).toHaveBeenCalledTimes(1));
-    expect(streamSpeech).toHaveBeenCalledWith(
-      'Câu đầu tiên. Câu thứ hai tiếp tục nội dung.',
+    await waitFor(() => expect(streamSpeech).toHaveBeenCalled());
+    expect(streamSpeech).toHaveBeenNthCalledWith(
+      1,
+      'Câu đầu tiên.',
       'Minh Quân',
       2,
       'https://tts.example.test',

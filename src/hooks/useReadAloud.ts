@@ -20,7 +20,6 @@ import { useTTSStore } from '../features/reader/stores/useTTSStore';
 export { splitParagraphIntoSentences } from '../services/gaplessTtsPlayer';
 
 const WORD_HIGHLIGHT_CLASS = 'msreadout-word-highlight';
-const VIENEU_SEGMENT_TARGET_CHARACTERS = 108;
 const VIENEU_SEGMENT_MAX_CHARACTERS = 120;
 
 export function useReadAloud(paragraphs: string[]) {
@@ -94,15 +93,17 @@ export function useReadAloud(paragraphs: string[]) {
         res.push(...sentenceChunks);
       }
     });
-    return buildSpeechSegments(
-      res,
-      isVieneu
-        ? {
-            targetCharacters: VIENEU_SEGMENT_TARGET_CHARACTERS,
-            maxCharacters: VIENEU_SEGMENT_MAX_CHARACTERS,
-          }
-        : undefined
-    );
+    if (isVieneu) {
+      // Keep one sentence per request so the server/model never receives a
+      // cross-sentence bundle. Long sentences were already split on whitespace
+      // by splitParagraphIntoSentences above.
+      return res.map((sentence, sentenceIndex) => ({
+        ...sentence,
+        sentenceStartIndex: sentenceIndex,
+        sentenceEndIndex: sentenceIndex,
+      }));
+    }
+    return buildSpeechSegments(res);
   }, [paragraphs, ttsEngine]);
 
   const activeParagraphIndex =
