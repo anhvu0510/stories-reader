@@ -598,8 +598,10 @@ export function useReadAloud(paragraphs: string[]) {
         ),
       // Warm the complete next source paragraph while the current one plays.
       // This avoids waiting on sentence 2+ without issuing requests for the
-      // entire chapter at startup.
+      // entire chapter at startup. The second paragraph provides a safety
+      // buffer when this private VPS has a transiently slower inference turn.
       prefetchByParagraph: true,
+      prefetchParagraphsAhead: 2,
     });
     gaplessPlayerRef.current = player;
 

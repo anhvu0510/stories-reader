@@ -84,6 +84,8 @@ export interface GaplessTtsPlayerOptions {
   prefetchAhead?: number;
   /** Prefetch complete source paragraphs instead of a fixed number of segments. */
   prefetchByParagraph?: boolean;
+  /** Number of paragraphs to keep prepared ahead of the currently playing one. */
+  prefetchParagraphsAhead?: number;
 }
 
 export interface GaplessPlaybackCallbacks {
@@ -418,6 +420,7 @@ export class GaplessTtsPlayer {
   private readonly startLeadSeconds: number;
   private readonly prefetchAhead: number;
   private readonly prefetchByParagraph: boolean;
+  private readonly prefetchParagraphsAhead: number;
   private readonly scheduledAudio = new Set<ScheduledAudio>();
   private activeSession: PlaybackSession | null = null;
   private nextSessionId = 1;
@@ -429,6 +432,7 @@ export class GaplessTtsPlayer {
     this.startLeadSeconds = Math.max(0, options.startLeadSeconds ?? 0.03);
     this.prefetchAhead = Math.max(1, Math.floor(options.prefetchAhead ?? 2));
     this.prefetchByParagraph = options.prefetchByParagraph ?? false;
+    this.prefetchParagraphsAhead = Math.max(1, Math.floor(options.prefetchParagraphsAhead ?? 2));
   }
 
   public start(segments: SpeechSegment[], callbacks: GaplessPlaybackCallbacks = {}): void {
@@ -510,8 +514,12 @@ export class GaplessTtsPlayer {
       };
       const prefetchAfter = (index: number) => {
         if (this.prefetchByParagraph) {
-          const nextIndex = paragraphEnd(index);
-          if (nextIndex < segments.length) void ensurePreparedParagraph(nextIndex).catch(() => {});
+          let nextIndex = paragraphEnd(index);
+          for (let paragraphOffset = 0; paragraphOffset < this.prefetchParagraphsAhead; paragraphOffset += 1) {
+            if (nextIndex >= segments.length) break;
+            void ensurePreparedParagraph(nextIndex).catch(() => {});
+            nextIndex = paragraphEnd(nextIndex);
+          }
           return;
         }
         for (let offset = 1; offset <= this.prefetchAhead; offset += 1) {
@@ -602,8 +610,12 @@ export class GaplessTtsPlayer {
       };
       const prefetchAfter = (index: number) => {
         if (this.prefetchByParagraph) {
-          const nextIndex = paragraphEnd(index);
-          if (nextIndex < segments.length) void ensureStreamParagraph(nextIndex).catch(() => {});
+          let nextIndex = paragraphEnd(index);
+          for (let paragraphOffset = 0; paragraphOffset < this.prefetchParagraphsAhead; paragraphOffset += 1) {
+            if (nextIndex >= segments.length) break;
+            void ensureStreamParagraph(nextIndex).catch(() => {});
+            nextIndex = paragraphEnd(nextIndex);
+          }
           return;
         }
         for (let offset = 1; offset <= this.prefetchAhead; offset += 1) {
