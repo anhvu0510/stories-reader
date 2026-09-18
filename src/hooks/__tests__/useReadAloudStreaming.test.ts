@@ -249,6 +249,10 @@ describe('useReadAloud Edge word boundaries', () => {
 
   beforeEach(() => {
     fakeAudios.length = 0;
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
     document.body.innerHTML = [
       '<main id="main-story-content"><article>',
       '<div data-paragraph-index="0">"Xin chào", thế giới.</div>',
@@ -324,6 +328,41 @@ describe('useReadAloud Edge word boundaries', () => {
     act(() => result.current.startReading());
     expect(fakeAudios[0].play).toHaveBeenCalledTimes(2);
 
+    unmount();
+  });
+
+  it('does not replay active Edge audio while its tab is hidden', async () => {
+    vi.spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries').mockResolvedValue({
+      audio: new Blob(['audio'], { type: 'audio/mpeg' }),
+      wordBoundaries: [],
+    });
+    const paragraphs = ['Đoạn đang đọc phải giữ nguyên khi chuyển tab.'];
+    const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
+
+    act(() => result.current.startReading());
+    await waitFor(() => expect(fakeAudios).toHaveLength(1));
+    expect(fakeAudios[0].play).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        value: 'hidden',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(fakeAudios[0].play).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      fakeAudios[0].paused = true;
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        value: 'visible',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(fakeAudios[0].play).toHaveBeenCalledTimes(2);
     unmount();
   });
 

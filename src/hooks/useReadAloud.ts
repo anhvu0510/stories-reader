@@ -424,13 +424,21 @@ export function useReadAloud(
 
   useEffect(() => {
     const onVisibilityChange = () => {
+      // A tab becoming hidden also fires this event. Calling play() while the
+      // Edge audio is already playing can make Edge re-negotiate its media
+      // session in the background, which presents as a skipped read-aloud
+      // segment when the reader is revisited. Only recover playback after the
+      // page is visible again, and only if the browser actually paused it.
+      if (document.visibilityState !== 'visible') return;
       if (!isPlayingRef.current || isPausedRef.current) return;
 
       backgroundAudioRef.current?.resume();
       if (ttsEngine === 'vieneu') {
         void gaplessPlayerRef.current?.resume().catch(() => {});
       } else if (ttsEngine === 'edge') {
-        void edgeAudioRef.current?.play().catch(() => {});
+        if (edgeAudioRef.current?.paused) {
+          void edgeAudioRef.current.play().catch(() => {});
+        }
       } else {
         synth?.resume();
       }
