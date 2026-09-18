@@ -179,9 +179,42 @@ describe('buildWordTimeline', () => {
 
 describe('GaplessTtsPlayer', () => {
   it.each([
-    { nextParagraphIndex: 0, expectedStart: 2.16, boundary: 'speech batch' },
-    { nextParagraphIndex: 1, expectedStart: 2.4, boundary: 'paragraph' },
-  ])('adds a natural pause at a $boundary boundary', async ({ nextParagraphIndex, expectedStart }) => {
+    {
+      previousText: 'Một nhịp đọc mềm',
+      nextParagraphIndex: 0,
+      expectedStart: 2.04,
+      boundary: 'soft split',
+    },
+    { previousText: 'Một mệnh đề,', nextParagraphIndex: 0, expectedStart: 2.12, boundary: 'clause' },
+    {
+      previousText: 'Một câu hoàn chỉnh.',
+      nextParagraphIndex: 0,
+      expectedStart: 2.26,
+      boundary: 'sentence',
+    },
+    {
+      previousText: 'Một câu hỏi?',
+      nextParagraphIndex: 0,
+      expectedStart: 2.34,
+      boundary: 'expressive sentence',
+    },
+    {
+      previousText: 'Một ý còn bỏ ngỏ…',
+      nextParagraphIndex: 0,
+      expectedStart: 2.46,
+      boundary: 'ellipsis',
+    },
+    {
+      previousText: 'Kết thúc đoạn.',
+      nextParagraphIndex: 1,
+      expectedStart: 2.56,
+      boundary: 'paragraph',
+    },
+  ])('adds a natural-fast pause at a $boundary boundary', async ({
+    previousText,
+    nextParagraphIndex,
+    expectedStart,
+  }) => {
     const scheduledStarts: number[] = [];
     const engine: AudioPlaybackEngine = {
       now: () => 0,
@@ -202,9 +235,9 @@ describe('GaplessTtsPlayer', () => {
     const segments: SpeechSegment[] = [
       {
         pIdx: 0,
-        text: 'Segment một.',
+        text: previousText,
         startOffset: 0,
-        length: 12,
+        length: previousText.length,
         sentenceStartIndex: 0,
         sentenceEndIndex: 0,
       },
@@ -345,7 +378,7 @@ describe('GaplessTtsPlayer', () => {
     expect(synthesize).not.toHaveBeenCalled();
     expect(appendedChunks).toEqual([[0, 0], [0, 0]]);
     expect(streamStarts[0]).toBe(0);
-    expect(streamStarts[1]).toBeCloseTo(1 / 24000 + 0.4, 10);
+    expect(streamStarts[1]).toBeCloseTo(1 / 24000 + 0.56, 10);
 
     await player.stop();
   });

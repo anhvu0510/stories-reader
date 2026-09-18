@@ -105,10 +105,27 @@ const MAX_PHRASE_CHARACTERS = 180;
 const DEFAULT_TARGET_CHARACTERS = 160;
 const DEFAULT_MAX_CHARACTERS = MAX_PHRASE_CHARACTERS;
 const WORD_PATTERN = /[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/gu;
-const SPEECH_BATCH_PAUSE_SECONDS = 0.16;
-const PARAGRAPH_PAUSE_SECONDS = 0.4;
-const CLAUSE_PAUSE_SECONDS = 0.08;
-const SOFT_BREAK_PAUSE_SECONDS = 0.06;
+interface BoundaryPauseProfile {
+  softBreak: number;
+  clause: number;
+  sentence: number;
+  expressiveSentence: number;
+  ellipsis: number;
+  paragraph: number;
+}
+
+const NATURAL_FAST_PAUSE_PROFILE: Readonly<BoundaryPauseProfile> = {
+  softBreak: 0.04,
+  clause: 0.12,
+  sentence: 0.26,
+  expressiveSentence: 0.34,
+  ellipsis: 0.46,
+  paragraph: 0.56,
+};
+const ELLIPSIS_ENDING_PATTERN = /(?:\.{3}|…)["'”’)\]]*$/u;
+const EXPRESSIVE_ENDING_PATTERN = /[!?]+["'”’)\]]*$/u;
+const SENTENCE_ENDING_PATTERN = /\.["'”’)\]]*$/u;
+const CLAUSE_ENDING_PATTERN = /[,;:]["'”’)\]]*$/u;
 const STREAM_PREFETCH_BUFFER_SECONDS = 4;
 const PCM_INITIAL_BUFFER_SECONDS = 0.2;
 const PCM_STEADY_BUFFER_SECONDS = 0.1;
@@ -224,12 +241,22 @@ class BoundedPcmStreamBuffer {
 }
 
 function getBoundaryPauseSeconds(previous: SpeechSegment, next: SpeechSegment): number {
-  if (previous.pIdx !== next.pIdx) return PARAGRAPH_PAUSE_SECONDS;
+  if (previous.pIdx !== next.pIdx) return NATURAL_FAST_PAUSE_PROFILE.paragraph;
 
   const ending = previous.text.trimEnd();
-  if (/[.!?…]["'”’)\]]*$/u.test(ending)) return SPEECH_BATCH_PAUSE_SECONDS;
-  if (/[,;:]["'”’)\]]*$/u.test(ending)) return CLAUSE_PAUSE_SECONDS;
-  return SOFT_BREAK_PAUSE_SECONDS;
+  if (ELLIPSIS_ENDING_PATTERN.test(ending)) {
+    return NATURAL_FAST_PAUSE_PROFILE.ellipsis;
+  }
+  if (EXPRESSIVE_ENDING_PATTERN.test(ending)) {
+    return NATURAL_FAST_PAUSE_PROFILE.expressiveSentence;
+  }
+  if (SENTENCE_ENDING_PATTERN.test(ending)) {
+    return NATURAL_FAST_PAUSE_PROFILE.sentence;
+  }
+  if (CLAUSE_ENDING_PATTERN.test(ending)) {
+    return NATURAL_FAST_PAUSE_PROFILE.clause;
+  }
+  return NATURAL_FAST_PAUSE_PROFILE.softBreak;
 }
 
 function joinChunksPreservingOffsets(previous: SentenceChunk, next: SentenceChunk): string {
