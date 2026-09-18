@@ -148,8 +148,9 @@ export interface ReaderConfig {
   speechRate: number;
   bookLimit: number;
   chapterLimit: number;
-  ttsEngine?: 'vieneu' | 'edge' | 'browser';
+  ttsEngine?: 'vieneu' | 'edge' | 'gtts' | 'browser';
   vieneuServerUrl?: string;
   edgeVoiceUri?: string;
+  gttsVoiceUri?: string;
   showTTSControlOnReader?: boolean;
 }

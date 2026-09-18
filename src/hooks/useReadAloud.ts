@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useReaderConfigStore } from '../stores/useReaderConfigStore';
 import { TTSService, DEFAULT_VIENEU_SERVER_URL } from '../services/ttsService';
 import { EdgeTTSService } from '../services/edgeTtsService';
+import { GTTSService } from '../services/gttsService';
 import {
   buildSpeechSegments,
   GaplessTtsPlayer,
@@ -22,6 +23,7 @@ export function useReadAloud(paragraphs: string[]) {
   const activeDomain = useAppStore((state) => state.activeDomain);
   const voiceUri = useReaderConfigStore((state) => state.voiceUri);
   const edgeVoiceUri = useReaderConfigStore((state) => state.edgeVoiceUri || 'vi-VN-HoaiMyNeural');
+  const gttsVoiceUri = useReaderConfigStore((state) => state.gttsVoiceUri || 'vi');
   const speechRate = useReaderConfigStore((state) => state.speechRate);
   const ttsEngine = useReaderConfigStore((state) => state.ttsEngine || 'vieneu');
   const vieneuServerUrl = useReaderConfigStore((state) => state.vieneuServerUrl || DEFAULT_VIENEU_SERVER_URL);
@@ -81,6 +83,7 @@ export function useReadAloud(paragraphs: string[]) {
   }, [isPlaying, isPaused, activeParagraphIndex]);
 
   const edgeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const gttsAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const stopAudioPlayer = () => {
     edgePrefetchCacheRef.current.clear();
@@ -184,12 +187,68 @@ export function useReadAloud(paragraphs: string[]) {
       });
   };
 
+  const playChunkViaGTTS = (index: number, sessionId: number) => {
+    if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
+    if (index >= chunks.length) {
+      stopReading();
+      return;
+    }
+
+    currentChunkIdxRef.current = index;
+    setCurrentChunkIndex(index);
+
+    const chunk = chunks[index];
+    if (!chunk || !chunk.text.trim()) {
+      playChunkViaGTTS(index + 1, sessionId);
+      return;
+    }
+
+    updateWordHighlight(index, 0, chunk.length);
+
+    if (gttsAudioRef.current) {
+      gttsAudioRef.current.pause();
+      gttsAudioRef.current = null;
+    }
+
+    GTTSService.synthesizeSpeech(chunk.text, gttsVoiceUri, speechRate, activeDomain?.url)
+      .then((blob) => {
+        if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        gttsAudioRef.current = audio;
+
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          if (isPlayingRef.current && playSessionIdRef.current === sessionId) {
+            playChunkViaGTTS(index + 1, sessionId);
+          }
+        };
+
+        audio.onerror = (err) => {
+          URL.revokeObjectURL(audioUrl);
+          console.warn('[gTTS] Playback error, fallback to browser voice:', err);
+          playChunkViaBrowser(index, 0, sessionId);
+        };
+
+        audio.play().catch((err) => {
+          console.warn('[gTTS] Audio play error:', err);
+          playChunkViaBrowser(index, 0, sessionId);
+        });
+      })
+      .catch((err) => {
+        console.warn('[gTTS] Synthesis error, fallback to browser voice:', err);
+        playChunkViaBrowser(index, 0, sessionId);
+      });
+  };
+
   const playChunk = (index: number, startOffset: number = 0) => {
     const sessionId = playSessionIdRef.current;
     if (ttsEngine === 'browser') {
       playChunkViaBrowser(index, startOffset, sessionId);
     } else if (ttsEngine === 'edge') {
       playChunkViaEdge(index, sessionId);
+    } else if (ttsEngine === 'gtts') {
+      playChunkViaGTTS(index, sessionId);
     } else {
       playChunkViaVieNeu(index, sessionId);
     }
