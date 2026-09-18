@@ -47,23 +47,30 @@ export function VoiceSettingsTab() {
   useEffect(() => {
     let isMounted = true;
     if (ttsEngine === 'vieneu') {
+      setVieneuVoices([]);
       setIsLoadingVoices(true);
       TTSService.fetchVoices(vieneuServerUrl)
         .then((voices) => {
           if (isMounted) {
             setVieneuVoices(voices);
+            if (voices.length > 0 && (!voiceUri || !voices.some((voice) => voice.id === voiceUri))) {
+              setVoiceUri(voices[0].id);
+            }
             setIsLoadingVoices(false);
           }
         })
         .catch(() => {
-          if (isMounted) setIsLoadingVoices(false);
+          if (isMounted) {
+            setVieneuVoices([]);
+            setIsLoadingVoices(false);
+          }
         });
     }
 
     return () => {
       isMounted = false;
     };
-  }, [vieneuServerUrl, ttsEngine]);
+  }, [vieneuServerUrl, ttsEngine, setVoiceUri, voiceUri]);
 
   // Fetch Edge TTS Voices
   useEffect(() => {
@@ -157,7 +164,11 @@ export function VoiceSettingsTab() {
 
     // Test VieNeu AI Voice
     try {
-      const targetVoice = overrideVoice || voiceUri || 'Minh Quân';
+      const targetVoice = overrideVoice || voiceUri;
+      if (!targetVoice) {
+        setTestError('Chưa có voice nào từ máy chủ VieNeu');
+        return;
+      }
       setIsTestingAudio(true);
       if (audioRef.current) {
         audioRef.current.pause();
@@ -217,8 +228,8 @@ export function VoiceSettingsTab() {
           type="button"
           onClick={() => {
             setTTSEngine('vieneu');
-            if (!voiceUri || !vieneuVoices.some((v) => v.id === voiceUri)) {
-              setVoiceUri('Minh Quân');
+            if (vieneuVoices.length > 0 && (!voiceUri || !vieneuVoices.some((v) => v.id === voiceUri))) {
+              setVoiceUri(vieneuVoices[0].id);
             }
           }}
           className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 ${
@@ -322,7 +333,7 @@ export function VoiceSettingsTab() {
         {ttsEngine === 'vieneu' && (
           <div className="grid grid-cols-3 gap-1.5 max-h-[210px] overflow-y-auto no-scrollbar pr-0.5">
             {vieneuVoices.map((v) => {
-              const isSelected = (voiceUri || 'Minh Quân') === v.id;
+              const isSelected = (voiceUri || vieneuVoices[0]?.id) === v.id;
               return (
                 <button
                   key={v.id}
@@ -331,7 +342,7 @@ export function VoiceSettingsTab() {
                     setVoiceUri(v.id);
                     handleTestVoice(v.id);
                   }}
-                  title={`${v.name} (${v.gender === 'male' ? 'Nam' : 'Nữ'})`}
+                  title={`${v.name} (${v.gender === 'male' ? 'Nam' : v.gender === 'female' ? 'Nữ' : 'Không xác định'})`}
                   className={`py-1.5 px-1.5 rounded-xl border text-center transition-all active:scale-95 flex flex-col items-center justify-center gap-0.5 cursor-pointer min-w-0 ${
                     isSelected
                       ? 'bg-primary/20 hover:bg-primary/25 border-primary/60 text-primary font-black shadow-xs'

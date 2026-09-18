@@ -70,3 +70,30 @@ describe('TTSService.synthesizeSpeech', () => {
     expect(firstChunk.value).toEqual(new Uint8Array([1, 2, 3, 4]));
   });
 });
+
+describe('TTSService.fetchVoices', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns only the voice list received from the server', async () => {
+    const voices = [{ id: 'Runtime Voice', name: 'Runtime Voice' }];
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ voices }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(TTSService.fetchVoices('https://tts.example.test/')).resolves.toEqual(voices);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://tts.example.test/v1/voices',
+      expect.objectContaining({ method: 'GET' })
+    );
+  });
+
+  it('does not silently replace an unavailable server list with hardcoded voices', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('offline', { status: 503 })));
+
+    await expect(TTSService.fetchVoices('https://tts.example.test')).rejects.toThrow('HTTP error 503');
+  });
+});

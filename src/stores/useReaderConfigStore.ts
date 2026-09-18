@@ -13,7 +13,7 @@ const defaultSettings: ReaderConfig = {
   groupLines: 1,
   batchChapterSize: 1,
   isEnabledReplace: true,
-  voiceUri: 'Minh Quân',
+  voiceUri: '',
   speechRate: 1.0,
   bookLimit: 20,
   chapterLimit: 50,

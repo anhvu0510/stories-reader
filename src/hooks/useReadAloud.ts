@@ -469,7 +469,7 @@ export function useReadAloud(paragraphs: string[]) {
 
     stopAudioPlayer();
     const audioContext = new AudioContextConstructor();
-    const activeVoice = voiceUri || 'Minh Quân';
+    const activeVoice = voiceUri || undefined;
     let activeIndex = index;
     const player = new GaplessTtsPlayer({
       engine: new WebAudioPlaybackEngine(audioContext),
