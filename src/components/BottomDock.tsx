@@ -40,7 +40,7 @@ export function BottomDock({
   return (
     <>
       <nav className="fixed bottom-4 left-0 right-0 z-40 w-full max-w-md mx-auto px-4 pointer-events-none box-border overflow-x-hidden transition-colors duration-200">
-        <div className="bg-black/10 dark:bg-black/15 backdrop-blur-[2px] border border-outline-variant/40 shadow-[0_16px_36px_rgba(0,0,0,0.5),_inset_0_1px_0.5px_0_rgba(255,255,255,0.45),_inset_0_-1px_0.5px_0_rgba(0,0,0,0.4)] rounded-full px-2.5 py-1.5 flex items-center justify-between pointer-events-auto transition-all duration-200 gap-2">
+        <div className="bg-background/90 dark:bg-background/95 backdrop-blur-md border border-outline-variant/40 shadow-[0_16px_36px_rgba(0,0,0,0.5),_inset_0_1px_0.5px_0_rgba(255,255,255,0.35),_inset_0_-1px_0.5px_0_rgba(0,0,0,0.4)] rounded-full px-2.5 py-1.5 flex items-center justify-between pointer-events-auto transition-all duration-200 gap-2">
           {/* Prev Page Button (Rich "Trang X" format) */}
           <button
             onClick={() => {

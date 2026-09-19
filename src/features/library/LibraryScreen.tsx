@@ -247,18 +247,20 @@ export function LibraryScreen() {
         onScroll={handleMainScroll}
         className="flex-1 overflow-y-auto hide-scrollbar no-scrollbar relative"
       >
-        {/* Pinned Sticky Ultra-Translucent Crystal Glass Header & Filters Section (Seamlessly blending with theme background) */}
-        <div className="sticky top-0 z-30 bg-background/50 dark:bg-background/40 backdrop-blur-md border-b border-outline-variant/20 transition-all duration-300">
-          <LibraryHeader
-            searchQuery={search}
-            onSearchChange={handleSearchChange}
-            onSubmitSearch={handleSearchSubmit}
-            onOpenSettings={() => openSettings('reader')}
-            onOpenTagFilter={() => setIsTagFilterOpen(true)}
-            activeTagsCount={selectedTags.length}
-            onOpenSort={tab === 'ALL' ? () => setIsSortSheetOpen(true) : undefined}
-            isCustomSortActive={isCustomSortActive}
-          />
+        {/* Non-sticky Header: Title bar & Search bar scroll away naturally */}
+        <LibraryHeader
+          searchQuery={search}
+          onSearchChange={handleSearchChange}
+          onSubmitSearch={handleSearchSubmit}
+          onOpenSettings={() => openSettings('reader')}
+          onOpenTagFilter={() => setIsTagFilterOpen(true)}
+          activeTagsCount={selectedTags.length}
+          onOpenSort={tab === 'ALL' ? () => setIsSortSheetOpen(true) : undefined}
+          isCustomSortActive={isCustomSortActive}
+        />
+
+        {/* Compact Pinned Sticky Tabs & Filter Bar (Sticky top-0 with opaque backdrop) */}
+        <div className="sticky top-0 z-30 bg-background/95 dark:bg-background/95 backdrop-blur-md border-b border-outline-variant/20 shadow-xs transition-all duration-300">
 
           {/* Active Tag Filter Pills Row */}
           {selectedTags.length > 0 && (

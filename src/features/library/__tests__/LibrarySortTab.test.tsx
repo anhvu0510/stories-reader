@@ -122,4 +122,16 @@ describe('Library Tab Sorting Requirements', () => {
       );
     });
   });
+
+  it('QC-1: Sticky tab navigation bar has sticky top-0 and bg-background/95 classes', async () => {
+    const { container } = render(<LibraryScreen />);
+    await waitFor(() => {
+      expect(BookRepository.getBooks).toHaveBeenCalled();
+    });
+
+    const stickyNavBar = container.querySelector('.sticky.top-0');
+    expect(stickyNavBar).not.toBeNull();
+    expect(stickyNavBar?.className).toContain('bg-background/95');
+  });
 });
+
