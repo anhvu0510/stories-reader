@@ -247,20 +247,18 @@ export function LibraryScreen() {
         onScroll={handleMainScroll}
         className="flex-1 overflow-y-auto hide-scrollbar no-scrollbar relative"
       >
-        {/* Non-sticky Header: Title bar & Search bar scroll away naturally */}
-        <LibraryHeader
-          searchQuery={search}
-          onSearchChange={handleSearchChange}
-          onSubmitSearch={handleSearchSubmit}
-          onOpenSettings={() => openSettings('reader')}
-          onOpenTagFilter={() => setIsTagFilterOpen(true)}
-          activeTagsCount={selectedTags.length}
-          onOpenSort={tab === 'ALL' ? () => setIsSortSheetOpen(true) : undefined}
-          isCustomSortActive={isCustomSortActive}
-        />
-
-        {/* Compact Pinned Sticky Tabs & Filter Bar (Sticky top-0 with opaque backdrop) */}
-        <div className="sticky top-0 z-30 bg-background/95 dark:bg-background/95 backdrop-blur-md border-b border-outline-variant/20 shadow-xs transition-all duration-300">
+        {/* Unified Pinned Sticky Header (Title + Search + Tabs fixed together at top-0) */}
+        <div className="sticky top-0 z-30 bg-background/98 dark:bg-background/98 backdrop-blur-md border-b border-outline-variant/20 transition-all duration-300">
+          <LibraryHeader
+            searchQuery={search}
+            onSearchChange={handleSearchChange}
+            onSubmitSearch={handleSearchSubmit}
+            onOpenSettings={() => openSettings('reader')}
+            onOpenTagFilter={() => setIsTagFilterOpen(true)}
+            activeTagsCount={selectedTags.length}
+            onOpenSort={tab === 'ALL' ? () => setIsSortSheetOpen(true) : undefined}
+            isCustomSortActive={isCustomSortActive}
+          />
 
           {/* Active Tag Filter Pills Row */}
           {selectedTags.length > 0 && (

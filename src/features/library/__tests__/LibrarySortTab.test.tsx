@@ -123,15 +123,19 @@ describe('Library Tab Sorting Requirements', () => {
     });
   });
 
-  it('QC-1: Sticky tab navigation bar has sticky top-0 and bg-background/95 classes', async () => {
+  it('QC-1: Entire LibraryHeader and tab navigation bar stay sticky at top-0', async () => {
     const { container } = render(<LibraryScreen />);
     await waitFor(() => {
       expect(BookRepository.getBooks).toHaveBeenCalled();
     });
 
-    const stickyNavBar = container.querySelector('.sticky.top-0');
-    expect(stickyNavBar).not.toBeNull();
-    expect(stickyNavBar?.className).toContain('bg-background/95');
+    const stickyContainer = container.querySelector('.sticky.top-0');
+    expect(stickyContainer).not.toBeNull();
+    expect(stickyContainer?.className).toContain('bg-background');
+    // Ensure LibraryHeader title is inside sticky container
+    const headerTitle = stickyContainer?.querySelector('h1');
+    expect(headerTitle?.textContent).toBe('Stories Reader');
   });
 });
+
 
