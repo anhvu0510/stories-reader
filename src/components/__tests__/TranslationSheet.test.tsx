@@ -23,6 +23,8 @@ vi.mock('../../repositories/ChapterRepository', () => ({
 vi.mock('../../repositories/AIRepository', () => ({
   AIRepository: {
     getQuotas: vi.fn().mockResolvedValue({ quotas: [], currentConfig: {} }),
+    detectProperNouns: vi.fn().mockResolvedValue({ success: true }),
+    translateChineseTitles: vi.fn().mockResolvedValue({ success: true }),
   },
 }));
 
@@ -150,7 +152,7 @@ describe('TranslationSheet Requirements', () => {
     });
   });
 
-  it('renders both Sync and Async translation buttons and triggers translate with correct mode on click', async () => {
+  it('triggers Sync translate with correct mode on click', async () => {
     const { fireEvent } = await import('@testing-library/react');
     const onSuccessMock = vi.fn();
     render(
@@ -163,12 +165,8 @@ describe('TranslationSheet Requirements', () => {
     );
 
     const syncBtn = screen.getByRole('button', { name: /^Dịch \(/i });
-    const asyncBtn = screen.getByRole('button', { name: /Dịch Batch/i });
-
     expect(syncBtn).toBeDefined();
-    expect(asyncBtn).toBeDefined();
 
-    // Click Sync button
     fireEvent.click(syncBtn);
 
     await waitFor(() => {
@@ -180,10 +178,21 @@ describe('TranslationSheet Requirements', () => {
       );
       expect(onSuccessMock).toHaveBeenCalled();
     });
+  });
 
-    vi.clearAllMocks();
+  it('triggers Async batch translate with correct mode on click', async () => {
+    const { fireEvent } = await import('@testing-library/react');
+    render(
+      <TranslationSheet
+        {...defaultProps}
+        initialSelectedChapters={['chap-15']}
+        currentChapterNumber={15}
+      />
+    );
 
-    // Click Async button
+    const asyncBtn = screen.getByRole('button', { name: /Dịch Batch/i });
+    expect(asyncBtn).toBeDefined();
+
     fireEvent.click(asyncBtn);
 
     await waitFor(() => {
@@ -195,4 +204,41 @@ describe('TranslationSheet Requirements', () => {
       );
     });
   });
+
+  it('triggers detectProperNouns API when clicking detect pronouns button', async () => {
+    const { fireEvent } = await import('@testing-library/react');
+    render(<TranslationSheet {...defaultProps} />);
+
+    const detectBtn = screen.getByRole('button', { name: /Phát hiện xưng hô \/ danh từ riêng/i });
+    expect(detectBtn).toBeDefined();
+
+    fireEvent.click(detectBtn);
+
+    await waitFor(() => {
+      expect(AIRepository.detectProperNouns).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bookId: 'book-123',
+        })
+      );
+    });
+  });
+
+  it('triggers translateChineseTitles API when clicking translate titles button', async () => {
+    const { fireEvent } = await import('@testing-library/react');
+    render(<TranslationSheet {...defaultProps} />);
+
+    const translateTitlesBtn = screen.getByRole('button', { name: /Dịch tiêu đề tiếng Trung/i });
+    expect(translateTitlesBtn).toBeDefined();
+
+    fireEvent.click(translateTitlesBtn);
+
+    await waitFor(() => {
+      expect(AIRepository.translateChineseTitles).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bookId: 'book-123',
+        })
+      );
+    });
+  });
 });
+

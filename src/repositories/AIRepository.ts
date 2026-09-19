@@ -34,4 +34,13 @@ export class AIRepository {
   static async deleteQuota(id: string): Promise<void> {
     return apiClient.delete(`/api/quota/${id}`);
   }
+
+  static async detectProperNouns(params: { bookId: string; model?: string; maxChars?: number }): Promise<any> {
+    return apiClient.post('/stories/detect-proper-nouns', params);
+  }
+
+  static async translateChineseTitles(params: { bookId?: string; batchSize?: number; limitChapter?: number; model?: string; platform?: string }): Promise<any> {
+    return apiClient.post('/stories/translate-chinese-titles', params);
+  }
 }
+
