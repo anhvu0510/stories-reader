@@ -3,13 +3,8 @@ export function openChapter(bookId: string, chapterId: string) {
 
   const targetHash = `#/book/${bookId}/chapter/${chapterId}`;
   if (typeof window !== 'undefined') {
-    window.location.hash = `#/book/${bookId}/chapter/${chapterId}`;
-    if (typeof window.location.reload === 'function') {
-      try {
-        window.location.reload();
-      } catch {
-        // Safe handling for test environments
-      }
+    if (window.location.hash !== targetHash) {
+      window.location.hash = targetHash;
     }
   }
 }

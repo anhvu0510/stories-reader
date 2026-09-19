@@ -365,6 +365,7 @@ export function ReaderScreen() {
     if (!chapterId) return;
     const MIN_LOADING_TIME = 200;
     const startTime = Date.now();
+    setContentData(null);
     setLoading(true);
     setError(null);
     try {

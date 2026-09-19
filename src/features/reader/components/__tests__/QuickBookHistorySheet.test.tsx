@@ -134,6 +134,6 @@ describe('QuickBookHistorySheet', () => {
 
     expect(onClose).toHaveBeenCalled();
     expect(window.location.hash).toBe('#/book/book-2/chapter/chap-10');
-    expect(reloadSpy).toHaveBeenCalled();
+    expect(reloadSpy).not.toHaveBeenCalled();
   });
 });

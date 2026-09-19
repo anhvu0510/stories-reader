@@ -24,18 +24,20 @@ describe('openChapter utility', () => {
     });
   });
 
-  it('updates window.location.hash and calls reload when bookId and chapterId are valid', () => {
+  it('updates window.location.hash without calling reload when bookId and chapterId are valid', () => {
     openChapter('b123', 'c456');
 
     expect(window.location.hash).toBe('#/book/b123/chapter/c456');
-    expect(window.location.reload).toHaveBeenCalledTimes(1);
+    expect(window.location.reload).not.toHaveBeenCalled();
   });
 
   it('does nothing if bookId or chapterId is missing', () => {
     openChapter('', 'c456');
+    expect(window.location.hash).toBe('');
     expect(window.location.reload).not.toHaveBeenCalled();
 
     openChapter('b123', '');
+    expect(window.location.hash).toBe('');
     expect(window.location.reload).not.toHaveBeenCalled();
   });
 });
