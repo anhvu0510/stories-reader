@@ -9,6 +9,7 @@ import { offlineDb } from '../../../lib/offlineDb';
 import { useToastStore } from '../../../stores/useToastStore';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { BottomSheet } from '../../../components/BottomSheet';
+import { openChapter } from '../../../shared/utils/openChapter';
 
 function ChapterSkeletonItem() {
   return (
@@ -342,7 +343,7 @@ export function QuickChapterSelectSheet({
 
   const handleSelectChapter = (chapterId: string) => {
     onClose();
-    navigate(`/book/${bookId}/chapter/${chapterId}`);
+    openChapter(bookId, chapterId);
   };
 
   return (

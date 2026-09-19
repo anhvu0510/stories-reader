@@ -10,6 +10,7 @@ import { useFavoriteStore } from '../../../stores/useFavoriteStore';
 import { offlineDb } from '../../../lib/offlineDb';
 import { downloadManager } from '../../../lib/DownloadManager';
 import { BookRepository } from '../../../repositories/BookRepository';
+import { openChapter } from '../../../shared/utils/openChapter';
 
 interface BookCardProps {
   key?: React.Key;
@@ -255,7 +256,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
     }
 
     if (activeTab === 'HISTORY' && book.lastReadChapter?.chapterId) {
-      navigate(`/book/${book.bookId}/chapter/${book.lastReadChapter.chapterId}`);
+      openChapter(book.bookId, book.lastReadChapter.chapterId);
     } else if (activeTab === 'AI') {
       setShowTranslationSheet(true);
     } else {

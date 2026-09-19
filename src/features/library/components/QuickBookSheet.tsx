@@ -11,6 +11,7 @@ import { offlineDb } from '../../../lib/offlineDb';
 import { TranslationSheet } from '../../../components/TranslationSheet';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { BottomSheet } from '../../../components/BottomSheet';
+import { openChapter } from '../../../shared/utils/openChapter';
 
 interface QuickBookSheetProps {
   book: Book;
@@ -302,7 +303,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 
   const handleSelectChapter = (chapterId: string) => {
     onClose();
-    navigate(`/book/${book.bookId}/chapter/${chapterId}`);
+    openChapter(book.bookId, chapterId);
   };
 
   return (

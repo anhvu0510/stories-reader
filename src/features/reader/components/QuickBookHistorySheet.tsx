@@ -5,6 +5,7 @@ import { Book } from '../../../shared/types';
 import { X, Clock, BookOpen, Sparkles, Layers, Search, RefreshCw } from 'lucide-react';
 import { useGlobalLoading } from '../../../hooks/useGlobalLoading';
 import { BottomSheet } from '../../../components/BottomSheet';
+import { openChapter } from '../../../shared/utils/openChapter';
 
 interface QuickBookHistorySheetProps {
   currentBookId?: string;
@@ -62,7 +63,7 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
   const handleSwapBook = (book: Book) => {
     onClose();
     if (book.lastReadChapter?.chapterId) {
-      navigate(`/book/${book.bookId}/chapter/${book.lastReadChapter.chapterId}`);
+      openChapter(book.bookId, book.lastReadChapter.chapterId);
     } else {
       navigate(`/book/${book.bookId}`);
     }

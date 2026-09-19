@@ -2,6 +2,7 @@ import React, { forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Chapter } from '../../../shared/types';
 import { ArrowRight, Sparkles, Clock, AlertCircle, Calendar } from 'lucide-react';
+import { openChapter } from '../../../shared/utils/openChapter';
 
 export interface ChapterItemProps {
   chapter: Chapter;
@@ -34,7 +35,7 @@ export const ChapterItem = forwardRef<HTMLDivElement, ChapterItemProps>(
       if (onClick) {
         onClick();
       } else if (bookId && chapter.chapterId) {
-        navigate(`/book/${bookId}/chapter/${chapter.chapterId}`);
+        openChapter(bookId, chapter.chapterId);
       }
     };
 

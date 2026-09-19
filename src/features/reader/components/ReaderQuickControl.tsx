@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useModalStore } from '../../../stores/useModalStore';
 import { ChapterDetailItem } from '../../../shared/types';
+import { openChapter } from '../../../shared/utils/openChapter';
 
 interface ReaderQuickControlProps {
   bookId: string;
@@ -99,8 +100,8 @@ export function ReaderQuickControl({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (hasPrev) {
-                navigate(`/book/${bookId}/chapter/${prevChapterId}`);
+              if (hasPrev && prevChapterId) {
+                openChapter(bookId, prevChapterId);
               }
             }}
             disabled={!hasPrev}
@@ -117,8 +118,8 @@ export function ReaderQuickControl({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (hasNext) {
-                navigate(`/book/${bookId}/chapter/${nextChapterId}`);
+              if (hasNext && nextChapterId) {
+                openChapter(bookId, nextChapterId);
               }
             }}
             disabled={!hasNext}

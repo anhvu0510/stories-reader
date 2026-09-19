@@ -111,6 +111,15 @@ describe('QuickBookHistorySheet', () => {
 
   it('navigates to book chapter when clicked', async () => {
     const onClose = vi.fn();
+    const reloadSpy = vi.fn();
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: {
+        hash: '',
+        reload: reloadSpy,
+      },
+    });
+
     render(
       <MemoryRouter>
         <QuickBookHistorySheet currentBookId="book-1" onClose={onClose} />
@@ -124,6 +133,7 @@ describe('QuickBookHistorySheet', () => {
     fireEvent.click(screen.getByText('Truyện Cũ Hơn'));
 
     expect(onClose).toHaveBeenCalled();
-    expect(mockNavigate).toHaveBeenCalledWith('/book/book-2/chapter/chap-10');
+    expect(window.location.hash).toBe('#/book/book-2/chapter/chap-10');
+    expect(reloadSpy).toHaveBeenCalled();
   });
 });
