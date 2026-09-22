@@ -79,6 +79,7 @@ export function useEdgeReadAloudBgm({
   const isManualPlayingRef = useRef(false);
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeOutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startBgmRef = useRef<((manual?: boolean) => Promise<void>) | null>(null);
 
   // Helper to ensure BGM runs on its own isolated AudioContext graph (no HTML5 MediaSession interference)
   const getOrCreateAudioContext = useCallback(() => {
@@ -92,6 +93,15 @@ export function useEdgeReadAloudBgm({
     if (!AudioContextClass) return null;
 
     const ctx = new AudioContextClass();
+    ctx.onstatechange = () => {
+      if (ctx.state === 'running') {
+        if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
+          if (!sourceNodeRef.current || !isPlayingRef.current) {
+            void startBgmRef.current?.(isManualPlayingRef.current);
+          }
+        }
+      }
+    };
     audioCtxRef.current = ctx;
     return ctx;
   }, []);
@@ -219,6 +229,10 @@ export function useEdgeReadAloudBgm({
     [getOrCreateAudioContext, getOrCreateCompressorNode, volume, fadeInMs]
   );
 
+  useEffect(() => {
+    startBgmRef.current = startBgm;
+  }, [startBgm]);
+
   const stopBgm = useCallback(
     (immediate = false) => {
       if (!isPlayingRef.current || !gainNodeRef.current || !audioCtxRef.current) return;
@@ -293,7 +307,19 @@ export function useEdgeReadAloudBgm({
       const ctx = getOrCreateAudioContext();
       if (ctx) {
         if (ctx.state === 'suspended') {
-          void ctx.resume().catch(() => {});
+          void ctx.resume().then(() => {
+            if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
+              if (!sourceNodeRef.current || !isPlayingRef.current) {
+                void startBgmRef.current?.(isManualPlayingRef.current);
+              }
+            }
+          }).catch(() => {});
+        } else if (ctx.state === 'running') {
+          if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
+            if (!sourceNodeRef.current || !isPlayingRef.current) {
+              void startBgmRef.current?.(isManualPlayingRef.current);
+            }
+          }
         }
         // Unlock WebAudio on iOS Safari with silent 1-sample buffer
         try {
