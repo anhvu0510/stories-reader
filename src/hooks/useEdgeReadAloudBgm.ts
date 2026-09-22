@@ -112,9 +112,9 @@ export function useEdgeReadAloudBgm({
     const ctx = new AudioContextClass();
     ctx.onstatechange = () => {
       if (ctx.state === 'running') {
-        if (!isUserMutedRef.current && (isEdgeReadAloudActive() || isManualPlayingRef.current)) {
+        if (!isUserMutedRef.current && isManualPlayingRef.current) {
           if (!sourceNodeRef.current || !isPlayingRef.current) {
-            void startBgmRef.current?.(isManualPlayingRef.current);
+            void startBgmRef.current?.(true);
           } else {
             setIsPlayingState(true);
           }
@@ -431,14 +431,9 @@ export function useEdgeReadAloudBgm({
         if (isPlayingRef.current || sourceNodeRef.current) {
           stopBgm(true);
         }
-      } else {
-        isUserMutedRef.current = false;
-        if (!isBgmPreviewingRef.current && (isEdgeReadAloudActive() || isManualPlayingRef.current)) {
-          void startBgm(isManualPlayingRef.current);
-        }
       }
     }
-  }, [enabled, stopBgm, startBgm]);
+  }, [enabled, stopBgm]);
 
   // Pause reader BGM while user previews audio in Settings tab, resume when preview stops
   useEffect(() => {
@@ -448,10 +443,8 @@ export function useEdgeReadAloudBgm({
         if (isPlayingRef.current || sourceNodeRef.current) {
           stopBgm(true);
         }
-      } else if (enabled && !isUserMutedRef.current) {
-        if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
-          void startBgm(isManualPlayingRef.current);
-        }
+      } else if (enabled && isManualPlayingRef.current && !isUserMutedRef.current) {
+        void startBgm(true);
       }
     }
   }, [isBgmPreviewing, enabled, stopBgm, startBgm]);
@@ -481,14 +474,14 @@ export function useEdgeReadAloudBgm({
       if (ctx) {
         if (ctx.state === 'suspended') {
           void ctx.resume().then(() => {
-            if (ctx.state === 'running' && !isUserMutedRef.current && (isEdgeReadAloudActive() || isManualPlayingRef.current)) {
-              void startBgmRef.current?.(isManualPlayingRef.current);
+            if (ctx.state === 'running' && !isUserMutedRef.current && isManualPlayingRef.current) {
+              void startBgmRef.current?.(true);
             }
           }).catch(() => {});
         } else if (ctx.state === 'running') {
-          if (!isUserMutedRef.current && (isEdgeReadAloudActive() || isManualPlayingRef.current)) {
+          if (!isUserMutedRef.current && isManualPlayingRef.current) {
             if (!sourceNodeRef.current || !isPlayingRef.current) {
-              void startBgmRef.current?.(isManualPlayingRef.current);
+              void startBgmRef.current?.(true);
             }
           }
         }
@@ -561,11 +554,11 @@ export function useEdgeReadAloudBgm({
               } catch {}
               sourceNodeRef.current = null;
               isPlayingRef.current = false;
-              void startBgm(isManualPlayingRef.current);
+              void startBgm(true);
             }
           }
-          if (!isUserMutedRef.current && (isEdgeReadAloudActive() || isManualPlayingRef.current)) {
-            void startBgm(isManualPlayingRef.current);
+          if (!isUserMutedRef.current && isManualPlayingRef.current) {
+            void startBgm(true);
           }
         } else {
           if (ctx.state !== 'closed') {
@@ -625,65 +618,6 @@ export function useEdgeReadAloudBgm({
       setIsPlayingState(false);
     };
   }, [audioUrl, enabled, getOrCreateAudioContext, startBgm]);
-
-  useEffect(() => {
-    if (!enabled || typeof document === 'undefined') return;
-
-    const checkAndToggle = () => {
-      if (isUserMutedRef.current || isBgmPreviewingRef.current) {
-        if (isPlayingRef.current || sourceNodeRef.current) {
-          stopBgm(true);
-        }
-        return;
-      }
-
-      const active = isEdgeReadAloudActive();
-      if (active || isManualPlayingRef.current) {
-        const ctx = audioCtxRef.current;
-        if (ctx && ctx.state === 'suspended') {
-          void ctx.resume().then(() => {
-            if (ctx.state === 'running') {
-              setIsPlayingState(true);
-            }
-          }).catch(() => {});
-        }
-        void startBgm(isManualPlayingRef.current);
-      } else {
-        stopBgm();
-      }
-    };
-
-    checkAndToggle();
-
-    const observer = new MutationObserver(checkAndToggle);
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-    });
-
-    const resumeRetryInterval = setInterval(() => {
-      if (isUserMutedRef.current || isBgmPreviewingRef.current) return;
-      if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
-        const ctx = audioCtxRef.current;
-        if (ctx && ctx.state === 'suspended') {
-          void ctx.resume().then(() => {
-            if (ctx.state === 'running') {
-              setIsPlayingState(true);
-            }
-          }).catch(() => {});
-        }
-        if (!sourceNodeRef.current || !isPlayingRef.current) {
-          void startBgmRef.current?.(isManualPlayingRef.current);
-        }
-      }
-    }, 500);
-
-    return () => {
-      clearInterval(resumeRetryInterval);
-      observer.disconnect();
-    };
-  }, [enabled, startBgm, stopBgm]);
 
   return {
     isPlaying: isPlayingState,

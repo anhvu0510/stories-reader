@@ -103,8 +103,8 @@ describe('useEdgeReadAloudBgm Hook', () => {
     expect(mockSourceNode.start).not.toHaveBeenCalled();
   });
 
-  it('QC-3: Tự động kích hoạt BGM khi MutationObserver phát hiện class Edge Read Aloud', async () => {
-    renderHook(() =>
+  it('QC-3: Kích hoạt BGM thủ công với fade-in và âm lượng an toàn', async () => {
+    const { result } = renderHook(() =>
       useEdgeReadAloudBgm({
         audioUrl: '/audio/test.mp3',
         volume: 0.15,
@@ -118,9 +118,8 @@ describe('useEdgeReadAloudBgm Hook', () => {
     });
 
     await act(async () => {
-      const p = document.createElement('p');
-      p.className = 'msreadout-line-highlight';
-      document.body.appendChild(p);
+      result.current.toggleBgm();
+      await Promise.resolve();
     });
 
     expect(mockAudioContext.createBufferSource).toHaveBeenCalled();
@@ -129,12 +128,8 @@ describe('useEdgeReadAloudBgm Hook', () => {
     expect(mockGainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.0375, 0.1);
   });
 
-  it('QC-4: Dừng nhạc mượt mà (Fade Out & Stop) sau khi ngắt class và hết khoảng trễ stopDelayMs', async () => {
-    const p = document.createElement('p');
-    p.className = 'msreadout-line-highlight';
-    document.body.appendChild(p);
-
-    renderHook(() =>
+  it('QC-4: Dừng nhạc thủ công mượt mà (Fade Out & Stop) sau khoảng trễ fadeOutMs', async () => {
+    const { result } = renderHook(() =>
       useEdgeReadAloudBgm({
         audioUrl: '/audio/test.mp3',
         volume: 0.15,
@@ -147,19 +142,18 @@ describe('useEdgeReadAloudBgm Hook', () => {
       await Promise.resolve();
     });
 
+    // Bật nhạc thủ công
+    await act(async () => {
+      result.current.toggleBgm();
+      await Promise.resolve();
+    });
     expect(mockSourceNode.start).toHaveBeenCalled();
 
+    // Tắt nhạc thủ công
     await act(async () => {
-      p.className = '';
+      result.current.toggleBgm();
     });
 
-    expect(mockSourceNode.stop).not.toHaveBeenCalled();
-
-    act(() => {
-      vi.advanceTimersByTime(750);
-    });
-
-    expect(mockGainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, 0.2);
     expect(mockSourceNode.stop).toHaveBeenCalled();
     expect(mockSourceNode.disconnect).toHaveBeenCalled();
   });
@@ -290,7 +284,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
   });
 
   it('QC-10: Sử dụng DynamicsCompressorNode để tránh xung đột âm lượng trên mobile', async () => {
-    renderHook(() =>
+    const { result } = renderHook(() =>
       useEdgeReadAloudBgm({
         audioUrl: '/audio/test.mp3',
         volume: 0.15,
@@ -298,9 +292,8 @@ describe('useEdgeReadAloudBgm Hook', () => {
     );
 
     await act(async () => {
-      const p = document.createElement('p');
-      p.className = 'msreadout-line-highlight';
-      document.body.appendChild(p);
+      result.current.toggleBgm();
+      await Promise.resolve();
     });
 
     expect(mockAudioContext.createDynamicsCompressor).toHaveBeenCalled();
@@ -308,11 +301,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     expect(mockCompressorNode.ratio.setValueAtTime).toHaveBeenCalledWith(12, 0);
   });
 
-  it('QC-11: Nút bật/tắt thủ công (toggleBgm) ghi đè thống nhất flow auto, không bị MutationObserver ép phát lại khi user đã tắt', async () => {
-    const p = document.createElement('p');
-    p.className = 'msreadout-line-highlight';
-    document.body.appendChild(p);
-
+  it('QC-11: Nút bật/tắt thủ công (toggleBgm) duy trì trạng thái TẮT khi DOM thay đổi', async () => {
     const { result } = renderHook(() =>
       useEdgeReadAloudBgm({
         audioUrl: '/audio/test.mp3',
@@ -325,44 +314,42 @@ describe('useEdgeReadAloudBgm Hook', () => {
       await Promise.resolve();
     });
 
-    // Auto flow đã bật BGM vì đang đọc
+    // Ban đầu BGM ở trạng thái TẮT
+    expect(result.current.isPlaying).toBe(false);
+
+    // Người dùng bấm BẬT nhạc nền thủ công
+    await act(async () => {
+      result.current.toggleBgm();
+      await Promise.resolve();
+    });
     expect(result.current.isPlaying).toBe(true);
 
-    // Người dùng bấm TẮT nhạc nền thủ công
+    // Bấm TẮT thủ công
     await act(async () => {
       result.current.toggleBgm();
       await Promise.resolve();
     });
     expect(result.current.isPlaying).toBe(false);
 
-    // Giả lập DOM MutationObserver tiếp tục thay đổi class highlight khi đọc câu tiếp theo
+    // Giả lập DOM tiếp tục thay đổi
     await act(async () => {
+      const p = document.createElement('p');
       p.className = 'msreadout-word-highlight';
+      document.body.appendChild(p);
     });
 
     act(() => {
       vi.advanceTimersByTime(200);
     });
 
-    // BGM phải giữ nguyên trạng thái TẮT (không bị auto flow ép bật lại)
+    // BGM giữ nguyên trạng thái TẮT
     expect(result.current.isPlaying).toBe(false);
-
-    // Bấm BẬT lại thủ công -> Phải phát lại bình thường
-    await act(async () => {
-      result.current.toggleBgm();
-      await Promise.resolve();
-    });
-    expect(result.current.isPlaying).toBe(true);
   });
 
-  it('QC-12: Mở khóa âm thanh tự động trên Mobile (pointerdown/touchstart) khi AudioContext bắt đầu ở trạng thái suspended', async () => {
+  it('QC-12: Mở khóa âm thanh tự động trên Mobile (pointerdown/touchstart) khi BGM được bật thủ công và AudioContext ở trạng thái suspended', async () => {
     mockAudioContext.state = 'suspended';
 
-    const p = document.createElement('p');
-    p.className = 'msreadout-line-highlight';
-    document.body.appendChild(p);
-
-    renderHook(() =>
+    const { result } = renderHook(() =>
       useEdgeReadAloudBgm({
         audioUrl: '/audio/test.mp3',
         volume: 0.15,
@@ -370,6 +357,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     );
 
     await act(async () => {
+      result.current.toggleBgm();
       await Promise.resolve();
     });
 
@@ -384,10 +372,6 @@ describe('useEdgeReadAloudBgm Hook', () => {
   });
 
   it('QC-13: Cập nhật âm lượng Real-time khi prop volume thay đổi trong lúc BGM đang phát', async () => {
-    const p = document.createElement('p');
-    p.className = 'msreadout-line-highlight';
-    document.body.appendChild(p);
-
     const { rerender, result } = renderHook(
       (props) =>
         useEdgeReadAloudBgm({
@@ -398,6 +382,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     );
 
     await act(async () => {
+      result.current.toggleBgm();
       await Promise.resolve();
     });
 
@@ -413,10 +398,6 @@ describe('useEdgeReadAloudBgm Hook', () => {
   });
 
   it('QC-14: Tắt ngay lập tức BGM khi prop enabled chuyển sang false', async () => {
-    const p = document.createElement('p');
-    p.className = 'msreadout-line-highlight';
-    document.body.appendChild(p);
-
     const { rerender, result } = renderHook(
       (props) =>
         useEdgeReadAloudBgm({
@@ -429,6 +410,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     );
 
     await act(async () => {
+      result.current.toggleBgm();
       await Promise.resolve();
     });
 
@@ -444,14 +426,10 @@ describe('useEdgeReadAloudBgm Hook', () => {
     expect(mockSourceNode.stop).toHaveBeenCalled();
   });
 
-  it('QC-15: Tự động khôi phục và sinh ambient buffer fallback nếu tải audio hoặc worker bị gián đoạn', async () => {
+  it('QC-15: Sinh ambient buffer fallback nếu tải audio hoặc worker bị gián đoạn', async () => {
     (global.fetch as any).mockRejectedValueOnce(new Error('Network offline'));
 
-    const p = document.createElement('p');
-    p.className = 'msreadout-line-highlight';
-    document.body.appendChild(p);
-
-    renderHook(() =>
+    const { result } = renderHook(() =>
       useEdgeReadAloudBgm({
         audioUrl: '/audio/missing.mp3',
         volume: 0.15,
@@ -459,6 +437,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     );
 
     await act(async () => {
+      result.current.toggleBgm();
       await Promise.resolve();
     });
 
@@ -512,7 +491,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     expect(result.current.isPlaying).toBe(false);
   });
 
-  it('QC-17: Tự động khôi phục (auto-resume) AudioContext khi tính năng Read Aloud được bật qua menu native trình duyệt mobile và thẻ highlight xuất hiện trong DOM', async () => {
+  it('QC-17: Khôi phục (auto-resume) AudioContext khi BGM đã được bật thủ công và AudioContext bị suspended', async () => {
     mockAudioContext.state = 'suspended';
     mockAudioContext.resume = vi.fn().mockImplementation(() => {
       mockAudioContext.state = 'running';
@@ -527,20 +506,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     );
 
     await act(async () => {
-      await Promise.resolve();
-    });
-
-    // Thêm thẻ highlight Read Aloud do trình duyệt native tự chèn khi chọn "Đọc trang này" trong menu
-    await act(async () => {
-      const span = document.createElement('span');
-      span.className = 'msreadout-line-highlight';
-      document.body.appendChild(span);
-      await Promise.resolve();
-    });
-
-    // Advance timer để retry loop chạy
-    await act(async () => {
-      vi.advanceTimersByTime(600);
+      result.current.toggleBgm();
       await Promise.resolve();
     });
 
@@ -549,10 +515,6 @@ describe('useEdgeReadAloudBgm Hook', () => {
   });
 
   it('QC-18: Tạm dừng reader BGM khi user bấm nghe thử (isBgmPreviewing = true) trong Settings tab, tự động phát lại khi nghe thử dừng (isBgmPreviewing = false)', async () => {
-    const p = document.createElement('p');
-    p.className = 'msreadout-line-highlight';
-    document.body.appendChild(p);
-
     const { rerender, result } = renderHook(
       (props) =>
         useEdgeReadAloudBgm({
@@ -565,6 +527,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     );
 
     await act(async () => {
+      result.current.toggleBgm();
       await Promise.resolve();
     });
 

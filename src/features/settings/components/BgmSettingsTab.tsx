@@ -232,7 +232,7 @@ export function BgmSettingsTab() {
                 </span>
               </h3>
               <p className="text-[11px] text-on-surface-variant/80 mt-0.5">
-                Tự động phát nhạc nền khi bật tính năng Edge Read Aloud
+                Bật/tắt nhạc nền thư giãn khi đọc sách bằng nút điều khiển thủ công
               </p>
             </div>
           </div>
