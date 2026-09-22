@@ -20,6 +20,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useReadingProgress } from '../../hooks/useReadingProgress';
 import { useGlobalLoading } from '../../hooks/useGlobalLoading';
 import { useReadAloud } from '../../hooks/useReadAloud';
+import { useEdgeReadAloudBgm } from '../../hooks/useEdgeReadAloudBgm';
 import { offlineDb } from '../../lib/offlineDb';
 import { AlertCircle, RotateCcw, Home } from 'lucide-react';
 
@@ -185,6 +186,12 @@ export function ReaderScreen() {
 
   // Sync document.title with the current reading story name
   useDocumentTitle(contentData?.chapter?.bookName);
+
+  // Background music automatically plays when Edge Read Aloud is active
+  useEdgeReadAloudBgm({
+    audioUrl: '/audio/ambient-bgm.mp3',
+    volume: 0.2,
+  });
 
   // Clean Reading Progress & Scroll Restoration
   const isContentReady = !loading && contentData !== null;
