@@ -33,16 +33,17 @@ export const ReaderHeader = memo(function ReaderHeader({
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-40 bg-black/5 dark:bg-black/10 backdrop-blur-[1.5px] border-b border-white/25 dark:border-white/25 shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1px_0_rgba(255,255,255,0.4)] px-3.5 py-2.5 w-full max-w-md mx-auto overflow-x-hidden box-border transition-all duration-300"
+      className="fixed top-0 left-0 right-0 z-40 bg-black/5 dark:bg-black/10 backdrop-blur-[1.5px] border-b border-white/25 dark:border-white/25 shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1px_0_rgba(255,255,255,0.4)] px-3 py-2 w-full max-w-md mx-auto overflow-x-hidden box-border transition-all duration-300"
     >
       <div className="flex items-center justify-between gap-2">
-        {/* Left: Home Button */}
+        {/* Left: Home Button (3D Compact Glass Sphere) */}
         <button
           onClick={() => navigate('/')}
-          className="p-2 rounded-full bg-white/10 dark:bg-white/10 border border-white/30 text-on-surface hover:text-primary hover:bg-white/20 transition-all flex-shrink-0 active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] cursor-pointer"
+          className="w-7 h-7 rounded-full bg-gradient-to-b from-white/20 via-white/10 to-white/5 dark:from-white/15 dark:via-white/5 dark:to-black/25 border border-white/35 dark:border-white/25 text-on-surface hover:text-primary hover:from-white/25 hover:to-white/10 shadow-[0_3px_8px_rgba(0,0,0,0.35),_inset_0_1px_1px_0_rgba(255,255,255,0.45),_inset_0_-1px_1px_0_rgba(0,0,0,0.35)] active:translate-y-[0.5px] active:scale-90 transition-all flex items-center justify-center flex-shrink-0 cursor-pointer"
           title="Về Thư viện"
+          aria-label="Về Thư viện"
         >
-          <Home size={16} />
+          <Home size={14} strokeWidth={2.3} />
         </button>
 
         {/* Center: Book Name & Chapter Title (Centered) */}
@@ -60,29 +61,30 @@ export const ReaderHeader = memo(function ReaderHeader({
           </div>
         </div>
 
-        {/* Right: Actions */}
+        {/* Right: Actions (3D Compact Glass Spheres) */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {onToggleBgm && (
             <button
               onClick={onToggleBgm}
-              className={`p-2 rounded-full border transition-all active:scale-90 cursor-pointer flex items-center justify-center ${
+              className={`w-7 h-7 rounded-full border transition-all active:translate-y-[0.5px] active:scale-90 cursor-pointer flex items-center justify-center flex-shrink-0 ${
                 isBgmActive
-                  ? 'bg-primary/25 border-primary/60 text-primary shadow-[0_2px_8px_rgba(59,130,246,0.35),_inset_0_1px_0.5px_rgba(255,255,255,0.4)]'
-                  : 'bg-white/10 dark:bg-white/10 border-white/30 text-on-surface hover:text-primary hover:bg-white/20 shadow-[0_2px_8px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.4)]'
+                  ? 'bg-gradient-to-b from-primary/35 via-primary/25 to-primary/15 border-primary/60 text-primary shadow-[0_3px_10px_rgba(59,130,246,0.45),_inset_0_1.2px_1px_0_rgba(255,255,255,0.55),_inset_0_-1px_1px_0_rgba(0,0,0,0.3)]'
+                  : 'bg-gradient-to-b from-white/20 via-white/10 to-white/5 dark:from-white/15 dark:via-white/5 dark:to-black/25 border-white/35 dark:border-white/25 text-on-surface hover:text-primary hover:from-white/25 hover:to-white/10 shadow-[0_3px_8px_rgba(0,0,0,0.35),_inset_0_1px_1px_0_rgba(255,255,255,0.45),_inset_0_-1px_1px_0_rgba(0,0,0,0.35)]'
               }`}
               title={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
               aria-label={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
             >
-              <Music size={16} className={isBgmActive ? 'animate-pulse text-primary' : ''} />
+              <Music size={14} strokeWidth={2.4} className={isBgmActive ? 'animate-pulse text-primary' : ''} />
             </button>
           )}
 
           <button
             onClick={onOpenHistory}
-            className="p-2 rounded-full bg-white/10 dark:bg-white/10 border border-white/30 text-primary hover:bg-white/20 transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] cursor-pointer"
+            className="w-7 h-7 rounded-full bg-gradient-to-b from-white/20 via-white/10 to-white/5 dark:from-white/15 dark:via-white/5 dark:to-black/25 border border-white/35 dark:border-white/25 text-primary hover:from-white/25 hover:to-white/10 shadow-[0_3px_8px_rgba(0,0,0,0.35),_inset_0_1px_1px_0_rgba(255,255,255,0.45),_inset_0_-1px_1px_0_rgba(0,0,0,0.35)] active:translate-y-[0.5px] active:scale-90 transition-all flex items-center justify-center flex-shrink-0 cursor-pointer"
             title="Lịch sử đọc gần đây"
+            aria-label="Lịch sử đọc gần đây"
           >
-            <Clock size={16} />
+            <Clock size={14} strokeWidth={2.3} />
           </button>
         </div>
       </div>
