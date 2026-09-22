@@ -238,6 +238,14 @@ export function useEdgeReadAloudBgm({
         return;
       }
 
+      if (sourceNodeRef.current && !isPlayingRef.current) {
+        try {
+          sourceNodeRef.current.stop();
+          sourceNodeRef.current.disconnect();
+        } catch {}
+        sourceNodeRef.current = null;
+      }
+
       try {
         console.log('[EdgeBgm] Starting background music in isolated WebAudio graph...');
         const source = ctx.createBufferSource();
@@ -315,11 +323,54 @@ export function useEdgeReadAloudBgm({
 
   const stopBgm = useCallback(
     (immediate = false) => {
-      if (!isPlayingRef.current || !gainNodeRef.current || !audioCtxRef.current) return;
+      if (!isPlayingRef.current && !sourceNodeRef.current) return;
 
       if (stopTimerRef.current) {
         clearTimeout(stopTimerRef.current);
         stopTimerRef.current = null;
+      }
+
+      if (immediate) {
+        if (fadeOutTimerRef.current) {
+          clearTimeout(fadeOutTimerRef.current);
+          fadeOutTimerRef.current = null;
+        }
+
+        console.log('[EdgeBgm] Immediately stopping isolated background music...');
+        const ctx = audioCtxRef.current;
+        const gain = gainNodeRef.current;
+        const source = sourceNodeRef.current;
+
+        if (gain && ctx) {
+          try {
+            const now = ctx.currentTime;
+            if (typeof gain.gain.cancelScheduledValues === 'function') {
+              gain.gain.cancelScheduledValues(now);
+            }
+            if (typeof gain.gain.setValueAtTime === 'function') {
+              gain.gain.setValueAtTime(0, now);
+            }
+          } catch {}
+        }
+
+        if (source) {
+          try {
+            source.stop();
+            source.disconnect();
+          } catch {}
+        }
+
+        if (gain) {
+          try {
+            gain.disconnect();
+          } catch {}
+        }
+
+        isPlayingRef.current = false;
+        sourceNodeRef.current = null;
+        gainNodeRef.current = null;
+        setIsPlayingState(false);
+        return;
       }
 
       const performFadeAndStop = () => {
@@ -328,7 +379,13 @@ export function useEdgeReadAloudBgm({
         const gain = gainNodeRef.current;
         const source = sourceNodeRef.current;
 
-        if (!ctx || !gain || !source) return;
+        if (!ctx || !gain || !source) {
+          isPlayingRef.current = false;
+          sourceNodeRef.current = null;
+          gainNodeRef.current = null;
+          setIsPlayingState(false);
+          return;
+        }
 
         const now = ctx.currentTime;
         if (typeof gain.gain.cancelScheduledValues === 'function') {
@@ -358,11 +415,7 @@ export function useEdgeReadAloudBgm({
         }, fadeOutMs);
       };
 
-      if (immediate) {
-        performFadeAndStop();
-      } else {
-        stopTimerRef.current = setTimeout(performFadeAndStop, stopDelayMs);
-      }
+      stopTimerRef.current = setTimeout(performFadeAndStop, stopDelayMs);
     },
     [fadeOutMs, stopDelayMs]
   );
@@ -371,14 +424,15 @@ export function useEdgeReadAloudBgm({
   useEffect(() => {
     if (!enabled) {
       isUserMutedRef.current = false;
-      if (isPlayingRef.current) {
+      if (isPlayingRef.current || sourceNodeRef.current) {
         stopBgm(true);
       }
     }
   }, [enabled, stopBgm]);
 
   const toggleBgm = useCallback(() => {
-    if (isPlayingRef.current) {
+    const currentlyActive = isPlayingRef.current || Boolean(sourceNodeRef.current);
+    if (currentlyActive) {
       isUserMutedRef.current = true;
       isManualPlayingRef.current = false;
       stopBgm(true);

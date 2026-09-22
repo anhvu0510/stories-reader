@@ -466,4 +466,49 @@ describe('useEdgeReadAloudBgm Hook', () => {
     expect(mockAudioContext.createBuffer).toHaveBeenCalled();
     expect(mockSourceNode.start).toHaveBeenCalledWith(0);
   });
+
+  it('QC-16: Nút toggleBgm hoạt động ổn định liên tục qua nhiều lần nhấn (Click 1: BẬT, Click 2: TẮT, Click 3: BẬT, Click 4: TẮT) không bị kẹt hay desync', async () => {
+    const { result } = renderHook(() =>
+      useEdgeReadAloudBgm({
+        audioUrl: '/audio/test.mp3',
+        volume: 0.15,
+        fadeOutMs: 100,
+      })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Initial state: OFF
+    expect(result.current.isPlaying).toBe(false);
+
+    // Click 1: ON
+    await act(async () => {
+      result.current.toggleBgm();
+      await Promise.resolve();
+    });
+    expect(result.current.isPlaying).toBe(true);
+
+    // Click 2: OFF
+    await act(async () => {
+      result.current.toggleBgm();
+      await Promise.resolve();
+    });
+    expect(result.current.isPlaying).toBe(false);
+
+    // Click 3: ON
+    await act(async () => {
+      result.current.toggleBgm();
+      await Promise.resolve();
+    });
+    expect(result.current.isPlaying).toBe(true);
+
+    // Click 4: OFF
+    await act(async () => {
+      result.current.toggleBgm();
+      await Promise.resolve();
+    });
+    expect(result.current.isPlaying).toBe(false);
+  });
 });
