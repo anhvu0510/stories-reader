@@ -99,8 +99,12 @@ export function useEdgeReadAloudBgm({
         if (!isUserMutedRef.current && (isEdgeReadAloudActive() || isManualPlayingRef.current)) {
           if (!sourceNodeRef.current || !isPlayingRef.current) {
             void startBgmRef.current?.(isManualPlayingRef.current);
+          } else {
+            setIsPlayingState(true);
           }
         }
+      } else if (ctx.state === 'suspended') {
+        setIsPlayingState(false);
       }
     };
     audioCtxRef.current = ctx;
@@ -192,7 +196,11 @@ export function useEdgeReadAloudBgm({
         } else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
           gain.gain.exponentialRampToValueAtTime(Math.max(safeVolume, 0.0001), now + fadeInMs / 1000);
         }
-        setIsPlayingState(true);
+        if (ctx.state === 'running') {
+          setIsPlayingState(true);
+        } else {
+          setIsPlayingState(false);
+        }
         return;
       }
 
@@ -225,7 +233,13 @@ export function useEdgeReadAloudBgm({
         sourceNodeRef.current = source;
         gainNodeRef.current = gain;
         isPlayingRef.current = true;
-        setIsPlayingState(true);
+
+        // UI Header Icon ONLY glows active if AudioContext is ACTUALLY running and producing sound
+        if (ctx.state === 'running') {
+          setIsPlayingState(true);
+        } else {
+          setIsPlayingState(false);
+        }
       } catch (err) {
         console.error('[EdgeBgm] Failed to start isolated BGM playback:', err);
       }
@@ -334,7 +348,7 @@ export function useEdgeReadAloudBgm({
     }
   }, [startBgm, stopBgm]);
 
-  // Mobile-aware synchronous user touch & click unlocker for isolated AudioContext
+  // Mobile-aware synchronous user touch & click & scroll & selection unlocker for isolated AudioContext
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -343,10 +357,8 @@ export function useEdgeReadAloudBgm({
       if (ctx) {
         if (ctx.state === 'suspended') {
           void ctx.resume().then(() => {
-            if (!isUserMutedRef.current && (isEdgeReadAloudActive() || isManualPlayingRef.current)) {
-              if (!sourceNodeRef.current || !isPlayingRef.current) {
-                void startBgmRef.current?.(isManualPlayingRef.current);
-              }
+            if (ctx.state === 'running' && !isUserMutedRef.current && (isEdgeReadAloudActive() || isManualPlayingRef.current)) {
+              void startBgmRef.current?.(isManualPlayingRef.current);
             }
           }).catch(() => {});
         } else if (ctx.state === 'running') {
@@ -368,17 +380,27 @@ export function useEdgeReadAloudBgm({
     };
 
     window.addEventListener('pointerdown', unlockAudio, { capture: true, passive: true });
+    window.addEventListener('pointermove', unlockAudio, { capture: true, passive: true });
     window.addEventListener('touchstart', unlockAudio, { capture: true, passive: true });
+    window.addEventListener('touchmove', unlockAudio, { capture: true, passive: true });
     window.addEventListener('touchend', unlockAudio, { capture: true, passive: true });
     window.addEventListener('click', unlockAudio, { capture: true, passive: true });
     window.addEventListener('keydown', unlockAudio, { capture: true, passive: true });
+    window.addEventListener('scroll', unlockAudio, { capture: true, passive: true });
+    window.addEventListener('focus', unlockAudio, { capture: true, passive: true });
+    document.addEventListener('selectionchange', unlockAudio, { capture: true, passive: true });
 
     return () => {
       window.removeEventListener('pointerdown', unlockAudio, { capture: true });
+      window.removeEventListener('pointermove', unlockAudio, { capture: true });
       window.removeEventListener('touchstart', unlockAudio, { capture: true });
+      window.removeEventListener('touchmove', unlockAudio, { capture: true });
       window.removeEventListener('touchend', unlockAudio, { capture: true });
       window.removeEventListener('click', unlockAudio, { capture: true });
       window.removeEventListener('keydown', unlockAudio, { capture: true });
+      window.removeEventListener('scroll', unlockAudio, { capture: true });
+      window.removeEventListener('focus', unlockAudio, { capture: true });
+      document.removeEventListener('selectionchange', unlockAudio, { capture: true });
     };
   }, [getOrCreateAudioContext]);
 
