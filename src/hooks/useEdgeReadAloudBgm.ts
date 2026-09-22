@@ -233,6 +233,26 @@ export function useEdgeReadAloudBgm({
     startBgmRef.current = startBgm;
   }, [startBgm]);
 
+  // Realtime volume adjustment effect while background music is currently playing
+  useEffect(() => {
+    if (!isPlayingRef.current || !gainNodeRef.current || !audioCtxRef.current) return;
+    const ctx = audioCtxRef.current;
+    const gain = gainNodeRef.current;
+    const safeVolume = Math.min(Math.max(volume, 0), 0.25);
+    const now = ctx.currentTime;
+
+    try {
+      if (typeof gain.gain.cancelScheduledValues === 'function') {
+        gain.gain.cancelScheduledValues(now);
+      }
+      if (typeof gain.gain.setValueAtTime === 'function') {
+        gain.gain.setValueAtTime(safeVolume, now);
+      }
+    } catch (err) {
+      console.warn('[EdgeBgm] Realtime volume update warning:', err);
+    }
+  }, [volume]);
+
   const stopBgm = useCallback(
     (immediate = false) => {
       if (!isPlayingRef.current || !gainNodeRef.current || !audioCtxRef.current) return;
@@ -287,6 +307,13 @@ export function useEdgeReadAloudBgm({
     },
     [fadeOutMs, stopDelayMs]
   );
+
+  // Realtime enable/disable effect
+  useEffect(() => {
+    if (!enabled && isPlayingRef.current) {
+      stopBgm(true);
+    }
+  }, [enabled, stopBgm]);
 
   const toggleBgm = useCallback(() => {
     if (isPlayingRef.current) {
@@ -368,6 +395,16 @@ export function useEdgeReadAloudBgm({
         if (isMounted) {
           if (decoded && decoded.duration > 0.1) {
             audioBufferRef.current = decoded;
+            // Realtime track update: if BGM is currently playing, seamlessly restart node with new track
+            if (isPlayingRef.current && sourceNodeRef.current && audioCtxRef.current) {
+              try {
+                sourceNodeRef.current.stop();
+                sourceNodeRef.current.disconnect();
+              } catch {}
+              sourceNodeRef.current = null;
+              isPlayingRef.current = false;
+              void startBgm(isManualPlayingRef.current);
+            }
           }
           if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
             void startBgm(isManualPlayingRef.current);

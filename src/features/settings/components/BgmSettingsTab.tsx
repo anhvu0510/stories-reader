@@ -78,6 +78,22 @@ export function BgmSettingsTab() {
     };
   }, []);
 
+  // Real-time volume update for active preview audio
+  useEffect(() => {
+    if (previewGainRef.current && previewAudioCtxRef.current) {
+      const ctx = previewAudioCtxRef.current;
+      const gain = previewGainRef.current;
+      const now = ctx.currentTime;
+      try {
+        if (typeof gain.gain.setValueAtTime === 'function') {
+          gain.gain.setValueAtTime(bgmVolume, now);
+        } else {
+          gain.gain.value = bgmVolume;
+        }
+      } catch {}
+    }
+  }, [bgmVolume]);
+
   const stopPreview = () => {
     if (previewSourceRef.current) {
       try {
