@@ -240,11 +240,7 @@ export function useEdgeReadAloudBgm({
         } else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
           gain.gain.exponentialRampToValueAtTime(Math.max(safeVolume, 0.0001), now + fadeInMs / 1000);
         }
-        if (ctx.state === 'running') {
-          setIsPlayingState(true);
-        } else {
-          setIsPlayingState(false);
-        }
+        setIsPlayingState(true);
         return;
       }
 
@@ -293,13 +289,7 @@ export function useEdgeReadAloudBgm({
         sourceNodeRef.current = source;
         gainNodeRef.current = gain;
         isPlayingRef.current = true;
-
-        // UI Header Icon ONLY glows active if AudioContext is ACTUALLY running and producing sound
-        if (ctx.state === 'running') {
-          setIsPlayingState(true);
-        } else {
-          setIsPlayingState(false);
-        }
+        setIsPlayingState(true);
       } catch (err) {
         console.error('[EdgeBgm] Failed to start isolated BGM playback:', err);
       }
@@ -467,7 +457,9 @@ export function useEdgeReadAloudBgm({
   }, [isBgmPreviewing, enabled, stopBgm, startBgm]);
 
   const toggleBgm = useCallback(() => {
-    const currentlyActive = isPlayingRef.current || Boolean(sourceNodeRef.current);
+    const ctx = audioCtxRef.current;
+    const isCtxRunning = ctx && ctx.state === 'running';
+    const currentlyActive = (isPlayingRef.current || Boolean(sourceNodeRef.current)) && isCtxRunning;
     if (currentlyActive) {
       isUserMutedRef.current = true;
       isManualPlayingRef.current = false;

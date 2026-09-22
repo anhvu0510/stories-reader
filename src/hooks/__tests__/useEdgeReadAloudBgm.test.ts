@@ -586,4 +586,40 @@ describe('useEdgeReadAloudBgm Hook', () => {
 
     expect(result.current.isPlaying).toBe(true);
   });
+
+  it('QC-19: Khi AudioContext ở trạng thái suspended do người dùng chưa chạm màn hình, nhấn toggleBgm() lần đầu tiên phát nhạc ngay lập tức (click 1 phát nhạc, không bắt click 2)', async () => {
+    mockAudioContext.state = 'suspended';
+    mockAudioContext.resume = vi.fn().mockResolvedValue(undefined);
+
+    const p = document.createElement('p');
+    p.className = 'msreadout-line-highlight';
+    document.body.appendChild(p);
+
+    const { result } = renderHook(() =>
+      useEdgeReadAloudBgm({
+        audioUrl: '/audio/test.mp3',
+        volume: 0.15,
+      })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Giả lập người dùng bấm nút toggleBgm thủ công LẦN ĐẦU TIÊN (click 1)
+    // Lúc này click handler kích hoạt resume() mở khóa AudioContext sang 'running'
+    mockAudioContext.resume = vi.fn().mockImplementation(() => {
+      mockAudioContext.state = 'running';
+      return Promise.resolve();
+    });
+
+    await act(async () => {
+      result.current.toggleBgm();
+      await Promise.resolve();
+    });
+
+    // Phải mở khóa resume và chuyển trạng thái isPlaying = true NGAY LẦN NHẤN ĐẦU TIÊN (click 1)
+    expect(mockAudioContext.resume).toHaveBeenCalled();
+    expect(result.current.isPlaying).toBe(true);
+  });
 });
