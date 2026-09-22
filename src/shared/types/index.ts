@@ -174,4 +174,5 @@ export interface ReaderConfig {
   bgmFadeOutMs?: number;
   bgmStopDelayMs?: number;
   bgmOnlyOnEdgeReadAloud?: boolean;
+  isBgmPreviewing?: boolean;
 }

@@ -547,4 +547,43 @@ describe('useEdgeReadAloudBgm Hook', () => {
     expect(mockAudioContext.resume).toHaveBeenCalled();
     expect(result.current.isPlaying).toBe(true);
   });
+
+  it('QC-18: Tạm dừng reader BGM khi user bấm nghe thử (isBgmPreviewing = true) trong Settings tab, tự động phát lại khi nghe thử dừng (isBgmPreviewing = false)', async () => {
+    const p = document.createElement('p');
+    p.className = 'msreadout-line-highlight';
+    document.body.appendChild(p);
+
+    const { rerender, result } = renderHook(
+      (props) =>
+        useEdgeReadAloudBgm({
+          audioUrl: '/audio/test.mp3',
+          volume: 0.15,
+          isBgmPreviewing: props.isBgmPreviewing,
+          fadeOutMs: 50,
+        }),
+      { initialProps: { isBgmPreviewing: false } }
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.isPlaying).toBe(true);
+
+    // User bấm Nghe thử trong Settings -> isBgmPreviewing = true
+    await act(async () => {
+      rerender({ isBgmPreviewing: true });
+      await Promise.resolve();
+    });
+
+    expect(result.current.isPlaying).toBe(false);
+
+    // User dừng Nghe thử -> isBgmPreviewing = false
+    await act(async () => {
+      rerender({ isBgmPreviewing: false });
+      await Promise.resolve();
+    });
+
+    expect(result.current.isPlaying).toBe(true);
+  });
 });

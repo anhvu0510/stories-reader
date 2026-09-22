@@ -43,6 +43,7 @@ const defaultSettings: ReaderConfig = {
   bgmFadeOutMs: 800,
   bgmStopDelayMs: 1500,
   bgmOnlyOnEdgeReadAloud: true,
+  isBgmPreviewing: false,
 };
 
 function getInitialSettings(isOffline: boolean): ReaderConfig {
@@ -72,6 +73,9 @@ interface ReaderConfigStore extends ReaderConfig {
   setVieneuParameter: <K extends keyof ReaderConfig>(key: K, value: ReaderConfig[K]) => void;
   setEdgeVoiceUri: (uri: string) => void;
   setShowTTSControlOnReader: (enabled: boolean) => void;
+  bgmOnlyOnEdgeReadAloud?: boolean;
+  isBgmPreviewing?: boolean;
+  setIsBgmPreviewing?: (isBgmPreviewing: boolean) => void;
   setBgmEnabled: (enabled: boolean) => void;
   setBgmVolume: (volume: number) => void;
   setBgmAudioUrl: (url: string) => void;
@@ -221,6 +225,9 @@ export const useReaderConfigStore = create<ReaderConfigStore>((set, get) => {
         persist(next);
         return { showTTSControlOnReader };
       });
+    },
+    setIsBgmPreviewing: (isBgmPreviewing) => {
+      set({ isBgmPreviewing });
     },
     setBgmEnabled: (bgmEnabled) => {
       set((state) => {

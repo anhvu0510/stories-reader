@@ -9,6 +9,7 @@ export interface EdgeReadAloudBgmOptions {
   fadeOutMs?: number;
   stopDelayMs?: number;
   enabled?: boolean;
+  isBgmPreviewing?: boolean;
 }
 
 export interface EdgeReadAloudBgmReturn {
@@ -79,6 +80,7 @@ export function useEdgeReadAloudBgm({
   fadeOutMs = 800,
   stopDelayMs = 1500,
   enabled = true,
+  isBgmPreviewing = false,
 }: EdgeReadAloudBgmOptions): EdgeReadAloudBgmReturn {
   const [isPlayingState, setIsPlayingState] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -90,6 +92,8 @@ export function useEdgeReadAloudBgm({
   const isPlayingRef = useRef(false);
   const isManualPlayingRef = useRef(false);
   const isUserMutedRef = useRef(false);
+  const isBgmPreviewingRef = useRef(isBgmPreviewing);
+  isBgmPreviewingRef.current = isBgmPreviewing;
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeOutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startBgmRef = useRef<((manual?: boolean) => Promise<void>) | null>(null);
@@ -178,6 +182,8 @@ export function useEdgeReadAloudBgm({
 
   const startBgm = useCallback(
     async (manual = false) => {
+      if (isBgmPreviewingRef.current) return;
+
       if (manual) {
         isUserMutedRef.current = false;
         isManualPlayingRef.current = true;
@@ -424,15 +430,41 @@ export function useEdgeReadAloudBgm({
     [fadeOutMs, stopDelayMs]
   );
 
+  const prevEnabledRef = useRef(enabled);
+  const prevPreviewRef = useRef(isBgmPreviewing);
+
   // Realtime enable/disable effect
   useEffect(() => {
-    if (!enabled) {
-      isUserMutedRef.current = false;
-      if (isPlayingRef.current || sourceNodeRef.current) {
-        stopBgm(true);
+    if (prevEnabledRef.current !== enabled) {
+      prevEnabledRef.current = enabled;
+      if (!enabled) {
+        if (isPlayingRef.current || sourceNodeRef.current) {
+          stopBgm(true);
+        }
+      } else {
+        isUserMutedRef.current = false;
+        if (!isBgmPreviewingRef.current && (isEdgeReadAloudActive() || isManualPlayingRef.current)) {
+          void startBgm(isManualPlayingRef.current);
+        }
       }
     }
-  }, [enabled, stopBgm]);
+  }, [enabled, stopBgm, startBgm]);
+
+  // Pause reader BGM while user previews audio in Settings tab, resume when preview stops
+  useEffect(() => {
+    if (prevPreviewRef.current !== isBgmPreviewing) {
+      prevPreviewRef.current = isBgmPreviewing;
+      if (isBgmPreviewing) {
+        if (isPlayingRef.current || sourceNodeRef.current) {
+          stopBgm(true);
+        }
+      } else if (enabled && !isUserMutedRef.current) {
+        if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
+          void startBgm(isManualPlayingRef.current);
+        }
+      }
+    }
+  }, [isBgmPreviewing, enabled, stopBgm, startBgm]);
 
   const toggleBgm = useCallback(() => {
     const currentlyActive = isPlayingRef.current || Boolean(sourceNodeRef.current);
@@ -606,7 +638,7 @@ export function useEdgeReadAloudBgm({
     if (!enabled || typeof document === 'undefined') return;
 
     const checkAndToggle = () => {
-      if (isUserMutedRef.current) {
+      if (isUserMutedRef.current || isBgmPreviewingRef.current) {
         if (isPlayingRef.current || sourceNodeRef.current) {
           stopBgm(true);
         }
@@ -639,7 +671,7 @@ export function useEdgeReadAloudBgm({
     });
 
     const resumeRetryInterval = setInterval(() => {
-      if (isUserMutedRef.current) return;
+      if (isUserMutedRef.current || isBgmPreviewingRef.current) return;
       if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
         const ctx = audioCtxRef.current;
         if (ctx && ctx.state === 'suspended') {

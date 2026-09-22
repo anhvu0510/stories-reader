@@ -96,6 +96,8 @@ export function BgmSettingsTab() {
     }
   }, [bgmVolume]);
 
+  const setIsBgmPreviewing = useReaderConfigStore((state) => state.setIsBgmPreviewing);
+
   const stopPreview = () => {
     if (previewSourceRef.current) {
       try {
@@ -115,6 +117,7 @@ export function BgmSettingsTab() {
       previewAudioCtxRef.current = null;
     }
     setIsPreviewing(false);
+    setIsBgmPreviewing?.(false);
   };
 
   const togglePreview = async () => {
@@ -125,6 +128,7 @@ export function BgmSettingsTab() {
 
     try {
       setIsPreviewing(true);
+      setIsBgmPreviewing?.(true);
       const AudioContextClass =
         window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
