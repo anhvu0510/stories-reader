@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
+import { BackgroundAudioKeepAlive } from '../services/backgroundAudioKeepAlive';
 
 export interface EdgeReadAloudBgmOptions {
   audioUrl: string;
@@ -9,16 +10,15 @@ export interface EdgeReadAloudBgmOptions {
   enabled?: boolean;
 }
 
-export interface UseEdgeReadAloudBgmReturn {
+export interface EdgeReadAloudBgmReturn {
   isPlaying: boolean;
-  isManualPlaying: boolean;
   toggleBgm: () => void;
-  startBgm: (isManual?: boolean) => void;
+  startBgm: (manual?: boolean) => void;
   stopBgm: (immediate?: boolean) => void;
 }
 
 export const EDGE_READ_ALOUD_SELECTOR =
-  '.msreadout-line-highlight, .msreadout-word-highlight, msreadoutspan, [data-readout-highlight]';
+  '.msreadout-line-highlight, .msreadout-word-highlight, .msreadout-highlight, msreadoutspan, [class*="msreadout"], [data-readout-highlight]';
 
 export const EDGE_READ_ALOUD_INACTIVE_SELECTOR =
   '.msreadout-inactive-highlight, .msreadout-inactive-line-highlight, [class*="inactive-highlight"]';
@@ -67,8 +67,8 @@ export function useEdgeReadAloudBgm({
   fadeOutMs = 800,
   stopDelayMs = 1500,
   enabled = true,
-}: EdgeReadAloudBgmOptions): UseEdgeReadAloudBgmReturn {
-  const [isPlaying, setIsPlaying] = useState(false);
+}: EdgeReadAloudBgmOptions): EdgeReadAloudBgmReturn {
+  const [isPlayingState, setIsPlayingState] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
@@ -77,8 +77,13 @@ export function useEdgeReadAloudBgm({
   const isManualPlayingRef = useRef(false);
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeOutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const backgroundAudioRef = useRef<BackgroundAudioKeepAlive | null>(null);
 
-  // Helper to ensure AudioContext is unlocked by browser autoplay policy
+  if (!backgroundAudioRef.current && typeof window !== 'undefined') {
+    backgroundAudioRef.current = new BackgroundAudioKeepAlive();
+  }
+
+  // Helper to ensure AudioContext is unlocked by browser/mobile autoplay policy
   const getOrCreateAudioContext = useCallback(() => {
     if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
       return audioCtxRef.current;
@@ -94,170 +99,203 @@ export function useEdgeReadAloudBgm({
     return ctx;
   }, []);
 
-  const startBgm = useCallback((isManual = false) => {
-    if (isManual) {
-      isManualPlayingRef.current = true;
-    }
-
-    if (stopTimerRef.current) {
-      clearTimeout(stopTimerRef.current);
-      stopTimerRef.current = null;
-    }
-    if (fadeOutTimerRef.current) {
-      clearTimeout(fadeOutTimerRef.current);
-      fadeOutTimerRef.current = null;
-    }
-
-    const ctx = getOrCreateAudioContext();
-    if (!ctx) return;
-
-    if (ctx.state === 'suspended') {
-      void ctx.resume().catch((err) => {
-        console.warn('[EdgeBgm] Could not resume AudioContext (autoplay restriction):', err);
-      });
-    }
-
-    let buffer = audioBufferRef.current;
-    if (!buffer || buffer.duration < 0.1) {
-      buffer = createSynthesizedAmbientBuffer(ctx);
-      audioBufferRef.current = buffer;
-    }
-
-    // If already playing, update gain ramping smoothly to target volume
-    if (isPlayingRef.current && gainNodeRef.current) {
-      const gain = gainNodeRef.current;
-      const now = ctx.currentTime;
-      if (typeof gain.gain.cancelScheduledValues === 'function') {
-        gain.gain.cancelScheduledValues(now);
-      }
-      if (typeof gain.gain.setValueAtTime === 'function') {
-        gain.gain.setValueAtTime(gain.gain.value, now);
-      }
-      if (typeof gain.gain.linearRampToValueAtTime === 'function') {
-        gain.gain.linearRampToValueAtTime(volume, now + fadeInMs / 1000);
-      } else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
-        gain.gain.exponentialRampToValueAtTime(Math.max(volume, 0.0001), now + fadeInMs / 1000);
-      }
-      setIsPlaying(true);
-      return;
-    }
-
-    try {
-      console.log('[EdgeBgm] Starting background music...');
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.loop = true;
-
-      const gain = ctx.createGain();
-      const now = ctx.currentTime;
-      if (typeof gain.gain.cancelScheduledValues === 'function') {
-        gain.gain.cancelScheduledValues(now);
-      }
-      if (typeof gain.gain.setValueAtTime === 'function') {
-        gain.gain.setValueAtTime(0, now);
-      }
-      if (typeof gain.gain.linearRampToValueAtTime === 'function') {
-        gain.gain.linearRampToValueAtTime(volume, now + fadeInMs / 1000);
-      } else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
-        gain.gain.exponentialRampToValueAtTime(Math.max(volume, 0.0001), now + fadeInMs / 1000);
+  const startBgm = useCallback(
+    (manual = false) => {
+      if (manual) {
+        isManualPlayingRef.current = true;
       }
 
-      source.connect(gain);
-      gain.connect(ctx.destination);
-
-      source.start(0);
-
-      sourceNodeRef.current = source;
-      gainNodeRef.current = gain;
-      isPlayingRef.current = true;
-      setIsPlaying(true);
-    } catch (err) {
-      console.error('[EdgeBgm] Failed to start BGM playback:', err);
-    }
-  }, [getOrCreateAudioContext, volume, fadeInMs]);
-
-  const stopBgm = useCallback((immediate = false) => {
-    if (!isPlayingRef.current || !gainNodeRef.current || !audioCtxRef.current) return;
-
-    if (stopTimerRef.current) {
-      clearTimeout(stopTimerRef.current);
-      stopTimerRef.current = null;
-    }
-
-    const performFadeAndStop = () => {
-      console.log('[EdgeBgm] Stopping background music...');
-      const ctx = audioCtxRef.current;
-      const gain = gainNodeRef.current;
-      const source = sourceNodeRef.current;
-
-      if (!ctx || !gain || !source) return;
-
-      const now = ctx.currentTime;
-      if (typeof gain.gain.cancelScheduledValues === 'function') {
-        gain.gain.cancelScheduledValues(now);
+      if (stopTimerRef.current) {
+        clearTimeout(stopTimerRef.current);
+        stopTimerRef.current = null;
       }
-      if (typeof gain.gain.setValueAtTime === 'function') {
-        gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), now);
-      }
-      if (typeof gain.gain.linearRampToValueAtTime === 'function') {
-        gain.gain.linearRampToValueAtTime(0, now + fadeOutMs / 1000);
-      } else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + fadeOutMs / 1000);
+      if (fadeOutTimerRef.current) {
+        clearTimeout(fadeOutTimerRef.current);
+        fadeOutTimerRef.current = null;
       }
 
-      if (fadeOutTimerRef.current) clearTimeout(fadeOutTimerRef.current);
-      fadeOutTimerRef.current = setTimeout(() => {
-        try {
-          source.stop();
-          source.disconnect();
-          gain.disconnect();
-        } catch {}
-        isPlayingRef.current = false;
-        isManualPlayingRef.current = false;
-        sourceNodeRef.current = null;
-        gainNodeRef.current = null;
-        setIsPlaying(false);
-      }, fadeOutMs);
-    };
+      const ctx = getOrCreateAudioContext();
+      if (!ctx) return;
 
-    if (immediate) {
-      performFadeAndStop();
-    } else {
-      stopTimerRef.current = setTimeout(performFadeAndStop, stopDelayMs);
-    }
-  }, [fadeOutMs, stopDelayMs]);
+      if (ctx.state === 'suspended') {
+        void ctx.resume().catch((err) => {
+          console.warn('[EdgeBgm] Could not resume AudioContext (autoplay restriction):', err);
+        });
+      }
+
+      // Start mobile background audio keep alive
+      if (backgroundAudioRef.current) {
+        backgroundAudioRef.current.start();
+        backgroundAudioRef.current.resume();
+      }
+
+      let buffer = audioBufferRef.current;
+      if (!buffer || buffer.duration < 0.1) {
+        buffer = createSynthesizedAmbientBuffer(ctx);
+        audioBufferRef.current = buffer;
+      }
+
+      if (isPlayingRef.current && gainNodeRef.current) {
+        const gain = gainNodeRef.current;
+        const now = ctx.currentTime;
+        if (typeof gain.gain.cancelScheduledValues === 'function') {
+          gain.gain.cancelScheduledValues(now);
+        }
+        if (typeof gain.gain.setValueAtTime === 'function') {
+          gain.gain.setValueAtTime(gain.gain.value, now);
+        }
+        if (typeof gain.gain.linearRampToValueAtTime === 'function') {
+          gain.gain.linearRampToValueAtTime(volume, now + fadeInMs / 1000);
+        } else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
+          gain.gain.exponentialRampToValueAtTime(Math.max(volume, 0.0001), now + fadeInMs / 1000);
+        }
+        setIsPlayingState(true);
+        return;
+      }
+
+      try {
+        console.log('[EdgeBgm] Starting background music...');
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
+        if (typeof gain.gain.cancelScheduledValues === 'function') {
+          gain.gain.cancelScheduledValues(now);
+        }
+        if (typeof gain.gain.setValueAtTime === 'function') {
+          gain.gain.setValueAtTime(0, now);
+        }
+        if (typeof gain.gain.linearRampToValueAtTime === 'function') {
+          gain.gain.linearRampToValueAtTime(volume, now + fadeInMs / 1000);
+        } else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
+          gain.gain.exponentialRampToValueAtTime(Math.max(volume, 0.0001), now + fadeInMs / 1000);
+        }
+
+        source.connect(gain);
+        gain.connect(ctx.destination);
+
+        source.start(0);
+
+        sourceNodeRef.current = source;
+        gainNodeRef.current = gain;
+        isPlayingRef.current = true;
+        setIsPlayingState(true);
+      } catch (err) {
+        console.error('[EdgeBgm] Failed to start BGM playback:', err);
+      }
+    },
+    [getOrCreateAudioContext, volume, fadeInMs]
+  );
+
+  const stopBgm = useCallback(
+    (immediate = false) => {
+      if (!isPlayingRef.current || !gainNodeRef.current || !audioCtxRef.current) return;
+
+      if (stopTimerRef.current) {
+        clearTimeout(stopTimerRef.current);
+        stopTimerRef.current = null;
+      }
+
+      const performFadeAndStop = () => {
+        console.log('[EdgeBgm] Stopping background music...');
+        const ctx = audioCtxRef.current;
+        const gain = gainNodeRef.current;
+        const source = sourceNodeRef.current;
+
+        if (!ctx || !gain || !source) return;
+
+        const now = ctx.currentTime;
+        if (typeof gain.gain.cancelScheduledValues === 'function') {
+          gain.gain.cancelScheduledValues(now);
+        }
+        if (typeof gain.gain.setValueAtTime === 'function') {
+          gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), now);
+        }
+        if (typeof gain.gain.linearRampToValueAtTime === 'function') {
+          gain.gain.linearRampToValueAtTime(0, now + fadeOutMs / 1000);
+        } else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + fadeOutMs / 1000);
+        }
+
+        if (fadeOutTimerRef.current) clearTimeout(fadeOutTimerRef.current);
+        fadeOutTimerRef.current = setTimeout(() => {
+          try {
+            source.stop();
+            source.disconnect();
+            gain.disconnect();
+          } catch {}
+
+          if (backgroundAudioRef.current) {
+            backgroundAudioRef.current.stop();
+          }
+
+          isPlayingRef.current = false;
+          isManualPlayingRef.current = false;
+          sourceNodeRef.current = null;
+          gainNodeRef.current = null;
+          setIsPlayingState(false);
+        }, fadeOutMs);
+      };
+
+      if (immediate) {
+        performFadeAndStop();
+      } else {
+        stopTimerRef.current = setTimeout(performFadeAndStop, stopDelayMs);
+      }
+    },
+    [fadeOutMs, stopDelayMs]
+  );
 
   const toggleBgm = useCallback(() => {
     if (isPlayingRef.current) {
       isManualPlayingRef.current = false;
       stopBgm(true);
-      setIsPlaying(false);
+      setIsPlayingState(false);
     } else {
       isManualPlayingRef.current = true;
       startBgm(true);
-      setIsPlaying(true);
     }
   }, [startBgm, stopBgm]);
 
-  // Global user interaction listener to unlock AudioContext Autoplay Restriction
+  // Mobile-aware synchronous user touch & click unlocker
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const unlockAudio = () => {
       const ctx = getOrCreateAudioContext();
-      if (ctx && ctx.state === 'suspended') {
-        void ctx.resume().catch(() => {});
+      if (ctx) {
+        if (ctx.state === 'suspended') {
+          void ctx.resume().catch(() => {});
+        }
+        // Unlock WebAudio on iOS Safari with silent 1-sample buffer
+        try {
+          const dummy = ctx.createBuffer(1, 1, 22050);
+          const node = ctx.createBufferSource();
+          node.buffer = dummy;
+          node.connect(ctx.destination);
+          node.start(0);
+        } catch {}
+      }
+
+      if (backgroundAudioRef.current) {
+        backgroundAudioRef.current.resume();
       }
     };
 
+    window.addEventListener('pointerdown', unlockAudio, { capture: true, passive: true });
+    window.addEventListener('touchstart', unlockAudio, { capture: true, passive: true });
+    window.addEventListener('touchend', unlockAudio, { capture: true, passive: true });
     window.addEventListener('click', unlockAudio, { capture: true, passive: true });
     window.addEventListener('keydown', unlockAudio, { capture: true, passive: true });
-    window.addEventListener('touchstart', unlockAudio, { capture: true, passive: true });
 
     return () => {
+      window.removeEventListener('pointerdown', unlockAudio, { capture: true });
+      window.removeEventListener('touchstart', unlockAudio, { capture: true });
+      window.removeEventListener('touchend', unlockAudio, { capture: true });
       window.removeEventListener('click', unlockAudio, { capture: true });
       window.removeEventListener('keydown', unlockAudio, { capture: true });
-      window.removeEventListener('touchstart', unlockAudio, { capture: true });
     };
   }, [getOrCreateAudioContext]);
 
@@ -325,14 +363,17 @@ export function useEdgeReadAloudBgm({
         gainNodeRef.current = null;
       }
 
+      if (backgroundAudioRef.current) {
+        backgroundAudioRef.current.stop();
+      }
+
       if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
         void audioCtxRef.current.close();
         audioCtxRef.current = null;
       }
       audioBufferRef.current = null;
       isPlayingRef.current = false;
-      isManualPlayingRef.current = false;
-      setIsPlaying(false);
+      setIsPlayingState(false);
     };
   }, [audioUrl, enabled, getOrCreateAudioContext, startBgm]);
 
@@ -340,12 +381,10 @@ export function useEdgeReadAloudBgm({
     if (!enabled || typeof document === 'undefined') return;
 
     const checkAndToggle = () => {
-      if (isEdgeReadAloudActive()) {
-        startBgm(false);
+      if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
+        startBgm(isManualPlayingRef.current);
       } else {
-        if (!isManualPlayingRef.current) {
-          stopBgm(false);
-        }
+        stopBgm();
       }
     };
 
@@ -364,8 +403,7 @@ export function useEdgeReadAloudBgm({
   }, [enabled, startBgm, stopBgm]);
 
   return {
-    isPlaying,
-    isManualPlaying: isManualPlayingRef.current,
+    isPlaying: isPlayingState,
     toggleBgm,
     startBgm,
     stopBgm,

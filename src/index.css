@@ -254,8 +254,7 @@
   will-change: transform;
 }
 
-.msreadout-word-highlight,
-::highlight(msreadout-word) {
+.msreadout-word-highlight {
   color: #111827;
   background-color: #facc15;
 }
