@@ -307,4 +307,51 @@ describe('useEdgeReadAloudBgm Hook', () => {
     expect(mockCompressorNode.threshold.setValueAtTime).toHaveBeenCalledWith(-24, 0);
     expect(mockCompressorNode.ratio.setValueAtTime).toHaveBeenCalledWith(12, 0);
   });
+
+  it('QC-11: Nút bật/tắt thủ công (toggleBgm) ghi đè thống nhất flow auto, không bị MutationObserver ép phát lại khi user đã tắt', async () => {
+    const p = document.createElement('p');
+    p.className = 'msreadout-line-highlight';
+    document.body.appendChild(p);
+
+    const { result } = renderHook(() =>
+      useEdgeReadAloudBgm({
+        audioUrl: '/audio/test.mp3',
+        volume: 0.15,
+        fadeOutMs: 100,
+      })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Auto flow đã bật BGM vì đang đọc
+    expect(result.current.isPlaying).toBe(true);
+
+    // Người dùng bấm TẮT nhạc nền thủ công
+    await act(async () => {
+      result.current.toggleBgm();
+      await Promise.resolve();
+    });
+    expect(result.current.isPlaying).toBe(false);
+
+    // Giả lập DOM MutationObserver tiếp tục thay đổi class highlight khi đọc câu tiếp theo
+    await act(async () => {
+      p.className = 'msreadout-word-highlight';
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    // BGM phải giữ nguyên trạng thái TẮT (không bị auto flow ép bật lại)
+    expect(result.current.isPlaying).toBe(false);
+
+    // Bấm BẬT lại thủ công -> Phải phát lại bình thường
+    await act(async () => {
+      result.current.toggleBgm();
+      await Promise.resolve();
+    });
+    expect(result.current.isPlaying).toBe(true);
+  });
 });

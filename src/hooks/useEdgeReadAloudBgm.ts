@@ -77,6 +77,7 @@ export function useEdgeReadAloudBgm({
   const audioBufferRef = useRef<AudioBuffer | null>(null);
   const isPlayingRef = useRef(false);
   const isManualPlayingRef = useRef(false);
+  const isUserMutedRef = useRef(false);
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeOutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startBgmRef = useRef<((manual?: boolean) => Promise<void>) | null>(null);
@@ -95,7 +96,7 @@ export function useEdgeReadAloudBgm({
     const ctx = new AudioContextClass();
     ctx.onstatechange = () => {
       if (ctx.state === 'running') {
-        if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
+        if (!isUserMutedRef.current && (isEdgeReadAloudActive() || isManualPlayingRef.current)) {
           if (!sourceNodeRef.current || !isPlayingRef.current) {
             void startBgmRef.current?.(isManualPlayingRef.current);
           }
@@ -140,7 +141,10 @@ export function useEdgeReadAloudBgm({
   const startBgm = useCallback(
     async (manual = false) => {
       if (manual) {
+        isUserMutedRef.current = false;
         isManualPlayingRef.current = true;
+      } else if (isUserMutedRef.current) {
+        return;
       }
 
       if (stopTimerRef.current) {
@@ -292,7 +296,6 @@ export function useEdgeReadAloudBgm({
           } catch {}
 
           isPlayingRef.current = false;
-          isManualPlayingRef.current = false;
           sourceNodeRef.current = null;
           gainNodeRef.current = null;
           setIsPlayingState(false);
@@ -310,17 +313,22 @@ export function useEdgeReadAloudBgm({
 
   // Realtime enable/disable effect
   useEffect(() => {
-    if (!enabled && isPlayingRef.current) {
-      stopBgm(true);
+    if (!enabled) {
+      isUserMutedRef.current = false;
+      if (isPlayingRef.current) {
+        stopBgm(true);
+      }
     }
   }, [enabled, stopBgm]);
 
   const toggleBgm = useCallback(() => {
     if (isPlayingRef.current) {
+      isUserMutedRef.current = true;
       isManualPlayingRef.current = false;
       stopBgm(true);
       setIsPlayingState(false);
     } else {
+      isUserMutedRef.current = false;
       isManualPlayingRef.current = true;
       void startBgm(true);
     }
@@ -335,14 +343,14 @@ export function useEdgeReadAloudBgm({
       if (ctx) {
         if (ctx.state === 'suspended') {
           void ctx.resume().then(() => {
-            if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
+            if (!isUserMutedRef.current && (isEdgeReadAloudActive() || isManualPlayingRef.current)) {
               if (!sourceNodeRef.current || !isPlayingRef.current) {
                 void startBgmRef.current?.(isManualPlayingRef.current);
               }
             }
           }).catch(() => {});
         } else if (ctx.state === 'running') {
-          if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
+          if (!isUserMutedRef.current && (isEdgeReadAloudActive() || isManualPlayingRef.current)) {
             if (!sourceNodeRef.current || !isPlayingRef.current) {
               void startBgmRef.current?.(isManualPlayingRef.current);
             }
@@ -406,7 +414,7 @@ export function useEdgeReadAloudBgm({
               void startBgm(isManualPlayingRef.current);
             }
           }
-          if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
+          if (!isUserMutedRef.current && (isEdgeReadAloudActive() || isManualPlayingRef.current)) {
             void startBgm(isManualPlayingRef.current);
           }
         } else {
@@ -465,6 +473,13 @@ export function useEdgeReadAloudBgm({
     if (!enabled || typeof document === 'undefined') return;
 
     const checkAndToggle = () => {
+      if (isUserMutedRef.current) {
+        if (isPlayingRef.current) {
+          stopBgm(true);
+        }
+        return;
+      }
+
       if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
         void startBgm(isManualPlayingRef.current);
       } else {
