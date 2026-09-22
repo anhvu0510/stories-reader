@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import React from 'react';
 import { VerticalBatchChapterNav } from '../VerticalBatchChapterNav';
 
@@ -206,5 +206,65 @@ describe('VerticalBatchChapterNav Component', () => {
     fireEvent.click(loadingBtn);
 
     expect(mockOnToggleTTS).toHaveBeenCalledTimes(1);
+  });
+
+  it('QC-10 [Vertical Menu BGM Toggle]: Shows BGM toggle button ONLY when Edge Read Aloud highlight is present in DOM', async () => {
+    const mockOnToggleBgm = vi.fn();
+
+    // 1. Without highlight class in DOM -> BGM button must NOT render
+    const { rerender } = render(
+      <VerticalBatchChapterNav
+        chapters={mockChapters}
+        activeChapterId="c1"
+        isVisible={true}
+        isTTSActive={false}
+        isBgmActive={false}
+        onToggleBgm={mockOnToggleBgm}
+      />
+    );
+
+    expect(screen.queryByTitle('Bật nhạc nền thư giãn')).toBeNull();
+
+    // 2. Add Edge Read Aloud highlight class to DOM -> BGM button must render in vertical menu
+    const span = document.createElement('span');
+    span.className = 'msreadout-line-highlight';
+
+    await act(async () => {
+      document.body.appendChild(span);
+      await Promise.resolve();
+    });
+
+    rerender(
+      <VerticalBatchChapterNav
+        chapters={mockChapters}
+        activeChapterId="c1"
+        isVisible={true}
+        isTTSActive={false}
+        isBgmActive={false}
+        onToggleBgm={mockOnToggleBgm}
+      />
+    );
+
+    const bgmBtn = screen.getByTitle('Bật nhạc nền thư giãn');
+    expect(bgmBtn).toBeDefined();
+
+    fireEvent.click(bgmBtn);
+    expect(mockOnToggleBgm).toHaveBeenCalledTimes(1);
+
+    document.body.removeChild(span);
+  });
+
+  it('QC-11 [showTTSControl=false]: Hides speaker button when showTTSControl prop is set to false', () => {
+    render(
+      <VerticalBatchChapterNav
+        chapters={mockChapters}
+        activeChapterId="c1"
+        isVisible={true}
+        isTTSActive={false}
+        showTTSControl={false}
+      />
+    );
+
+    expect(screen.queryByLabelText('Bật đọc thành tiếng')).toBeNull();
   });
 });

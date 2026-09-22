@@ -20,7 +20,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useReadingProgress } from '../../hooks/useReadingProgress';
 import { useGlobalLoading } from '../../hooks/useGlobalLoading';
 import { useReadAloud } from '../../hooks/useReadAloud';
-import { useEdgeReadAloudBgm } from '../../hooks/useEdgeReadAloudBgm';
+import { useEdgeReadAloudBgm, isEdgeReadAloudActive } from '../../hooks/useEdgeReadAloudBgm';
 import { offlineDb } from '../../lib/offlineDb';
 import { AlertCircle, RotateCcw, Home } from 'lucide-react';
 
@@ -218,6 +218,26 @@ export function ReaderScreen() {
   const [showTypographySheet, setShowTypographySheet] = useState(false);
   const [showChapterSelectSheet, setShowChapterSelectSheet] = useState(false);
   const [showHistorySheet, setShowHistorySheet] = useState(false);
+  const [hasEdgeReadAloud, setHasEdgeReadAloud] = useState(false);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const check = () => {
+      setHasEdgeReadAloud(isEdgeReadAloudActive());
+    };
+
+    check();
+
+    const observer = new MutationObserver(check);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   // Zen Reader Mode: Dock controls show/hide state (Header stays ALWAYS VISIBLE)
   const [showZenControls, setShowZenControls] = useState(true);
@@ -519,8 +539,6 @@ export function ReaderScreen() {
           progress={scrollProgress}
           isVisible={true}
           isTTSActive={isPlaying || isPaused}
-          isBgmActive={isBgmPlaying}
-          onToggleBgm={handleToggleBgm}
           onToggleTTS={() => (isPlaying || isPaused || isTTSLoading ? stopReading() : startReading())}
           onOpenHistory={handleOpenHistory}
         />
@@ -530,10 +548,13 @@ export function ReaderScreen() {
       <VerticalBatchChapterNav
         chapters={displayChapters}
         activeChapterId={activeChapter?.chapterId}
-        isVisible={showZenControls && (showTTSControlOnReader || isPlaying || isPaused || isTTSLoading)}
+        isVisible={showZenControls && (showTTSControlOnReader || isPlaying || isPaused || isTTSLoading || hasEdgeReadAloud)}
         isTTSActive={isPlaying || isPaused}
         isTTSLoading={isTTSLoading}
         isTTSPlaying={isPlaying}
+        isBgmActive={isBgmPlaying}
+        showTTSControl={showTTSControlOnReader}
+        onToggleBgm={handleToggleBgm}
         currentParagraphIndex={activeParagraphIndex}
         onToggleTTS={() => (isPlaying || isPaused || isTTSLoading ? stopReading() : startReading())}
         onTTSPlay={startReading}

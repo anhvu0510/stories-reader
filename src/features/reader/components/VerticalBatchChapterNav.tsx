@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { LocateFixed, Volume2, Play, Pause, Square, SkipBack, SkipForward, Loader2 } from 'lucide-react';
+import { LocateFixed, Volume2, Play, Pause, Square, SkipBack, SkipForward, Loader2, Music } from 'lucide-react';
 import { ChapterDetailItem } from '../../../shared/types';
+import { isEdgeReadAloudActive } from '../../../hooks/useEdgeReadAloudBgm';
 
 export interface VerticalBatchChapterNavProps {
   chapters?: ChapterDetailItem[];
@@ -9,6 +10,9 @@ export interface VerticalBatchChapterNavProps {
   isTTSActive?: boolean;
   isTTSLoading?: boolean;
   isTTSPlaying?: boolean;
+  isBgmActive?: boolean;
+  showTTSControl?: boolean;
+  onToggleBgm?: () => void;
   currentParagraphIndex?: number;
   onToggleTTS?: () => void;
   onTTSPlay?: () => void;
@@ -25,6 +29,9 @@ export function VerticalBatchChapterNav({
   isTTSActive = false,
   isTTSLoading = false,
   isTTSPlaying = false,
+  isBgmActive = false,
+  showTTSControl = true,
+  onToggleBgm,
   currentParagraphIndex = 0,
   onToggleTTS,
   onTTSPlay,
@@ -42,8 +49,7 @@ export function VerticalBatchChapterNav({
 
     const checkHighlight = () => {
       if (typeof document === 'undefined') return;
-      const el = document.querySelector('.msreadout-line-highlight');
-      setHasBrowserReadAloudHighlight(Boolean(el));
+      setHasBrowserReadAloudHighlight(isEdgeReadAloudActive());
     };
 
     checkHighlight();
@@ -68,7 +74,7 @@ export function VerticalBatchChapterNav({
 
   const handleJumpToHighlight = () => {
     if (typeof document === 'undefined') return;
-    const highlightEl = document.querySelector('.msreadout-line-highlight');
+    const highlightEl = document.querySelector('.msreadout-line-highlight, .msreadout-word-highlight, msreadoutspan');
     if (highlightEl && typeof highlightEl.scrollIntoView === 'function') {
       highlightEl.scrollIntoView({
         behavior: 'smooth',
@@ -91,25 +97,64 @@ export function VerticalBatchChapterNav({
         className="w-fit flex flex-col items-center gap-2 pointer-events-auto box-border transition-all duration-300 transform-gpu"
       >
         {!isTTSActive ? (
-          /* Inactive State: Single Floating 3D Circle Speaker Button */
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onToggleTTS) onToggleTTS();
-              else if (onTTSPlay) onTTSPlay();
-            }}
-            className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer bg-black/10 dark:bg-black/20 backdrop-blur-[1.5px] border border-primary/50 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 active:scale-90"
-            title={isTTSLoading ? 'Đang chuẩn bị âm thanh... (Bấm để hủy)' : 'Bật đọc thành tiếng (Read Aloud)'}
-            aria-label={isTTSLoading ? 'Đang chuẩn bị âm thanh' : 'Bật đọc thành tiếng'}
-          >
-            {isTTSLoading ? (
-              <Loader2 size={13.5} className="animate-spin text-primary" />
-            ) : (
-              <Volume2 size={13.5} />
+          /* Inactive State: Single Floating 3D Circle Speaker Button + Conditional BGM & Locate Buttons */
+          <div className="flex flex-col items-center gap-2">
+            {/* Locate Highlight Button (shown when Edge Read Aloud highlight exists) */}
+            {hasBrowserReadAloudHighlight && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleJumpToHighlight();
+                }}
+                className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer bg-black/10 dark:bg-black/20 backdrop-blur-[1.5px] border border-primary/50 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 active:scale-90"
+                title="Nhảy tới dòng đang đọc"
+                aria-label="Nhảy tới dòng đang đọc"
+              >
+                <LocateFixed size={13.5} />
+              </button>
             )}
-          </button>
+
+            {/* BGM Toggle Button (shown ONLY when Edge Read Aloud highlight exists) */}
+            {hasBrowserReadAloudHighlight && onToggleBgm && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleBgm();
+                }}
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer backdrop-blur-[1.5px] shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 active:scale-90 ${
+                  isBgmActive
+                    ? 'bg-primary/25 text-primary border border-primary/60 shadow-[0_3px_10px_rgba(59,130,246,0.45)]'
+                    : 'bg-black/10 dark:bg-black/20 border border-primary/50 text-on-surface hover:text-primary'
+                }`}
+                title={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
+                aria-label={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
+              >
+                <Music size={13.5} className={isBgmActive ? 'animate-pulse text-primary' : ''} />
+              </button>
+            )}
+
+            {/* Speaker Button (controlled strictly by showTTSControl setting in app config) */}
+            {(showTTSControl || isTTSLoading) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onToggleTTS) onToggleTTS();
+                  else if (onTTSPlay) onTTSPlay();
+                }}
+                className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer bg-black/10 dark:bg-black/20 backdrop-blur-[1.5px] border border-primary/50 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 active:scale-90"
+                title={isTTSLoading ? 'Đang chuẩn bị âm thanh... (Bấm để hủy)' : 'Bật đọc thành tiếng (Read Aloud)'}
+                aria-label={isTTSLoading ? 'Đang chuẩn bị âm thanh' : 'Bật đọc thành tiếng'}
+              >
+                {isTTSLoading ? (
+                  <Loader2 size={13.5} className="animate-spin text-primary" />
+                ) : (
+                  <Volume2 size={13.5} />
+                )}
+              </button>
+            )}
+          </div>
         ) : (
-          /* Active State: Vertical Stack of Independent Floating 3D Circle Buttons (No Capsule Shell) */
+          /* Active State: Vertical Stack of Independent Floating 3D Circle Buttons */
           <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-90 duration-300 ease-out">
             {/* Locate Highlight Button (shown when line highlight exists) */}
             {hasBrowserReadAloudHighlight && (
@@ -123,6 +168,25 @@ export function VerticalBatchChapterNav({
                 aria-label="Nhảy tới dòng đang đọc"
               >
                 <LocateFixed size={13.5} />
+              </button>
+            )}
+
+            {/* BGM Toggle Button (shown ONLY when Edge Read Aloud highlight exists) */}
+            {hasBrowserReadAloudHighlight && onToggleBgm && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleBgm();
+                }}
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150 shrink-0 cursor-pointer backdrop-blur-[1.5px] shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 active:scale-90 ${
+                  isBgmActive
+                    ? 'bg-primary/25 text-primary border border-primary/60 shadow-[0_3px_10px_rgba(59,130,246,0.45)]'
+                    : 'bg-black/10 dark:bg-black/20 border border-primary/50 text-on-surface hover:text-primary'
+                }`}
+                title={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
+                aria-label={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
+              >
+                <Music size={13.5} className={isBgmActive ? 'animate-pulse text-primary' : ''} />
               </button>
             )}
 

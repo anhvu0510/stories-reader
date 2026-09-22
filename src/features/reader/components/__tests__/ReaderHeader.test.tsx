@@ -28,8 +28,8 @@ describe('ReaderHeader Component', () => {
     expect(screen.getByText('Chương 10: Trúc Cơ Kỳ')).toBeDefined();
   });
 
-  it('renders manual BGM toggle button when onToggleBgm is provided', () => {
-    const handleToggleBgm = vi.fn();
+  it('renders history button and triggers onOpenHistory when clicked', () => {
+    const handleOpenHistory = vi.fn();
 
     render(
       <MemoryRouter>
@@ -37,36 +37,15 @@ describe('ReaderHeader Component', () => {
           bookId="b1"
           bookName="Tu Chân Giới"
           chapterTitle="Chương 1"
-          isBgmActive={false}
-          onToggleBgm={handleToggleBgm}
-          onOpenHistory={vi.fn()}
+          onOpenHistory={handleOpenHistory}
         />
       </MemoryRouter>
     );
 
-    const bgmBtn = screen.getByTitle('Bật nhạc nền thư giãn');
-    expect(bgmBtn).toBeDefined();
+    const historyBtn = screen.getByTitle('Lịch sử đọc gần đây');
+    expect(historyBtn).toBeDefined();
 
-    fireEvent.click(bgmBtn);
-    expect(handleToggleBgm).toHaveBeenCalledTimes(1);
-  });
-
-  it('displays active state and proper title when isBgmActive is true', () => {
-    render(
-      <MemoryRouter>
-        <ReaderHeader
-          bookId="b1"
-          bookName="Tu Chân Giới"
-          chapterTitle="Chương 1"
-          isBgmActive={true}
-          onToggleBgm={vi.fn()}
-          onOpenHistory={vi.fn()}
-        />
-      </MemoryRouter>
-    );
-
-    const activeBgmBtn = screen.getByTitle('Tắt nhạc nền (Đang phát)');
-    expect(activeBgmBtn).toBeDefined();
-    expect(activeBgmBtn.className).toContain('text-primary');
+    fireEvent.click(historyBtn);
+    expect(handleOpenHistory).toHaveBeenCalledTimes(1);
   });
 });
