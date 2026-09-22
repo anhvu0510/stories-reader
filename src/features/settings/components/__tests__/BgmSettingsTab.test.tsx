@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { BgmSettingsTab } from '../BgmSettingsTab';
 import { useReaderConfigStore } from '../../../../stores/useReaderConfigStore';
 
@@ -101,5 +101,19 @@ describe('BgmSettingsTab Component UI & Store Integration', () => {
 
     fireEvent.click(toggleBtn);
     expect(useReaderConfigStore.getState().bgmEnabled).toBe(true);
+  });
+
+  it('QC-UI-4: Bấm "Nghe thử" áp dụng đúng công thức computeSubtleBgmVolume để âm lượng nghe thử trùng khớp 1:1 với âm lượng nhạc nền reader', async () => {
+    render(<BgmSettingsTab />);
+
+    const previewBtn = screen.getAllByText('Nghe thử')[0];
+    fireEvent.click(previewBtn);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // 0.2 * 0.25 = 0.05
+    expect(mockGainNode.gain.value).toBe(0.05);
   });
 });

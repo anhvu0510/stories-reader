@@ -126,7 +126,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     expect(mockAudioContext.createBufferSource).toHaveBeenCalled();
     expect(mockSourceNode.start).toHaveBeenCalledWith(0);
     expect(mockGainNode.gain.setValueAtTime).toHaveBeenCalledWith(0, 0);
-    expect(mockGainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.00225, 0.1);
+    expect(mockGainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.0375, 0.1);
   });
 
   it('QC-4: Dừng nhạc mượt mà (Fade Out & Stop) sau khi ngắt class và hết khoảng trễ stopDelayMs', async () => {
@@ -409,7 +409,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
       await Promise.resolve();
     });
 
-    expect(mockGainNode.gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(0.004000000000000001, 0.5);
+    expect(mockGainNode.gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(0.05, 0.5);
   });
 
   it('QC-14: Tắt ngay lập tức BGM khi prop enabled chuyển sang false', async () => {

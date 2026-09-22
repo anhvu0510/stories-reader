@@ -32,14 +32,14 @@ export function isEdgeReadAloudActive(root: ParentNode = document): boolean {
 }
 
 /**
- * Scales user volume setting (0.0 - 1.0) down to a subtle ambient background level (max 0.10 ~ -20dB).
- * Applies a quadratic curve so low slider values (10%-25%) produce ultra-soft background pads
- * that stay acoustically behind mobile speech synthesis / Read Aloud.
+ * Scales user volume setting (0.0 - 1.0) down to an ambient background level (max 0.25 ~ -12dB).
+ * Capped at 25% output gain ceiling to ensure background music stays acoustically
+ * behind speech TTS while scaling 1:1 with the Settings preview volume slider.
  */
 export function computeSubtleBgmVolume(inputVolume: number): number {
   const clamped = Math.min(Math.max(inputVolume, 0), 1.0);
-  const MAX_CEILING = 0.10; // 10% maximum output gain ceiling for background music
-  return Math.pow(clamped, 2) * MAX_CEILING;
+  const MAX_CEILING = 0.25; // 25% maximum output gain ceiling for background music
+  return clamped * MAX_CEILING;
 }
 
 /**

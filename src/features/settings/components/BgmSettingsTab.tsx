@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { getAssetUrl } from '../../../shared/utils/assetUrl';
+import { computeSubtleBgmVolume } from '../../../hooks/useEdgeReadAloudBgm';
 
 const PRESET_MUSIC_LIST = [
   {
@@ -83,12 +84,13 @@ export function BgmSettingsTab() {
     if (previewGainRef.current && previewAudioCtxRef.current) {
       const ctx = previewAudioCtxRef.current;
       const gain = previewGainRef.current;
+      const safeVolume = computeSubtleBgmVolume(bgmVolume);
       const now = ctx.currentTime;
       try {
         if (typeof gain.gain.setValueAtTime === 'function') {
-          gain.gain.setValueAtTime(bgmVolume, now);
+          gain.gain.setValueAtTime(safeVolume, now);
         } else {
-          gain.gain.value = bgmVolume;
+          gain.gain.value = safeVolume;
         }
       } catch {}
     }
@@ -168,7 +170,7 @@ export function BgmSettingsTab() {
       source.loop = true;
 
       const gain = ctx.createGain();
-      gain.gain.value = bgmVolume;
+      gain.gain.value = computeSubtleBgmVolume(bgmVolume);
 
       source.connect(gain);
       gain.connect(ctx.destination);
