@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { BackgroundAudioKeepAlive } from '../services/backgroundAudioKeepAlive';
+import { getAssetUrl } from '../shared/utils/assetUrl';
 
 export interface EdgeReadAloudBgmOptions {
   audioUrl: string;
@@ -308,11 +309,7 @@ export function useEdgeReadAloudBgm({
 
     const loadAudio = async () => {
       try {
-        const resolvedUrl =
-          typeof window !== 'undefined' && audioUrl.startsWith('/')
-            ? `${window.location.origin}${audioUrl}`
-            : audioUrl;
-
+        const resolvedUrl = getAssetUrl(audioUrl);
         const response = await fetch(resolvedUrl, { signal: controller.signal });
         const arrayBuffer = await response.arrayBuffer();
 

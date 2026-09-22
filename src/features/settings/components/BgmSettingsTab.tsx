@@ -17,6 +17,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
+import { getAssetUrl } from '../../../shared/utils/assetUrl';
 
 const PRESET_MUSIC_LIST = [
   {
@@ -115,9 +116,7 @@ export function BgmSettingsTab() {
       const ctx = new AudioContextClass();
       previewAudioCtxRef.current = ctx;
 
-      const resolvedUrl = bgmAudioUrl.startsWith('/')
-        ? `${window.location.origin}${bgmAudioUrl}`
-        : bgmAudioUrl;
+      const resolvedUrl = getAssetUrl(bgmAudioUrl);
 
       let buffer: AudioBuffer;
       try {
