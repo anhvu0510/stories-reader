@@ -32,6 +32,17 @@ export function isEdgeReadAloudActive(root: ParentNode = document): boolean {
 }
 
 /**
+ * Scales user volume setting (0.0 - 1.0) down to a subtle ambient background level (max 0.10 ~ -20dB).
+ * Applies a quadratic curve so low slider values (10%-25%) produce ultra-soft background pads
+ * that stay acoustically behind mobile speech synthesis / Read Aloud.
+ */
+export function computeSubtleBgmVolume(inputVolume: number): number {
+  const clamped = Math.min(Math.max(inputVolume, 0), 1.0);
+  const MAX_CEILING = 0.10; // 10% maximum output gain ceiling for background music
+  return Math.pow(clamped, 2) * MAX_CEILING;
+}
+
+/**
  * Creates a soft 4-second synthesized ambient loop (C-major chord)
  * fallback if physical audio file is missing or worker is unavailable.
  */
@@ -72,6 +83,7 @@ export function useEdgeReadAloudBgm({
   const [isPlayingState, setIsPlayingState] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
+  const lowPassFilterNodeRef = useRef<BiquadFilterNode | null>(null);
   const compressorNodeRef = useRef<DynamicsCompressorNode | null>(null);
   const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
@@ -109,6 +121,28 @@ export function useEdgeReadAloudBgm({
     };
     audioCtxRef.current = ctx;
     return ctx;
+  }, []);
+
+  // Low-Pass Acoustic BiquadFilter (2200Hz cutoff) to keep BGM frequency spectrum behind speech clarity
+  const getOrCreateLowPassFilterNode = useCallback((ctx: AudioContext): AudioNode => {
+    if (lowPassFilterNodeRef.current) return lowPassFilterNodeRef.current;
+    if (typeof ctx.createBiquadFilter !== 'function') return ctx.destination;
+
+    try {
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      const now = ctx.currentTime;
+      if (filter.frequency && typeof filter.frequency.setValueAtTime === 'function') {
+        filter.frequency.setValueAtTime(2200, now);
+      }
+      if (filter.Q && typeof filter.Q.setValueAtTime === 'function') {
+        filter.Q.setValueAtTime(0.707, now);
+      }
+      lowPassFilterNodeRef.current = filter;
+      return filter;
+    } catch {
+      return ctx.destination;
+    }
   }, []);
 
   // Set up isolated DynamicsCompressor node to cap dynamic range and prevent mobile volume ducking
@@ -179,8 +213,8 @@ export function useEdgeReadAloudBgm({
         audioBufferRef.current = buffer;
       }
 
-      // Cap volume strictly to safe auxiliary background level (max 0.25) so BGM never conflicts with speech
-      const safeVolume = Math.min(Math.max(volume, 0), 0.25);
+      // Compute subtle volume scaled down strictly behind speech levels
+      const safeVolume = computeSubtleBgmVolume(volume);
 
       if (isPlayingRef.current && gainNodeRef.current) {
         const gain = gainNodeRef.current;
@@ -224,9 +258,17 @@ export function useEdgeReadAloudBgm({
           gain.gain.exponentialRampToValueAtTime(Math.max(safeVolume, 0.0001), now + fadeInMs / 1000);
         }
 
+        const lowPass = getOrCreateLowPassFilterNode(ctx);
         const compressorOrDest = getOrCreateCompressorNode(ctx);
+
         source.connect(gain);
-        gain.connect(compressorOrDest);
+
+        if (lowPass !== ctx.destination) {
+          gain.connect(lowPass);
+          lowPass.connect(compressorOrDest);
+        } else {
+          gain.connect(compressorOrDest);
+        }
 
         source.start(0);
 
@@ -244,7 +286,7 @@ export function useEdgeReadAloudBgm({
         console.error('[EdgeBgm] Failed to start isolated BGM playback:', err);
       }
     },
-    [getOrCreateAudioContext, getOrCreateCompressorNode, volume, fadeInMs]
+    [getOrCreateAudioContext, getOrCreateLowPassFilterNode, getOrCreateCompressorNode, volume, fadeInMs]
   );
 
   useEffect(() => {
@@ -256,7 +298,7 @@ export function useEdgeReadAloudBgm({
     if (!isPlayingRef.current || !gainNodeRef.current || !audioCtxRef.current) return;
     const ctx = audioCtxRef.current;
     const gain = gainNodeRef.current;
-    const safeVolume = Math.min(Math.max(volume, 0), 0.25);
+    const safeVolume = computeSubtleBgmVolume(volume);
     const now = ctx.currentTime;
 
     try {
@@ -472,6 +514,13 @@ export function useEdgeReadAloudBgm({
           gainNodeRef.current.disconnect();
         } catch {}
         gainNodeRef.current = null;
+      }
+
+      if (lowPassFilterNodeRef.current) {
+        try {
+          lowPassFilterNodeRef.current.disconnect();
+        } catch {}
+        lowPassFilterNodeRef.current = null;
       }
 
       if (compressorNodeRef.current) {
