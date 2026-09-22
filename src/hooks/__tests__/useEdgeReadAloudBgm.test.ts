@@ -6,6 +6,7 @@ import { useEdgeReadAloudBgm, isEdgeReadAloudActive } from '../useEdgeReadAloudB
 describe('useEdgeReadAloudBgm Hook', () => {
   let mockAudioContext: any;
   let mockGainNode: any;
+  let mockCompressorNode: any;
   let mockSourceNode: any;
   let mockAudioBuffer: any;
 
@@ -15,12 +16,21 @@ describe('useEdgeReadAloudBgm Hook', () => {
     mockAudioBuffer = { duration: 10 };
     mockGainNode = {
       gain: {
-        value: 0.2,
+        value: 0.15,
         setValueAtTime: vi.fn(),
         exponentialRampToValueAtTime: vi.fn(),
         linearRampToValueAtTime: vi.fn(),
         cancelScheduledValues: vi.fn(),
       },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    };
+    mockCompressorNode = {
+      threshold: { setValueAtTime: vi.fn() },
+      knee: { setValueAtTime: vi.fn() },
+      ratio: { setValueAtTime: vi.fn() },
+      attack: { setValueAtTime: vi.fn() },
+      release: { setValueAtTime: vi.fn() },
       connect: vi.fn(),
       disconnect: vi.fn(),
     };
@@ -36,6 +46,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
       state: 'running',
       currentTime: 0,
       createGain: vi.fn(() => mockGainNode),
+      createDynamicsCompressor: vi.fn(() => mockCompressorNode),
       createBufferSource: vi.fn(() => mockSourceNode),
       createBuffer: vi.fn(() => mockAudioBuffer),
       decodeAudioData: vi.fn().mockResolvedValue(mockAudioBuffer),
@@ -81,7 +92,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     renderHook(() =>
       useEdgeReadAloudBgm({
         audioUrl: '/audio/test.mp3',
-        volume: 0.2,
+        volume: 0.15,
       })
     );
 
@@ -96,7 +107,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     renderHook(() =>
       useEdgeReadAloudBgm({
         audioUrl: '/audio/test.mp3',
-        volume: 0.2,
+        volume: 0.15,
         fadeInMs: 100,
         stopDelayMs: 500,
       })
@@ -115,7 +126,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     expect(mockAudioContext.createBufferSource).toHaveBeenCalled();
     expect(mockSourceNode.start).toHaveBeenCalledWith(0);
     expect(mockGainNode.gain.setValueAtTime).toHaveBeenCalledWith(0, 0);
-    expect(mockGainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.2, 0.1);
+    expect(mockGainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.15, 0.1);
   });
 
   it('QC-4: Dừng nhạc mượt mà (Fade Out & Stop) sau khi ngắt class và hết khoảng trễ stopDelayMs', async () => {
@@ -126,7 +137,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     renderHook(() =>
       useEdgeReadAloudBgm({
         audioUrl: '/audio/test.mp3',
-        volume: 0.2,
+        volume: 0.15,
         fadeOutMs: 200,
         stopDelayMs: 500,
       })
@@ -187,7 +198,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     const { result } = renderHook(() =>
       useEdgeReadAloudBgm({
         audioUrl: '/audio/test.mp3',
-        volume: 0.2,
+        volume: 0.15,
       })
     );
 
@@ -197,8 +208,9 @@ describe('useEdgeReadAloudBgm Hook', () => {
 
     expect(result.current.isPlaying).toBe(false);
 
-    act(() => {
+    await act(async () => {
       result.current.toggleBgm();
+      await Promise.resolve();
     });
 
     expect(mockSourceNode.start).toHaveBeenCalledWith(0);
@@ -209,7 +221,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     const { result } = renderHook(() =>
       useEdgeReadAloudBgm({
         audioUrl: '/audio/test.mp3',
-        volume: 0.2,
+        volume: 0.15,
         fadeOutMs: 100,
       })
     );
@@ -218,12 +230,13 @@ describe('useEdgeReadAloudBgm Hook', () => {
       await Promise.resolve();
     });
 
-    act(() => {
+    await act(async () => {
       result.current.toggleBgm();
+      await Promise.resolve();
     });
     expect(result.current.isPlaying).toBe(true);
 
-    act(() => {
+    await act(async () => {
       result.current.toggleBgm();
     });
     expect(result.current.isPlaying).toBe(false);
@@ -239,7 +252,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     const { result } = renderHook(() =>
       useEdgeReadAloudBgm({
         audioUrl: '/audio/test.mp3',
-        volume: 0.2,
+        volume: 0.15,
         stopDelayMs: 200,
       })
     );
@@ -249,8 +262,9 @@ describe('useEdgeReadAloudBgm Hook', () => {
     });
 
     // Bật BGM thủ công
-    act(() => {
+    await act(async () => {
       result.current.toggleBgm();
+      await Promise.resolve();
     });
     expect(result.current.isPlaying).toBe(true);
 
@@ -274,5 +288,23 @@ describe('useEdgeReadAloudBgm Hook', () => {
     expect(mockSourceNode.stop).not.toHaveBeenCalled();
     expect(result.current.isPlaying).toBe(true);
   });
-});
 
+  it('QC-10: Sử dụng DynamicsCompressorNode để tránh xung đột âm lượng trên mobile', async () => {
+    renderHook(() =>
+      useEdgeReadAloudBgm({
+        audioUrl: '/audio/test.mp3',
+        volume: 0.15,
+      })
+    );
+
+    await act(async () => {
+      const p = document.createElement('p');
+      p.className = 'msreadout-line-highlight';
+      document.body.appendChild(p);
+    });
+
+    expect(mockAudioContext.createDynamicsCompressor).toHaveBeenCalled();
+    expect(mockCompressorNode.threshold.setValueAtTime).toHaveBeenCalledWith(-24, 0);
+    expect(mockCompressorNode.ratio.setValueAtTime).toHaveBeenCalledWith(12, 0);
+  });
+});

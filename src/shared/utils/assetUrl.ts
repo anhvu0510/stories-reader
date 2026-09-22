@@ -10,7 +10,8 @@ export function getAssetUrl(path: string): string {
     return path;
   }
 
-  const baseUrl = import.meta.env.BASE_URL || '/';
+  const metaEnv = (import.meta as unknown as { env?: { BASE_URL?: string } }).env;
+  const baseUrl = metaEnv?.BASE_URL || '/';
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
 

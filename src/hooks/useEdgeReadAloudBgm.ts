@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { BackgroundAudioKeepAlive } from '../services/backgroundAudioKeepAlive';
 import { getAssetUrl } from '../shared/utils/assetUrl';
+import { generateBgmBufferInWorker } from '../services/bgmAudioWorkerService';
 
 export interface EdgeReadAloudBgmOptions {
   audioUrl: string;
@@ -33,7 +33,7 @@ export function isEdgeReadAloudActive(root: ParentNode = document): boolean {
 
 /**
  * Creates a soft 4-second synthesized ambient loop (C-major chord)
- * to guarantee background music plays even if a physical MP3 file is missing or 0-byte.
+ * fallback if physical audio file is missing or worker is unavailable.
  */
 function createSynthesizedAmbientBuffer(ctx: AudioContext): AudioBuffer | null {
   if (typeof ctx.createBuffer !== 'function') return null;
@@ -49,9 +49,9 @@ function createSynthesizedAmbientBuffer(ctx: AudioContext): AudioBuffer | null {
   for (let i = 0; i < numSamples; i++) {
     const t = i / sampleRate;
     const lfo = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.25 * t);
-    const note1 = Math.sin(2 * Math.PI * 261.63 * t) * 0.15;
-    const note2 = Math.sin(2 * Math.PI * 329.63 * t) * 0.12;
-    const note3 = Math.sin(2 * Math.PI * 392.00 * t) * 0.10;
+    const note1 = Math.sin(2 * Math.PI * 261.63 * t) * 0.12;
+    const note2 = Math.sin(2 * Math.PI * 329.63 * t) * 0.10;
+    const note3 = Math.sin(2 * Math.PI * 392.00 * t) * 0.08;
     const wave = (note1 + note2 + note3) * lfo;
 
     left[i] = wave;
@@ -63,7 +63,7 @@ function createSynthesizedAmbientBuffer(ctx: AudioContext): AudioBuffer | null {
 
 export function useEdgeReadAloudBgm({
   audioUrl,
-  volume = 0.2,
+  volume = 0.15,
   fadeInMs = 500,
   fadeOutMs = 800,
   stopDelayMs = 1500,
@@ -72,19 +72,15 @@ export function useEdgeReadAloudBgm({
   const [isPlayingState, setIsPlayingState] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
+  const compressorNodeRef = useRef<DynamicsCompressorNode | null>(null);
   const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
   const isPlayingRef = useRef(false);
   const isManualPlayingRef = useRef(false);
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeOutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const backgroundAudioRef = useRef<BackgroundAudioKeepAlive | null>(null);
 
-  if (!backgroundAudioRef.current && typeof window !== 'undefined') {
-    backgroundAudioRef.current = new BackgroundAudioKeepAlive();
-  }
-
-  // Helper to ensure AudioContext is unlocked by browser/mobile autoplay policy
+  // Helper to ensure BGM runs on its own isolated AudioContext graph (no HTML5 MediaSession interference)
   const getOrCreateAudioContext = useCallback(() => {
     if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
       return audioCtxRef.current;
@@ -100,8 +96,39 @@ export function useEdgeReadAloudBgm({
     return ctx;
   }, []);
 
+  // Set up isolated DynamicsCompressor node to cap dynamic range and prevent mobile volume ducking
+  const getOrCreateCompressorNode = useCallback((ctx: AudioContext): AudioNode => {
+    if (compressorNodeRef.current) return compressorNodeRef.current;
+    if (typeof ctx.createDynamicsCompressor !== 'function') return ctx.destination;
+
+    try {
+      const compressor = ctx.createDynamicsCompressor();
+      const now = ctx.currentTime;
+      if (compressor.threshold && typeof compressor.threshold.setValueAtTime === 'function') {
+        compressor.threshold.setValueAtTime(-24, now);
+      }
+      if (compressor.knee && typeof compressor.knee.setValueAtTime === 'function') {
+        compressor.knee.setValueAtTime(30, now);
+      }
+      if (compressor.ratio && typeof compressor.ratio.setValueAtTime === 'function') {
+        compressor.ratio.setValueAtTime(12, now);
+      }
+      if (compressor.attack && typeof compressor.attack.setValueAtTime === 'function') {
+        compressor.attack.setValueAtTime(0.003, now);
+      }
+      if (compressor.release && typeof compressor.release.setValueAtTime === 'function') {
+        compressor.release.setValueAtTime(0.25, now);
+      }
+      compressor.connect(ctx.destination);
+      compressorNodeRef.current = compressor;
+      return compressor;
+    } catch {
+      return ctx.destination;
+    }
+  }, []);
+
   const startBgm = useCallback(
-    (manual = false) => {
+    async (manual = false) => {
       if (manual) {
         isManualPlayingRef.current = true;
       }
@@ -120,21 +147,22 @@ export function useEdgeReadAloudBgm({
 
       if (ctx.state === 'suspended') {
         void ctx.resume().catch((err) => {
-          console.warn('[EdgeBgm] Could not resume AudioContext (autoplay restriction):', err);
+          console.warn('[EdgeBgm] Could not resume isolated AudioContext:', err);
         });
       }
 
-      // Start mobile background audio keep alive
-      if (backgroundAudioRef.current) {
-        backgroundAudioRef.current.start();
-        backgroundAudioRef.current.resume();
-      }
-
+      // Offload synthesis to background Web Worker if buffer is not loaded yet
       let buffer = audioBufferRef.current;
       if (!buffer || buffer.duration < 0.1) {
-        buffer = createSynthesizedAmbientBuffer(ctx);
+        buffer = await generateBgmBufferInWorker(ctx);
+        if (!buffer) {
+          buffer = createSynthesizedAmbientBuffer(ctx);
+        }
         audioBufferRef.current = buffer;
       }
+
+      // Cap volume strictly to safe auxiliary background level (max 0.25) so BGM never conflicts with speech
+      const safeVolume = Math.min(Math.max(volume, 0), 0.25);
 
       if (isPlayingRef.current && gainNodeRef.current) {
         const gain = gainNodeRef.current;
@@ -146,16 +174,16 @@ export function useEdgeReadAloudBgm({
           gain.gain.setValueAtTime(gain.gain.value, now);
         }
         if (typeof gain.gain.linearRampToValueAtTime === 'function') {
-          gain.gain.linearRampToValueAtTime(volume, now + fadeInMs / 1000);
+          gain.gain.linearRampToValueAtTime(safeVolume, now + fadeInMs / 1000);
         } else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
-          gain.gain.exponentialRampToValueAtTime(Math.max(volume, 0.0001), now + fadeInMs / 1000);
+          gain.gain.exponentialRampToValueAtTime(Math.max(safeVolume, 0.0001), now + fadeInMs / 1000);
         }
         setIsPlayingState(true);
         return;
       }
 
       try {
-        console.log('[EdgeBgm] Starting background music...');
+        console.log('[EdgeBgm] Starting background music in isolated WebAudio graph...');
         const source = ctx.createBufferSource();
         source.buffer = buffer;
         source.loop = true;
@@ -169,13 +197,14 @@ export function useEdgeReadAloudBgm({
           gain.gain.setValueAtTime(0, now);
         }
         if (typeof gain.gain.linearRampToValueAtTime === 'function') {
-          gain.gain.linearRampToValueAtTime(volume, now + fadeInMs / 1000);
+          gain.gain.linearRampToValueAtTime(safeVolume, now + fadeInMs / 1000);
         } else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
-          gain.gain.exponentialRampToValueAtTime(Math.max(volume, 0.0001), now + fadeInMs / 1000);
+          gain.gain.exponentialRampToValueAtTime(Math.max(safeVolume, 0.0001), now + fadeInMs / 1000);
         }
 
+        const compressorOrDest = getOrCreateCompressorNode(ctx);
         source.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(compressorOrDest);
 
         source.start(0);
 
@@ -184,10 +213,10 @@ export function useEdgeReadAloudBgm({
         isPlayingRef.current = true;
         setIsPlayingState(true);
       } catch (err) {
-        console.error('[EdgeBgm] Failed to start BGM playback:', err);
+        console.error('[EdgeBgm] Failed to start isolated BGM playback:', err);
       }
     },
-    [getOrCreateAudioContext, volume, fadeInMs]
+    [getOrCreateAudioContext, getOrCreateCompressorNode, volume, fadeInMs]
   );
 
   const stopBgm = useCallback(
@@ -200,7 +229,7 @@ export function useEdgeReadAloudBgm({
       }
 
       const performFadeAndStop = () => {
-        console.log('[EdgeBgm] Stopping background music...');
+        console.log('[EdgeBgm] Stopping isolated background music...');
         const ctx = audioCtxRef.current;
         const gain = gainNodeRef.current;
         const source = sourceNodeRef.current;
@@ -228,10 +257,6 @@ export function useEdgeReadAloudBgm({
             gain.disconnect();
           } catch {}
 
-          if (backgroundAudioRef.current) {
-            backgroundAudioRef.current.stop();
-          }
-
           isPlayingRef.current = false;
           isManualPlayingRef.current = false;
           sourceNodeRef.current = null;
@@ -256,11 +281,11 @@ export function useEdgeReadAloudBgm({
       setIsPlayingState(false);
     } else {
       isManualPlayingRef.current = true;
-      startBgm(true);
+      void startBgm(true);
     }
   }, [startBgm, stopBgm]);
 
-  // Mobile-aware synchronous user touch & click unlocker
+  // Mobile-aware synchronous user touch & click unlocker for isolated AudioContext
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -278,10 +303,6 @@ export function useEdgeReadAloudBgm({
           node.connect(ctx.destination);
           node.start(0);
         } catch {}
-      }
-
-      if (backgroundAudioRef.current) {
-        backgroundAudioRef.current.resume();
       }
     };
 
@@ -323,7 +344,7 @@ export function useEdgeReadAloudBgm({
             audioBufferRef.current = decoded;
           }
           if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
-            startBgm(isManualPlayingRef.current);
+            void startBgm(isManualPlayingRef.current);
           }
         } else {
           if (ctx.state !== 'closed') {
@@ -360,8 +381,11 @@ export function useEdgeReadAloudBgm({
         gainNodeRef.current = null;
       }
 
-      if (backgroundAudioRef.current) {
-        backgroundAudioRef.current.stop();
+      if (compressorNodeRef.current) {
+        try {
+          compressorNodeRef.current.disconnect();
+        } catch {}
+        compressorNodeRef.current = null;
       }
 
       if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
@@ -379,7 +403,7 @@ export function useEdgeReadAloudBgm({
 
     const checkAndToggle = () => {
       if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
-        startBgm(isManualPlayingRef.current);
+        void startBgm(isManualPlayingRef.current);
       } else {
         stopBgm();
       }
