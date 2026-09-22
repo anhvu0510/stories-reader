@@ -511,4 +511,40 @@ describe('useEdgeReadAloudBgm Hook', () => {
     });
     expect(result.current.isPlaying).toBe(false);
   });
+
+  it('QC-17: Tự động khôi phục (auto-resume) AudioContext khi tính năng Read Aloud được bật qua menu native trình duyệt mobile và thẻ highlight xuất hiện trong DOM', async () => {
+    mockAudioContext.state = 'suspended';
+    mockAudioContext.resume = vi.fn().mockImplementation(() => {
+      mockAudioContext.state = 'running';
+      return Promise.resolve();
+    });
+
+    const { result } = renderHook(() =>
+      useEdgeReadAloudBgm({
+        audioUrl: '/audio/test.mp3',
+        volume: 0.15,
+      })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Thêm thẻ highlight Read Aloud do trình duyệt native tự chèn khi chọn "Đọc trang này" trong menu
+    await act(async () => {
+      const span = document.createElement('span');
+      span.className = 'msreadout-line-highlight';
+      document.body.appendChild(span);
+      await Promise.resolve();
+    });
+
+    // Advance timer để retry loop chạy
+    await act(async () => {
+      vi.advanceTimersByTime(600);
+      await Promise.resolve();
+    });
+
+    expect(mockAudioContext.resume).toHaveBeenCalled();
+    expect(result.current.isPlaying).toBe(true);
+  });
 });

@@ -198,7 +198,11 @@ export function useEdgeReadAloudBgm({
       if (!ctx) return;
 
       if (ctx.state === 'suspended') {
-        void ctx.resume().catch((err) => {
+        void ctx.resume().then(() => {
+          if (ctx.state === 'running') {
+            setIsPlayingState(true);
+          }
+        }).catch((err) => {
           console.warn('[EdgeBgm] Could not resume isolated AudioContext:', err);
         });
       }
@@ -485,6 +489,8 @@ export function useEdgeReadAloudBgm({
     window.addEventListener('scroll', unlockAudio, { capture: true, passive: true });
     window.addEventListener('focus', unlockAudio, { capture: true, passive: true });
     document.addEventListener('selectionchange', unlockAudio, { capture: true, passive: true });
+    document.addEventListener('visibilitychange', unlockAudio, { capture: true, passive: true });
+    window.addEventListener('pageshow', unlockAudio, { capture: true, passive: true });
 
     return () => {
       window.removeEventListener('pointerdown', unlockAudio, { capture: true });
@@ -497,6 +503,8 @@ export function useEdgeReadAloudBgm({
       window.removeEventListener('scroll', unlockAudio, { capture: true });
       window.removeEventListener('focus', unlockAudio, { capture: true });
       document.removeEventListener('selectionchange', unlockAudio, { capture: true });
+      document.removeEventListener('visibilitychange', unlockAudio, { capture: true });
+      window.removeEventListener('pageshow', unlockAudio, { capture: true });
     };
   }, [getOrCreateAudioContext]);
 
@@ -599,13 +607,22 @@ export function useEdgeReadAloudBgm({
 
     const checkAndToggle = () => {
       if (isUserMutedRef.current) {
-        if (isPlayingRef.current) {
+        if (isPlayingRef.current || sourceNodeRef.current) {
           stopBgm(true);
         }
         return;
       }
 
-      if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
+      const active = isEdgeReadAloudActive();
+      if (active || isManualPlayingRef.current) {
+        const ctx = audioCtxRef.current;
+        if (ctx && ctx.state === 'suspended') {
+          void ctx.resume().then(() => {
+            if (ctx.state === 'running') {
+              setIsPlayingState(true);
+            }
+          }).catch(() => {});
+        }
         void startBgm(isManualPlayingRef.current);
       } else {
         stopBgm();
@@ -621,7 +638,25 @@ export function useEdgeReadAloudBgm({
       attributes: true,
     });
 
+    const resumeRetryInterval = setInterval(() => {
+      if (isUserMutedRef.current) return;
+      if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
+        const ctx = audioCtxRef.current;
+        if (ctx && ctx.state === 'suspended') {
+          void ctx.resume().then(() => {
+            if (ctx.state === 'running') {
+              setIsPlayingState(true);
+            }
+          }).catch(() => {});
+        }
+        if (!sourceNodeRef.current || !isPlayingRef.current) {
+          void startBgmRef.current?.(isManualPlayingRef.current);
+        }
+      }
+    }, 500);
+
     return () => {
+      clearInterval(resumeRetryInterval);
       observer.disconnect();
     };
   }, [enabled, startBgm, stopBgm]);
