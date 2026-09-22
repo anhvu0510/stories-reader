@@ -167,4 +167,11 @@ export interface ReaderConfig {
   vieneuOutputSampleRate?: 0 | 24000 | 48000;
   edgeVoiceUri?: string;
   showTTSControlOnReader?: boolean;
+  bgmEnabled?: boolean;
+  bgmVolume?: number;
+  bgmAudioUrl?: string;
+  bgmFadeInMs?: number;
+  bgmFadeOutMs?: number;
+  bgmStopDelayMs?: number;
+  bgmOnlyOnEdgeReadAloud?: boolean;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export interface EdgeReadAloudBgmOptions {
   audioUrl: string;
@@ -7,6 +7,14 @@ export interface EdgeReadAloudBgmOptions {
   fadeOutMs?: number;
   stopDelayMs?: number;
   enabled?: boolean;
+}
+
+export interface UseEdgeReadAloudBgmReturn {
+  isPlaying: boolean;
+  isManualPlaying: boolean;
+  toggleBgm: () => void;
+  startBgm: (isManual?: boolean) => void;
+  stopBgm: (immediate?: boolean) => void;
 }
 
 export const EDGE_READ_ALOUD_SELECTOR =
@@ -59,12 +67,14 @@ export function useEdgeReadAloudBgm({
   fadeOutMs = 800,
   stopDelayMs = 1500,
   enabled = true,
-}: EdgeReadAloudBgmOptions) {
+}: EdgeReadAloudBgmOptions): UseEdgeReadAloudBgmReturn {
+  const [isPlaying, setIsPlaying] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
   const isPlayingRef = useRef(false);
+  const isManualPlayingRef = useRef(false);
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeOutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -84,7 +94,11 @@ export function useEdgeReadAloudBgm({
     return ctx;
   }, []);
 
-  const startBgm = useCallback(() => {
+  const startBgm = useCallback((isManual = false) => {
+    if (isManual) {
+      isManualPlayingRef.current = true;
+    }
+
     if (stopTimerRef.current) {
       clearTimeout(stopTimerRef.current);
       stopTimerRef.current = null;
@@ -124,11 +138,12 @@ export function useEdgeReadAloudBgm({
       } else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
         gain.gain.exponentialRampToValueAtTime(Math.max(volume, 0.0001), now + fadeInMs / 1000);
       }
+      setIsPlaying(true);
       return;
     }
 
     try {
-      console.log('[EdgeBgm] Edge Read Aloud detected! Starting background music...');
+      console.log('[EdgeBgm] Starting background music...');
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.loop = true;
@@ -155,18 +170,22 @@ export function useEdgeReadAloudBgm({
       sourceNodeRef.current = source;
       gainNodeRef.current = gain;
       isPlayingRef.current = true;
+      setIsPlaying(true);
     } catch (err) {
       console.error('[EdgeBgm] Failed to start BGM playback:', err);
     }
   }, [getOrCreateAudioContext, volume, fadeInMs]);
 
-  const stopBgm = useCallback(() => {
+  const stopBgm = useCallback((immediate = false) => {
     if (!isPlayingRef.current || !gainNodeRef.current || !audioCtxRef.current) return;
 
-    if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
+    if (stopTimerRef.current) {
+      clearTimeout(stopTimerRef.current);
+      stopTimerRef.current = null;
+    }
 
-    stopTimerRef.current = setTimeout(() => {
-      console.log('[EdgeBgm] Edge Read Aloud inactive. Stopping background music...');
+    const performFadeAndStop = () => {
+      console.log('[EdgeBgm] Stopping background music...');
       const ctx = audioCtxRef.current;
       const gain = gainNodeRef.current;
       const source = sourceNodeRef.current;
@@ -194,20 +213,40 @@ export function useEdgeReadAloudBgm({
           gain.disconnect();
         } catch {}
         isPlayingRef.current = false;
+        isManualPlayingRef.current = false;
         sourceNodeRef.current = null;
         gainNodeRef.current = null;
+        setIsPlaying(false);
       }, fadeOutMs);
-    }, stopDelayMs);
+    };
+
+    if (immediate) {
+      performFadeAndStop();
+    } else {
+      stopTimerRef.current = setTimeout(performFadeAndStop, stopDelayMs);
+    }
   }, [fadeOutMs, stopDelayMs]);
+
+  const toggleBgm = useCallback(() => {
+    if (isPlayingRef.current) {
+      isManualPlayingRef.current = false;
+      stopBgm(true);
+      setIsPlaying(false);
+    } else {
+      isManualPlayingRef.current = true;
+      startBgm(true);
+      setIsPlaying(true);
+    }
+  }, [startBgm, stopBgm]);
 
   // Global user interaction listener to unlock AudioContext Autoplay Restriction
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const unlockAudio = () => {
-      const ctx = audioCtxRef.current;
+      const ctx = getOrCreateAudioContext();
       if (ctx && ctx.state === 'suspended') {
-        void ctx.resume();
+        void ctx.resume().catch(() => {});
       }
     };
 
@@ -220,7 +259,7 @@ export function useEdgeReadAloudBgm({
       window.removeEventListener('keydown', unlockAudio, { capture: true });
       window.removeEventListener('touchstart', unlockAudio, { capture: true });
     };
-  }, []);
+  }, [getOrCreateAudioContext]);
 
   // Preload and decode background audio buffer with AbortController signal
   useEffect(() => {
@@ -248,8 +287,8 @@ export function useEdgeReadAloudBgm({
           if (decoded && decoded.duration > 0.1) {
             audioBufferRef.current = decoded;
           }
-          if (isEdgeReadAloudActive()) {
-            startBgm();
+          if (isEdgeReadAloudActive() || isManualPlayingRef.current) {
+            startBgm(isManualPlayingRef.current);
           }
         } else {
           if (ctx.state !== 'closed') {
@@ -292,6 +331,8 @@ export function useEdgeReadAloudBgm({
       }
       audioBufferRef.current = null;
       isPlayingRef.current = false;
+      isManualPlayingRef.current = false;
+      setIsPlaying(false);
     };
   }, [audioUrl, enabled, getOrCreateAudioContext, startBgm]);
 
@@ -300,9 +341,11 @@ export function useEdgeReadAloudBgm({
 
     const checkAndToggle = () => {
       if (isEdgeReadAloudActive()) {
-        startBgm();
+        startBgm(false);
       } else {
-        stopBgm();
+        if (!isManualPlayingRef.current) {
+          stopBgm(false);
+        }
       }
     };
 
@@ -319,4 +362,12 @@ export function useEdgeReadAloudBgm({
       observer.disconnect();
     };
   }, [enabled, startBgm, stopBgm]);
+
+  return {
+    isPlaying,
+    isManualPlaying: isManualPlayingRef.current,
+    toggleBgm,
+    startBgm,
+    stopBgm,
+  };
 }

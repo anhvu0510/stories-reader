@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type SettingsTab = 'servers' | 'tokens' | 'quotas' | 'reader' | 'translation' | 'replacements' | 'voice';
+export type SettingsTab = 'servers' | 'tokens' | 'quotas' | 'reader' | 'translation' | 'replacements' | 'voice' | 'bgm';
 
 interface ModalStore {
   isSettingsOpen: boolean;

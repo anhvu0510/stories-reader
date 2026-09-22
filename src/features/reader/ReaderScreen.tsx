@@ -187,11 +187,28 @@ export function ReaderScreen() {
   // Sync document.title with the current reading story name
   useDocumentTitle(contentData?.chapter?.bookName);
 
-  // Background music automatically plays when Edge Read Aloud is active
-  useEdgeReadAloudBgm({
-    audioUrl: '/audio/ambient-bgm.mp3',
-    volume: 0.2,
+  const bgmEnabled = useReaderConfigStore((state) => state.bgmEnabled ?? true);
+  const bgmVolume = useReaderConfigStore((state) => state.bgmVolume ?? 0.2);
+  const bgmAudioUrl = useReaderConfigStore((state) => state.bgmAudioUrl || '/audio/ambient-bgm.mp3');
+  const bgmFadeInMs = useReaderConfigStore((state) => state.bgmFadeInMs ?? 500);
+  const bgmFadeOutMs = useReaderConfigStore((state) => state.bgmFadeOutMs ?? 800);
+  const bgmStopDelayMs = useReaderConfigStore((state) => state.bgmStopDelayMs ?? 1500);
+
+  // Background music automatically plays when Edge Read Aloud is active or toggled manually
+  const { isPlaying: isBgmPlaying, toggleBgm } = useEdgeReadAloudBgm({
+    audioUrl: bgmAudioUrl,
+    volume: bgmVolume,
+    fadeInMs: bgmFadeInMs,
+    fadeOutMs: bgmFadeOutMs,
+    stopDelayMs: bgmStopDelayMs,
+    enabled: bgmEnabled,
   });
+
+  const handleToggleBgm = useCallback(() => {
+    toggleBgm();
+    const willPlay = !isBgmPlaying;
+    showToast(willPlay ? 'Đã bật nhạc nền thư giãn' : 'Đã tắt nhạc nền', 'info');
+  }, [toggleBgm, isBgmPlaying, showToast]);
 
   // Clean Reading Progress & Scroll Restoration
   const isContentReady = !loading && contentData !== null;
@@ -502,6 +519,8 @@ export function ReaderScreen() {
           progress={scrollProgress}
           isVisible={true}
           isTTSActive={isPlaying || isPaused}
+          isBgmActive={isBgmPlaying}
+          onToggleBgm={handleToggleBgm}
           onToggleTTS={() => (isPlaying || isPaused || isTTSLoading ? stopReading() : startReading())}
           onOpenHistory={handleOpenHistory}
         />

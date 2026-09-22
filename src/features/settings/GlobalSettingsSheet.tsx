@@ -1,5 +1,4 @@
-import React from 'react';
-import { X, Server, BookOpen, Volume2, Sparkles, RefreshCw } from 'lucide-react';
+import { X, Server, BookOpen, Volume2, Sparkles, RefreshCw, Music } from 'lucide-react';
 import { useModalStore } from '../../stores/useModalStore';
 import { BottomSheet } from '../../components/BottomSheet';
 import { ServerTab } from './components/ServerTab';
@@ -7,6 +6,7 @@ import { ReaderSettingsTab } from './components/ReaderSettingsTab';
 import { VoiceSettingsTab } from './components/VoiceSettingsTab';
 import { AISettingsTab } from './components/AISettingsTab';
 import { ReplacementsTab } from './components/ReplacementsTab';
+import { BgmSettingsTab } from './components/BgmSettingsTab';
 
 interface GlobalSettingsSheetProps {
   currentBookId?: string;
@@ -24,6 +24,7 @@ export function GlobalSettingsSheet({
     { id: 'servers', label: 'Server API', icon: Server },
     { id: 'reader', label: 'Chế độ Đọc', icon: BookOpen },
     { id: 'voice', label: 'Giọng đọc TTS', icon: Volume2 },
+    { id: 'bgm', label: 'Nhạc Nền', icon: Music },
     { id: 'translation', label: 'Dịch AI', icon: Sparkles },
     { id: 'replacements', label: 'Thay thế từ', icon: RefreshCw },
   ] as const;
@@ -92,6 +93,7 @@ export function GlobalSettingsSheet({
         {activeSettingsTab === 'servers' && <ServerTab />}
         {activeSettingsTab === 'reader' && <ReaderSettingsTab />}
         {activeSettingsTab === 'voice' && <VoiceSettingsTab />}
+        {activeSettingsTab === 'bgm' && <BgmSettingsTab />}
         {activeSettingsTab === 'translation' && (
           <AISettingsTab bookId={currentBookId} chapterId={currentChapterId} />
         )}

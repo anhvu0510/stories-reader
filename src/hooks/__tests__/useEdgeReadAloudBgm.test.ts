@@ -182,4 +182,97 @@ describe('useEdgeReadAloudBgm Hook', () => {
     span.className = 'msreadout-inactive-line-highlight';
     expect(isEdgeReadAloudActive()).toBe(false);
   });
+
+  it('QC-7: Cho phép người dùng bật BGM thủ công qua toggleBgm()', async () => {
+    const { result } = renderHook(() =>
+      useEdgeReadAloudBgm({
+        audioUrl: '/audio/test.mp3',
+        volume: 0.2,
+      })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.isPlaying).toBe(false);
+
+    act(() => {
+      result.current.toggleBgm();
+    });
+
+    expect(mockSourceNode.start).toHaveBeenCalledWith(0);
+    expect(result.current.isPlaying).toBe(true);
+  });
+
+  it('QC-8: Cho phép người dùng tắt BGM thủ công khi đang phát', async () => {
+    const { result } = renderHook(() =>
+      useEdgeReadAloudBgm({
+        audioUrl: '/audio/test.mp3',
+        volume: 0.2,
+        fadeOutMs: 100,
+      })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      result.current.toggleBgm();
+    });
+    expect(result.current.isPlaying).toBe(true);
+
+    act(() => {
+      result.current.toggleBgm();
+    });
+    expect(result.current.isPlaying).toBe(false);
+
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
+
+    expect(mockSourceNode.stop).toHaveBeenCalled();
+  });
+
+  it('QC-9: BGM bật thủ công không bị dừng khi Edge Read Aloud ngắt trạng thái', async () => {
+    const { result } = renderHook(() =>
+      useEdgeReadAloudBgm({
+        audioUrl: '/audio/test.mp3',
+        volume: 0.2,
+        stopDelayMs: 200,
+      })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Bật BGM thủ công
+    act(() => {
+      result.current.toggleBgm();
+    });
+    expect(result.current.isPlaying).toBe(true);
+
+    // Kích hoạt DOM Edge Read Aloud
+    await act(async () => {
+      const p = document.createElement('p');
+      p.className = 'msreadout-line-highlight';
+      document.body.appendChild(p);
+    });
+
+    // Ngắt DOM Edge Read Aloud
+    await act(async () => {
+      document.body.innerHTML = '';
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    // Vẫn đang phát vì là bật thủ công
+    expect(mockSourceNode.stop).not.toHaveBeenCalled();
+    expect(result.current.isPlaying).toBe(true);
+  });
 });
+

@@ -36,6 +36,13 @@ const defaultSettings: ReaderConfig = {
   vieneuOutputSampleRate: 0,
   edgeVoiceUri: 'vi-VN-HoaiMyNeural',
   showTTSControlOnReader: true,
+  bgmEnabled: true,
+  bgmVolume: 0.2,
+  bgmAudioUrl: '/audio/ambient-bgm.mp3',
+  bgmFadeInMs: 500,
+  bgmFadeOutMs: 800,
+  bgmStopDelayMs: 1500,
+  bgmOnlyOnEdgeReadAloud: true,
 };
 
 function getInitialSettings(isOffline: boolean): ReaderConfig {
@@ -65,6 +72,10 @@ interface ReaderConfigStore extends ReaderConfig {
   setVieneuParameter: <K extends keyof ReaderConfig>(key: K, value: ReaderConfig[K]) => void;
   setEdgeVoiceUri: (uri: string) => void;
   setShowTTSControlOnReader: (enabled: boolean) => void;
+  setBgmEnabled: (enabled: boolean) => void;
+  setBgmVolume: (volume: number) => void;
+  setBgmAudioUrl: (url: string) => void;
+  setBgmParameter: <K extends keyof ReaderConfig>(key: K, value: ReaderConfig[K]) => void;
   setBookLimit: (limit: number) => void;
   setChapterLimit: (limit: number) => void;
   updateSettings: (partial: Partial<ReaderConfig>) => void;
@@ -209,6 +220,35 @@ export const useReaderConfigStore = create<ReaderConfigStore>((set, get) => {
         const next = { ...state, showTTSControlOnReader };
         persist(next);
         return { showTTSControlOnReader };
+      });
+    },
+    setBgmEnabled: (bgmEnabled) => {
+      set((state) => {
+        const next = { ...state, bgmEnabled };
+        persist(next);
+        return { bgmEnabled };
+      });
+    },
+    setBgmVolume: (bgmVolume) => {
+      const sanitized = Math.max(0, Math.min(1, bgmVolume));
+      set((state) => {
+        const next = { ...state, bgmVolume: sanitized };
+        persist(next);
+        return { bgmVolume: sanitized };
+      });
+    },
+    setBgmAudioUrl: (bgmAudioUrl) => {
+      set((state) => {
+        const next = { ...state, bgmAudioUrl };
+        persist(next);
+        return { bgmAudioUrl };
+      });
+    },
+    setBgmParameter: (key, value) => {
+      set((state) => {
+        const next = { ...state, [key]: value };
+        persist(next);
+        return { [key]: value } as Partial<ReaderConfig>;
       });
     },
     setBookLimit: (bookLimit) => {

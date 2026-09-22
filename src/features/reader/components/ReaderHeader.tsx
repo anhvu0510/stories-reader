@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Home, Clock } from 'lucide-react';
+import { Home, Clock, Music } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface ReaderHeaderProps {
@@ -10,6 +10,8 @@ interface ReaderHeaderProps {
   progress?: number;
   isVisible?: boolean;
   isTTSActive?: boolean;
+  isBgmActive?: boolean;
+  onToggleBgm?: () => void;
   onToggleTTS?: () => void;
   onOpenHistory: () => void;
 }
@@ -22,6 +24,8 @@ export const ReaderHeader = memo(function ReaderHeader({
   progress = 0,
   isVisible = true,
   isTTSActive = false,
+  isBgmActive = false,
+  onToggleBgm,
   onToggleTTS,
   onOpenHistory,
 }: ReaderHeaderProps) {
@@ -56,8 +60,23 @@ export const ReaderHeader = memo(function ReaderHeader({
           </div>
         </div>
 
-        {/* Right: Reading History */}
+        {/* Right: Actions */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          {onToggleBgm && (
+            <button
+              onClick={onToggleBgm}
+              className={`p-2 rounded-full border transition-all active:scale-90 cursor-pointer flex items-center justify-center ${
+                isBgmActive
+                  ? 'bg-primary/25 border-primary/60 text-primary shadow-[0_2px_8px_rgba(59,130,246,0.35),_inset_0_1px_0.5px_rgba(255,255,255,0.4)]'
+                  : 'bg-white/10 dark:bg-white/10 border-white/30 text-on-surface hover:text-primary hover:bg-white/20 shadow-[0_2px_8px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.4)]'
+              }`}
+              title={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
+              aria-label={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
+            >
+              <Music size={16} className={isBgmActive ? 'animate-pulse text-primary' : ''} />
+            </button>
+          )}
+
           <button
             onClick={onOpenHistory}
             className="p-2 rounded-full bg-white/10 dark:bg-white/10 border border-white/30 text-primary hover:bg-white/20 transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] cursor-pointer"
