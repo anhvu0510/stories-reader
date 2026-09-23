@@ -585,4 +585,49 @@ describe('useEdgeReadAloudBgm Hook', () => {
     expect(mockAudioContext.resume).toHaveBeenCalled();
     expect(result.current.isPlaying).toBe(true);
   });
+
+  it('QC-20: Không đăng ký event listener tần suất cao (touchmove, scroll, pointermove) làm tụt FPS mobile', () => {
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+
+    renderHook(() =>
+      useEdgeReadAloudBgm({
+        audioUrl: '/audio/test.mp3',
+        volume: 0.15,
+      })
+    );
+
+    const registeredEvents = addEventListenerSpy.mock.calls.map((call) => call[0]);
+    expect(registeredEvents).not.toContain('touchmove');
+    expect(registeredEvents).not.toContain('pointermove');
+    expect(registeredEvents).not.toContain('scroll');
+
+    addEventListenerSpy.mockRestore();
+  });
+
+  it('QC-21: Tự động gỡ bỏ (removeEventListener) các listener unlock khi AudioContext đã ở trạng thái running', async () => {
+    const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+
+    mockAudioContext.state = 'suspended';
+
+    renderHook(() =>
+      useEdgeReadAloudBgm({
+        audioUrl: '/audio/test.mp3',
+        volume: 0.15,
+      })
+    );
+
+    await act(async () => {
+      mockAudioContext.state = 'running';
+      window.dispatchEvent(new Event('pointerdown'));
+      await Promise.resolve();
+    });
+
+    const removedEvents = removeEventListenerSpy.mock.calls.map((call) => call[0]);
+    expect(removedEvents).toContain('pointerdown');
+    expect(removedEvents).toContain('touchstart');
+    expect(removedEvents).toContain('click');
+
+    removeEventListenerSpy.mockRestore();
+  });
 });
+
