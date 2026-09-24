@@ -630,7 +630,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
     removeEventListenerSpy.mockRestore();
   });
 
-  it('QC-22: Tự động pause nhạc nền khi Edge Read Aloud tạm ngưng với class (msreadout-line-highlight msreadout-inactive-highlight)', async () => {
+  it('QC-22: Không tự động bật BGM khi có class Read Aloud mà chưa được người dùng khởi động thủ công', async () => {
     const span = document.createElement('span');
     span.className = 'msreadout-line-highlight';
     document.body.appendChild(span);
@@ -646,18 +646,45 @@ describe('useEdgeReadAloudBgm Hook', () => {
       await Promise.resolve();
     });
 
+    // BGM không tự động phát nếu người dùng chưa bấm bật thủ công
+    expect(result.current.isPlaying).toBe(false);
+  });
+
+  it('QC-23: Khi BGM đã bật thủ công, tự động tạm ngưng BGM khi Edge Read Aloud tạm dừng (class msreadout-inactive-highlight)', async () => {
+    const span = document.createElement('span');
+    span.className = 'msreadout-line-highlight';
+    document.body.appendChild(span);
+
+    const { result } = renderHook(() =>
+      useEdgeReadAloudBgm({
+        audioUrl: '/audio/test.mp3',
+        volume: 0.15,
+      })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Người dùng bấm bật BGM thủ công
+    await act(async () => {
+      result.current.toggleBgm();
+      await Promise.resolve();
+    });
+
     expect(result.current.isPlaying).toBe(true);
 
-    // Edge Read Aloud tạm ngưng -> DOM cập nhật class inactive
+    // Edge Read Aloud tạm ngưng đọc -> DOM cập nhật class inactive
     await act(async () => {
       span.className = 'msreadout-line-highlight msreadout-inactive-highlight';
       await Promise.resolve();
     });
 
+    // BGM tự động tạm ngưng
     expect(result.current.isPlaying).toBe(false);
   });
 
-  it('QC-23: Tự động resume nhạc nền khi Edge Read Aloud nhấn start lại (xóa class msreadout-inactive-highlight)', async () => {
+  it('QC-24: Khi BGM đã bật thủ công và đang tạm ngưng, tự động resume BGM khi Edge Read Aloud nhấn start đọc lại', async () => {
     const span = document.createElement('span');
     span.className = 'msreadout-line-highlight msreadout-inactive-highlight';
     document.body.appendChild(span);
@@ -673,16 +700,25 @@ describe('useEdgeReadAloudBgm Hook', () => {
       await Promise.resolve();
     });
 
+    // Bật BGM thủ công trước đó
+    await act(async () => {
+      result.current.toggleBgm();
+      await Promise.resolve();
+    });
+
+    // Vì DOM có class inactive nên BGM bị tạm ngưng
     expect(result.current.isPlaying).toBe(false);
 
-    // User nhấn start lại trên Edge Read Aloud -> gỡ bỏ class msreadout-inactive-highlight
+    // Người dùng nhấn start đọc lại trên Edge Read Aloud -> xóa class inactive
     await act(async () => {
       span.className = 'msreadout-line-highlight';
       await Promise.resolve();
     });
 
+    // BGM tự động tiếp tục (resume) phát lại
     expect(result.current.isPlaying).toBe(true);
   });
 });
+
 
 

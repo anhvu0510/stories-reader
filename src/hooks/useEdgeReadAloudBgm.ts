@@ -466,7 +466,8 @@ export function useEdgeReadAloudBgm({
         }
       } else if (isActive) {
         // Edge Read Aloud is active reading (e.g. msreadout-line-highlight without inactive class)
-        if (!isPlayingRef.current && !isUserMutedRef.current && !isBgmPreviewingRef.current) {
+        // Resume BGM ONLY IF user had manually started BGM (isManualPlayingRef.current === true)
+        if (isManualPlayingRef.current && !isPlayingRef.current && !isUserMutedRef.current && !isBgmPreviewingRef.current) {
           void startBgmRef.current?.(false);
         }
       } else {
@@ -506,7 +507,10 @@ export function useEdgeReadAloudBgm({
     } else {
       isUserMutedRef.current = false;
       isManualPlayingRef.current = true;
-      void startBgm(true);
+      const hasInactive = typeof document !== 'undefined' && Boolean(document.querySelector(EDGE_READ_ALOUD_INACTIVE_SELECTOR));
+      if (!hasInactive) {
+        void startBgm(true);
+      }
     }
   }, [startBgm, stopBgm]);
 
