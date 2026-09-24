@@ -449,6 +449,51 @@ export function useEdgeReadAloudBgm({
     }
   }, [isBgmPreviewing, enabled, stopBgm, startBgm]);
 
+  // Observe DOM for Edge Read Aloud state changes (auto-start, auto-pause on inactive highlight, auto-resume on start)
+  useEffect(() => {
+    if (!enabled || typeof document === 'undefined') return;
+
+    let wasActive = isEdgeReadAloudActive();
+
+    const checkDomState = () => {
+      const hasInactive = Boolean(document.querySelector(EDGE_READ_ALOUD_INACTIVE_SELECTOR));
+      const isActive = isEdgeReadAloudActive();
+
+      if (hasInactive) {
+        // Edge Read Aloud is paused (e.g. msreadout-line-highlight msreadout-inactive-highlight)
+        if (isPlayingRef.current || sourceNodeRef.current) {
+          stopBgm(true);
+        }
+      } else if (isActive) {
+        // Edge Read Aloud is active reading (e.g. msreadout-line-highlight without inactive class)
+        if (!isPlayingRef.current && !isUserMutedRef.current && !isBgmPreviewingRef.current) {
+          void startBgmRef.current?.(false);
+        }
+      } else {
+        // Edge Read Aloud highlight is no longer present in DOM
+        if (wasActive && isPlayingRef.current && !isManualPlayingRef.current) {
+          stopBgm(false);
+        }
+      }
+
+      wasActive = isActive;
+    };
+
+    checkDomState();
+
+    const observer = new MutationObserver(checkDomState);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [enabled, stopBgm]);
+
+
   const toggleBgm = useCallback(() => {
     const ctx = audioCtxRef.current;
     const isCtxRunning = ctx && ctx.state === 'running';
