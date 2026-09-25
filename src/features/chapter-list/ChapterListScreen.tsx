@@ -179,16 +179,16 @@ export function ChapterListScreen() {
   return (
     <div className="min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-28 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200">
       {/* Sticky Header */}
-      <header className="sticky top-0 z-30 bg-surface/95 backdrop-blur-md border-b border-outline-variant/20 px-3.5 py-3 space-y-2.5 w-full max-w-md mx-auto">
+      <header className="sticky top-0 z-30 bg-surface/95 backdrop-blur-md border-b border-outline-variant/20 px-3.5 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3 space-y-2.5 w-full max-w-md mx-auto">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <motion.button
-              whileTap={{ scale: 0.90 }}
+              whileTap={{ scale: 0.88 }}
               onClick={() => {
                 triggerHaptic('light');
                 navigate('/');
               }}
-              className="p-2 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors flex-shrink-0 cursor-pointer"
+              className="w-9 h-9 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center flex-shrink-0 cursor-pointer"
               title="Về Thư viện"
             >
               <ArrowLeft size={16} />
@@ -206,9 +206,9 @@ export function ChapterListScreen() {
               <>
                 <motion.button
                   type="button"
-                  whileTap={{ scale: 0.90 }}
+                  whileTap={{ scale: 0.88 }}
                   onClick={handleToggleFavorite}
-                  className={`p-2 rounded-full border transition-all cursor-pointer ${
+                  className={`w-9 h-9 rounded-full border transition-all flex items-center justify-center cursor-pointer ${
                     isFav
                       ? 'bg-rose-500/15 border-rose-500/40 text-rose-500 shadow-xs'
                       : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-rose-400'
@@ -219,13 +219,13 @@ export function ChapterListScreen() {
                 </motion.button>
 
                 <motion.button
-                  whileTap={{ scale: 0.90 }}
+                  whileTap={{ scale: 0.88 }}
                   onClick={() => {
                     triggerHaptic('light');
                     downloadManager.addBook(book.bookId, book.bookName);
                     showToast(`Đã thêm "${book.bookName}" vào hàng đợi tải xuống`, 'info');
                   }}
-                  className="p-2 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center cursor-pointer"
                   title="Tải về bộ truyện"
                 >
                   <Download size={15} />
@@ -234,13 +234,13 @@ export function ChapterListScreen() {
             )}
 
             <motion.button
-              whileTap={{ scale: 0.90 }}
+              whileTap={{ scale: 0.88 }}
               onClick={() => {
                 triggerHaptic('light');
                 fetchChapters(1, search, filterState, sortOrder, false);
               }}
               disabled={loading}
-              className="p-2 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+              className="w-9 h-9 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center cursor-pointer"
               title="Làm mới"
             >
               <RefreshCw size={15} className={loading ? 'animate-spin text-primary' : ''} />
@@ -248,23 +248,26 @@ export function ChapterListScreen() {
           </div>
         </div>
 
-        {/* Search & State Filter Controls */}
+        {/* Search & State Filter Controls with Touch-Friendly Heights */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
             <input
               type="text"
               placeholder="Tìm số/tên chương..."
               value={search}
               onChange={handleSearchChange}
-              className="w-full pl-8 pr-2.5 py-1.5 rounded-2xl bg-surface-container border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium"
+              className="w-full pl-8 pr-2.5 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-sm sm:text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium"
             />
           </div>
 
           <select
             value={filterState}
-            onChange={(e) => setFilterState(e.target.value)}
-            className="px-2.5 py-1.5 rounded-2xl bg-surface-container border border-outline-variant/30 text-xs text-on-surface font-mono font-bold"
+            onChange={(e) => {
+              triggerHaptic('selection');
+              setFilterState(e.target.value);
+            }}
+            className="px-2.5 py-2 rounded-xl bg-surface-container border border-outline-variant/30 text-xs text-on-surface font-mono font-bold cursor-pointer"
           >
             <option value="all">Tất cả</option>
             <option value="SUCCEEDED">Đã dịch</option>
@@ -272,12 +275,17 @@ export function ChapterListScreen() {
             <option value="FAILED">Lỗi</option>
           </select>
 
-          <button
-            onClick={() => setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC')}
-            className="px-2.5 py-1.5 rounded-2xl bg-surface-container border border-outline-variant/30 text-xs font-mono font-extrabold text-primary active:scale-95"
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={() => {
+              triggerHaptic('selection');
+              setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+            }}
+            className="w-9 h-9 rounded-xl bg-surface-container border border-outline-variant/30 text-xs font-mono font-extrabold text-primary flex items-center justify-center cursor-pointer shrink-0"
+            title={sortOrder === 'ASC' ? 'Sắp xếp: Tăng dần (Bấm để giảm dần)' : 'Sắp xếp: Giảm dần (Bấm để tăng dần)'}
           >
             {sortOrder === 'ASC' ? '▲' : '▼'}
-          </button>
+          </motion.button>
         </div>
 
         {/* Chapter Range Chunk Filter Bar (1-100, 101-200) */}
