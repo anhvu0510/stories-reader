@@ -118,6 +118,11 @@ export function useLongPress({
     [onClick]
   );
 
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
   return {
     onTouchStart: start,
     onTouchMove: move,
@@ -128,5 +133,6 @@ export function useLongPress({
     onMouseUp: clear,
     onMouseLeave: clear,
     onClick: handleClick,
+    onContextMenu: handleContextMenu,
   };
 }

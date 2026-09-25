@@ -57,7 +57,7 @@ describe('useHaptic & sound feedback', () => {
     expect(played).toBe(true);
     expect(mockOscillator.start).toHaveBeenCalled();
     expect(mockOscillator.stop).toHaveBeenCalled();
-    expect(mockGain.gain.setValueAtTime).toHaveBeenCalledWith(0.2, 0);
+    expect(mockGain.gain.setValueAtTime).toHaveBeenCalledWith(0.12, 0);
   });
 
   it('useHaptic hook provides trigger, playSound, and isSupported status', () => {

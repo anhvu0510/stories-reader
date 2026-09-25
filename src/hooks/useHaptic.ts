@@ -7,6 +7,19 @@ export type HapticFeedbackType =
   | 'warning'
   | 'error';
 
+// Enforce hardware vibration block globally to prevent any native or 3rd-party vibration
+if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+  try {
+    Object.defineProperty(navigator, 'vibrate', {
+      value: () => false,
+      configurable: true,
+      writable: true,
+    });
+  } catch {
+    // ignore if locked
+  }
+}
+
 let sharedAudioContext: AudioContext | null = null;
 
 function getAudioContext(): AudioContext | null {
@@ -32,7 +45,8 @@ function getAudioContext(): AudioContext | null {
 }
 
 /**
- * Synthesizes a single unified, clean tactile micro-click sound for all UI interactions.
+ * Synthesizes a crisp, clear, high-frequency tactile tick using Web Audio API.
+ * Tuned above 850Hz to guarantee zero physical chassis vibration or mobile audio-haptic resonance.
  * Works natively on iOS Safari, Android, Chrome, and Desktop without downloading external files.
  */
 export function playFeedbackSound(_type?: HapticFeedbackType): boolean {
@@ -47,15 +61,16 @@ export function playFeedbackSound(_type?: HapticFeedbackType): boolean {
     osc.connect(gain);
     gain.connect(ctx.destination);
 
-    // Single unified tactile micro-click for all operations with clear, audible volume
+    // High-frequency crisp click (1800Hz -> 850Hz in 14ms)
+    // Avoids frequencies < 800Hz so phone body / speaker frame does not physically resonate
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(1100, now);
-    osc.frequency.exponentialRampToValueAtTime(300, now + 0.02);
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.02);
+    osc.frequency.setValueAtTime(1800, now);
+    osc.frequency.exponentialRampToValueAtTime(850, now + 0.014);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.014);
 
     osc.start(now);
-    osc.stop(now + 0.022);
+    osc.stop(now + 0.015);
 
     return true;
   } catch {
