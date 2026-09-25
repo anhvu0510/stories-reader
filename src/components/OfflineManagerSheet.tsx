@@ -5,6 +5,8 @@ import { offlineDb } from '../lib/offlineDb';
 import { useAppStore } from '../stores/useAppStore';
 import { useToastStore } from '../stores/useToastStore';
 import { BottomSheet } from './BottomSheet';
+import { motion } from 'motion/react';
+import { triggerHaptic } from '../hooks/useHaptic';
 
 export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?: () => void, isEmbedded?: boolean }) {
   const isOffline = useAppStore((state) => state.isOfflineMode);
@@ -55,9 +57,18 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
           </h2>
           <div className="flex items-center gap-1 sm:gap-2">
             {!isEmbedded && onClose && (
-             <button onClick={onClose} className="p-1.5 bg-white/10 dark:bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-full text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all active:scale-95">
-                <X size={14} />
-              </button>
+              <motion.button
+                whileTap={{ scale: 0.88 }}
+                onClick={() => {
+                  triggerHaptic('light');
+                  onClose();
+                }}
+                className="w-9 h-9 bg-white/10 dark:bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] rounded-full text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
+                title="Đóng"
+                aria-label="Đóng"
+              >
+                <X size={16} />
+              </motion.button>
             )}
           </div>
         </div>
@@ -74,15 +85,25 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
             </div>
             <p className="text-[10px] text-on-surface-variant/70">Chỉ tải dữ liệu đã lưu trong máy</p>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isOffline}
-              onChange={(e) => toggleOfflineMode(e.target.checked)}
-              className="sr-only peer"
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.94 }}
+            onClick={() => {
+              triggerHaptic('selection');
+              toggleOfflineMode(!isOffline);
+            }}
+            className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${
+              isOffline ? 'bg-primary' : 'bg-white/20'
+            }`}
+            title={isOffline ? 'Tắt chế độ ngoại tuyến' : 'Bật chế độ ngoại tuyến'}
+            aria-label="Chuyển đổi chế độ đọc ngoại tuyến"
+          >
+            <div
+              className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${
+                isOffline ? 'translate-x-5' : 'translate-x-0'
+              }`}
             />
-            <div className="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-          </label>
+          </motion.button>
         </div>
 
         {/* Saved Books List */}
@@ -112,13 +133,18 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => handleDeleteParams(book.bookId)}
-                    className="p-1.5 rounded-xl text-rose-400 hover:bg-rose-500/20 transition-colors"
+                  <motion.button
+                    whileTap={{ scale: 0.88 }}
+                    onClick={() => {
+                      triggerHaptic('warning');
+                      handleDeleteParams(book.bookId);
+                    }}
+                    className="w-8 h-8 rounded-xl text-rose-400 hover:bg-rose-500/20 transition-colors flex items-center justify-center cursor-pointer"
                     title="Xóa truyện khỏi máy"
+                    aria-label="Xóa truyện khỏi máy"
                   >
-                    <Trash2 size={14} />
-                  </button>
+                    <Trash2 size={16} />
+                  </motion.button>
                 </div>
               </div>
             ))

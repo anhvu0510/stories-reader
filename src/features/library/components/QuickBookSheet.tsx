@@ -12,6 +12,8 @@ import { TranslationSheet } from '../../../components/TranslationSheet';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { BottomSheet } from '../../../components/BottomSheet';
 import { openChapter } from '../../../shared/utils/openChapter';
+import { motion } from 'motion/react';
+import { triggerHaptic } from '../../../hooks/useHaptic';
 
 interface QuickBookSheetProps {
   book: Book;
@@ -326,52 +328,72 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
               {book.bookName}
             </h2>
 
-            {/* Action Icon Group (Compact p-1 buttons) */}
-            <div className="flex items-center gap-1 shrink-0">
+            {/* Action Icon Group (Comfortable w-8 h-8 buttons with touch feedback) */}
+            <div className="flex items-center gap-1.5 shrink-0">
               {/* AI Batch Translation icon button with pending badge */}
               {!isOfflineMode && (
-                <button
+                <motion.button
                   type="button"
-                  onClick={() => setShowTranslationSheet(true)}
-                  className="relative p-1 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-primary hover:bg-white/20 transition-all flex items-center justify-center active:scale-95"
+                  whileTap={{ scale: 0.88 }}
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setShowTranslationSheet(true);
+                  }}
+                  className="relative w-8 h-8 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-primary hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
                   title={pendingCount > 0 ? `Chờ dịch: ${pendingCount} chương (Mở Dịch AI)` : 'Mở Dịch AI'}
+                  aria-label="Mở Dịch AI"
                 >
-                  <Sparkles size={15} className={pendingCount > 0 ? 'text-primary animate-pulse' : ''} />
+                  <Sparkles size={16} className={pendingCount > 0 ? 'text-primary animate-pulse' : ''} />
                   {pendingCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-[13px] h-[13px] px-0.5 rounded-full bg-primary text-on-primary font-mono font-black text-[7.5px] flex items-center justify-center leading-none shadow-xs">
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-primary text-on-primary font-mono font-black text-[8px] flex items-center justify-center leading-none shadow-xs">
                       {pendingCount > 99 ? '99+' : pendingCount}
                     </span>
                   )}
-                </button>
+                </motion.button>
               )}
 
               {/* Download / Delete icon button */}
               {isDownloaded ? (
-                <button
-                  onClick={handleDeleteOfflineBook}
-                  className="p-1 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-rose-400 hover:text-rose-300 hover:bg-white/20 transition-all flex items-center justify-center active:scale-95"
+                <motion.button
+                  whileTap={{ scale: 0.88 }}
+                  onClick={() => {
+                    triggerHaptic('warning');
+                    handleDeleteOfflineBook();
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-rose-400 hover:text-rose-300 hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
                   title="Xóa truyện khỏi máy"
+                  aria-label="Xóa truyện khỏi máy"
                 >
-                  <Trash2 size={15} />
-                </button>
+                  <Trash2 size={16} />
+                </motion.button>
               ) : !isOfflineMode ? (
-                <button
-                  onClick={handleDownloadBook}
-                  className="p-1 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all flex items-center justify-center active:scale-95"
+                <motion.button
+                  whileTap={{ scale: 0.88 }}
+                  onClick={() => {
+                    triggerHaptic('light');
+                    handleDownloadBook();
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
                   title="Tải về ngoại tuyến"
+                  aria-label="Tải về ngoại tuyến"
                 >
-                  <Download size={15} />
-                </button>
+                  <Download size={16} />
+                </motion.button>
               ) : null}
 
               {/* Close modal button */}
-              <button
-                onClick={onClose}
-                className="p-1 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all flex items-center justify-center ml-0.5 active:scale-95"
+              <motion.button
+                whileTap={{ scale: 0.88 }}
+                onClick={() => {
+                  triggerHaptic('light');
+                  onClose();
+                }}
+                className="w-8 h-8 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
                 title="Đóng"
+                aria-label="Đóng"
               >
-                <X size={16} />
-              </button>
+                <X size={17} />
+              </motion.button>
             </div>
           </div>
 
@@ -400,16 +422,31 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
             </div>
           )}
 
-          {/* Row 3: Compact Search Bar */}
+          {/* Row 4: Mobile-optimized Search Bar */}
           <div className="relative pt-0.5">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60 pointer-events-none" />
             <input
               type="text"
               placeholder="Tìm nhanh số hoặc tên chương..."
               value={search}
               onChange={handleSearchChange}
-              className="w-full pl-8 pr-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 font-medium transition-all"
+              className="w-full pl-9 pr-8 py-2 rounded-xl bg-white/10 border border-white/15 text-sm sm:text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 font-medium transition-all"
             />
+            {search && (
+              <motion.button
+                whileTap={{ scale: 0.85 }}
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSearch('');
+                  loadInitialChapters('');
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface"
+                title="Xóa tìm kiếm"
+              >
+                <X size={13} />
+              </motion.button>
+            )}
           </div>
         </div>
 

@@ -10,6 +10,8 @@ import { useToastStore } from '../../../stores/useToastStore';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { BottomSheet } from '../../../components/BottomSheet';
 import { openChapter } from '../../../shared/utils/openChapter';
+import { motion } from 'motion/react';
+import { triggerHaptic } from '../../../hooks/useHaptic';
 
 function ChapterSkeletonItem() {
   return (
@@ -362,13 +364,22 @@ export function QuickChapterSelectSheet({
 
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-extrabold text-on-surface tracking-tight">Danh Sách Chương</h3>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={isDownloaded ? () => setShowDeleteConfirm(true) : handleDownloadBook}
+            <div className="flex items-center gap-1.5">
+              <motion.button
+                whileTap={{ scale: 0.88 }}
+                onClick={() => {
+                  if (isDownloaded) {
+                    triggerHaptic('warning');
+                    setShowDeleteConfirm(true);
+                  } else {
+                    triggerHaptic('light');
+                    handleDownloadBook();
+                  }
+                }}
                 disabled={Boolean(downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting'))}
                 title={isDownloaded ? "Xóa dữ liệu ngoại tuyến" : "Tải bộ truyện về đọc offline"}
                 aria-label={isDownloaded ? "Xóa dữ liệu ngoại tuyến" : "Tải bộ truyện về đọc offline"}
-                className={`p-1.5 rounded-full transition-colors ${
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
                   isDownloaded
                     ? "text-rose-500 bg-rose-500/10 hover:bg-rose-500/20"
                     : downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting')
@@ -383,28 +394,47 @@ export function QuickChapterSelectSheet({
                 ) : (
                   <Download size={16} />
                 )}
-              </button>
+              </motion.button>
 
-              <button
-                onClick={onClose}
-                className="p-1.5 text-on-surface-variant hover:text-on-surface rounded-full hover:bg-white/10 transition-colors"
+              <motion.button
+                whileTap={{ scale: 0.88 }}
+                onClick={() => {
+                  triggerHaptic('light');
+                  onClose();
+                }}
+                className="w-9 h-9 text-on-surface-variant hover:text-on-surface rounded-full hover:bg-white/10 transition-colors flex items-center justify-center cursor-pointer"
                 title="Đóng"
                 aria-label="Đóng bảng chọn chương"
               >
                 <X size={18} />
-              </button>
+              </motion.button>
             </div>
           </div>
 
           <div className="relative pt-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60 pointer-events-none" />
             <input
               type="text"
               placeholder="Tìm nhanh số hoặc tên chương..."
               value={search}
               onChange={handleSearchChange}
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white/10 border border-white/15 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 font-medium transition-all"
+              className="w-full pl-9 pr-8 py-2 rounded-xl bg-white/10 border border-white/15 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] text-sm sm:text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 font-medium transition-all"
             />
+            {search && (
+              <motion.button
+                whileTap={{ scale: 0.85 }}
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSearch('');
+                  loadInitialChapters('');
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface"
+                title="Xóa tìm kiếm"
+              >
+                <X size={13} />
+              </motion.button>
+            )}
           </div>
         </div>
 
@@ -482,18 +512,26 @@ export function QuickChapterSelectSheet({
             </div>
 
             <div className="flex items-center gap-2 pt-1">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 py-2.5 rounded-xl font-semibold text-xs bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors"
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowDeleteConfirm(false);
+                }}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-xs bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer"
               >
                 Hủy
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-rose-600 text-white hover:bg-rose-700 shadow-md shadow-rose-600/20 transition-colors"
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  triggerHaptic('warning');
+                  handleConfirmDelete();
+                }}
+                className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-rose-600 text-white hover:bg-rose-700 shadow-md shadow-rose-600/20 transition-colors cursor-pointer"
               >
                 Xóa khỏi máy
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>

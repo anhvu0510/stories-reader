@@ -2,6 +2,8 @@ import React from 'react';
 import { Palette, Type, Sliders, Layers, Plus, Minus, BookOpen, Volume2, RefreshCw } from 'lucide-react';
 import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { ThemeType, FontType } from '../../../shared/types';
+import { motion } from 'motion/react';
+import { triggerHaptic } from '../../../hooks/useHaptic';
 
 const THEMES: { id: ThemeType; label: string; bg: string; color: string }[] = [
   { id: 'royal-vn', label: 'Royal VN', bg: '#040e2b', color: '#e2e8f0' },
@@ -66,29 +68,37 @@ function NumericStepper({
       </label>
 
       <div className="flex items-center justify-between gap-1 bg-white/10 p-1 rounded-xl border border-white/15 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]">
-        <button
+        <motion.button
           type="button"
-          onClick={handleDecrease}
+          whileTap={{ scale: 0.88 }}
+          onClick={() => {
+            triggerHaptic('light');
+            handleDecrease();
+          }}
           disabled={!canDecrease}
-          className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 disabled:opacity-30 disabled:pointer-events-none text-on-surface flex items-center justify-center transition-all font-bold shrink-0"
+          className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:pointer-events-none text-on-surface flex items-center justify-center transition-all font-bold shrink-0 cursor-pointer"
           title="Giảm"
         >
-          <Minus size={12} />
-        </button>
+          <Minus size={13} />
+        </motion.button>
 
         <span className="px-1 text-xs font-mono font-extrabold text-primary text-center select-none truncate flex-1">
           {displayVal}
         </span>
 
-        <button
+        <motion.button
           type="button"
-          onClick={handleIncrease}
+          whileTap={{ scale: 0.88 }}
+          onClick={() => {
+            triggerHaptic('light');
+            handleIncrease();
+          }}
           disabled={!canIncrease}
-          className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 disabled:opacity-30 disabled:pointer-events-none text-on-surface flex items-center justify-center transition-all font-bold shrink-0"
+          className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:pointer-events-none text-on-surface flex items-center justify-center transition-all font-bold shrink-0 cursor-pointer"
           title="Tăng"
         >
-          <Plus size={12} />
-        </button>
+          <Plus size={13} />
+        </motion.button>
       </div>
     </div>
   );
@@ -113,49 +123,57 @@ export function ReaderSettingsTab() {
       {/* Top Controls: Compact Toggle Chips with Icons */}
       <div className="grid grid-cols-2 gap-2">
         {/* Toggle Nút Đọc TTS */}
-        <div className="p-2 px-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-1.5 shadow-xs">
+        <div className="p-2.5 px-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-1.5 shadow-xs">
           <span className="text-xs font-bold text-on-surface flex items-center gap-1.5 min-w-0">
-            <Volume2 size={13} className="text-primary shrink-0" />
+            <Volume2 size={14} className="text-primary shrink-0" />
             <span className="truncate">Nút Đọc</span>
           </span>
-          <button
+          <motion.button
             type="button"
-            onClick={() => setShowTTSControlOnReader(!showTTSControlOnReader)}
-            className={`w-8 h-4.5 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${
+            whileTap={{ scale: 0.94 }}
+            onClick={() => {
+              triggerHaptic('selection');
+              setShowTTSControlOnReader(!showTTSControlOnReader);
+            }}
+            className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${
               showTTSControlOnReader ? 'bg-primary' : 'bg-white/20'
             }`}
             title={showTTSControlOnReader ? 'Tắt nút Đọc ngoài màn hình' : 'Bật nút Đọc ngoài màn hình'}
             aria-label="Chuyển đổi hiển thị nút Đọc ngoài màn hình"
           >
             <div
-              className={`w-3.5 h-3.5 rounded-full bg-white shadow-xs transition-transform ${
-                showTTSControlOnReader ? 'translate-x-3.5' : 'translate-x-0'
+              className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${
+                showTTSControlOnReader ? 'translate-x-5' : 'translate-x-0'
               }`}
             />
-          </button>
+          </motion.button>
         </div>
 
         {/* Toggle Từ điển thay thế */}
-        <div className="p-2 px-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-1.5 shadow-xs">
+        <div className="p-2.5 px-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-1.5 shadow-xs">
           <span className="text-xs font-bold text-on-surface flex items-center gap-1.5 min-w-0">
-            <RefreshCw size={13} className="text-primary shrink-0" />
+            <RefreshCw size={14} className="text-primary shrink-0" />
             <span className="truncate">Thay thế từ</span>
           </span>
-          <button
+          <motion.button
             type="button"
-            onClick={() => setIsEnabledReplace(!isEnabledReplace)}
-            className={`w-8 h-4.5 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${
+            whileTap={{ scale: 0.94 }}
+            onClick={() => {
+              triggerHaptic('selection');
+              setIsEnabledReplace(!isEnabledReplace);
+            }}
+            className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${
               isEnabledReplace ? 'bg-primary' : 'bg-white/20'
             }`}
             title={isEnabledReplace ? 'Tắt thay thế từ' : 'Bật thay thế từ'}
             aria-label="Chuyển đổi từ điển thay thế"
           >
             <div
-              className={`w-3.5 h-3.5 rounded-full bg-white shadow-xs transition-transform ${
-                isEnabledReplace ? 'translate-x-3.5' : 'translate-x-0'
+              className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${
+                isEnabledReplace ? 'translate-x-5' : 'translate-x-0'
               }`}
             />
-          </button>
+          </motion.button>
         </div>
       </div>
       {/* Themes (2 cột) */}
@@ -172,11 +190,15 @@ export function ReaderSettingsTab() {
           {THEMES.map((item) => {
             const isSelected = theme === item.id;
             return (
-              <button
+              <motion.button
                 key={item.id}
                 type="button"
-                onClick={() => setTheme(item.id)}
-                className={`py-2 px-3 rounded-xl border flex items-center gap-2 transition-all text-xs active:scale-95 ${
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  triggerHaptic('selection');
+                  setTheme(item.id);
+                }}
+                className={`py-2 px-3 rounded-xl border flex items-center gap-2 transition-all text-xs cursor-pointer ${
                   isSelected
                     ? 'bg-primary/20 hover:bg-primary/25 border-primary/50 text-primary font-black shadow-xs'
                     : 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface'
@@ -187,7 +209,7 @@ export function ReaderSettingsTab() {
                   style={{ backgroundColor: item.bg }}
                 />
                 <span className="font-bold text-xs truncate">{item.label}</span>
-              </button>
+              </motion.button>
             );
           })}
         </div>
@@ -201,17 +223,21 @@ export function ReaderSettingsTab() {
         </div>
         <div className="grid grid-cols-2 gap-2">
           {FONTS.map((item) => (
-            <button
+            <motion.button
               key={item.id}
-              onClick={() => setFont(item.id)}
-              className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all active:scale-95 text-center truncate ${
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                triggerHaptic('selection');
+                setFont(item.id);
+              }}
+              className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all text-center truncate cursor-pointer ${
                 font === item.id
                   ? 'bg-primary/20 hover:bg-primary/25 border-primary/50 text-primary font-black shadow-xs'
                   : 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface'
               }`}
             >
               {item.label}
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>

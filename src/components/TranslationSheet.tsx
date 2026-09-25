@@ -9,6 +9,8 @@ import { useToastStore } from '../stores/useToastStore';
 import { useReaderConfigStore } from '../stores/useReaderConfigStore';
 import { BottomSheet } from './BottomSheet';
 import { cn } from '../lib/utils';
+import { motion } from 'motion/react';
+import { triggerHaptic } from '../hooks/useHaptic';
 
 type Tab = 'current' | 'batch_chapter' | 'story';
 
@@ -791,13 +793,18 @@ export function TranslationSheet({
             <TabButton active={activeTab === 'batch_chapter'} onClick={() => setActiveTab('batch_chapter')}>Nhiều chương</TabButton>
             <TabButton active={activeTab === 'story'} onClick={() => setActiveTab('story')}>Truyện</TabButton>
           </div>
-          <button 
-            onClick={onClose} 
-            className="p-1.5 bg-white/10 border border-white/20 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all active:scale-95 shrink-0"
+          <motion.button 
+            whileTap={{ scale: 0.88 }}
+            onClick={() => {
+              triggerHaptic('light');
+              onClose();
+            }} 
+            className="w-8.5 h-8.5 bg-white/10 border border-white/20 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer shrink-0"
             title="Đóng"
+            aria-label="Đóng"
           >
-            <X size={15} />
-          </button>
+            <X size={16} />
+          </motion.button>
         </div>
       </div>
 
@@ -809,7 +816,7 @@ export function TranslationSheet({
             onClick={() => setShowConfig(!showConfig)}
           >
             <div className="flex items-center gap-2">
-              <Settings2 size={12} />
+              <Settings2 size={13} />
               <span>Cấu hình AI</span>
               {poolStatus && poolStatus.model === options.model && (
                 <span className="ml-2 text-[9px] font-bold text-on-surface-variant bg-white/10 px-1.5 py-0.5 rounded border border-blue-500/20 flex items-center gap-1">
@@ -819,34 +826,38 @@ export function TranslationSheet({
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <motion.button
+                whileTap={{ scale: 0.9 }}
                 onClick={(e) => {
                   e.stopPropagation();
+                  triggerHaptic('light');
                   handleDetectProperNouns();
                 }}
                 className={cn(
-                  "p-1.5 rounded-lg transition-all active:scale-95 border bg-white/5 border-blue-500/20 text-on-surface-variant hover:text-on-surface hover:bg-white/10"
+                  "w-7.5 h-7.5 rounded-lg transition-colors border bg-white/5 border-blue-500/20 text-on-surface-variant hover:text-on-surface hover:bg-white/10 flex items-center justify-center cursor-pointer"
                 )}
                 title="Phát hiện xưng hô / danh từ riêng"
                 aria-label="Phát hiện xưng hô / danh từ riêng"
               >
-                <UserCheck size={12} />
-              </button>
+                <UserCheck size={14} />
+              </motion.button>
 
-              <button
+              <motion.button
+                whileTap={{ scale: 0.9 }}
                 onClick={(e) => {
                   e.stopPropagation();
+                  triggerHaptic('light');
                   handleTranslateChineseTitles();
                 }}
                 className={cn(
-                  "p-1.5 rounded-lg transition-all active:scale-95 border bg-white/5 border-blue-500/20 text-on-surface-variant hover:text-on-surface hover:bg-white/10"
+                  "w-7.5 h-7.5 rounded-lg transition-colors border bg-white/5 border-blue-500/20 text-on-surface-variant hover:text-on-surface hover:bg-white/10 flex items-center justify-center cursor-pointer"
                 )}
                 title="Dịch tiêu đề tiếng Trung"
                 aria-label="Dịch tiêu đề tiếng Trung"
               >
-                <Heading size={12} />
-              </button>
-              {showConfig ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                <Heading size={14} />
+              </motion.button>
+              {showConfig ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
             </div>
           </div>
           
@@ -1227,10 +1238,16 @@ export function TranslationSheet({
 
 function TabButton({ active, children, onClick, disabled }: { active: boolean, children: React.ReactNode, onClick: () => void, disabled?: boolean }) {
   return (
-    <button 
-      onClick={onClick} 
+    <motion.button 
+      whileTap={!disabled ? { scale: 0.94 } : undefined}
+      onClick={() => {
+        if (!disabled) {
+          triggerHaptic('selection');
+          onClick();
+        }
+      }} 
       disabled={disabled}
-      className={`flex-1 py-1 text-[11px] font-bold rounded-md transition-all duration-200 ${
+      className={`flex-1 py-1.5 min-h-[32px] text-xs font-bold rounded-md transition-all duration-200 flex items-center justify-center ${
         disabled 
           ? 'opacity-30 cursor-not-allowed bg-transparent text-on-surface-variant' 
           : active 
@@ -1239,7 +1256,7 @@ function TabButton({ active, children, onClick, disabled }: { active: boolean, c
       }`}
     >
       {children}
-    </button>
+    </motion.button>
   );
 }
 

@@ -1,6 +1,8 @@
 import { X, Server, BookOpen, Volume2, Sparkles, RefreshCw, Music } from 'lucide-react';
 import { useModalStore } from '../../stores/useModalStore';
 import { BottomSheet } from '../../components/BottomSheet';
+import { motion } from 'motion/react';
+import { triggerHaptic } from '../../hooks/useHaptic';
 import { ServerTab } from './components/ServerTab';
 import { ReaderSettingsTab } from './components/ReaderSettingsTab';
 import { VoiceSettingsTab } from './components/VoiceSettingsTab';
@@ -52,12 +54,18 @@ export function GlobalSettingsSheet({
               Settings & Preferences
             </p>
           </div>
-          <button
-            onClick={closeSettings}
-            className="p-1 rounded-full bg-surface-container-high border border-outline-variant/40 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all active:scale-95"
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={() => {
+              triggerHaptic('light');
+              closeSettings();
+            }}
+            className="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/40 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors flex items-center justify-center cursor-pointer"
+            title="Đóng"
+            aria-label="Đóng"
           >
-            <X size={15} />
-          </button>
+            <X size={16} />
+          </motion.button>
         </div>
 
         {/* Smooth Capsule Container */}
@@ -66,23 +74,28 @@ export function GlobalSettingsSheet({
             const Icon = tab.icon;
             const isActive = activeSettingsTab === tab.id;
             return (
-              <button
+              <motion.button
                 key={tab.id}
-                onClick={() => setSettingsTab(tab.id as any)}
+                whileTap={{ scale: 0.93 }}
+                onClick={() => {
+                  triggerHaptic('selection');
+                  setSettingsTab(tab.id as any);
+                }}
                 title={tab.label}
-                className={`transition-all duration-300 flex items-center justify-center active:scale-95 ${
+                aria-label={tab.label}
+                className={`min-h-[36px] transition-all duration-200 flex items-center justify-center cursor-pointer ${
                   isActive
                     ? 'px-3 py-1.5 rounded-xl bg-primary/20 hover:bg-primary/30 border border-primary/60 text-primary font-black shadow-xs gap-1.5 flex-1'
-                    : 'p-1.5 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
+                    : 'p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container min-w-[36px]'
                 }`}
               >
-                <Icon size={15} className={isActive ? 'text-primary' : 'text-primary/70'} />
+                <Icon size={16} className={isActive ? 'text-primary' : 'text-primary/70'} />
                 {isActive && (
                   <span className="text-xs tracking-tight font-black whitespace-nowrap animate-in fade-in duration-200">
                     {tab.label}
                   </span>
                 )}
-              </button>
+              </motion.button>
             );
           })}
         </div>

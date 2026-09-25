@@ -6,6 +6,8 @@ import { X, Clock, BookOpen, Sparkles, Layers, Search, RefreshCw } from 'lucide-
 import { useGlobalLoading } from '../../../hooks/useGlobalLoading';
 import { BottomSheet } from '../../../components/BottomSheet';
 import { openChapter } from '../../../shared/utils/openChapter';
+import { motion } from 'motion/react';
+import { triggerHaptic } from '../../../hooks/useHaptic';
 
 interface QuickBookHistorySheetProps {
   currentBookId?: string;
@@ -93,10 +95,14 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
     const readCount = book.lastReadChapter?.chapterNumber || (book.totalTranslated > 0 ? 1 : 0);
 
     return (
-      <div
+      <motion.div
         key={book.bookId}
-        onClick={() => handleSwapBook(book)}
-        className={`group relative z-10 rounded-xl p-2.5 transition-all duration-150 cursor-pointer flex items-center justify-between gap-2.5 shadow-xs hover:shadow-md overflow-hidden active:scale-[0.99] ${
+        whileTap={{ scale: 0.98 }}
+        onClick={() => {
+          triggerHaptic('light');
+          handleSwapBook(book);
+        }}
+        className={`group relative z-10 rounded-xl p-2.5 transition-colors cursor-pointer flex items-center justify-between gap-2.5 shadow-xs hover:shadow-md overflow-hidden ${
           isPinned
             ? 'bg-primary/20 hover:bg-primary/25 border border-primary/50 border-l-4 border-l-primary text-primary shadow-xs'
             : 'bg-white/[0.04] dark:bg-white/[0.04] hover:bg-white/[0.08] dark:hover:bg-white/[0.08] border border-white/10 dark:border-white/10 border-l-4 border-l-primary shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.15)] hover:border-primary/50 text-on-surface'
@@ -169,7 +175,7 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
             </span>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   };
 
@@ -190,12 +196,18 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
           <h3 className="text-xs font-black text-on-surface tracking-tight flex items-center gap-1.5 uppercase">
             <Clock size={15} className="text-primary" /> LỊCH SỬ ĐỌC TRUYỆN ({historyBooks.length})
           </h3>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors"
+          <motion.button
+            whileTap={{ scale: 0.88 }}
+            onClick={() => {
+              triggerHaptic('light');
+              onClose();
+            }}
+            className="w-9 h-9 rounded-full hover:bg-white/10 text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center cursor-pointer"
+            title="Đóng"
+            aria-label="Đóng"
           >
-            <X size={15} />
-          </button>
+            <X size={16} />
+          </motion.button>
         </div>
 
         {/* Search Input Bar */}
@@ -206,7 +218,7 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
             className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60 hover:text-primary transition-colors cursor-pointer"
             title="Bấm để tìm kiếm"
           >
-            <Search size={13} />
+            <Search size={14} />
           </button>
           <input
             type="text"
@@ -218,16 +230,20 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
                 handleSearchSubmit();
               }
             }}
-            className="w-full pl-8 pr-7 py-1.5 rounded-xl bg-white/10 dark:bg-white/10 border border-white/15 text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] transition-all"
+            className="w-full pl-9 pr-8 py-2 rounded-xl bg-white/10 dark:bg-white/10 border border-white/15 text-sm sm:text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] transition-all"
           />
           {searchQuery && (
-            <button
-              onClick={() => handleSearchChange('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-on-surface-variant/60 hover:text-on-surface active:scale-90 transition-all"
+            <motion.button
+              whileTap={{ scale: 0.85 }}
+              onClick={() => {
+                triggerHaptic('light');
+                handleSearchChange('');
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface"
               title="Xóa từ khóa"
             >
-              <X size={12} />
-            </button>
+              <X size={13} />
+            </motion.button>
           )}
         </div>
       </div>
