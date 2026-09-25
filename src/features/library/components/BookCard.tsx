@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Book } from '../../../shared/types';
-import { Sparkles, BookOpen, ExternalLink, Trash2, Clock, Download, AlertCircle, Heart } from 'lucide-react';
+import { Sparkles, BookOpen, Trash2, Heart, MoreVertical, AlertCircle } from 'lucide-react';
 import { QuickBookSheet } from './QuickBookSheet';
+import { BookActionSheet } from './BookActionSheet';
 import { TranslationSheet } from '../../../components/TranslationSheet';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useToastStore } from '../../../stores/useToastStore';
@@ -12,6 +13,7 @@ import { downloadManager } from '../../../lib/DownloadManager';
 import { BookRepository } from '../../../repositories/BookRepository';
 import { openChapter } from '../../../shared/utils/openChapter';
 import { triggerHaptic } from '../../../hooks/useHaptic';
+import { useLongPress } from '../../../hooks/useLongPress';
 
 interface BookCardProps {
   key?: React.Key;
@@ -24,21 +26,28 @@ interface BookCardProps {
   onTagClick?: (tag: string) => void;
 }
 
-export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMode }: BookCardProps) {
+export const BookCard = React.memo(function BookCard({
+  book,
+  activeTab,
+  onSelect,
+  isSelected,
+  isSelectionMode,
+  onTagClick,
+}: BookCardProps) {
   const navigate = useNavigate();
   const [showQuickSheet, setShowQuickSheet] = useState(false);
+  const [showActionSheet, setShowActionSheet] = useState(false);
   const [showTranslationSheet, setShowTranslationSheet] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
-  const [isSwipedOpen, setIsSwipedOpen] = useState(false);
-  const [isSwipedOpenLeft, setIsSwipedOpenLeft] = useState(false);
-  const [isSwiping, setIsSwiping] = useState(false);
   const [deleteConfirmType, setDeleteConfirmType] = useState<'ONLINE' | 'OFFLINE' | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const isOfflineMode = useAppStore((state) => state.isOfflineMode);
   const showToast = useToastStore((state) => state.showToast);
 
-  const isFav = useFavoriteStore((state) => state.favoriteBookIds.includes(book.bookId)) || Boolean(book.isFavorite);
+  const isFav =
+    useFavoriteStore((state) => state.favoriteBookIds.includes(book.bookId)) ||
+    Boolean(book.isFavorite);
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -47,7 +56,9 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
       const res = await BookRepository.toggleFavorite(book.bookId);
       triggerHaptic('success');
       showToast(
-        res.isFavorite ? `Đã thêm "${book.bookName}" vào yêu thích` : `Đã bỏ "${book.bookName}" khỏi yêu thích`,
+        res.isFavorite
+          ? `Đã thêm "${book.bookName}" vào yêu thích`
+          : `Đã bỏ "${book.bookName}" khỏi yêu thích`,
         'success'
       );
       window.dispatchEvent(new CustomEvent('favorites-updated'));
@@ -64,211 +75,9 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
     offlineDb.getBook(book.bookId).then((b) => setIsDownloaded(Boolean(b)));
   }, [book.bookId]);
 
-  // Auto-close open swipe menu when page is scrolled or when user moves vertically
-  useEffect(() => {
-    if (!isSwipedOpen && !isSwipedOpenLeft) return;
-
-    const handleAutoClose = () => {
-      setIsSwipedOpen(false);
-      setIsSwipedOpenLeft(false);
-    };
-
-    window.addEventListener('scroll', handleAutoClose, { passive: true, capture: true });
-    return () => {
-      window.removeEventListener('scroll', handleAutoClose, { capture: true });
-    };
-  }, [isSwipedOpen, isSwipedOpenLeft]);
-
-  // Listen for global event to close all other open swipe menus when another card is touched
-  useEffect(() => {
-    const handleCloseSwipes = (e: Event) => {
-      const customEv = e as CustomEvent;
-      if (customEv.detail?.exceptBookId !== book.bookId) {
-        setIsSwipedOpen(false);
-        setIsSwipedOpenLeft(false);
-      }
-    };
-
-    window.addEventListener('close-all-swipes', handleCloseSwipes);
-    return () => {
-      window.removeEventListener('close-all-swipes', handleCloseSwipes);
-    };
-  }, [book.bookId]);
-
-  const touchStartXRef = useRef<number | null>(null);
-  const touchStartYRef = useRef<number | null>(null);
-  const isDraggingRef = useRef<boolean>(false);
-  const isScrollingYRef = useRef<boolean>(false);
-  const swipeInitialStateRef = useRef<'CLOSED' | 'OPEN_LEFT' | 'OPEN_RIGHT'>('CLOSED');
-  const hasTriggeredThresholdHapticRef = useRef<boolean>(false);
-  const cardElementRef = useRef<HTMLDivElement | null>(null);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    window.dispatchEvent(new CustomEvent('close-all-swipes', { detail: { exceptBookId: book.bookId } }));
-    touchStartXRef.current = e.touches[0].clientX;
-    touchStartYRef.current = e.touches[0].clientY;
-    isDraggingRef.current = false;
-    isScrollingYRef.current = false;
-    hasTriggeredThresholdHapticRef.current = false;
-    setIsSwiping(true);
-
-    if (isSwipedOpenLeft) {
-      swipeInitialStateRef.current = 'OPEN_LEFT';
-    } else if (isSwipedOpen) {
-      swipeInitialStateRef.current = 'OPEN_RIGHT';
-    } else {
-      swipeInitialStateRef.current = 'CLOSED';
-    }
-
-    if (cardElementRef.current) {
-      cardElementRef.current.style.transition = 'none';
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
-    if (isScrollingYRef.current) return;
-
-    const currentX = e.touches[0].clientX;
-    const currentY = e.touches[0].clientY;
-    const deltaX = currentX - touchStartXRef.current;
-    const deltaY = currentY - touchStartYRef.current;
-
-    // Lock direction on initial drag movement
-    if (!isDraggingRef.current && !isScrollingYRef.current) {
-      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 6) {
-        isScrollingYRef.current = true;
-        setIsSwiping(false);
-        if (isSwipedOpen || isSwipedOpenLeft) {
-          setIsSwipedOpen(false);
-          setIsSwipedOpenLeft(false);
-        }
-        return;
-      }
-      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 6) {
-        isDraggingRef.current = true;
-      }
-    }
-
-    if (isDraggingRef.current && cardElementRef.current) {
-      // Haptic bump when passing swipe threshold
-      if (Math.abs(deltaX) > 45 && !hasTriggeredThresholdHapticRef.current) {
-        triggerHaptic('medium');
-        hasTriggeredThresholdHapticRef.current = true;
-      } else if (Math.abs(deltaX) < 25 && hasTriggeredThresholdHapticRef.current) {
-        hasTriggeredThresholdHapticRef.current = false;
-      }
-
-      const initialState = swipeInitialStateRef.current;
-
-      if (initialState === 'OPEN_LEFT') {
-        let newTranslateX = actionTrayLeftWidth + deltaX;
-        if (newTranslateX < 0) {
-          newTranslateX = 0;
-        } else if (newTranslateX > actionTrayLeftWidth) {
-          const overflow = newTranslateX - actionTrayLeftWidth;
-          newTranslateX = actionTrayLeftWidth + overflow * 0.2;
-        }
-        cardElementRef.current.style.transform = `translateX(${newTranslateX}px)`;
-      } else if (initialState === 'OPEN_RIGHT') {
-        let newTranslateX = -actionTrayWidth + deltaX;
-        if (newTranslateX > 0) {
-          newTranslateX = 0;
-        } else if (newTranslateX < -actionTrayWidth) {
-          const overflow = newTranslateX + actionTrayWidth;
-          newTranslateX = -actionTrayWidth + overflow * 0.2;
-        }
-        cardElementRef.current.style.transform = `translateX(${newTranslateX}px)`;
-      } else {
-        let newTranslateX = deltaX;
-        if (!isOfflineMode) {
-          if (newTranslateX > actionTrayLeftWidth) {
-            const overflow = newTranslateX - actionTrayLeftWidth;
-            newTranslateX = actionTrayLeftWidth + overflow * 0.2;
-          } else if (newTranslateX < -actionTrayWidth) {
-            const overflow = newTranslateX + actionTrayWidth;
-            newTranslateX = -actionTrayWidth + overflow * 0.2;
-          }
-        } else {
-          if (newTranslateX > 0) {
-            newTranslateX = newTranslateX * 0.2;
-          } else if (newTranslateX < -actionTrayWidth) {
-            const overflow = newTranslateX + actionTrayWidth;
-            newTranslateX = -actionTrayWidth + overflow * 0.2;
-          }
-        }
-        cardElementRef.current.style.transform = `translateX(${newTranslateX}px)`;
-      }
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    setIsSwiping(false);
-    if (cardElementRef.current) {
-      cardElementRef.current.style.transition = 'transform 280ms cubic-bezier(0.25, 1, 0.5, 1)';
-    }
-
-    if (isDraggingRef.current && touchStartXRef.current !== null) {
-      const touchEndX = e.changedTouches[0]?.clientX ?? touchStartXRef.current;
-      const deltaX = touchEndX - touchStartXRef.current;
-      const initialState = swipeInitialStateRef.current;
-
-      if (initialState === 'OPEN_LEFT') {
-        if (deltaX < -20) {
-          setIsSwipedOpenLeft(false);
-          setIsSwipedOpen(false);
-          if (cardElementRef.current) cardElementRef.current.style.transform = 'translateX(0px)';
-        } else {
-          triggerHaptic('selection');
-          setIsSwipedOpenLeft(true);
-          setIsSwipedOpen(false);
-          if (cardElementRef.current) cardElementRef.current.style.transform = `translateX(${actionTrayLeftWidth}px)`;
-        }
-      } else if (initialState === 'OPEN_RIGHT') {
-        if (deltaX > 20) {
-          setIsSwipedOpen(false);
-          setIsSwipedOpenLeft(false);
-          if (cardElementRef.current) cardElementRef.current.style.transform = 'translateX(0px)';
-        } else {
-          triggerHaptic('selection');
-          setIsSwipedOpen(true);
-          setIsSwipedOpenLeft(false);
-          if (cardElementRef.current) cardElementRef.current.style.transform = `translateX(-${actionTrayWidth}px)`;
-        }
-      } else {
-        if (!isOfflineMode && deltaX > 45) {
-          triggerHaptic('selection');
-          setIsSwipedOpenLeft(true);
-          setIsSwipedOpen(false);
-          if (cardElementRef.current) cardElementRef.current.style.transform = `translateX(${actionTrayLeftWidth}px)`;
-        } else if (deltaX < -45) {
-          triggerHaptic('selection');
-          setIsSwipedOpen(true);
-          setIsSwipedOpenLeft(false);
-          if (cardElementRef.current) cardElementRef.current.style.transform = `translateX(-${actionTrayWidth}px)`;
-        } else {
-          setIsSwipedOpenLeft(false);
-          setIsSwipedOpen(false);
-          if (cardElementRef.current) cardElementRef.current.style.transform = 'translateX(0px)';
-        }
-      }
-    }
-
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
-    isDraggingRef.current = false;
-    isScrollingYRef.current = false;
-    hasTriggeredThresholdHapticRef.current = false;
-  };
-
   const handleCardClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     triggerHaptic('light');
-    if (isSwipedOpen || isSwipedOpenLeft) {
-      setIsSwipedOpen(false);
-      setIsSwipedOpenLeft(false);
-      return;
-    }
 
     if (isSelectionMode && onSelect) {
       onSelect(book.bookId);
@@ -284,36 +93,24 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
     }
   };
 
-  const handleOpenNewTab = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsSwipedOpen(false);
-    setIsSwipedOpenLeft(false);
+  const handleReadContinue = () => {
+    if (book.lastReadChapter?.chapterId) {
+      openChapter(book.bookId, book.lastReadChapter.chapterId);
+    } else {
+      setShowQuickSheet(true);
+    }
+  };
+
+  const handleOpenNewTab = () => {
     const url = book.lastReadChapter?.chapterId
       ? `#/book/${book.bookId}/chapter/${book.lastReadChapter.chapterId}`
       : `#/book/${book.bookId}`;
     window.open(url, '_blank');
   };
 
-  const handleDownloadBook = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsSwipedOpen(false);
-    setIsSwipedOpenLeft(false);
+  const handleDownloadBook = () => {
     downloadManager.addBook(book.bookId, book.bookName);
     showToast(`Đã thêm "${book.bookName}" vào hàng đợi tải xuống`, 'info');
-  };
-
-  const handleOpenDeleteOfflineModal = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsSwipedOpen(false);
-    setIsSwipedOpenLeft(false);
-    setDeleteConfirmType('OFFLINE');
-  };
-
-  const handleOpenDeleteOnlineModal = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsSwipedOpen(false);
-    setIsSwipedOpenLeft(false);
-    setDeleteConfirmType('ONLINE');
   };
 
   const handleConfirmDelete = async () => {
@@ -352,87 +149,28 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
   };
 
   const formattedDate = formatDate(book.updatedAt || (book as any).lastedReadAt);
-  const actionTrayLeftWidth = 60;
-  const actionTrayWidth = isOfflineMode ? 120 : (isDownloaded ? 180 : 120);
 
-  const progressPct = book.chapterCount > 0
-    ? Math.min(100, Math.round((readCount / book.chapterCount) * 100))
-    : 0;
+  const progressPct =
+    book.chapterCount > 0
+      ? Math.min(100, Math.round((readCount / book.chapterCount) * 100))
+      : 0;
+
+  // Use long-press hook for tactile contextual menu without interfering with scrolling
+  const longPressHandlers = useLongPress({
+    threshold: 400,
+    moveTolerance: 10,
+    onLongPress: () => {
+      setShowActionSheet(true);
+    },
+    onClick: handleCardClick,
+  });
 
   return (
     <>
       <div className="relative overflow-hidden rounded-2xl w-full select-none">
-        {/* Background Native Mobile Swipe Left Action Tiles (Online Delete Button) */}
-        {!isOfflineMode && (
-          <div
-            className={`absolute inset-y-0 left-0 z-0 flex items-center justify-start overflow-hidden rounded-l-2xl h-full transition-opacity duration-150 ${
-              isSwipedOpenLeft ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
-          >
-            <button
-              onClick={handleOpenDeleteOnlineModal}
-              className="w-[60px] h-full bg-rose-600 hover:bg-rose-700 text-white flex flex-col items-center justify-center font-mono text-[10px] font-black gap-0.5 active:scale-95 transition-all shadow-inner"
-              title="Xóa bộ truyện khỏi hệ thống"
-            >
-              <Trash2 size={18} />
-              <span className="leading-none mt-0.5">XÓA</span>
-            </button>
-          </div>
-        )}
-
-        {/* Background Native Mobile Swipe Right Action Tiles (Theme-Synced) */}
+        {/* Main Card */}
         <div
-          className={`absolute inset-y-0 right-0 z-0 flex items-center justify-end overflow-hidden rounded-r-2xl h-full transition-opacity duration-150 ${
-            isSwipedOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
-        >
-          {/* Download Action Tile (Online Only) */}
-          {!isOfflineMode && (
-            <button
-              onClick={handleDownloadBook}
-              className="w-[60px] h-full bg-primary hover:opacity-90 text-on-primary flex flex-col items-center justify-center font-mono text-[10px] font-black gap-0.5 active:scale-95 transition-all shadow-inner"
-              title="Tải về bộ truyện"
-            >
-              <Download size={18} />
-              <span className="leading-none mt-0.5">TẢI VỀ</span>
-            </button>
-          )}
-
-          {/* Open in New Tab Action Tile */}
-          <button
-            onClick={handleOpenNewTab}
-            className="w-[60px] h-full bg-surface-container-highest hover:bg-surface-container-high text-on-surface border-l border-outline-variant/30 flex flex-col items-center justify-center font-mono text-[10px] font-black gap-0.5 active:scale-95 transition-all shadow-inner"
-            title="Mở trong tab mới"
-          >
-            <ExternalLink size={18} />
-            <span className="leading-none mt-0.5">MỞ TAB</span>
-          </button>
-
-          {/* Delete Offline Action Tile */}
-          {(isOfflineMode || isDownloaded) && (
-            <button
-              onClick={handleOpenDeleteOfflineModal}
-              className="w-[60px] h-full bg-rose-600/90 hover:bg-rose-600 text-white flex flex-col items-center justify-center font-mono text-[10px] font-black gap-0.5 active:scale-95 transition-all shadow-inner"
-              title="Xóa khỏi máy"
-            >
-              <Trash2 size={18} />
-              <span className="leading-none mt-0.5">XÓA</span>
-            </button>
-          )}
-        </div>
-
-        {/* Foreground Sliding Main Card */}
-        <div
-          ref={cardElementRef}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onClick={handleCardClick}
-          style={{
-            transform: isSwipedOpenLeft
-              ? `translateX(${actionTrayLeftWidth}px)`
-              : (isSwipedOpen ? `translateX(-${actionTrayWidth}px)` : 'translateX(0px)'),
-          }}
+          {...longPressHandlers}
           className={`group relative z-10 rounded-2xl border p-2 sm:p-2.5 transition-all duration-200 ease-out cursor-pointer flex items-center gap-2.5 overflow-hidden active:scale-[0.99] ${
             isSelected
               ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary shadow-[0_4px_20px_rgba(245,158,11,0.35),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] text-primary'
@@ -446,18 +184,22 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
               {book.chapterCount > 9999 ? `${(book.chapterCount / 1000).toFixed(1)}k` : book.chapterCount} ch
             </span>
             {isDownloaded && (
-              <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" title="Đã tải offline" />
+              <span
+                className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
+                title="Đã tải offline"
+              />
             )}
           </div>
 
           {/* Right: Rich Content Details (Compact Mobile First Layout) */}
           <div className="flex-1 min-w-0 space-y-1">
-            {/* Row 1: Title + Favorite Heart + Date */}
+            {/* Row 1: Title + Action Buttons (Favorite + 3-Dot More) + Date */}
             <div className="flex items-start justify-between gap-1.5 min-w-0">
               <h3 className="text-[13px] font-bold text-on-surface leading-snug tracking-tight group-hover:text-primary transition-colors line-clamp-2 min-w-0 flex-1">
                 {book.bookName}
               </h3>
               <div className="flex items-center gap-1 shrink-0 pt-0.5">
+                {/* Favorite Button */}
                 <button
                   type="button"
                   onClick={handleToggleFavorite}
@@ -467,13 +209,30 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
                       : 'text-on-surface-variant/40 hover:text-rose-400 hover:bg-rose-500/10'
                   }`}
                   title={isFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
+                  aria-label={isFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
                 >
                   <Heart
                     size={13}
                     className={isFav ? 'fill-rose-500 text-rose-500' : ''}
                   />
                 </button>
-                <span className="text-[9px] font-mono text-on-surface-variant/60 whitespace-nowrap">
+
+                {/* 3-Dot Quick Action Menu Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerHaptic('light');
+                    setShowActionSheet(true);
+                  }}
+                  className="p-0.5 rounded-full text-on-surface-variant/40 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 cursor-pointer"
+                  title="Tùy chọn thao tác"
+                  aria-label={`Tùy chọn cho truyện ${book.bookName}`}
+                >
+                  <MoreVertical size={13} />
+                </button>
+
+                <span className="text-[9px] font-mono text-on-surface-variant/60 whitespace-nowrap ml-0.5">
                   {formattedDate}
                 </span>
               </div>
@@ -517,7 +276,14 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
                     {book.tags.slice(0, 2).map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center px-1.5 py-0.25 rounded-md text-[8.5px] font-bold bg-primary/15 text-primary truncate max-w-[65px] border border-primary/30"
+                        onClick={(e) => {
+                          if (onTagClick) {
+                            e.stopPropagation();
+                            triggerHaptic('light');
+                            onTagClick(tag);
+                          }
+                        }}
+                        className="inline-flex items-center px-1.5 py-0.25 rounded-md text-[8.5px] font-bold bg-primary/15 text-primary truncate max-w-[65px] border border-primary/30 cursor-pointer hover:bg-primary/25"
                       >
                         #{tag}
                       </span>
@@ -563,6 +329,26 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
           </div>
         </div>
       </div>
+
+      {/* Modern Quick Action Bottom Sheet */}
+      <BookActionSheet
+        book={book}
+        isOpen={showActionSheet}
+        onClose={() => setShowActionSheet(false)}
+        isDownloaded={isDownloaded}
+        isOfflineMode={isOfflineMode}
+        isFavorite={isFav}
+        readCount={readCount}
+        unTranslatedCount={unTranslatedCount}
+        onReadContinue={handleReadContinue}
+        onOpenQuickSheet={() => setShowQuickSheet(true)}
+        onOpenTranslationSheet={() => setShowTranslationSheet(true)}
+        onDownloadBook={handleDownloadBook}
+        onOpenDeleteOffline={() => setDeleteConfirmType('OFFLINE')}
+        onOpenDeleteOnline={() => setDeleteConfirmType('ONLINE')}
+        onToggleFavorite={handleToggleFavorite}
+        onOpenNewTab={handleOpenNewTab}
+      />
 
       {showQuickSheet && (
         <QuickBookSheet book={book} onClose={() => setShowQuickSheet(false)} />
@@ -643,4 +429,3 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
     </>
   );
 });
-
