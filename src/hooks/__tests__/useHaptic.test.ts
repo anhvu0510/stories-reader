@@ -62,4 +62,43 @@ describe('useHaptic & triggerHaptic', () => {
     });
     expect(vibrateMock).toHaveBeenCalledWith(15);
   });
+
+  it('synthesizes Web Audio feedback when AudioContext is supported', async () => {
+    const { playFeedbackSound } = await import('../useHaptic');
+
+    const mockOscillator = {
+      connect: vi.fn(),
+      type: 'sine',
+      frequency: {
+        setValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn(),
+      },
+      start: vi.fn(),
+      stop: vi.fn(),
+    };
+
+    const mockGain = {
+      connect: vi.fn(),
+      gain: {
+        setValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn(),
+      },
+    };
+
+    const mockAudioContext = vi.fn().mockImplementation(function (this: any) {
+      this.state = 'running';
+      this.currentTime = 0;
+      this.destination = {};
+      this.createOscillator = vi.fn().mockReturnValue(mockOscillator);
+      this.createGain = vi.fn().mockReturnValue(mockGain);
+      this.resume = vi.fn().mockResolvedValue(undefined);
+    });
+
+    (window as any).AudioContext = mockAudioContext;
+
+    const played = playFeedbackSound('selection');
+    expect(played).toBe(true);
+    expect(mockOscillator.start).toHaveBeenCalled();
+    expect(mockOscillator.stop).toHaveBeenCalled();
+  });
 });
