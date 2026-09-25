@@ -7,16 +7,6 @@ export type HapticFeedbackType =
   | 'warning'
   | 'error';
 
-const HAPTIC_PATTERNS: Record<HapticFeedbackType, number | number[]> = {
-  light: 8,
-  medium: 15,
-  heavy: 25,
-  selection: 6,
-  success: [10, 30, 15],
-  warning: [15, 40, 15],
-  error: [20, 50, 20, 50, 30],
-};
-
 let sharedAudioContext: AudioContext | null = null;
 
 function getAudioContext(): AudioContext | null {
@@ -57,15 +47,15 @@ export function playFeedbackSound(_type?: HapticFeedbackType): boolean {
     osc.connect(gain);
     gain.connect(ctx.destination);
 
-    // Single unified tactile micro-click for all operations
+    // Single unified tactile micro-click for all operations with clear, audible volume
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(1050, now);
-    osc.frequency.exponentialRampToValueAtTime(320, now + 0.016);
-    gain.gain.setValueAtTime(0.055, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.016);
+    osc.frequency.setValueAtTime(1100, now);
+    osc.frequency.exponentialRampToValueAtTime(300, now + 0.02);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.02);
 
     osc.start(now);
-    osc.stop(now + 0.018);
+    osc.stop(now + 0.022);
 
     return true;
   } catch {
@@ -74,37 +64,22 @@ export function playFeedbackSound(_type?: HapticFeedbackType): boolean {
 }
 
 /**
- * Triggers tactile & audio feedback:
- * 1. Plays crisp UI micro-sound via Web Audio API (cross-platform: iOS, Android, Desktop).
- * 2. Concurrently triggers hardware vibration if navigator.vibrate is supported.
+ * Triggers audio feedback on user tap/click/hold.
+ * Hardware vibration has been removed; purely emits clear tactile click sound.
  */
 export function triggerHaptic(type: HapticFeedbackType = 'light'): boolean {
-  const soundPlayed = playFeedbackSound(type);
-
-  let vibratePlayed = false;
-  if (
-    typeof window !== 'undefined' &&
-    typeof navigator !== 'undefined' &&
-    typeof navigator.vibrate === 'function'
-  ) {
-    try {
-      vibratePlayed = navigator.vibrate(HAPTIC_PATTERNS[type]);
-    } catch {
-      vibratePlayed = false;
-    }
-  }
-
-  return soundPlayed || vibratePlayed;
+  return playFeedbackSound(type);
 }
+
+export const triggerSound = triggerHaptic;
 
 export function useHaptic() {
   const isSupported =
     typeof window !== 'undefined' &&
-    (typeof (
+    typeof (
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    ) === 'function' ||
-      (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function'));
+    ) === 'function';
 
   return {
     trigger: triggerHaptic,
@@ -112,3 +87,5 @@ export function useHaptic() {
     isSupported,
   };
 }
+
+export const useSoundFeedback = useHaptic;
