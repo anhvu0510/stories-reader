@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Book } from '../../../shared/types';
 import { Sparkles, BookOpen, Trash2, Heart, MoreVertical, AlertCircle } from 'lucide-react';
 import { QuickBookSheet } from './QuickBookSheet';
-import { BookActionSheet } from './BookActionSheet';
+import { BookFloatMenu } from './BookFloatMenu';
 import { TranslationSheet } from '../../../components/TranslationSheet';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useToastStore } from '../../../stores/useToastStore';
@@ -330,8 +330,8 @@ export const BookCard = React.memo(function BookCard({
         </div>
       </div>
 
-      {/* Modern Quick Action Bottom Sheet */}
-      <BookActionSheet
+      {/* Modern Quick Action Float Menu */}
+      <BookFloatMenu
         book={book}
         isOpen={showActionSheet}
         onClose={() => setShowActionSheet(false)}

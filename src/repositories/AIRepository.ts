@@ -42,5 +42,13 @@ export class AIRepository {
   static async translateChineseTitles(params: { bookId?: string; batchSize?: number; limitChapter?: number; model?: string; platform?: string }): Promise<any> {
     return apiClient.post('/stories/translate-chinese-titles', params);
   }
+
+  static async detectPronounMatrix(params: { bookId: string; model?: string; batchChars?: number; maxChapters?: number; platform?: string }): Promise<any> {
+    return apiClient.post('/stories/detect-pronoun-matrix', params);
+  }
+
+  static async detectTagsAndPov(params: { bookId: string; model?: string; maxChars?: number; platform?: string }): Promise<any> {
+    return apiClient.post('/stories/detect-tags-and-pov', params);
+  }
 }
 

@@ -41,11 +41,16 @@ describe('BookCard Quick Action Menu & Long Press', () => {
 
     fireEvent.click(moreButton);
 
-    // Bottom sheet dialog should be visible with actions
+    // Dialog should be visible with actions
     expect(screen.getByRole('dialog', { name: /Thao tác cho truyện Vũ Động Càn Khôn/i })).toBeDefined();
-    expect(screen.getByText(/Đọc tiếp Chương 10/i)).toBeDefined();
-    expect(screen.getByText(/Mục lục & Danh sách chương/i)).toBeDefined();
-    expect(screen.getByText(/Dịch thuật AI hàng loạt/i)).toBeDefined();
+    expect(screen.getByText('Đọc tiếp')).toBeDefined();
+    expect(screen.getByText('Mục lục')).toBeDefined();
+    expect(screen.getByText('Dịch AI')).toBeDefined();
+    expect(screen.getByText('Dịch tiêu đề')).toBeDefined();
+    expect(screen.getByText('Dịch tên')).toBeDefined();
+    expect(screen.getByText('Dịch POV')).toBeDefined();
+    expect(screen.getByText('Tab mới')).toBeDefined();
+    expect(screen.getByText('Tải về')).toBeDefined();
   });
 
   it('opens BookActionSheet on touch long-press (after 400ms hold)', () => {
@@ -74,4 +79,37 @@ describe('BookCard Quick Action Menu & Long Press', () => {
 
     vi.useRealTimers();
   });
+
+  it('triggers AI API calls when clicking Dịch tiêu đề, Dịch tên, Dịch POV without waiting', async () => {
+    const { AIRepository } = await import('../../../../repositories/AIRepository');
+    vi.spyOn(AIRepository, 'translateChineseTitles').mockResolvedValue({});
+    vi.spyOn(AIRepository, 'detectProperNouns').mockResolvedValue({});
+    vi.spyOn(AIRepository, 'detectTagsAndPov').mockResolvedValue({ tags: ['Tiên Hiệp'], pointOfView: 'Ngôi thứ 3' });
+
+    render(
+      <MemoryRouter>
+        <BookCard book={mockBook} activeTab="ALL" />
+      </MemoryRouter>
+    );
+
+    const moreButton = screen.getByRole('button', { name: /Tùy chọn cho truyện Vũ Động Càn Khôn/i });
+    fireEvent.click(moreButton);
+
+    const titleBtn = screen.getByText('Dịch tiêu đề');
+    fireEvent.click(titleBtn);
+    expect(AIRepository.translateChineseTitles).toHaveBeenCalledWith({ bookId: 'book-action-test-1' });
+
+    // Open again
+    fireEvent.click(moreButton);
+    const nameBtn = screen.getByText('Dịch tên');
+    fireEvent.click(nameBtn);
+    expect(AIRepository.detectProperNouns).toHaveBeenCalledWith({ bookId: 'book-action-test-1' });
+
+    // Open again
+    fireEvent.click(moreButton);
+    const povBtn = screen.getByText('Dịch POV');
+    fireEvent.click(povBtn);
+    expect(AIRepository.detectTagsAndPov).toHaveBeenCalledWith({ bookId: 'book-action-test-1' });
+  });
 });
+
