@@ -11,6 +11,7 @@ import { offlineDb } from '../../../lib/offlineDb';
 import { downloadManager } from '../../../lib/DownloadManager';
 import { BookRepository } from '../../../repositories/BookRepository';
 import { openChapter } from '../../../shared/utils/openChapter';
+import { triggerHaptic } from '../../../hooks/useHaptic';
 
 interface BookCardProps {
   key?: React.Key;
@@ -41,14 +42,17 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    triggerHaptic('selection');
     try {
       const res = await BookRepository.toggleFavorite(book.bookId);
+      triggerHaptic('success');
       showToast(
         res.isFavorite ? `Đã thêm "${book.bookName}" vào yêu thích` : `Đã bỏ "${book.bookName}" khỏi yêu thích`,
         'success'
       );
       window.dispatchEvent(new CustomEvent('favorites-updated'));
     } catch {
+      triggerHaptic('warning');
       showToast('Không thể cập nhật trạng thái yêu thích', 'error');
     }
   };
@@ -96,6 +100,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
   const isDraggingRef = useRef<boolean>(false);
   const isScrollingYRef = useRef<boolean>(false);
   const swipeInitialStateRef = useRef<'CLOSED' | 'OPEN_LEFT' | 'OPEN_RIGHT'>('CLOSED');
+  const hasTriggeredThresholdHapticRef = useRef<boolean>(false);
   const cardElementRef = useRef<HTMLDivElement | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -104,6 +109,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
     touchStartYRef.current = e.touches[0].clientY;
     isDraggingRef.current = false;
     isScrollingYRef.current = false;
+    hasTriggeredThresholdHapticRef.current = false;
     setIsSwiping(true);
 
     if (isSwipedOpenLeft) {
@@ -145,6 +151,14 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
     }
 
     if (isDraggingRef.current && cardElementRef.current) {
+      // Haptic bump when passing swipe threshold
+      if (Math.abs(deltaX) > 45 && !hasTriggeredThresholdHapticRef.current) {
+        triggerHaptic('medium');
+        hasTriggeredThresholdHapticRef.current = true;
+      } else if (Math.abs(deltaX) < 25 && hasTriggeredThresholdHapticRef.current) {
+        hasTriggeredThresholdHapticRef.current = false;
+      }
+
       const initialState = swipeInitialStateRef.current;
 
       if (initialState === 'OPEN_LEFT') {
@@ -191,7 +205,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
   const handleTouchEnd = (e: React.TouchEvent) => {
     setIsSwiping(false);
     if (cardElementRef.current) {
-      cardElementRef.current.style.transition = 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)';
+      cardElementRef.current.style.transition = 'transform 280ms cubic-bezier(0.25, 1, 0.5, 1)';
     }
 
     if (isDraggingRef.current && touchStartXRef.current !== null) {
@@ -205,6 +219,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
           setIsSwipedOpen(false);
           if (cardElementRef.current) cardElementRef.current.style.transform = 'translateX(0px)';
         } else {
+          triggerHaptic('selection');
           setIsSwipedOpenLeft(true);
           setIsSwipedOpen(false);
           if (cardElementRef.current) cardElementRef.current.style.transform = `translateX(${actionTrayLeftWidth}px)`;
@@ -215,16 +230,19 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
           setIsSwipedOpenLeft(false);
           if (cardElementRef.current) cardElementRef.current.style.transform = 'translateX(0px)';
         } else {
+          triggerHaptic('selection');
           setIsSwipedOpen(true);
           setIsSwipedOpenLeft(false);
           if (cardElementRef.current) cardElementRef.current.style.transform = `translateX(-${actionTrayWidth}px)`;
         }
       } else {
         if (!isOfflineMode && deltaX > 45) {
+          triggerHaptic('selection');
           setIsSwipedOpenLeft(true);
           setIsSwipedOpen(false);
           if (cardElementRef.current) cardElementRef.current.style.transform = `translateX(${actionTrayLeftWidth}px)`;
         } else if (deltaX < -45) {
+          triggerHaptic('selection');
           setIsSwipedOpen(true);
           setIsSwipedOpenLeft(false);
           if (cardElementRef.current) cardElementRef.current.style.transform = `translateX(-${actionTrayWidth}px)`;
@@ -240,10 +258,12 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
     touchStartYRef.current = null;
     isDraggingRef.current = false;
     isScrollingYRef.current = false;
+    hasTriggeredThresholdHapticRef.current = false;
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    triggerHaptic('light');
     if (isSwipedOpen || isSwipedOpenLeft) {
       setIsSwipedOpen(false);
       setIsSwipedOpenLeft(false);

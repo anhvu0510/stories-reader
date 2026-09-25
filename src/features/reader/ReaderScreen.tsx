@@ -22,6 +22,7 @@ import { useGlobalLoading } from '../../hooks/useGlobalLoading';
 import { useReadAloud } from '../../hooks/useReadAloud';
 import { useEdgeReadAloudBgm, isEdgeReadAloudActive } from '../../hooks/useEdgeReadAloudBgm';
 import { offlineDb } from '../../lib/offlineDb';
+import { triggerHaptic } from '../../hooks/useHaptic';
 import { AlertCircle, RotateCcw, Home } from 'lucide-react';
 
 interface ChapterContentSectionProps {
@@ -138,6 +139,7 @@ export function ReaderScreen() {
   const [contentData, setContentData] = useState<ChapterContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [ripple, setRipple] = useState<{ x: number; y: number; id: number } | null>(null);
 
   // Normalized list of chapters to display
   const displayChapters: ChapterDetailItem[] = useMemo(() => {
@@ -364,17 +366,22 @@ export function ReaderScreen() {
   }, []);
 
   // Single unified toggle with 400ms lock to eliminate duplicate touch + dblclick flickering
-  const toggleZenControls = useCallback(() => {
+  const toggleZenControls = useCallback((coords?: { x: number; y: number }) => {
     const now = Date.now();
     if (now - lastToggleTimeRef.current < 400) return;
     lastToggleTimeRef.current = now;
+    triggerHaptic('light');
+    if (coords) {
+      setRipple({ x: coords.x, y: coords.y, id: now });
+    }
     setShowZenControls((prev) => !prev);
   }, []);
 
   // Case 2: Double click / Double tap on reading screen to toggle bottom dock
   const handleDoubleClick = useCallback((e?: React.MouseEvent) => {
     if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-    toggleZenControls();
+    const coords = e ? { x: e.clientX, y: e.clientY } : undefined;
+    toggleZenControls(coords);
   }, [toggleZenControls]);
 
   const handleTouchEnd = useCallback((e?: React.TouchEvent) => {
@@ -390,6 +397,7 @@ export function ReaderScreen() {
       }
     }
 
+    const savedPos = touchStartPosRef.current;
     touchStartPosRef.current = null;
 
     if (isMoved) {
@@ -399,7 +407,8 @@ export function ReaderScreen() {
 
     if (now - lastTapTimeRef.current < 350 && now - lastTapTimeRef.current > 40) {
       if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-      toggleZenControls();
+      const coords = savedPos ? { x: savedPos.x, y: savedPos.y } : undefined;
+      toggleZenControls(coords);
       lastTapTimeRef.current = 0;
     } else {
       lastTapTimeRef.current = now;
@@ -638,6 +647,15 @@ export function ReaderScreen() {
           />
         )}
       </div>
+
+      {/* Visual Touch Double-Tap Ripple Feedback */}
+      {ripple && (
+        <span
+          key={ripple.id}
+          className="pointer-events-none fixed z-[99999] w-14 h-14 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/60 bg-primary/20 animate-ping duration-300"
+          style={{ left: ripple.x, top: ripple.y }}
+        />
+      )}
     </div>
   );
 }

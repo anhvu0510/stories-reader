@@ -35,7 +35,7 @@ needed.
 
 ## Working pattern
 
-1. Use CodeGraph to trace the component, hook, repository, and tests involved.
+1. For code modifications or bug fixes: Use CodeGraph to trace the component, hook, repository, and tests involved. For Q&A, answer directly.
 2. Reproduce the behavior and add a focused Vitest test first when a practical
    seam exists.
 3. Keep screens compositional; put reusable lifecycle behavior in hooks, server

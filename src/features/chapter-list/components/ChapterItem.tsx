@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Chapter } from '../../../shared/types';
 import { ArrowRight, Sparkles, Clock, AlertCircle, Calendar } from 'lucide-react';
 import { openChapter } from '../../../shared/utils/openChapter';
+import { triggerHaptic } from '../../../hooks/useHaptic';
 
 export interface ChapterItemProps {
   chapter: Chapter;
@@ -32,6 +33,7 @@ export const ChapterItem = forwardRef<HTMLDivElement, ChapterItemProps>(
     const formattedDate = formatDate(chapter.updatedAt);
 
     const handleClick = () => {
+      triggerHaptic('light');
       if (onClick) {
         onClick();
       } else if (bookId && chapter.chapterId) {

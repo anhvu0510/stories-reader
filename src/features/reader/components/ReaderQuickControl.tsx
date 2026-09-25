@@ -11,6 +11,8 @@ import { useAppStore } from '../../../stores/useAppStore';
 import { useModalStore } from '../../../stores/useModalStore';
 import { ChapterDetailItem } from '../../../shared/types';
 import { openChapter } from '../../../shared/utils/openChapter';
+import { motion } from 'motion/react';
+import { triggerHaptic } from '../../../hooks/useHaptic';
 
 interface ReaderQuickControlProps {
   bookId: string;
@@ -97,41 +99,45 @@ export function ReaderQuickControl({
       >
         {/* LEFT GROUP: macOS Control Center Joined Segment Capsule */}
         <div className="relative z-10 flex items-center gap-1.5 bg-black/5 dark:bg-black/10 backdrop-blur-[1.5px] p-1 rounded-full border border-primary/40 dark:border-primary/40 shadow-[0_4px_14px_rgba(0,0,0,0.35),_inset_0_1.5px_1px_0_rgba(255,255,255,0.4),_inset_0_-1px_1px_0_rgba(0,0,0,0.4)] shrink-0">
-          <button
+          <motion.button
+            whileTap={hasPrev ? { scale: 0.88 } : undefined}
             onClick={(e) => {
               e.stopPropagation();
               if (hasPrev && prevChapterId) {
+                triggerHaptic('light');
                 openChapter(bookId, prevChapterId);
               }
             }}
             disabled={!hasPrev}
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-150 ${
               hasPrev
-                ? 'bg-white/10 border border-primary/50 text-on-surface shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 active:scale-90 cursor-pointer opacity-100'
+                ? 'bg-white/10 border border-primary/50 text-on-surface shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 cursor-pointer opacity-100'
                 : 'bg-white/[0.06] text-on-surface-variant/40 border border-primary/30 shadow-[0_2px_8px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.35)] opacity-70 cursor-not-allowed pointer-events-none'
             }`}
             title={hasPrev ? 'Chương trước' : 'Đã ở chương đầu tiên'}
           >
             <ChevronsLeft size={17} strokeWidth={2.5} />
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileTap={hasNext ? { scale: 0.88 } : undefined}
             onClick={(e) => {
               e.stopPropagation();
               if (hasNext && nextChapterId) {
+                triggerHaptic('light');
                 openChapter(bookId, nextChapterId);
               }
             }}
             disabled={!hasNext}
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-150 ${
               hasNext
-                ? 'bg-primary/25 text-primary font-bold border border-primary/60 shadow-[0_4px_12px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.45)] hover:bg-primary/35 active:scale-90 cursor-pointer opacity-100'
+                ? 'bg-primary/25 text-primary font-bold border border-primary/60 shadow-[0_4px_12px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.45)] hover:bg-primary/35 cursor-pointer opacity-100'
                 : 'bg-white/[0.06] text-on-surface-variant/40 border border-primary/30 shadow-[0_2px_8px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.35)] opacity-70 cursor-not-allowed pointer-events-none'
             }`}
             title={hasNext ? 'Chương sau' : 'Đã ở chương mới nhất'}
           >
             <ChevronsRight size={17} strokeWidth={2.5} />
-          </button>
+          </motion.button>
         </div>
 
         {/* Vertical macOS Glass Separator Line */}
@@ -144,16 +150,18 @@ export function ReaderQuickControl({
               /* Multi-Chapter Batch Mode: 3D Glass Segmented Control */
               <div className="w-full flex items-center gap-1.5 min-w-0">
                 {/* 3D Glass Menu List Button on Far Left (Pin Fixed) */}
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.88 }}
                   onClick={(e) => {
                     e.stopPropagation();
+                    triggerHaptic('selection');
                     onOpenChapterSelect();
                   }}
-                  className="w-7 h-7 rounded-full bg-primary/20 hover:bg-primary/30 border border-primary/60 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.4)] flex items-center justify-center transition-all active:scale-90 cursor-pointer shrink-0"
+                  className="w-7 h-7 rounded-full bg-primary/20 hover:bg-primary/30 border border-primary/60 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.4)] flex items-center justify-center transition-all cursor-pointer shrink-0"
                   title="Mở danh sách tất cả các chương"
                 >
                   <List size={14} strokeWidth={2.5} />
-                </button>
+                </motion.button>
 
                 {/* Vertical Separator Line */}
                 <div className="w-[1px] h-4.5 bg-primary/40 shrink-0" />
@@ -163,17 +171,19 @@ export function ReaderQuickControl({
                   {chapters.map((chap) => {
                     const isActive = chap.chapterId === activeChapterId;
                     return (
-                      <button
+                      <motion.button
                         key={chap.chapterId}
+                        whileTap={{ scale: 0.92 }}
                         data-nav-chapter-id={chap.chapterId}
                         onClick={(e) => {
                           e.stopPropagation();
+                          triggerHaptic('selection');
                           handleJumpToChapter(chap.chapterId);
                         }}
                         className={`w-full py-1 px-0.5 rounded-full text-[10.5px] font-mono font-black tracking-tight flex items-center justify-center transition-all duration-150 cursor-pointer truncate ${
                           isActive
                             ? 'bg-primary/25 text-primary font-black border border-primary/60 shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.4)] scale-[1.02]'
-                            : 'bg-white/10 text-on-surface/90 font-mono font-bold border border-primary/40 shadow-[0_2px_6px_rgba(0,0,0,0.25),_inset_0_1px_0.5px_rgba(255,255,255,0.3)] hover:bg-white/20 active:scale-95'
+                            : 'bg-white/10 text-on-surface/90 font-mono font-bold border border-primary/40 shadow-[0_2px_6px_rgba(0,0,0,0.25),_inset_0_1px_0.5px_rgba(255,255,255,0.3)] hover:bg-white/20'
                         }`}
                         title={
                           chap.title?.toLowerCase().startsWith('chương')
@@ -182,25 +192,27 @@ export function ReaderQuickControl({
                         }
                       >
                         <span className="truncate">{chap.chapterNumber}</span>
-                      </button>
+                      </motion.button>
                     );
                   })}
                 </div>
               </div>
             ) : (
               /* Single Chapter Mode */
-              <button
+              <motion.button
+                whileTap={{ scale: 0.94 }}
                 onClick={(e) => {
                   e.stopPropagation();
+                  triggerHaptic('selection');
                   onOpenChapterSelect();
                 }}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 hover:bg-primary/30 border border-primary/60 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.4)] transition-all active:scale-95 cursor-pointer font-mono font-black text-xs"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 hover:bg-primary/30 border border-primary/60 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.4)] transition-all cursor-pointer font-mono font-black text-xs"
                 title="Mở danh sách tất cả các chương"
               >
                 <List size={14} strokeWidth={2.5} />
                 <span>Ch. {currentChapterNumber !== undefined ? currentChapterNumber : '-'}</span>
                 {totalChapters ? <span className="text-[10px] opacity-70">/{totalChapters}</span> : null}
-              </button>
+              </motion.button>
             )}
           </div>
         </div>
@@ -211,29 +223,33 @@ export function ReaderQuickControl({
         {/* RIGHT GROUP: macOS Control Center Glass Spheres Capsule */}
         <div className="relative z-10 flex items-center gap-1.5 bg-black/5 dark:bg-black/10 backdrop-blur-[1.5px] p-1 rounded-full border border-primary/40 dark:border-primary/40 shadow-[0_4px_14px_rgba(0,0,0,0.35),_inset_0_1.5px_1px_0_rgba(255,255,255,0.4),_inset_0_-1px_1px_0_rgba(0,0,0,0.4)] shrink-0">
           {/* System Settings Button */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.88 }}
             onClick={(e) => {
               e.stopPropagation();
+              triggerHaptic('light');
               openSettings('reader');
             }}
-            className="w-8 h-8 rounded-full bg-white/10 border border-primary/50 text-on-surface shadow-[0_3px_10px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:text-primary hover:rotate-45 hover:bg-white/20 transition-all duration-300 active:scale-90 cursor-pointer flex items-center justify-center"
+            className="w-8 h-8 rounded-full bg-white/10 border border-primary/50 text-on-surface shadow-[0_3px_10px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:text-primary hover:rotate-45 hover:bg-white/20 transition-all duration-300 cursor-pointer flex items-center justify-center"
             title="Cài đặt đọc sách"
           >
             <Settings size={17} />
-          </button>
+          </motion.button>
 
           {/* AI Translation Button (Online Only) */}
           {!isOfflineMode && (
-            <button
+            <motion.button
+              whileTap={{ scale: 0.88 }}
               onClick={(e) => {
                 e.stopPropagation();
+                triggerHaptic('light');
                 onOpenTranslation();
               }}
-              className="w-8 h-8 rounded-full bg-primary/25 border border-primary/60 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.4)] hover:bg-primary/35 transition-all active:scale-90 cursor-pointer flex items-center justify-center"
+              className="w-8 h-8 rounded-full bg-primary/25 border border-primary/60 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.4)] hover:bg-primary/35 transition-all cursor-pointer flex items-center justify-center"
               title="Dịch AI"
             >
               <Sparkles size={17} />
-            </button>
+            </motion.button>
           )}
         </div>
       </div>

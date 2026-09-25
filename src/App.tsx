@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'motion/react';
 import { LibraryScreen } from './features/library/LibraryScreen';
 import { ChapterListScreen } from './features/chapter-list/ChapterListScreen';
 import { ReaderScreen } from './features/reader/ReaderScreen';
@@ -13,13 +14,26 @@ import { useReaderConfigStore } from './stores/useReaderConfigStore';
 import { BookOpen } from 'lucide-react';
 
 function AppContent() {
+  const location = useLocation();
+
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-on-background flex flex-col box-border">
-      <Routes>
-        <Route path="/" element={<LibraryScreen />} />
-        <Route path="/book/:bookId" element={<ChapterListScreen />} />
-        <Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
-      </Routes>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+          className="flex-1 flex flex-col w-full"
+        >
+          <Routes location={location}>
+            <Route path="/" element={<LibraryScreen />} />
+            <Route path="/book/:bookId" element={<ChapterListScreen />} />
+            <Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+          </Routes>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { BookOpen, Clock, Sparkles, Library, X, RotateCcw, Heart, Search, Tag, A
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useLibraryStore, SortByField, SortOrderDirection } from '../../stores/useLibraryStore';
 import { useReaderConfigStore } from '../../stores/useReaderConfigStore';
+import { triggerHaptic } from '../../hooks/useHaptic';
 
 export function LibraryScreen() {
   useDocumentTitle();
@@ -206,6 +207,7 @@ export function LibraryScreen() {
   // Tab switch handler: resets page and passes new tab to API
   const handleTabChange = (newTab: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI') => {
     if (newTab === tab) return;
+    triggerHaptic('selection');
     setTab(newTab);
     setPage(1);
     setLibraryState(1, newTab, search, selectedTags, sortBy, sortOrder, 0);
@@ -216,6 +218,7 @@ export function LibraryScreen() {
 
   // Tag filter apply handler
   const handleTagFilterApply = (newTags: string[]) => {
+    triggerHaptic('light');
     setSelectedTags(newTags);
     setPage(1);
     setLibraryState(1, tab, search, newTags, sortBy, sortOrder, 0);
@@ -226,6 +229,7 @@ export function LibraryScreen() {
 
   // Sort apply handler
   const handleSortApply = (newSortBy: SortByField, newSortOrder: SortOrderDirection) => {
+    triggerHaptic('selection');
     setSortByState(newSortBy);
     setSortOrderState(newSortOrder);
     setSort(newSortBy, newSortOrder);
@@ -305,11 +309,12 @@ export function LibraryScreen() {
                 ].map((t) => {
                   const isActive = tab === t.id;
                   return (
-                    <button
+                    <motion.button
                       key={t.id}
+                      whileTap={{ scale: 0.94 }}
                       onClick={() => handleTabChange(t.id as any)}
                       title={t.title}
-                      className={`relative h-7 flex items-center justify-center gap-1 px-1.5 rounded-[11px] transition-colors duration-200 active:scale-95 shrink-0 ${
+                      className={`relative h-7 flex items-center justify-center gap-1 px-1.5 rounded-[11px] transition-colors duration-200 shrink-0 cursor-pointer ${
                         isActive ? `${t.activeText} font-bold` : 'text-on-surface-variant/75 hover:text-on-surface'
                       }`}
                     >
@@ -338,7 +343,7 @@ export function LibraryScreen() {
                           {total}
                         </span>
                       )}
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
@@ -347,10 +352,14 @@ export function LibraryScreen() {
               <div className="flex items-center gap-1.5 shrink-0 h-9 ml-auto">
                 {/* Sort Button */}
                 {tab === 'ALL' && (
-                  <button
+                  <motion.button
                     type="button"
-                    onClick={() => setIsSortSheetOpen(true)}
-                    className={`relative h-9 w-9 rounded-[14px] border transition-all active:scale-95 flex items-center justify-center shrink-0 box-border ${
+                    whileTap={{ scale: 0.90 }}
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setIsSortSheetOpen(true);
+                    }}
+                    className={`relative h-9 w-9 rounded-[14px] border transition-all flex items-center justify-center shrink-0 box-border cursor-pointer ${
                       isCustomSortActive
                         ? 'bg-primary/20 border-primary/60 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)]'
                         : 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-primary hover:border-primary/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
@@ -363,14 +372,18 @@ export function LibraryScreen() {
                     {isCustomSortActive && (
                       <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary border-2 border-surface" />
                     )}
-                  </button>
+                  </motion.button>
                 )}
 
                 {/* Tag Filter Button */}
-                <button
+                <motion.button
                   type="button"
-                  onClick={() => setIsTagFilterOpen(true)}
-                  className={`relative h-9 w-9 rounded-[14px] border transition-all active:scale-95 flex items-center justify-center shrink-0 box-border ${
+                  whileTap={{ scale: 0.90 }}
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setIsTagFilterOpen(true);
+                  }}
+                  className={`relative h-9 w-9 rounded-[14px] border transition-all flex items-center justify-center shrink-0 box-border cursor-pointer ${
                     selectedTags.length > 0
                       ? 'bg-primary border-primary text-on-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]'
                       : 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-primary hover:border-primary/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
@@ -385,7 +398,7 @@ export function LibraryScreen() {
                       {selectedTags.length}
                     </span>
                   )}
-                </button>
+                </motion.button>
               </div>
             </div>
           </div>

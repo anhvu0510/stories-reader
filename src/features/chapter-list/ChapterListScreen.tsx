@@ -14,6 +14,8 @@ import { useFavoriteStore } from '../../stores/useFavoriteStore';
 import { useReaderConfigStore } from '../../stores/useReaderConfigStore';
 import { ArrowLeft, Search, RefreshCw, Download, Heart } from 'lucide-react';
 import { downloadManager } from '../../lib/DownloadManager';
+import { motion } from 'motion/react';
+import { triggerHaptic } from '../../hooks/useHaptic';
 
 export function ChapterListScreen() {
   const { bookId } = useParams<{ bookId: string }>();
@@ -180,13 +182,17 @@ export function ChapterListScreen() {
       <header className="sticky top-0 z-30 bg-surface/95 backdrop-blur-md border-b border-outline-variant/20 px-3.5 py-3 space-y-2.5 w-full max-w-md mx-auto">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <button
-              onClick={() => navigate('/')}
-              className="p-2 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors flex-shrink-0 active:scale-95"
+            <motion.button
+              whileTap={{ scale: 0.90 }}
+              onClick={() => {
+                triggerHaptic('light');
+                navigate('/');
+              }}
+              className="p-2 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors flex-shrink-0 cursor-pointer"
               title="Về Thư viện"
             >
               <ArrowLeft size={16} />
-            </button>
+            </motion.button>
             <div className="min-w-0">
               <h1 className="text-sm font-extrabold text-on-surface truncate">{book?.bookName || 'Đang tải...'}</h1>
               <p className="text-[10px] font-mono text-on-surface-variant/70 truncate">
@@ -198,10 +204,11 @@ export function ChapterListScreen() {
           <div className="flex items-center gap-1.5">
             {book && (
               <>
-                <button
+                <motion.button
                   type="button"
+                  whileTap={{ scale: 0.90 }}
                   onClick={handleToggleFavorite}
-                  className={`p-2 rounded-full border transition-all active:scale-95 cursor-pointer ${
+                  className={`p-2 rounded-full border transition-all cursor-pointer ${
                     isFav
                       ? 'bg-rose-500/15 border-rose-500/40 text-rose-500 shadow-xs'
                       : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-rose-400'
@@ -209,29 +216,35 @@ export function ChapterListScreen() {
                   title={isFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
                 >
                   <Heart size={15} className={isFav ? 'fill-rose-500 text-rose-500' : ''} />
-                </button>
+                </motion.button>
 
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.90 }}
                   onClick={() => {
+                    triggerHaptic('light');
                     downloadManager.addBook(book.bookId, book.bookName);
                     showToast(`Đã thêm "${book.bookName}" vào hàng đợi tải xuống`, 'info');
                   }}
-                  className="p-2 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95"
+                  className="p-2 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
                   title="Tải về bộ truyện"
                 >
                   <Download size={15} />
-                </button>
+                </motion.button>
               </>
             )}
 
-            <button
-              onClick={() => fetchChapters(1, search, filterState, sortOrder, false)}
+            <motion.button
+              whileTap={{ scale: 0.90 }}
+              onClick={() => {
+                triggerHaptic('light');
+                fetchChapters(1, search, filterState, sortOrder, false);
+              }}
               disabled={loading}
-              className="p-2 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors active:scale-95"
+              className="p-2 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
               title="Làm mới"
             >
               <RefreshCw size={15} className={loading ? 'animate-spin text-primary' : ''} />
-            </button>
+            </motion.button>
           </div>
         </div>
 
