@@ -325,3 +325,19 @@ select {
   -webkit-tap-highlight-color: transparent !important;
   touch-action: manipulation;
 }
+
+/* Touch ripple effect for reader screen double tap */
+@keyframes touch-ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0.6);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.6);
+    opacity: 0;
+  }
+}
+
+.animate-ripple {
+  animation: touch-ripple 350ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}

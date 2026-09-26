@@ -354,6 +354,15 @@ export function ReaderScreen() {
   const lastTapTimeRef = useRef<number>(0);
   const lastToggleTimeRef = useRef<number>(0);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const rippleTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rippleTimerRef.current) {
+        clearTimeout(rippleTimerRef.current);
+      }
+    };
+  }, []);
 
   // Record touch start coordinates to measure movement distance on touchEnd
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -373,6 +382,13 @@ export function ReaderScreen() {
     triggerHaptic('light');
     if (coords) {
       setRipple({ x: coords.x, y: coords.y, id: now });
+      if (rippleTimerRef.current) {
+        clearTimeout(rippleTimerRef.current);
+      }
+      rippleTimerRef.current = setTimeout(() => {
+        setRipple(null);
+        rippleTimerRef.current = null;
+      }, 350);
     }
     setShowZenControls((prev) => !prev);
   }, []);
@@ -652,7 +668,8 @@ export function ReaderScreen() {
       {ripple && (
         <span
           key={ripple.id}
-          className="pointer-events-none fixed z-[99999] w-14 h-14 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/60 bg-primary/20 animate-ping duration-300"
+          onAnimationEnd={() => setRipple(null)}
+          className="pointer-events-none fixed z-[99999] w-14 h-14 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/60 bg-primary/20 animate-ripple"
           style={{ left: ripple.x, top: ripple.y }}
         />
       )}
