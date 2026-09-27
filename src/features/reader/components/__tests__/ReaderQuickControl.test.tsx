@@ -106,7 +106,33 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
         />
       </MemoryRouter>
     );
-
     expect(screen.queryByTitle('Bật đọc thành tiếng (VieNeu AI TTS)')).toBeNull();
   });
+
+  it('navigates to next chapter using openNextChapter with scroll reset when clicking next button', () => {
+    window.scrollTo = vi.fn();
+    localStorage.setItem('reading_progress_b1_c551', JSON.stringify({ chapterId: 'c551', scrollY: 3000 }));
+    localStorage.setItem('reading_progress_b1_c552', JSON.stringify({ chapterId: 'c552', scrollY: 1000 }));
+
+    render(
+      <MemoryRouter>
+        <ReaderQuickControl
+          bookId="b1"
+          currentChapterId="c551"
+          nextChapterId="c552"
+          activeChapterId="c551"
+          onOpenChapterSelect={vi.fn()}
+          onOpenTranslation={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+
+    const nextBtn = screen.getByTitle('Chương sau');
+    fireEvent.click(nextBtn);
+
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
+    expect(localStorage.getItem('reading_progress_b1_c551')).toBeNull();
+    expect(localStorage.getItem('reading_progress_b1_c552')).toBeNull();
+  });
 });
+

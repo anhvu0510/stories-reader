@@ -10,12 +10,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useModalStore } from '../../../stores/useModalStore';
 import { ChapterDetailItem } from '../../../shared/types';
-import { openChapter } from '../../../shared/utils/openChapter';
+import { openChapter, openNextChapter, openPrevChapter } from '../../../shared/utils/openChapter';
 import { motion } from 'motion/react';
 import { triggerHaptic } from '../../../hooks/useHaptic';
 
 interface ReaderQuickControlProps {
   bookId: string;
+  currentChapterId?: string;
   prevChapterId?: string;
   nextChapterId?: string;
   currentChapterNumber?: number;
@@ -39,6 +40,7 @@ interface ReaderQuickControlProps {
 
 export function ReaderQuickControl({
   bookId,
+  currentChapterId,
   prevChapterId,
   nextChapterId,
   currentChapterNumber,
@@ -105,7 +107,7 @@ export function ReaderQuickControl({
               e.stopPropagation();
               if (hasPrev && prevChapterId) {
                 triggerHaptic('light');
-                openChapter(bookId, prevChapterId);
+                openPrevChapter(bookId, currentChapterId || activeChapterId, prevChapterId);
               }
             }}
             disabled={!hasPrev}
@@ -125,7 +127,7 @@ export function ReaderQuickControl({
               e.stopPropagation();
               if (hasNext && nextChapterId) {
                 triggerHaptic('light');
-                openChapter(bookId, nextChapterId);
+                openNextChapter(bookId, currentChapterId || activeChapterId, nextChapterId);
               }
             }}
             disabled={!hasNext}

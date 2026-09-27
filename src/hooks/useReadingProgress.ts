@@ -5,11 +5,21 @@ export interface ReadingState {
   scrollY: number;
   activeChapterId?: string;
   paragraphIndex?: number;
+  isCompleted?: boolean;
   updatedAt: number;
 }
 
 const STORAGE_PREFIX = 'reading_progress_';
 const MAX_PROGRESS_ITEMS = 20;
+
+export const clearReadingProgress = (bookId?: string, chapterId?: string) => {
+  if (!bookId || !chapterId) return;
+  try {
+    localStorage.removeItem(`${STORAGE_PREFIX}${bookId}_${chapterId}`);
+  } catch {
+    // Safe fallback
+  }
+};
 
 /**
  * Perform LRU garbage collection to prevent localStorage quota issues
@@ -54,6 +64,9 @@ const cleanupOldProgress = () => {
   }
 };
 
+// Module-level tracking across component unmount/remount in router
+let lastActiveChapterKey = '';
+
 /**
  * Custom hook to cleanly persist and auto-restore reading scroll position
  * per book and chapter, preventing unwanted reloads and lost scroll states.
@@ -64,7 +77,7 @@ export function useReadingProgress(
   isContentReady: boolean
 ) {
   const isRestoredRef = useRef(false);
-  const prevChapterIdRef = useRef<string | undefined>(undefined);
+  const prevChapterIdRef = useRef<string | undefined>(chapterId);
 
   const getStorageKey = useCallback((bId?: string, cId?: string) => {
     if (!bId || !cId) return null;
@@ -75,26 +88,36 @@ export function useReadingProgress(
   useEffect(() => {
     if (!bookId || !chapterId) return;
 
-    if (prevChapterIdRef.current && prevChapterIdRef.current !== chapterId) {
-      // Chapter changed! Clean up previous chapter reading progress from localStorage
-      const oldKey = getStorageKey(bookId, prevChapterIdRef.current);
-      if (oldKey) {
-        try {
-          localStorage.removeItem(oldKey);
-        } catch {
-          // Safe fallback
+    const currentKey = `${bookId}_${chapterId}`;
+    const isDifferentChapter =
+      (prevChapterIdRef.current && prevChapterIdRef.current !== chapterId) ||
+      (lastActiveChapterKey && lastActiveChapterKey !== currentKey);
+
+    if (isDifferentChapter) {
+      const prevCId =
+        (prevChapterIdRef.current && prevChapterIdRef.current !== chapterId)
+          ? prevChapterIdRef.current
+          : (lastActiveChapterKey.startsWith(`${bookId}_`) ? lastActiveChapterKey.replace(`${bookId}_`, '') : undefined);
+
+      if (prevCId && prevCId !== chapterId) {
+        const oldKey = getStorageKey(bookId, prevCId);
+        if (oldKey) {
+          try {
+            localStorage.removeItem(oldKey);
+          } catch {
+            // Safe fallback
+          }
         }
       }
 
-      // Reset scroll to top
-      isRestoredRef.current = true;
+      // Reset scroll to top immediately
+      isRestoredRef.current = false;
       if (typeof window !== 'undefined' && window.scrollTo) {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       }
-    } else if (!prevChapterIdRef.current) {
-      isRestoredRef.current = false;
     }
 
+    lastActiveChapterKey = currentKey;
     prevChapterIdRef.current = chapterId;
   }, [bookId, chapterId, getStorageKey]);
 
@@ -109,6 +132,9 @@ export function useReadingProgress(
 
     const saveCurrentProgress = () => {
       try {
+        // Do not overwrite progress until restoration has completed
+        if (!isRestoredRef.current) return;
+
         let activeChapterId: string | undefined;
         let paragraphIndex: number | undefined;
 
@@ -130,14 +156,31 @@ export function useReadingProgress(
           }
         }
 
+        const currentY = window.scrollY || 0;
+        const totalHeight = typeof document !== 'undefined'
+          ? (document.documentElement.scrollHeight - window.innerHeight)
+          : 0;
+        const isCompleted = totalHeight > 0 && currentY >= totalHeight - 60;
+
         const state: ReadingState = {
           chapterId,
-          scrollY: window.scrollY || 0,
+          scrollY: currentY,
           activeChapterId,
           paragraphIndex,
+          isCompleted,
           updatedAt: Date.now(),
         };
+
         localStorage.setItem(key, JSON.stringify(state));
+
+        // In multi-chapter batch mode: also save under activeChapterId for direct resume
+        if (activeChapterId && activeChapterId !== chapterId) {
+          const activeKey = getStorageKey(bookId, activeChapterId);
+          if (activeKey) {
+            localStorage.setItem(activeKey, JSON.stringify(state));
+          }
+        }
+
         cleanupOldProgress();
       } catch {
         // Safe fallback
@@ -178,14 +221,14 @@ export function useReadingProgress(
       const raw = localStorage.getItem(key);
       if (raw) {
         const savedState: ReadingState = JSON.parse(raw);
-        if (savedState.chapterId === chapterId) {
+        if (savedState.chapterId === chapterId && !savedState.isCompleted) {
           // Double RAF / setTimeout ensures DOM layout & typography are computed before scrolling
           requestAnimationFrame(() => {
             setTimeout(() => {
               let restoredByElement = false;
 
               // Priority 1: Restore precision scroll by target paragraph element
-              if (savedState.paragraphIndex !== undefined) {
+              if (savedState.paragraphIndex !== undefined && savedState.paragraphIndex > 0) {
                 let selector = `[data-paragraph-index="${savedState.paragraphIndex}"]`;
                 if (savedState.activeChapterId) {
                   selector = `#chapter-section-${savedState.activeChapterId} ${selector}`;
@@ -198,7 +241,7 @@ export function useReadingProgress(
                     window.scrollBy({ top: -70, behavior: 'instant' });
                   }
 
-                  // Visual Flash Highlight feedback on restored paragraph for 2 seconds (pure background color, zero text movement)
+                  // Visual Flash Highlight feedback on restored paragraph for 2 seconds
                   const highlightClasses = [
                     'bg-primary/20',
                     'transition-colors',
@@ -217,23 +260,38 @@ export function useReadingProgress(
               }
 
               // Priority 2: Fallback to pixel scrollY position
-              if (!restoredByElement && savedState.scrollY > 0) {
+              if (!restoredByElement && savedState.scrollY > 50) {
                 if (typeof window !== 'undefined' && window.scrollTo) {
                   window.scrollTo({ top: savedState.scrollY, behavior: 'instant' });
+                }
+                restoredByElement = true;
+              }
+
+              if (!restoredByElement) {
+                if (typeof window !== 'undefined' && window.scrollTo) {
+                  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
                 }
               }
 
               isRestoredRef.current = true;
-            }, 100);
+            }, 80);
           });
           return;
+        } else if (savedState.isCompleted) {
+          // Chapter was previously completed - start fresh from top and clear stale cache
+          clearReadingProgress(bookId, chapterId);
         }
       }
     } catch {
       // Safe fallback
     }
 
+    // Default when no saved state exists or state was completed: Ensure scroll is 0!
+    if (typeof window !== 'undefined' && window.scrollTo) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
     isRestoredRef.current = true;
   }, [bookId, chapterId, isContentReady, getStorageKey]);
 }
+
 

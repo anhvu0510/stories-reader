@@ -16,6 +16,18 @@ import { BookOpen } from 'lucide-react';
 function AppContent() {
   const location = useLocation();
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.scrollTo) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-on-background flex flex-col box-border">
       <AnimatePresence mode="wait">

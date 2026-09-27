@@ -72,7 +72,13 @@ export const BookCard = React.memo(function BookCard({
   const unTranslatedCount = Math.max(0, book.chapterCount - book.totalTranslated);
 
   useEffect(() => {
-    offlineDb.getBook(book.bookId).then((b) => setIsDownloaded(Boolean(b)));
+    let isMounted = true;
+    offlineDb.getBook(book.bookId).then((b) => {
+      if (isMounted) setIsDownloaded(Boolean(b));
+    });
+    return () => {
+      isMounted = false;
+    };
   }, [book.bookId]);
 
   const handleCardClick = (e: React.MouseEvent) => {

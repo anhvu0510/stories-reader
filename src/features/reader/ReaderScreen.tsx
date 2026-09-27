@@ -434,6 +434,9 @@ export function ReaderScreen() {
   // Fetch chapter data with smooth 200ms loading feedback
   const loadChapter = useCallback(async () => {
     if (!chapterId) return;
+    if (typeof window !== 'undefined' && window.scrollTo) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
     const MIN_LOADING_TIME = 200;
     const startTime = Date.now();
     setContentData(null);
@@ -608,6 +611,7 @@ export function ReaderScreen() {
       <div aria-hidden="true">
         <ReaderQuickControl
           bookId={bookId || ''}
+          currentChapterId={chapterId}
           prevChapterId={navigation?.prev?.chapterId || undefined}
           nextChapterId={navigation?.next?.chapterId || undefined}
           currentChapterNumber={currentViewingNumber}
