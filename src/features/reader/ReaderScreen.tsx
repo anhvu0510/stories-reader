@@ -121,6 +121,7 @@ export function ReaderScreen() {
 
 	const [contentData, setContentData] = useState<ChapterContent | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [domResetKey, setDomResetKey] = useState(0);
 	const [error, setError] = useState<string | null>(null);
 	const [ripple, setRipple] = useState<{ x: number; y: number; id: number } | null>(null);
 	const [isRefreshingLatest, setIsRefreshingLatest] = useState(false);
@@ -426,16 +427,12 @@ export function ReaderScreen() {
 		[toggleZenControls]
 	);
 
-	// Fetch chapter data with smooth 200ms loading feedback
+	// Fetch chapter data with smooth loading feedback & fresh DOM remount
 	const loadChapter = useCallback(
 		async (isForceFresh = false) => {
 			if (!chapterId) return;
-			if (typeof window !== 'undefined' && window.scrollTo) {
-				window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-			}
 			const MIN_LOADING_TIME = 200;
 			const startTime = Date.now();
-			setContentData(null);
 			setLoading(true);
 			setError(null);
 			try {
@@ -447,7 +444,12 @@ export function ReaderScreen() {
 				if (elapsedTime < MIN_LOADING_TIME) {
 					await new Promise((resolve) => setTimeout(resolve, MIN_LOADING_TIME - elapsedTime));
 				}
+				// Force complete DOM flush & remount like F5 (clean slate, zero stale elements)
+				setDomResetKey((k) => k + 1);
 				setContentData(res);
+				if (typeof window !== 'undefined' && window.scrollTo) {
+					window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+				}
 			} catch (e: any) {
 				const elapsedTime = Date.now() - startTime;
 				if (elapsedTime < MIN_LOADING_TIME) {
@@ -614,6 +616,7 @@ export function ReaderScreen() {
 
 			{/* Reader Content Article - Frozen Memoized Multi-Chapter Section with Tap-to-Toggle Dock */}
 			<ChapterContentSection
+				key={`${chapter.chapterId}-${domResetKey}`}
 				chapters={displayChapters}
 				fontSize={fontSize}
 				lineHeight={lineHeight}
