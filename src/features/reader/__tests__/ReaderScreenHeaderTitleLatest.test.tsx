@@ -13,14 +13,14 @@ vi.mock('../../../repositories/ChapterRepository', () => ({
 	ChapterRepository: {
 		getChapterContent: vi.fn(),
 		getChapters: vi.fn().mockResolvedValue({ chapters: [], pagination: {} }),
-		getLatestChapter: vi.fn()
+		getLatestChapter: vi.fn().mockResolvedValue(null)
 	}
 }));
 
 vi.mock('../../../repositories/BookRepository', () => ({
 	BookRepository: {
-		getLastReadChapter: vi.fn(),
-		getBook: vi.fn(),
+		getLastReadChapter: vi.fn().mockResolvedValue(null),
+		getBook: vi.fn().mockResolvedValue(null),
 		updateLastReadChapter: vi.fn().mockResolvedValue({})
 	}
 }));
@@ -245,6 +245,7 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 		});
 
 		expect(window.scrollTo).not.toHaveBeenCalled();
+		vi.useRealTimers();
 	});
 
 	it('QC-4: Handles network error gracefully on double click with error toast feedback', async () => {

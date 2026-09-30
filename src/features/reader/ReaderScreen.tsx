@@ -519,9 +519,31 @@ export function ReaderScreen() {
 		stopReading();
 		try {
 			// 1. Prioritize user's lastReadChapter from server API (same as history tab)
-			const lastRead = await BookRepository.getLastReadChapter(bookId, { forceFresh: true });
-			// 2. Fallback to latest chapter if no lastReadChapter found
-			const targetChapter = lastRead || (await ChapterRepository.getLatestChapter(bookId, { forceFresh: true }));
+			const lastRead = await Promise.resolve(
+				BookRepository.getLastReadChapter(bookId, { forceFresh: true })
+			).catch(() => null);
+
+			const latest = !lastRead
+				? await Promise.resolve(ChapterRepository.getLatestChapter(bookId, { forceFresh: true })).catch(() => null)
+				: null;
+
+			const offlineBook = !lastRead && !latest
+				? await Promise.resolve(offlineDb.getBook(bookId)).catch(() => null)
+				: null;
+
+			const targetChapter =
+				lastRead ||
+				latest ||
+				(offlineBook?.lastReadChapter
+					? {
+							chapterId: offlineBook.lastReadChapter.chapterId,
+							chapterNumber:
+								typeof offlineBook.lastReadChapter.chapterNumber === 'number'
+									? offlineBook.lastReadChapter.chapterNumber
+									: parseInt(String(offlineBook.lastReadChapter.chapterNumber), 10) || 1,
+							title: offlineBook.lastReadChapter.title
+						}
+					: null);
 
 			const targetChapId = targetChapter?.chapterId || activeChapter?.chapterId || chapterId;
 			if (!targetChapId) return;
@@ -533,7 +555,7 @@ export function ReaderScreen() {
 				navigate(`/book/${bookId}/chapter/${targetChapId}`);
 			}
 		} catch (err: any) {
-			console.error('Lỗi khi tải lại chương từ máy chủ:', err);
+			console.error('Lỗi khi tải lại chương:', err);
 		} finally {
 			setIsRefreshingLatest(false);
 		}

@@ -35,13 +35,13 @@ export const ReaderHeader = memo(function ReaderHeader({
 	onTitleDoubleClick
 }: ReaderHeaderProps) {
 	const navigate = useNavigate();
-	const clickTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-	const lastTapTimeRef = React.useRef<number>(0);
+	const tapCountRef = React.useRef<number>(0);
+	const resetTapTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	React.useEffect(() => {
 		return () => {
-			if (clickTimerRef.current) {
-				clearTimeout(clickTimerRef.current);
+			if (resetTapTimerRef.current) {
+				clearTimeout(resetTapTimerRef.current);
 			}
 		};
 	}, []);
@@ -49,22 +49,35 @@ export const ReaderHeader = memo(function ReaderHeader({
 	const handleCenterClick = (e?: React.SyntheticEvent) => {
 		if (isRefreshingLatest) return;
 
-		// Double tap / double click detected (second tap within 350ms)
-		if (clickTimerRef.current) {
-			clearTimeout(clickTimerRef.current);
-			clickTimerRef.current = null;
-			triggerHaptic('medium');
-			if (onTitleDoubleClick) {
-				onTitleDoubleClick();
+		tapCountRef.current += 1;
+
+		if (tapCountRef.current === 1) {
+			// Nhấn lần 1: Kích hoạt cuộn tới vị trí đọc thoại (nếu có)
+			triggerHaptic('light');
+			onTitleClick?.();
+
+			// Mở cửa sổ chờ lần nhấn 2 trong vòng 700ms
+			if (resetTapTimerRef.current) {
+				clearTimeout(resetTapTimerRef.current);
 			}
+			resetTapTimerRef.current = setTimeout(() => {
+				tapCountRef.current = 0;
+				resetTapTimerRef.current = null;
+			}, 700);
 			return;
 		}
 
-		triggerHaptic('light');
-		clickTimerRef.current = setTimeout(() => {
-			clickTimerRef.current = null;
-			onTitleClick?.();
-		}, 350);
+		if (tapCountRef.current >= 2) {
+			// Nhấn lần 2: Tải chương đọc gần nhất (last read) từ server DB
+			tapCountRef.current = 0;
+			if (resetTapTimerRef.current) {
+				clearTimeout(resetTapTimerRef.current);
+				resetTapTimerRef.current = null;
+			}
+			triggerHaptic('medium');
+			onTitleDoubleClick?.();
+			return;
+		}
 	};
 
 	return (

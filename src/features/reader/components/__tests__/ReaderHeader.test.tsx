@@ -39,8 +39,7 @@ describe('ReaderHeader Component', () => {
 		expect(handleOpenHistory).toHaveBeenCalledTimes(1);
 	});
 
-	it('triggers onTitleClick after 350ms when center title bar is clicked once', () => {
-		vi.useFakeTimers();
+	it('triggers onTitleClick immediately on first tap without delay', () => {
 		const handleTitleClick = vi.fn();
 		const handleTitleDoubleClick = vi.fn();
 
@@ -61,15 +60,39 @@ describe('ReaderHeader Component', () => {
 		expect(titleBtn).toBeDefined();
 
 		fireEvent.click(titleBtn);
-		expect(handleTitleClick).not.toHaveBeenCalled();
-
-		vi.advanceTimersByTime(350);
 		expect(handleTitleClick).toHaveBeenCalledTimes(1);
 		expect(handleTitleDoubleClick).not.toHaveBeenCalled();
-		vi.useRealTimers();
 	});
 
-	it('triggers onTitleDoubleClick immediately and skips onTitleClick when double clicked within 250ms', () => {
+	it('triggers onTitleDoubleClick when tapped a 2nd time within 700ms window', () => {
+		const handleTitleClick = vi.fn();
+		const handleTitleDoubleClick = vi.fn();
+
+		render(
+			<MemoryRouter>
+				<ReaderHeader
+					bookId="b1"
+					bookName="Tu Chân Giới"
+					chapterTitle="Chương 1"
+					onOpenHistory={vi.fn()}
+					onTitleClick={handleTitleClick}
+					onTitleDoubleClick={handleTitleDoubleClick}
+				/>
+			</MemoryRouter>
+		);
+
+		const titleBtn = screen.getByText('Chương 1').closest('button')!;
+
+		// First tap
+		fireEvent.click(titleBtn);
+		expect(handleTitleClick).toHaveBeenCalledTimes(1);
+
+		// Second tap
+		fireEvent.click(titleBtn);
+		expect(handleTitleDoubleClick).toHaveBeenCalledTimes(1);
+	});
+
+	it('resets tap count back to 1 when second tap occurs after 700ms', () => {
 		vi.useFakeTimers();
 		const handleTitleClick = vi.fn();
 		const handleTitleDoubleClick = vi.fn();
@@ -89,18 +112,18 @@ describe('ReaderHeader Component', () => {
 
 		const titleBtn = screen.getByText('Chương 1').closest('button')!;
 
-		// First click
+		// First tap
 		fireEvent.click(titleBtn);
-		// Second click within 100ms
-		vi.advanceTimersByTime(100);
+		expect(handleTitleClick).toHaveBeenCalledTimes(1);
+
+		// Wait 700ms window expires
+		vi.advanceTimersByTime(700);
+
+		// Another tap after window expired (should be treated as 1st tap again)
 		fireEvent.click(titleBtn);
+		expect(handleTitleClick).toHaveBeenCalledTimes(2);
+		expect(handleTitleDoubleClick).not.toHaveBeenCalled();
 
-		expect(handleTitleDoubleClick).toHaveBeenCalledTimes(1);
-		expect(handleTitleClick).not.toHaveBeenCalled();
-
-		// Even after full debounce elapsed, single click shouldn't fire
-		vi.advanceTimersByTime(300);
-		expect(handleTitleClick).not.toHaveBeenCalled();
 		vi.useRealTimers();
 	});
 
