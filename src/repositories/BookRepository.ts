@@ -296,11 +296,15 @@ export const BookRepository = {
 		const isOffline = useAppStore.getState().isOfflineMode;
 		if (!isOffline) {
 			try {
-				await apiClient.post(`/api/books/${encodeURIComponent(bookId)}/last-read`, {
-					chapterId: lastRead.chapterId,
-					chapterNumber: lastRead.chapterNumber,
-					title: lastRead.title
-				});
+				await apiClient.post(
+					`/api/books/${encodeURIComponent(bookId)}/last-read`,
+					{
+						chapterId: lastRead.chapterId,
+						chapterNumber: lastRead.chapterNumber,
+						title: lastRead.title
+					},
+					{ silent: true, timeout: 3000, retries: 0 }
+				);
 			} catch (e) {
 				console.warn('Failed to sync lastReadChapter to server:', e);
 			}

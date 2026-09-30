@@ -250,11 +250,15 @@ describe('BookRepository Favorite Server Management', () => {
 			title: 'Chương 10'
 		});
 
-		expect(apiClient.post).toHaveBeenCalledWith('/api/books/b-99/last-read', {
-			chapterId: 'c-10',
-			chapterNumber: 10,
-			title: 'Chương 10'
-		});
+		expect(apiClient.post).toHaveBeenCalledWith(
+			'/api/books/b-99/last-read',
+			{
+				chapterId: 'c-10',
+				chapterNumber: 10,
+				title: 'Chương 10'
+			},
+			expect.objectContaining({ silent: true })
+		);
 
 		const saved = await offlineDb.getBook('b-99');
 		expect(saved?.lastReadChapter).toEqual({
