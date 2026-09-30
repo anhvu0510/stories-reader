@@ -1,6 +1,7 @@
-import { Book } from '@/shared/types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+
+import type { Book } from '@/shared/types';
 
 interface FavoriteState {
 	favoriteBookIds: string[];

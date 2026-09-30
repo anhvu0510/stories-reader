@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Book } from '@/shared/types';
 import { Sparkles, BookOpen, Trash2, Heart, MoreVertical, AlertCircle } from 'lucide-react';
-import { QuickBookSheet } from './QuickBookSheet';
-import { BookFloatMenu } from './BookFloatMenu';
+
 import { TranslationSheet } from '@/components/TranslationSheet';
-import { useAppStore } from '@/stores/useAppStore';
-import { useToastStore } from '@/stores/useToastStore';
-import { useFavoriteStore } from '@/stores/useFavoriteStore';
-import { offlineDb } from '@/lib/offlineDb';
-import { downloadManager } from '@/lib/DownloadManager';
-import { BookRepository } from '@/repositories/BookRepository';
-import { openChapter } from '@/shared/utils/openChapter';
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { useLongPress } from '@/hooks/useLongPress';
+import { downloadManager } from '@/lib/DownloadManager';
+import { offlineDb } from '@/lib/offlineDb';
+import { BookRepository } from '@/repositories/BookRepository';
+import { openChapter } from '@/shared/utils/openChapter';
+import { useAppStore } from '@/stores/useAppStore';
+import { useFavoriteStore } from '@/stores/useFavoriteStore';
+import { useToastStore } from '@/stores/useToastStore';
+
+import { BookFloatMenu } from './BookFloatMenu';
+import { QuickBookSheet } from './QuickBookSheet';
+
+import type { Book } from '@/shared/types';
 
 interface BookCardProps {
 	key?: React.Key;

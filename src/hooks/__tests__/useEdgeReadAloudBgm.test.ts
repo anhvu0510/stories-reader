@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+
 import { useEdgeReadAloudBgm, isEdgeReadAloudActive } from '@/hooks/useEdgeReadAloudBgm';
 
 describe('useEdgeReadAloudBgm Hook', () => {

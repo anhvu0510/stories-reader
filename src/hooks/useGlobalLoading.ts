@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+
 import { useAppStore } from '@/stores/useAppStore';
 
 export function useGlobalLoading(isLoading: boolean) {

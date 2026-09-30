@@ -1,4 +1,5 @@
 import React, { useRef, useCallback } from 'react';
+
 import { triggerHaptic } from './useHaptic';
 
 export interface UseLongPressOptions {

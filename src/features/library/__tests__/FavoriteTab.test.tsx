@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import 'fake-indexeddb/auto';
 import React from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import 'fake-indexeddb/auto';
+
 import { LibraryScreen } from '@/features/library/LibraryScreen';
 import { BookRepository } from '@/repositories/BookRepository';
 import { useFavoriteStore } from '@/stores/useFavoriteStore';

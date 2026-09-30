@@ -1,8 +1,9 @@
-import { Replacement } from '@/shared/types';
-import { apiClient } from '@/services/apiClient';
 import { offlineDb } from '@/lib/offlineDb';
+import { apiClient } from '@/services/apiClient';
 import { MOCK_REPLACEMENTS } from '@/services/mockData';
 import { useAppStore } from '@/stores/useAppStore';
+
+import type { Replacement } from '@/shared/types';
 
 export const ReplacementRepository = {
 	async getReplacements(): Promise<Replacement[]> {

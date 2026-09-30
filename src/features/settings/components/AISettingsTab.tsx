@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { TokenManagerSheet } from './TokenManagerSheet';
-import { QuotaSettingsSheet } from './QuotaSettingsSheet';
 import { KeyRound, Bot } from 'lucide-react';
+
+import { QuotaSettingsSheet } from './QuotaSettingsSheet';
+import { TokenManagerSheet } from './TokenManagerSheet';
 
 export function AISettingsTab() {
 	const [subTab, setSubTab] = useState<'tokens' | 'quotas'>('tokens');

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+
 import { useDocumentTitle, DEFAULT_APP_TITLE } from '@/hooks/useDocumentTitle';
 
 describe('useDocumentTitle Hook', () => {

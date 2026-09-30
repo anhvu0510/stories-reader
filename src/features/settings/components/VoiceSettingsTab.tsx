@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Volume2, Sliders, Cpu, Loader2, Minus, Plus, Sparkles, Globe, Server, RotateCcw, Radio } from 'lucide-react';
-import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
-import { useAppStore } from '@/stores/useAppStore';
-import { TTSService, VieNeuVoice, VieNeuModel, DEFAULT_VIENEU_SERVER_URL } from '@/services/ttsService';
+
 import { EdgeTTSService, EdgeVoice } from '@/services/edgeTtsService';
+import { TTSService, VieNeuVoice, VieNeuModel, DEFAULT_VIENEU_SERVER_URL } from '@/services/ttsService';
+import { useAppStore } from '@/stores/useAppStore';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { showToast } from '@/stores/useToastStore';
 
 export function VoiceSettingsTab() {

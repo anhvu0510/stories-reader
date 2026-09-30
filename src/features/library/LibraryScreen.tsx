@@ -1,23 +1,26 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'motion/react';
-import { BookRepository } from '@/repositories/BookRepository';
-import { Book } from '@/shared/types';
-import { useToastStore } from '@/stores/useToastStore';
-import { useModalStore } from '@/stores/useModalStore';
-import { useAppStore } from '@/stores/useAppStore';
-import { BookCard } from './components/BookCard';
-import { LibraryHeader } from './components/LibraryHeader';
-import { TagFilterSheet } from './components/TagFilterSheet';
-import { SortSheet } from './components/SortSheet';
+import { BookOpen, Clock, Sparkles, Library, X, RotateCcw, Heart, Search, Tag, ArrowUpDown } from 'lucide-react';
+
 import { BottomDock } from '@/components/BottomDock';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
-import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
 import { OfflineManagerSheet } from '@/components/OfflineManagerSheet';
-import { BookOpen, Clock, Sparkles, Library, X, RotateCcw, Heart, Search, Tag, ArrowUpDown } from 'lucide-react';
+import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useLibraryStore, SortByField, SortOrderDirection } from '@/stores/useLibraryStore';
-import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { triggerHaptic } from '@/hooks/useHaptic';
+import { BookRepository } from '@/repositories/BookRepository';
+import { useAppStore } from '@/stores/useAppStore';
+import { useLibraryStore, SortByField, SortOrderDirection } from '@/stores/useLibraryStore';
+import { useModalStore } from '@/stores/useModalStore';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+import { useToastStore } from '@/stores/useToastStore';
+
+import { BookCard } from './components/BookCard';
+import { LibraryHeader } from './components/LibraryHeader';
+import { SortSheet } from './components/SortSheet';
+import { TagFilterSheet } from './components/TagFilterSheet';
+
+import type { Book } from '@/shared/types';
 
 export function LibraryScreen() {
 	useDocumentTitle();

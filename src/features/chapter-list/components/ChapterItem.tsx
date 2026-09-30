@@ -1,9 +1,11 @@
 import React, { forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Chapter } from '@/shared/types';
 import { ArrowRight, Sparkles, Clock, AlertCircle, Calendar } from 'lucide-react';
-import { openChapter } from '@/shared/utils/openChapter';
+
 import { triggerHaptic } from '@/hooks/useHaptic';
+import { openChapter } from '@/shared/utils/openChapter';
+
+import type { Chapter } from '@/shared/types';
 
 export interface ChapterItemProps {
 	chapter: Chapter;

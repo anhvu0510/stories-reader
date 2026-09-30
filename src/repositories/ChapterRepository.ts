@@ -1,8 +1,9 @@
 import { offlineDb } from '@/lib/offlineDb';
 import { apiClient } from '@/services/apiClient';
 import { INVISIBLE_SENTENCE_DELIMITER } from '@/shared/constants/textBoundaries';
-import { Chapter, ChapterContent } from '@/shared/types';
 import { useAppStore } from '@/stores/useAppStore';
+
+import type { Chapter, ChapterContent } from '@/shared/types';
 
 export const ChapterRepository = {
 	async getChapters(

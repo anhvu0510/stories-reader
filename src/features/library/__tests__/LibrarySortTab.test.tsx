@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import 'fake-indexeddb/auto';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
-import { SortSheet, SORT_OPTIONS } from '@/features/library/components/SortSheet';
+import 'fake-indexeddb/auto';
+
 import { LibraryHeader } from '@/features/library/components/LibraryHeader';
+import { SortSheet, SORT_OPTIONS } from '@/features/library/components/SortSheet';
 import { LibraryScreen } from '@/features/library/LibraryScreen';
 import { BookRepository } from '@/repositories/BookRepository';
 

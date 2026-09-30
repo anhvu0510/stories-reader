@@ -1,5 +1,6 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { Book, Chapter, ChapterContent, Replacement } from '@/shared/types';
+
+import type { Book, Chapter, ChapterContent, Replacement } from '@/shared/types';
 
 interface ReaderDBSchema extends DBSchema {
 	books: {

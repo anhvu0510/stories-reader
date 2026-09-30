@@ -1,8 +1,9 @@
-import { Book } from '@/shared/types';
-import { apiClient } from '@/services/apiClient';
 import { offlineDb } from '@/lib/offlineDb';
+import { apiClient } from '@/services/apiClient';
 import { useAppStore } from '@/stores/useAppStore';
 import { useFavoriteStore } from '@/stores/useFavoriteStore';
+
+import type { Book } from '@/shared/types';
 
 export interface GetBooksResult {
 	books: Book[];

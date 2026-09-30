@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import React from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+
 import { ReaderQuickControl } from '@/features/reader/components/ReaderQuickControl';
 
 describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', () => {

@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
-import { TTSService, DEFAULT_VIENEU_SERVER_URL, type VieNeuRequestContext } from '@/services/ttsService';
-import { EdgeTTSService, type EdgeSpeechWithBoundaries } from '@/services/edgeTtsService';
-import { GaplessTtsPlayer, splitByDatabaseBoundaries, type SentenceChunk, WebAudioPlaybackEngine } from '@/services/gaplessTtsPlayer';
-import { DomWordHighlighter } from '@/services/domWordHighlighter';
-import { useAppStore } from '@/stores/useAppStore';
-import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
+
 import { useTTSStore } from '@/features/reader/stores/useTTSStore';
 import { BackgroundAudioKeepAlive } from '@/services/backgroundAudioKeepAlive';
+import { DomWordHighlighter } from '@/services/domWordHighlighter';
+import { EdgeTTSService, type EdgeSpeechWithBoundaries } from '@/services/edgeTtsService';
+import { GaplessTtsPlayer, splitByDatabaseBoundaries, type SentenceChunk, WebAudioPlaybackEngine } from '@/services/gaplessTtsPlayer';
+import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
+import { TTSService, DEFAULT_VIENEU_SERVER_URL, type VieNeuRequestContext } from '@/services/ttsService';
+import { useAppStore } from '@/stores/useAppStore';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 
 export { splitParagraphIntoSentences } from '@/services/gaplessTtsPlayer';
 

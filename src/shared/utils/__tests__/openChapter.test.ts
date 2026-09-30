@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { openChapter, openNextChapter, openPrevChapter } from '@/shared/utils/openChapter';
 
 describe('openChapter utility', () => {

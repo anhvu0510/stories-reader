@@ -1,5 +1,6 @@
 import { apiClient } from '@/services/apiClient';
-import { AIToken, AIQuota, QuotaResponse } from '@/shared/types';
+
+import type { AIToken, AIQuota, QuotaResponse } from '@/shared/types';
 
 export class AIRepository {
 	static async getTokens(platform?: string): Promise<{ tokens: AIToken[] }> {

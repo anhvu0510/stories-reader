@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Edit2, Trash2, Check, RefreshCw } from 'lucide-react';
-import { AIRepository } from '@/repositories/AIRepository';
-import { AIQuota } from '@/shared/types';
-import { useToastStore } from '@/stores/useToastStore';
+
 import { BottomSheet } from '@/components/BottomSheet';
+import { AIRepository } from '@/repositories/AIRepository';
+import { useToastStore } from '@/stores/useToastStore';
+
+import type { AIQuota } from '@/shared/types';
 
 export function QuotaSettingsSheet({
 	onClose,

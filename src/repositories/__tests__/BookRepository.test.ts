@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import 'fake-indexeddb/auto';
+
+import { offlineDb } from '@/lib/offlineDb';
 import { BookRepository } from '@/repositories/BookRepository';
 import { apiClient } from '@/services/apiClient';
-import { offlineDb } from '@/lib/offlineDb';
 import { useAppStore } from '@/stores/useAppStore';
 import { useFavoriteStore } from '@/stores/useFavoriteStore';
 

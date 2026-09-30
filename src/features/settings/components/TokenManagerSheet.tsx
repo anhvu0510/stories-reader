@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Edit2, Trash2, Check, RefreshCw, PlayCircle, PauseCircle } from 'lucide-react';
-import { AIRepository } from '@/repositories/AIRepository';
-import { AIToken } from '@/shared/types';
-import { useToastStore } from '@/stores/useToastStore';
+
 import { BottomSheet } from '@/components/BottomSheet';
+import { AIRepository } from '@/repositories/AIRepository';
+import { useToastStore } from '@/stores/useToastStore';
+
+import type { AIToken } from '@/shared/types';
 
 export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: () => void; isEmbedded?: boolean }) {
 	const [tokens, setTokens] = useState<AIToken[]>([]);

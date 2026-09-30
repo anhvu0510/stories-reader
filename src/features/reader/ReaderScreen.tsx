@@ -1,3 +1,7 @@
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { AlertCircle, Home, RotateCcw } from 'lucide-react';
+
 import { TranslationSheet } from '@/components/TranslationSheet';
 import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -9,13 +13,10 @@ import { useReadingProgress } from '@/hooks/useReadingProgress';
 import { offlineDb } from '@/lib/offlineDb';
 import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
-import { ChapterContent, ChapterDetailItem } from '@/shared/types';
 import { useAppStore } from '@/stores/useAppStore';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { useToastStore } from '@/stores/useToastStore';
-import { AlertCircle, Home, RotateCcw } from 'lucide-react';
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+
 import { ParagraphView } from './components/ParagraphView';
 import { QuickBookHistorySheet } from './components/QuickBookHistorySheet';
 import { QuickChapterSelectSheet } from './components/QuickChapterSelectSheet';
@@ -23,6 +24,8 @@ import { QuickTypographySheet } from './components/QuickTypographySheet';
 import { ReaderHeader } from './components/ReaderHeader';
 import { ReaderQuickControl } from './components/ReaderQuickControl';
 import { VerticalBatchChapterNav } from './components/VerticalBatchChapterNav';
+
+import type { ChapterContent, ChapterDetailItem } from '@/shared/types';
 
 interface ChapterContentSectionProps {
 	chapters: ChapterDetailItem[];

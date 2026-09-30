@@ -1,5 +1,6 @@
 import React from 'react';
 import { Play, Pause, Square, SkipBack, SkipForward } from 'lucide-react';
+
 import { useTTSStore } from '@/features/reader/stores/useTTSStore';
 
 interface TTSControlBarProps {

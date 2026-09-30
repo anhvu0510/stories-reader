@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import {
 	X,
 	Languages,
@@ -24,17 +25,19 @@ import {
 	Clock,
 	AlertCircle
 } from 'lucide-react';
-import { Book, Chapter } from '@/shared/types';
+
+import { triggerHaptic } from '@/hooks/useHaptic';
+import { cn } from '@/lib/utils';
+import { AIRepository } from '@/repositories/AIRepository';
 import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
-import { AIRepository } from '@/repositories/AIRepository';
 import { SettingsRepository } from '@/repositories/SettingsRepository';
-import { useToastStore } from '@/stores/useToastStore';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+import { useToastStore } from '@/stores/useToastStore';
+
 import { BottomSheet } from './BottomSheet';
-import { cn } from '@/lib/utils';
-import { motion } from 'motion/react';
-import { triggerHaptic } from '@/hooks/useHaptic';
+
+import type { Book, Chapter } from '@/shared/types';
 
 type Tab = 'current' | 'batch_chapter' | 'story';
 

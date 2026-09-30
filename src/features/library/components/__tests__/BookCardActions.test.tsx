@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
-import 'fake-indexeddb/auto';
 import React from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import 'fake-indexeddb/auto';
+
 import { BookCard } from '@/features/library/components/BookCard';
-import { Book } from '@/shared/types';
 import * as useHapticModule from '@/hooks/useHaptic';
+
+import type { Book } from '@/shared/types';
 
 const mockBook: Book = {
 	bookId: 'book-action-test-1',

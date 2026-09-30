@@ -1,14 +1,16 @@
-import { X, Server, BookOpen, Volume2, Sparkles, RefreshCw, Music } from 'lucide-react';
-import { useModalStore } from '@/stores/useModalStore';
-import { BottomSheet } from '@/components/BottomSheet';
 import { motion } from 'motion/react';
+import { X, Server, BookOpen, Volume2, Sparkles, RefreshCw, Music } from 'lucide-react';
+
+import { BottomSheet } from '@/components/BottomSheet';
 import { triggerHaptic } from '@/hooks/useHaptic';
-import { ServerTab } from './components/ServerTab';
-import { ReaderSettingsTab } from './components/ReaderSettingsTab';
-import { VoiceSettingsTab } from './components/VoiceSettingsTab';
+import { useModalStore } from '@/stores/useModalStore';
+
 import { AISettingsTab } from './components/AISettingsTab';
-import { ReplacementsTab } from './components/ReplacementsTab';
 import { BgmSettingsTab } from './components/BgmSettingsTab';
+import { ReaderSettingsTab } from './components/ReaderSettingsTab';
+import { ReplacementsTab } from './components/ReplacementsTab';
+import { ServerTab } from './components/ServerTab';
+import { VoiceSettingsTab } from './components/VoiceSettingsTab';
 
 interface GlobalSettingsSheetProps {
 	currentBookId?: string;

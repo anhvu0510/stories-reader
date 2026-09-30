@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
-import 'fake-indexeddb/auto';
 import React from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import 'fake-indexeddb/auto';
+
 import { QuickBookHistorySheet } from '@/features/reader/components/QuickBookHistorySheet';
 import { BookRepository } from '@/repositories/BookRepository';
-import { Book } from '@/shared/types';
+
+import type { Book } from '@/shared/types';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {

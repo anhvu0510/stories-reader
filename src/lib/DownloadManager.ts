@@ -1,7 +1,10 @@
-import { Book, Chapter } from '@/shared/types';
-import { offlineDb } from './offlineDb';
-import { useAppStore } from '@/stores/useAppStore';
 import oboe from 'oboe';
+
+import { useAppStore } from '@/stores/useAppStore';
+
+import { offlineDb } from './offlineDb';
+
+import type { Book, Chapter } from '@/shared/types';
 
 // Suppress Oboe's attempt to set Content-Length which causes an ugly red browser warning
 const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;

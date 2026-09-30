@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { LibraryScreen } from './features/library/LibraryScreen';
-import { ChapterListScreen } from './features/chapter-list/ChapterListScreen';
-import { ReaderScreen } from './features/reader/ReaderScreen';
-import { ToastContainer } from './components/Toast';
-import { GlobalDownloadProgress } from './components/GlobalDownloadProgress';
+import { BookOpen } from 'lucide-react';
+
 import { GlobalApiLoading } from './components/GlobalApiLoading';
+import { GlobalDownloadProgress } from './components/GlobalDownloadProgress';
+import { ToastContainer } from './components/Toast';
+import { ChapterListScreen } from './features/chapter-list/ChapterListScreen';
+import { LibraryScreen } from './features/library/LibraryScreen';
+import { ReaderScreen } from './features/reader/ReaderScreen';
 import { useAppStore } from './stores/useAppStore';
 import { useModalStore } from './stores/useModalStore';
-import { useToastStore } from './stores/useToastStore';
 import { useReaderConfigStore } from './stores/useReaderConfigStore';
-import { BookOpen } from 'lucide-react';
+import { useToastStore } from './stores/useToastStore';
 
 function AppContent() {
 	const location = useLocation();

@@ -1,9 +1,11 @@
 import React from 'react';
-import { Palette, Type, Sliders, Layers, Plus, Minus, BookOpen, Volume2, RefreshCw } from 'lucide-react';
-import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
-import { ThemeType, FontType } from '@/shared/types';
 import { motion } from 'motion/react';
+import { Palette, Type, Sliders, Layers, Plus, Minus, BookOpen, Volume2, RefreshCw } from 'lucide-react';
+
 import { triggerHaptic } from '@/hooks/useHaptic';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+
+import type { ThemeType, FontType } from '@/shared/types';
 
 const THEMES: { id: ThemeType; label: string; bg: string; color: string }[] = [
 	{ id: 'royal-vn', label: 'Royal VN', bg: '#040e2b', color: '#e2e8f0' },

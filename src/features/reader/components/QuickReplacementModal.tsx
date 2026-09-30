@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { X, Save, ArrowRight } from 'lucide-react';
+
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { ReplacementRepository } from '@/repositories/ReplacementRepository';
 import { useToastStore } from '@/stores/useToastStore';
-import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 interface QuickReplacementModalProps {
 	matchText: string;

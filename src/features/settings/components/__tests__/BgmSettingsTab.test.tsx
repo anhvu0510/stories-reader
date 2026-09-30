@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
+
 import { BgmSettingsTab } from '@/features/settings/components/BgmSettingsTab';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 
