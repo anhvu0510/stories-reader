@@ -17,6 +17,7 @@ interface ReaderHeaderProps {
 	onToggleTTS?: () => void;
 	onOpenHistory: () => void;
 	onTitleClick?: () => void;
+	onTitleDoubleClick?: () => void;
 }
 
 export const ReaderHeader = memo(function ReaderHeader({
@@ -30,18 +31,43 @@ export const ReaderHeader = memo(function ReaderHeader({
 	isRefreshingLatest = false,
 	onToggleTTS,
 	onOpenHistory,
-	onTitleClick
+	onTitleClick,
+	onTitleDoubleClick
 }: ReaderHeaderProps) {
 	const navigate = useNavigate();
+	const clickTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const handleCenterTap = () => {
+	React.useEffect(() => {
+		return () => {
+			if (clickTimerRef.current) {
+				clearTimeout(clickTimerRef.current);
+			}
+		};
+	}, []);
+
+	const handleCenterClick = () => {
 		if (isRefreshingLatest) return;
-		triggerHaptic('light');
-		if (onTitleClick) {
-			onTitleClick();
-		} else {
-			window.scrollTo({ top: 0, behavior: 'smooth' });
+
+		// If a previous click is pending within 250ms, this is a double click
+		if (clickTimerRef.current) {
+			clearTimeout(clickTimerRef.current);
+			clickTimerRef.current = null;
+			triggerHaptic('medium');
+			if (onTitleDoubleClick) {
+				onTitleDoubleClick();
+			}
+			return;
 		}
+
+		triggerHaptic('light');
+		clickTimerRef.current = setTimeout(() => {
+			clickTimerRef.current = null;
+			if (onTitleClick) {
+				onTitleClick();
+			} else {
+				window.scrollTo({ top: 0, behavior: 'smooth' });
+			}
+		}, 250);
 	};
 
 	return (
@@ -61,14 +87,14 @@ export const ReaderHeader = memo(function ReaderHeader({
 					<Home size={16} strokeWidth={2.3} />
 				</motion.button>
 
-				{/* Center: Interactive Tap-to-top / Load Latest Title Bar */}
+				{/* Center: Interactive Tap-to-read-aloud (single click) / Force Reload Current Chapter (double click) Title Bar */}
 				<motion.button
 					whileTap={{ scale: isRefreshingLatest ? 1 : 0.98 }}
-					onClick={handleCenterTap}
+					onClick={handleCenterClick}
 					disabled={isRefreshingLatest}
 					className="min-w-0 flex-1 text-center px-1.5 py-0.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer disabled:cursor-wait"
-					title={isRefreshingLatest ? 'Đang tải chương mới nhất từ máy chủ...' : 'Bấm để tải chương mới nhất từ máy chủ'}
-					aria-label={isRefreshingLatest ? 'Đang tải chương mới nhất từ máy chủ' : 'Bấm để tải chương mới nhất từ máy chủ'}
+					title={chapterTitle || bookName || undefined}
+					aria-label={chapterTitle || bookName || 'Tiêu đề'}
 				>
 					<div className="flex items-center justify-center gap-1.5">
 						{isRefreshingLatest && <Loader2 size={12} className="animate-spin text-primary shrink-0" />}

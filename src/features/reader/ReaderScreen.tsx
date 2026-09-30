@@ -492,35 +492,51 @@ export function ReaderScreen() {
 		loadChapter(shouldForceFresh);
 	}, [chapterId, loadChapter]);
 
-	const handleHeaderTitleClick = useCallback(async () => {
+	const handleTitleSingleClick = useCallback(() => {
+		if (typeof document === 'undefined') return;
+
+		// 1. Locate Edge / Browser Read Aloud highlight element
+		const highlightEl = document.querySelector(
+			'.msreadout-line-highlight, .msreadout-word-highlight, .msreadout-highlight, msreadoutspan, [class*="msreadout"], [data-readout-highlight]'
+		);
+		if (highlightEl && typeof highlightEl.scrollIntoView === 'function') {
+			highlightEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			return;
+		}
+
+		// 2. Locate App TTS active paragraph
+		if ((isPlaying || isPaused) && activeParagraphIndex >= 0) {
+			const paragraphEl = document.querySelector(`[data-paragraph-index="${activeParagraphIndex}"]`);
+			if (paragraphEl && typeof paragraphEl.scrollIntoView === 'function') {
+				paragraphEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				return;
+			}
+		}
+
+		// 3. Fallback: scroll to top of page
+		window.scrollTo({ top: 0, behavior: 'smooth' });
+	}, [isPlaying, isPaused, activeParagraphIndex]);
+
+	const handleTitleDoubleClick = useCallback(async () => {
 		if (!bookId || isRefreshingLatest) return;
 		setIsRefreshingLatest(true);
 		stopReading();
 		try {
-			// 1. Prioritize user's lastReadChapter from server API (same as history tab)
-			const lastRead = await BookRepository.getLastReadChapter(bookId, { forceFresh: true });
-			// 2. Fallback to latest chapter if no lastReadChapter found
-			const targetChapter = lastRead || (await ChapterRepository.getLatestChapter(bookId, { forceFresh: true }));
+			const currentChapId = activeChapter?.chapterId || chapterId;
+			if (!currentChapId) return;
 
-			if (!targetChapter) {
-				showToast('Không tìm thấy thông tin chương từ máy chủ', 'info');
-				return;
-			}
-
-			const isCurrent = targetChapter.chapterId === chapterId;
-
-			if (isCurrent) {
+			if (currentChapId === chapterId) {
 				await loadChapter(true);
 			} else {
 				forceFreshNextLoadRef.current = true;
-				navigate(`/book/${bookId}/chapter/${targetChapter.chapterId}`);
+				navigate(`/book/${bookId}/chapter/${currentChapId}`);
 			}
 		} catch (err: any) {
-			showToast(err.message || 'Lỗi khi tải chương từ máy chủ', 'error');
+			console.error('Lỗi khi tải lại chương:', err);
 		} finally {
 			setIsRefreshingLatest(false);
 		}
-	}, [bookId, chapterId, isRefreshingLatest, stopReading, showToast, loadChapter, navigate]);
+	}, [bookId, chapterId, activeChapter, isRefreshingLatest, stopReading, loadChapter, navigate]);
 
 	const handleOpenHistory = useCallback(() => setShowHistorySheet(true), []);
 	const handleOpenChapterSelect = useCallback(() => setShowChapterSelectSheet(true), []);
@@ -614,7 +630,8 @@ export function ReaderScreen() {
 				isRefreshingLatest={isRefreshingLatest}
 				onToggleTTS={() => (isPlaying || isPaused || isTTSLoading ? stopReading() : startReading())}
 				onOpenHistory={handleOpenHistory}
-				onTitleClick={handleHeaderTitleClick}
+				onTitleClick={handleTitleSingleClick}
+				onTitleDoubleClick={handleTitleDoubleClick}
 			/>
 
 			{/* Floating Vertical Audio Menu Dock on Left Edge */}
