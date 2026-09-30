@@ -36,6 +36,7 @@ export const ReaderHeader = memo(function ReaderHeader({
 }: ReaderHeaderProps) {
 	const navigate = useNavigate();
 	const clickTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+	const lastTapTimeRef = React.useRef<number>(0);
 
 	React.useEffect(() => {
 		return () => {
@@ -45,10 +46,10 @@ export const ReaderHeader = memo(function ReaderHeader({
 		};
 	}, []);
 
-	const handleCenterClick = () => {
+	const handleCenterClick = (e?: React.SyntheticEvent) => {
 		if (isRefreshingLatest) return;
 
-		// If a previous click is pending within 250ms, this is a double click
+		// Double tap / double click detected (second tap within 350ms)
 		if (clickTimerRef.current) {
 			clearTimeout(clickTimerRef.current);
 			clickTimerRef.current = null;
@@ -63,7 +64,7 @@ export const ReaderHeader = memo(function ReaderHeader({
 		clickTimerRef.current = setTimeout(() => {
 			clickTimerRef.current = null;
 			onTitleClick?.();
-		}, 250);
+		}, 350);
 	};
 
 	return (
@@ -84,24 +85,23 @@ export const ReaderHeader = memo(function ReaderHeader({
 				</motion.button>
 
 				{/* Center: Interactive Tap-to-read-aloud (single click) / Force Reload Current Chapter (double click) Title Bar */}
-				<motion.button
-					whileTap={{ scale: isRefreshingLatest ? 1 : 0.98 }}
+				<button
 					onClick={handleCenterClick}
 					disabled={isRefreshingLatest}
-					className="min-w-0 flex-1 text-center px-1.5 py-0.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer disabled:cursor-wait"
+					className="min-w-0 flex-1 text-center px-1.5 py-0.5 rounded-lg hover:bg-white/5 active:scale-[0.98] transition-transform transition-colors cursor-pointer disabled:cursor-wait touch-manipulation select-none"
 					title={chapterTitle || bookName || undefined}
 					aria-label={chapterTitle || bookName || 'Tiêu đề'}
 				>
-					<div className="flex items-center justify-center gap-1.5">
+					<div className="flex items-center justify-center gap-1.5 pointer-events-none select-none">
 						{isRefreshingLatest && <Loader2 size={12} className="animate-spin text-primary shrink-0" />}
 						<p className="text-[10.5px] font-bold text-on-surface-variant/75 truncate tracking-tight text-center">{bookName || 'Đang tải...'}</p>
 					</div>
-					<div className="mt-0.5 overflow-hidden w-full mx-auto max-w-[200px] sm:max-w-[250px]">
+					<div className="mt-0.5 overflow-hidden w-full mx-auto max-w-[200px] sm:max-w-[250px] pointer-events-none select-none">
 						<h2 className="text-xs font-extrabold text-on-surface truncate tracking-tight text-center" title={chapterTitle}>
 							{chapterTitle || ''}
 						</h2>
 					</div>
-				</motion.button>
+				</button>
 
 				{/* Right: Actions (Mobile-Optimized 3D Glass Sphere) */}
 				<div className="flex items-center gap-1.5 flex-shrink-0">

@@ -194,9 +194,9 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 		// Single click
 		fireEvent.click(titleBtn);
 
-		// Advance timer for 250ms debounce
+		// Advance timer for 350ms debounce
 		act(() => {
-			vi.advanceTimersByTime(250);
+			vi.advanceTimersByTime(350);
 		});
 
 		expect(scrollMock).toHaveBeenCalledWith({
@@ -241,7 +241,7 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 		fireEvent.click(titleBtn);
 
 		act(() => {
-			vi.advanceTimersByTime(250);
+			vi.advanceTimersByTime(350);
 		});
 
 		expect(window.scrollTo).not.toHaveBeenCalled();

@@ -39,7 +39,7 @@ describe('ReaderHeader Component', () => {
 		expect(handleOpenHistory).toHaveBeenCalledTimes(1);
 	});
 
-	it('triggers onTitleClick after 250ms when center title bar is clicked once', () => {
+	it('triggers onTitleClick after 350ms when center title bar is clicked once', () => {
 		vi.useFakeTimers();
 		const handleTitleClick = vi.fn();
 		const handleTitleDoubleClick = vi.fn();
@@ -63,7 +63,7 @@ describe('ReaderHeader Component', () => {
 		fireEvent.click(titleBtn);
 		expect(handleTitleClick).not.toHaveBeenCalled();
 
-		vi.advanceTimersByTime(250);
+		vi.advanceTimersByTime(350);
 		expect(handleTitleClick).toHaveBeenCalledTimes(1);
 		expect(handleTitleDoubleClick).not.toHaveBeenCalled();
 		vi.useRealTimers();
