@@ -486,9 +486,7 @@ export function ReaderScreen() {
 
 			if (isCurrent) {
 				await loadChapter(true);
-				showToast(`Đã tải bản mới nhất: Chương ${targetChapter.chapterNumber}`, 'success');
 			} else {
-				showToast(`Chuyển đến chương đọc gần nhất: Chương ${targetChapter.chapterNumber}`, 'success');
 				forceFreshNextLoadRef.current = true;
 				navigate(`/book/${bookId}/chapter/${targetChapter.chapterId}`);
 			}
