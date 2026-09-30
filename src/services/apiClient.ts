@@ -74,13 +74,13 @@ export async function fetchWithRetry(
 }
 
 export const apiClient = {
-  async get<T>(path: string, options?: { retries?: number; timeout?: number; silent?: boolean }): Promise<T> {
+  async get<T>(path: string, options?: RequestOptions): Promise<T> {
     const res = await fetchWithRetry(path, { method: 'GET', ...options }, options?.retries, options?.timeout);
     if (!res.ok) throw new ApiError(`HTTP Error ${res.status}`, res.status);
     return await res.json();
   },
 
-  async post<T>(path: string, body?: any, options?: { retries?: number; timeout?: number; silent?: boolean }): Promise<T> {
+  async post<T>(path: string, body?: any, options?: RequestOptions): Promise<T> {
     const res = await fetchWithRetry(
       path,
       {
@@ -95,7 +95,7 @@ export const apiClient = {
     return await res.json();
   },
 
-  async put<T>(path: string, body?: any, options?: { retries?: number; timeout?: number; silent?: boolean }): Promise<T> {
+  async put<T>(path: string, body?: any, options?: RequestOptions): Promise<T> {
     const res = await fetchWithRetry(
       path,
       {
@@ -110,7 +110,7 @@ export const apiClient = {
     return await res.json();
   },
 
-  async delete<T>(path: string, body?: any, options?: { retries?: number; timeout?: number; silent?: boolean }): Promise<T> {
+  async delete<T>(path: string, body?: any, options?: RequestOptions): Promise<T> {
     const res = await fetchWithRetry(
       path,
       {

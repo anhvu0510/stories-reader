@@ -140,6 +140,8 @@ export function ReaderScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ripple, setRipple] = useState<{ x: number; y: number; id: number } | null>(null);
+  const [isRefreshingLatest, setIsRefreshingLatest] = useState(false);
+  const forceFreshNextLoadRef = useRef(false);
 
   // Normalized list of chapters to display
   const displayChapters: ChapterDetailItem[] = useMemo(() => {
@@ -432,7 +434,7 @@ export function ReaderScreen() {
   }, [toggleZenControls]);
 
   // Fetch chapter data with smooth 200ms loading feedback
-  const loadChapter = useCallback(async () => {
+  const loadChapter = useCallback(async (isForceFresh = false) => {
     if (!chapterId) return;
     if (typeof window !== 'undefined' && window.scrollTo) {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -444,13 +446,22 @@ export function ReaderScreen() {
     setError(null);
     try {
       const effectiveBatchSize = batchChapterSize;
-      const res = await ChapterRepository.getChapterContent(
-        chapterId,
-        groupLines,
-        isEnabledReplace,
-        '',
-        effectiveBatchSize
-      );
+      const res = isForceFresh
+        ? await ChapterRepository.getChapterContent(
+            chapterId,
+            groupLines,
+            isEnabledReplace,
+            '',
+            effectiveBatchSize,
+            { forceFresh: true }
+          )
+        : await ChapterRepository.getChapterContent(
+            chapterId,
+            groupLines,
+            isEnabledReplace,
+            '',
+            effectiveBatchSize
+          );
       const elapsedTime = Date.now() - startTime;
       if (elapsedTime < MIN_LOADING_TIME) {
         await new Promise((resolve) => setTimeout(resolve, MIN_LOADING_TIME - elapsedTime));
@@ -468,8 +479,42 @@ export function ReaderScreen() {
   }, [chapterId, groupLines, isEnabledReplace, batchChapterSize, isOfflineMode]);
 
   useEffect(() => {
-    loadChapter();
+    const shouldForceFresh = forceFreshNextLoadRef.current;
+    forceFreshNextLoadRef.current = false;
+    loadChapter(shouldForceFresh);
   }, [chapterId, loadChapter]);
+
+  const handleHeaderTitleClick = useCallback(async () => {
+    if (!bookId || isRefreshingLatest) return;
+    setIsRefreshingLatest(true);
+    stopReading();
+    try {
+      showToast('Đang kiểm tra chương mới nhất...', 'info');
+      const latestChapter = await ChapterRepository.getLatestChapter(bookId, { forceFresh: true });
+      if (!latestChapter) {
+        showToast('Không tìm thấy chương nào từ máy chủ', 'info');
+        return;
+      }
+
+      const isCurrentLatest =
+        latestChapter.chapterId === chapterId ||
+        (activeChapter && activeChapter.chapterNumber >= latestChapter.chapterNumber);
+
+      if (isCurrentLatest) {
+        showToast(`Đang tải lại bản mới nhất: Chương ${latestChapter.chapterNumber}`, 'info');
+        await loadChapter(true);
+        showToast(`Đã tải bản mới nhất: Chương ${latestChapter.chapterNumber}`, 'success');
+      } else {
+        showToast(`Chuyển đến chương mới nhất: Chương ${latestChapter.chapterNumber}`, 'success');
+        forceFreshNextLoadRef.current = true;
+        navigate(`/book/${bookId}/chapter/${latestChapter.chapterId}`);
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khi tải chương mới nhất từ máy chủ', 'error');
+    } finally {
+      setIsRefreshingLatest(false);
+    }
+  }, [bookId, chapterId, activeChapter, isRefreshingLatest, stopReading, showToast, loadChapter, navigate]);
 
   const handleOpenHistory = useCallback(() => setShowHistorySheet(true), []);
   const handleOpenChapterSelect = useCallback(() => setShowChapterSelectSheet(true), []);
@@ -560,19 +605,19 @@ export function ReaderScreen() {
       <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-96 bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent blur-3xl" />
 
       {/* Sticky Header - ALWAYS VISIBLE */}
-      <div aria-hidden="true">
-        <ReaderHeader
-          bookId={bookId || ''}
-          bookName={chapter.bookName}
-          chapterNumber={currentViewingNumber}
-          chapterTitle={currentViewingTitle}
-          progress={scrollProgress}
-          isVisible={true}
-          isTTSActive={isPlaying || isPaused}
-          onToggleTTS={() => (isPlaying || isPaused || isTTSLoading ? stopReading() : startReading())}
-          onOpenHistory={handleOpenHistory}
-        />
-      </div>
+      <ReaderHeader
+        bookId={bookId || ''}
+        bookName={chapter.bookName}
+        chapterNumber={currentViewingNumber}
+        chapterTitle={currentViewingTitle}
+        progress={scrollProgress}
+        isVisible={true}
+        isTTSActive={isPlaying || isPaused}
+        isRefreshingLatest={isRefreshingLatest}
+        onToggleTTS={() => (isPlaying || isPaused || isTTSLoading ? stopReading() : startReading())}
+        onOpenHistory={handleOpenHistory}
+        onTitleClick={handleHeaderTitleClick}
+      />
 
       {/* Floating Vertical Audio Menu Dock on Left Edge */}
       <VerticalBatchChapterNav

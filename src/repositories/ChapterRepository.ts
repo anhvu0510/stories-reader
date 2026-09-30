@@ -102,12 +102,76 @@ export const ChapterRepository = {
     };
   },
 
+  async getLatestChapter(
+    bookId: string,
+    options?: { forceFresh?: boolean }
+  ): Promise<Chapter | null> {
+    const isOffline = useAppStore.getState().isOfflineMode;
+
+    if (!isOffline) {
+      try {
+        const query = new URLSearchParams({
+          page: '1',
+          limit: '1',
+          sortBy: 'chapterNumber',
+          sortOrder: 'DESC',
+        });
+        if (options?.forceFresh) {
+          query.append('_t', Date.now().toString());
+        }
+
+        const requestOptions: any = {
+          timeout: 5000,
+          retries: 0,
+          silent: true,
+        };
+        if (options?.forceFresh) {
+          requestOptions.headers = {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          };
+          requestOptions.cache = 'no-store';
+        }
+
+        const res = await apiClient.get<any>(`/api/books/${bookId}/chapters?${query.toString()}`, requestOptions);
+        if (res) {
+          const rawItems = res.chapters || res.data || res.items || (Array.isArray(res) ? res : []);
+          if (rawItems.length > 0) {
+            const c = rawItems[0];
+            return {
+              chapterId: String(c.chapterId || c._id || c.id || `chap-${c.chapterNumber || 1}`),
+              chapterNumber: typeof c.chapterNumber === 'number' ? c.chapterNumber : (parseInt(c.chapterNumber, 10) || 1),
+              title: c.title || `Chương ${c.chapterNumber || 1}`,
+              state: c.state || 'SUCCEEDED',
+              updatedAt: c.updatedAt || new Date().toISOString(),
+              bookId: c.bookId || bookId,
+            };
+          }
+        }
+      } catch (e: any) {
+        console.warn('Failed to fetch latest chapter online:', e);
+        if (options?.forceFresh) {
+          throw new Error(e?.message || 'Không thể lấy thông tin chương mới nhất từ máy chủ');
+        }
+      }
+    }
+
+    if (options?.forceFresh && isOffline) {
+      throw new Error('Đang ở chế độ offline, không thể tải từ máy chủ');
+    }
+
+    const chapters: Chapter[] = await offlineDb.getChapters(bookId);
+    if (!chapters || chapters.length === 0) return null;
+    return chapters.reduce((max, c) => (c.chapterNumber > max.chapterNumber ? c : max), chapters[0]);
+  },
+
   async getChapterContent(
     chapterId: string,
     groupLines: number = 1,
     isEnabledReplace: boolean = true,
     rootTab = '',
-    batchSize: number = 1
+    batchSize: number = 1,
+    options?: { forceFresh?: boolean }
   ): Promise<ChapterContent> {
     const isOffline = useAppStore.getState().isOfflineMode;
 
@@ -251,16 +315,44 @@ export const ChapterRepository = {
     };
 
     if (isOffline) {
+      if (options?.forceFresh) {
+        throw new Error('Đang ở chế độ offline, không thể tải từ máy chủ');
+      }
       return await processOfflineBatch(chapterId, batchSize);
     }
 
     try {
-      const hasOffline = await offlineDb.getChapterContent(chapterId);
-      const timeout = hasOffline ? 1200 : 3500;
-      const url = `/api/chapters/${chapterId}?groupLines=${groupLines}&isEnabledReplace=${isEnabledReplace}&rootTab=${rootTab}&batchSize=${batchSize}`;
-      const res = await apiClient.get<any>(url, { timeout, retries: 0 });
+      const hasOffline = !options?.forceFresh && (await offlineDb.getChapterContent(chapterId));
+      const timeout = hasOffline ? 1200 : 6000;
+      let url = `/api/chapters/${chapterId}?groupLines=${groupLines}&isEnabledReplace=${isEnabledReplace}&rootTab=${rootTab}&batchSize=${batchSize}`;
+      const requestOptions: any = { timeout, retries: 0 };
+
+      if (options?.forceFresh) {
+        url += `&_t=${Date.now()}`;
+        requestOptions.headers = {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        };
+        requestOptions.cache = 'no-store';
+      }
+
+      const res = await apiClient.get<any>(url, requestOptions);
+      if (res?.chapter) {
+        offlineDb.saveChapter({
+          chapterId: res.chapter.chapterId,
+          chapterNumber: res.chapter.chapterNumber,
+          title: res.chapter.title,
+          state: res.chapter.state || 'SUCCEEDED',
+          updatedAt: res.chapter.updatedAt || new Date().toISOString(),
+          bookId: res.chapter.bookId || '',
+        }).catch(() => {});
+        offlineDb.saveChapterContent(res).catch(() => {});
+      }
       return res;
-    } catch (e) {
+    } catch (e: any) {
+      if (options?.forceFresh) {
+        throw new Error(e?.message || 'Không thể tải nội dung chương mới nhất từ máy chủ');
+      }
       return await processOfflineBatch(chapterId, batchSize);
     }
   },

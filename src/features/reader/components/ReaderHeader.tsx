@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Home, Clock } from 'lucide-react';
+import { Home, Clock, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { triggerHaptic } from '../../../hooks/useHaptic';
@@ -12,6 +12,7 @@ interface ReaderHeaderProps {
   progress?: number;
   isVisible?: boolean;
   isTTSActive?: boolean;
+  isRefreshingLatest?: boolean;
   onToggleTTS?: () => void;
   onOpenHistory: () => void;
   onTitleClick?: () => void;
@@ -25,6 +26,7 @@ export const ReaderHeader = memo(function ReaderHeader({
   progress = 0,
   isVisible = true,
   isTTSActive = false,
+  isRefreshingLatest = false,
   onToggleTTS,
   onOpenHistory,
   onTitleClick,
@@ -32,6 +34,7 @@ export const ReaderHeader = memo(function ReaderHeader({
   const navigate = useNavigate();
 
   const handleCenterTap = () => {
+    if (isRefreshingLatest) return;
     triggerHaptic('light');
     if (onTitleClick) {
       onTitleClick();
@@ -59,16 +62,23 @@ export const ReaderHeader = memo(function ReaderHeader({
           <Home size={16} strokeWidth={2.3} />
         </motion.button>
 
-        {/* Center: Interactive Tap-to-top Title Bar */}
+        {/* Center: Interactive Tap-to-top / Load Latest Title Bar */}
         <motion.button
-          whileTap={{ scale: 0.98 }}
+          whileTap={{ scale: isRefreshingLatest ? 1 : 0.98 }}
           onClick={handleCenterTap}
-          className="min-w-0 flex-1 text-center px-1.5 py-0.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-          title="Bấm để cuộn về đầu trang"
+          disabled={isRefreshingLatest}
+          className="min-w-0 flex-1 text-center px-1.5 py-0.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer disabled:cursor-wait"
+          title={isRefreshingLatest ? "Đang tải chương mới nhất từ máy chủ..." : "Bấm để tải chương mới nhất từ máy chủ"}
+          aria-label={isRefreshingLatest ? "Đang tải chương mới nhất từ máy chủ" : "Bấm để tải chương mới nhất từ máy chủ"}
         >
-          <p className="text-[10.5px] font-bold text-on-surface-variant/75 truncate tracking-tight text-center">
-            {bookName || 'Đang tải...'}
-          </p>
+          <div className="flex items-center justify-center gap-1.5">
+            {isRefreshingLatest && (
+              <Loader2 size={12} className="animate-spin text-primary shrink-0" />
+            )}
+            <p className="text-[10.5px] font-bold text-on-surface-variant/75 truncate tracking-tight text-center">
+              {bookName || 'Đang tải...'}
+            </p>
+          </div>
           <div className="mt-0.5 overflow-hidden w-full mx-auto max-w-[200px] sm:max-w-[250px]">
             <h2
               className="text-xs font-extrabold text-on-surface truncate tracking-tight text-center"
