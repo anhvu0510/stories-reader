@@ -294,9 +294,13 @@ export function ReaderScreen() {
 		};
 	}, [displayChapters]);
 
-	// Sync active reading chapter to local book history
+	// Sync active reading chapter to local book history & server API with debounce
+	const syncLastReadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 	useEffect(() => {
 		if (!activeChapter || !bookId) return;
+
+		// Immediately update local offlineDb for zero data loss on instant refresh/close
 		offlineDb.getBook(bookId).then((b) => {
 			if (b) {
 				b.lastReadChapter = {
@@ -308,6 +312,25 @@ export function ReaderScreen() {
 				offlineDb.saveBook(b);
 			}
 		});
+
+		// Debounce server API sync (800ms) to avoid spamming network while scrolling fast
+		if (syncLastReadTimerRef.current) {
+			clearTimeout(syncLastReadTimerRef.current);
+		}
+
+		syncLastReadTimerRef.current = setTimeout(() => {
+			BookRepository.updateLastReadChapter(bookId, {
+				chapterId: activeChapter.chapterId,
+				chapterNumber: activeChapter.chapterNumber,
+				title: activeChapter.title
+			});
+		}, 800);
+
+		return () => {
+			if (syncLastReadTimerRef.current) {
+				clearTimeout(syncLastReadTimerRef.current);
+			}
+		};
 	}, [activeChapter, bookId]);
 
 	// Throttled & Smooth scroll progress listener for Progress bar & End of Batch auto-show dock

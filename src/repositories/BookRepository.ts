@@ -276,5 +276,34 @@ export const BookRepository = {
 
 	async saveBookOffline(book: Book): Promise<void> {
 		await offlineDb.saveBook(book);
+	},
+
+	async updateLastReadChapter(bookId: string, lastRead: { chapterId: string; chapterNumber: number; title?: string }): Promise<void> {
+		if (!bookId || !lastRead?.chapterId) return;
+
+		const lastedReadAt = new Date().toISOString();
+		const offlineBook = await offlineDb.getBook(bookId);
+		if (offlineBook) {
+			offlineBook.lastReadChapter = {
+				chapterId: lastRead.chapterId,
+				chapterNumber: lastRead.chapterNumber,
+				title: lastRead.title || `Chương ${lastRead.chapterNumber}`
+			};
+			offlineBook.lastedReadAt = lastedReadAt;
+			await offlineDb.saveBook(offlineBook);
+		}
+
+		const isOffline = useAppStore.getState().isOfflineMode;
+		if (!isOffline) {
+			try {
+				await apiClient.post(`/api/books/${encodeURIComponent(bookId)}/last-read`, {
+					chapterId: lastRead.chapterId,
+					chapterNumber: lastRead.chapterNumber,
+					title: lastRead.title
+				});
+			} catch (e) {
+				console.warn('Failed to sync lastReadChapter to server:', e);
+			}
+		}
 	}
 };

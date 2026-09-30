@@ -231,4 +231,77 @@ describe('BookRepository Favorite Server Management', () => {
 		const [calledUrl] = vi.mocked(apiClient.get).mock.calls[0];
 		expect(calledUrl).toBe('/api/books?bookId=b-55&limit=1');
 	});
+
+	it('QC-9 [Online]: updateLastReadChapter calls server API and saves to offlineDb', async () => {
+		const mockBook = {
+			bookId: 'b-99',
+			bookName: 'Đấu Phá Khung Thương'
+		} as any;
+		await offlineDb.saveBook(mockBook);
+
+		vi.mocked(apiClient.post).mockResolvedValueOnce({
+			code: 1000,
+			data: { bookId: 'b-99', lastReadChapter: { chapterId: 'c-10', chapterNumber: 10, title: 'Chương 10' } }
+		});
+
+		await (BookRepository as any).updateLastReadChapter('b-99', {
+			chapterId: 'c-10',
+			chapterNumber: 10,
+			title: 'Chương 10'
+		});
+
+		expect(apiClient.post).toHaveBeenCalledWith('/api/books/b-99/last-read', {
+			chapterId: 'c-10',
+			chapterNumber: 10,
+			title: 'Chương 10'
+		});
+
+		const saved = await offlineDb.getBook('b-99');
+		expect(saved?.lastReadChapter).toEqual({
+			chapterId: 'c-10',
+			chapterNumber: 10,
+			title: 'Chương 10'
+		});
+		expect(saved?.lastedReadAt).toBeDefined();
+	});
+
+	it('QC-10 [Offline]: updateLastReadChapter only updates offlineDb and skips API call', async () => {
+		useAppStore.getState().setOfflineMode(true);
+		const mockBook = {
+			bookId: 'b-99',
+			bookName: 'Đấu Phá Khung Thương'
+		} as any;
+		await offlineDb.saveBook(mockBook);
+
+		await (BookRepository as any).updateLastReadChapter('b-99', {
+			chapterId: 'c-11',
+			chapterNumber: 11,
+			title: 'Chương 11'
+		});
+
+		expect(apiClient.post).not.toHaveBeenCalled();
+		const saved = await offlineDb.getBook('b-99');
+		expect(saved?.lastReadChapter?.chapterId).toBe('c-11');
+	});
+
+	it('QC-11 [Network Error]: updateLastReadChapter safely handles API rejection while keeping offlineDb updated', async () => {
+		const mockBook = {
+			bookId: 'b-99',
+			bookName: 'Đấu Phá Khung Thương'
+		} as any;
+		await offlineDb.saveBook(mockBook);
+
+		vi.mocked(apiClient.post).mockRejectedValueOnce(new Error('Network disconnected'));
+
+		await expect(
+			(BookRepository as any).updateLastReadChapter('b-99', {
+				chapterId: 'c-12',
+				chapterNumber: 12,
+				title: 'Chương 12'
+			})
+		).resolves.not.toThrow();
+
+		const saved = await offlineDb.getBook('b-99');
+		expect(saved?.lastReadChapter?.chapterId).toBe('c-12');
+	});
 });

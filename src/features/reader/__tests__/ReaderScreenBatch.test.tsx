@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
 import { ReaderScreen } from '@/features/reader/ReaderScreen';
+import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
 import { useAppStore } from '@/stores/useAppStore';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
@@ -12,6 +13,14 @@ vi.mock('../../../repositories/ChapterRepository', () => ({
 	ChapterRepository: {
 		getChapterContent: vi.fn(),
 		getChapters: vi.fn().mockResolvedValue({ chapters: [], pagination: {} })
+	}
+}));
+
+vi.mock('../../../repositories/BookRepository', () => ({
+	BookRepository: {
+		updateLastReadChapter: vi.fn().mockResolvedValue(undefined),
+		getLastReadChapter: vi.fn(),
+		getBook: vi.fn()
 	}
 }));
 
@@ -210,5 +219,56 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 		);
 
 		expect(ChapterRepository.getChapterContent).toHaveBeenCalledWith('c1', 1, false, '', 5);
+	});
+
+	it('QC-7 [Last Read Sync]: syncs active reading chapter to BookRepository.updateLastReadChapter', async () => {
+		const mockBatchData = {
+			chapter: {
+				chapterId: 'c1',
+				chapterNumber: 1,
+				title: 'Chương 1',
+				bookName: 'Truyện Đỉnh Cao',
+				state: 'SUCCEEDED',
+				totalTokens: 100,
+				content: ['Nội dung ch1'],
+				rootTab: ''
+			},
+			chapters: [
+				{
+					chapterId: 'c1',
+					chapterNumber: 1,
+					title: 'Chương 1',
+					bookName: 'Truyện Đỉnh Cao',
+					state: 'SUCCEEDED',
+					totalTokens: 100,
+					content: ['Nội dung ch1'],
+					rootTab: ''
+				}
+			],
+			navigation: { prev: null, next: null }
+		};
+
+		vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue(mockBatchData as any);
+
+		render(
+			<MemoryRouter initialEntries={['/book/b1/chapter/c1']}>
+				<Routes>
+					<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+				</Routes>
+			</MemoryRouter>
+		);
+
+		await waitFor(
+			() => {
+				expect(BookRepository.updateLastReadChapter).toHaveBeenCalledWith(
+					'b1',
+					expect.objectContaining({
+						chapterId: 'c1',
+						chapterNumber: 1
+					})
+				);
+			},
+			{ timeout: 3000 }
+		);
 	});
 });

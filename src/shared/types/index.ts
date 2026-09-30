@@ -1,6 +1,6 @@
 export interface LastReadChapter {
 	chapterId: string;
-	chapterNumber: string;
+	chapterNumber: string | number;
 	title: string;
 }
 
