@@ -1,30 +1,28 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ChapterRepository } from '@/repositories/ChapterRepository';
-import { BookRepository } from '@/repositories/BookRepository';
-import { ChapterContent, ChapterDetailItem } from '@/shared/types';
-import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
-import { useAppStore } from '@/stores/useAppStore';
-import { useToastStore } from '@/stores/useToastStore';
-import { useTTSStore } from './stores/useTTSStore';
-import { ReaderHeader } from './components/ReaderHeader';
-import { ParagraphView } from './components/ParagraphView';
-import { QuickReplacementModal } from './components/QuickReplacementModal';
-import { ReaderQuickControl } from './components/ReaderQuickControl';
-import { QuickTypographySheet } from './components/QuickTypographySheet';
-import { QuickChapterSelectSheet } from './components/QuickChapterSelectSheet';
-import { QuickBookHistorySheet } from './components/QuickBookHistorySheet';
-import { VerticalBatchChapterNav } from './components/VerticalBatchChapterNav';
 import { TranslationSheet } from '@/components/TranslationSheet';
 import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useReadingProgress } from '@/hooks/useReadingProgress';
+import { isEdgeReadAloudActive, useEdgeReadAloudBgm } from '@/hooks/useEdgeReadAloudBgm';
 import { useGlobalLoading } from '@/hooks/useGlobalLoading';
-import { useReadAloud } from '@/hooks/useReadAloud';
-import { useEdgeReadAloudBgm, isEdgeReadAloudActive } from '@/hooks/useEdgeReadAloudBgm';
-import { offlineDb } from '@/lib/offlineDb';
 import { triggerHaptic } from '@/hooks/useHaptic';
-import { AlertCircle, RotateCcw, Home } from 'lucide-react';
+import { useReadAloud } from '@/hooks/useReadAloud';
+import { useReadingProgress } from '@/hooks/useReadingProgress';
+import { offlineDb } from '@/lib/offlineDb';
+import { BookRepository } from '@/repositories/BookRepository';
+import { ChapterRepository } from '@/repositories/ChapterRepository';
+import { ChapterContent, ChapterDetailItem } from '@/shared/types';
+import { useAppStore } from '@/stores/useAppStore';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+import { useToastStore } from '@/stores/useToastStore';
+import { AlertCircle, Home, RotateCcw } from 'lucide-react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ParagraphView } from './components/ParagraphView';
+import { QuickBookHistorySheet } from './components/QuickBookHistorySheet';
+import { QuickChapterSelectSheet } from './components/QuickChapterSelectSheet';
+import { QuickTypographySheet } from './components/QuickTypographySheet';
+import { ReaderHeader } from './components/ReaderHeader';
+import { ReaderQuickControl } from './components/ReaderQuickControl';
+import { VerticalBatchChapterNav } from './components/VerticalBatchChapterNav';
 
 interface ChapterContentSectionProps {
 	chapters: ChapterDetailItem[];
@@ -172,7 +170,7 @@ export function ReaderScreen() {
 	);
 
 	// Keep single global LoadingOverlay active until chapter data is rendered in React state
-	useGlobalLoading(loading);
+	useGlobalLoading(loading || isRefreshingLatest);
 
 	// Sync document.title with the current reading story name
 	useDocumentTitle(contentData?.chapter?.bookName);
@@ -471,7 +469,6 @@ export function ReaderScreen() {
 		setIsRefreshingLatest(true);
 		stopReading();
 		try {
-			showToast('Đang kiểm tra chương đọc gần nhất...', 'info');
 			// 1. Prioritize user's lastReadChapter from server API (same as history tab)
 			const lastRead = await BookRepository.getLastReadChapter(bookId, { forceFresh: true });
 			// 2. Fallback to latest chapter if no lastReadChapter found
@@ -485,7 +482,6 @@ export function ReaderScreen() {
 			const isCurrent = targetChapter.chapterId === chapterId;
 
 			if (isCurrent) {
-				showToast(`Đang làm mới chương ${targetChapter.chapterNumber}...`, 'info');
 				await loadChapter(true);
 				showToast(`Đã tải bản mới nhất: Chương ${targetChapter.chapterNumber}`, 'success');
 			} else {
