@@ -69,11 +69,7 @@ export function GlobalSettingsSheet({ currentBookId, currentChapterId }: GlobalS
 								}}
 								title={tab.label}
 								aria-label={tab.label}
-								className={`min-h-[36px] transition-all duration-200 flex items-center justify-center cursor-pointer ${
-									isActive
-										? 'px-3 py-1.5 rounded-xl bg-primary/20 hover:bg-primary/30 border border-primary/60 text-primary font-black shadow-xs gap-1.5 flex-1'
-										: 'p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container min-w-[36px]'
-								}`}
+								className={`min-h-[36px] transition-all duration-200 flex items-center justify-center cursor-pointer ${isActive ? 'px-3 py-1.5 rounded-xl bg-primary/20 hover:bg-primary/30 border border-primary/60 text-primary font-black shadow-xs gap-1.5 flex-1' : 'p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container min-w-[36px]'}`}
 							>
 								<Icon size={16} className={isActive ? 'text-primary' : 'text-primary/70'} />
 								{isActive && <span className="text-xs tracking-tight font-black whitespace-nowrap animate-in fade-in duration-200">{tab.label}</span>}

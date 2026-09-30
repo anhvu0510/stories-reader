@@ -175,11 +175,7 @@ export const BookFloatMenu = React.memo(function BookFloatMenu({
 							className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
 						>
 							<div
-								className={`w-11 h-11 rounded-2xl border flex items-center justify-center group-hover:scale-105 transition-transform mb-1 shadow-xs ${
-									isDownloaded
-										? 'bg-emerald-500/15 hover:bg-emerald-500/20 border-emerald-500/30 text-emerald-400'
-										: 'bg-sky-500/15 hover:bg-sky-500/20 border-sky-500/30 text-sky-400'
-								}`}
+								className={`w-11 h-11 rounded-2xl border flex items-center justify-center group-hover:scale-105 transition-transform mb-1 shadow-xs ${isDownloaded ? 'bg-emerald-500/15 hover:bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-sky-500/15 hover:bg-sky-500/20 border-sky-500/30 text-sky-400'}`}
 							>
 								{isDownloaded ? <RefreshCw size={18} /> : <Download size={19} />}
 							</div>
@@ -198,9 +194,7 @@ export const BookFloatMenu = React.memo(function BookFloatMenu({
 							className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
 						>
 							<div
-								className={`w-11 h-11 rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform mb-1 border shadow-xs ${
-									isFavorite ? 'bg-rose-500/20 border-rose-500/40 text-rose-500' : 'bg-white/10 hover:bg-white/15 border-white/15 text-on-surface-variant'
-								}`}
+								className={`w-11 h-11 rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform mb-1 border shadow-xs ${isFavorite ? 'bg-rose-500/20 border-rose-500/40 text-rose-500' : 'bg-white/10 hover:bg-white/15 border-white/15 text-on-surface-variant'}`}
 							>
 								<Heart size={19} className={isFavorite ? 'fill-rose-500' : ''} />
 							</div>

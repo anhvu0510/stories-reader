@@ -113,11 +113,7 @@ export function ServerTab() {
 							setOfflineMode(nextState);
 							showToast(nextState ? 'Đã bật chế độ Ngoại tuyến (Offline Mode)' : 'Đã kết nối lại chế độ Trực tuyến (Online Mode)', nextState ? 'info' : 'success');
 						}}
-						className={`p-1.5 rounded-lg transition-colors text-xs flex items-center gap-1 font-medium ${
-							isOfflineMode
-								? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25'
-								: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25'
-						}`}
+						className={`p-1.5 rounded-lg transition-colors text-xs flex items-center gap-1 font-medium ${isOfflineMode ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25' : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25'}`}
 						title={isOfflineMode ? 'Đang Ngoại tuyến (Nhấp để bật Online)' : 'Đang Trực tuyến (Nhấp để bật Offline)'}
 					>
 						{isOfflineMode ? <WifiOff size={14} /> : <Wifi size={14} />}
@@ -185,9 +181,7 @@ export function ServerTab() {
 					return (
 						<div
 							key={domain.id}
-							className={`p-3 rounded-2xl border transition-all flex items-center justify-between ${
-								isActive ? 'bg-primary/20 border-primary/50 text-on-surface shadow-xs' : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-on-surface'
-							}`}
+							className={`p-3 rounded-2xl border transition-all flex items-center justify-between ${isActive ? 'bg-primary/20 border-primary/50 text-on-surface shadow-xs' : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-on-surface'}`}
 						>
 							<div className="flex-1 min-w-0 pr-3">
 								<div className="flex items-center gap-2">

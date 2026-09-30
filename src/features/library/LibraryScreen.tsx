@@ -322,9 +322,7 @@ export function LibraryScreen() {
 											whileTap={{ scale: 0.94 }}
 											onClick={() => handleTabChange(t.id as any)}
 											title={t.title}
-											className={`relative h-7 flex items-center justify-center gap-1 px-1.5 rounded-[11px] transition-colors duration-200 shrink-0 cursor-pointer ${
-												isActive ? `${t.activeText} font-bold` : 'text-on-surface-variant/75 hover:text-on-surface'
-											}`}
+											className={`relative h-7 flex items-center justify-center gap-1 px-1.5 rounded-[11px] transition-colors duration-200 shrink-0 cursor-pointer ${isActive ? `${t.activeText} font-bold` : 'text-on-surface-variant/75 hover:text-on-surface'}`}
 										>
 											{isActive && (
 												<motion.div
@@ -339,9 +337,7 @@ export function LibraryScreen() {
 											)}
 											<t.Icon
 												size={13}
-												className={`shrink-0 relative z-10 ${
-													t.id === 'FAVORITE' && isActive ? 'fill-rose-500 text-rose-500' : isActive ? t.activeText : 'text-on-surface-variant/60'
-												}`}
+												className={`shrink-0 relative z-10 ${t.id === 'FAVORITE' && isActive ? 'fill-rose-500 text-rose-500' : isActive ? t.activeText : 'text-on-surface-variant/60'}`}
 											/>
 											<span className="text-[10.5px] tracking-tight font-bold relative z-10 whitespace-nowrap">{t.label}</span>
 											{isActive && (
@@ -365,11 +361,7 @@ export function LibraryScreen() {
 											triggerHaptic('light');
 											setIsSortSheetOpen(true);
 										}}
-										className={`relative h-9 w-9 rounded-[14px] border transition-all flex items-center justify-center shrink-0 box-border cursor-pointer ${
-											isCustomSortActive
-												? 'bg-primary/20 border-primary/60 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)]'
-												: 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-primary hover:border-primary/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
-										}`}
+										className={`relative h-9 w-9 rounded-[14px] border transition-all flex items-center justify-center shrink-0 box-border cursor-pointer ${isCustomSortActive ? 'bg-primary/20 border-primary/60 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)]' : 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-primary hover:border-primary/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'}`}
 										title="Sắp xếp danh sách"
 										aria-label="Sắp xếp danh sách"
 										data-testid="sort-trigger-btn"
@@ -387,11 +379,7 @@ export function LibraryScreen() {
 										triggerHaptic('light');
 										setIsTagFilterOpen(true);
 									}}
-									className={`relative h-9 w-9 rounded-[14px] border transition-all flex items-center justify-center shrink-0 box-border cursor-pointer ${
-										selectedTags.length > 0
-											? 'bg-primary border-primary text-on-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]'
-											: 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-primary hover:border-primary/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
-									}`}
+									className={`relative h-9 w-9 rounded-[14px] border transition-all flex items-center justify-center shrink-0 box-border cursor-pointer ${selectedTags.length > 0 ? 'bg-primary border-primary text-on-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-primary hover:border-primary/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'}`}
 									title="Lọc theo Thể loại & Tags"
 									aria-label="Lọc theo Thể loại & Tags"
 									data-testid="tag-filter-trigger-btn"

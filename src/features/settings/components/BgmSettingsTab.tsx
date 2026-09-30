@@ -238,9 +238,7 @@ export function BgmSettingsTab() {
 					<button
 						onClick={togglePreview}
 						disabled={!bgmEnabled}
-						className={`px-2.5 py-1 rounded-xl font-bold flex items-center gap-1.5 transition-all text-[11px] active:scale-95 ${
-							isPreviewing ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 hover:bg-amber-500/30' : 'bg-primary/20 text-primary border border-primary/40 hover:bg-primary/30'
-						} disabled:opacity-40 disabled:pointer-events-none`}
+						className={`px-2.5 py-1 rounded-xl font-bold flex items-center gap-1.5 transition-all text-[11px] active:scale-95 ${isPreviewing ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 hover:bg-amber-500/30' : 'bg-primary/20 text-primary border border-primary/40 hover:bg-primary/30'} disabled:opacity-40 disabled:pointer-events-none`}
 					>
 						{isPreviewing ? <Pause size={13} /> : <Play size={13} />}
 						{isPreviewing ? 'Tạm dừng' : 'Nghe thử'}
@@ -279,9 +277,7 @@ export function BgmSettingsTab() {
 							<button
 								key={presetVol}
 								onClick={() => setBgmVolume(presetVol)}
-								className={`flex-1 py-1 text-[11px] font-bold rounded-lg border transition-all text-center active:scale-95 ${
-									isSelected ? 'bg-primary/30 text-primary border-primary/60 shadow-xs' : 'bg-white/5 border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/10'
-								}`}
+								className={`flex-1 py-1 text-[11px] font-bold rounded-lg border transition-all text-center active:scale-95 ${isSelected ? 'bg-primary/30 text-primary border-primary/60 shadow-xs' : 'bg-white/5 border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/10'}`}
 							>
 								{pct}%
 							</button>
@@ -305,11 +301,7 @@ export function BgmSettingsTab() {
 							<button
 								key={preset.id}
 								onClick={() => handleSelectPreset(preset.url)}
-								className={`p-2 rounded-xl border text-left transition-all flex items-start gap-2 relative ${
-									isSelected
-										? 'bg-primary/20 border-primary/60 text-on-surface shadow-xs'
-										: 'bg-white/5 border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/10'
-								}`}
+								className={`p-2 rounded-xl border text-left transition-all flex items-start gap-2 relative ${isSelected ? 'bg-primary/20 border-primary/60 text-on-surface shadow-xs' : 'bg-white/5 border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/10'}`}
 							>
 								<div className={`p-1.5 rounded-lg ${isSelected ? 'bg-primary/30 text-primary' : 'bg-white/10 text-on-surface-variant'}`}>
 									<Icon size={15} />

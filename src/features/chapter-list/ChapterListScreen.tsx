@@ -190,11 +190,7 @@ export function ChapterListScreen() {
 									type="button"
 									whileTap={{ scale: 0.88 }}
 									onClick={handleToggleFavorite}
-									className={`w-9 h-9 rounded-full border transition-all flex items-center justify-center cursor-pointer ${
-										isFav
-											? 'bg-rose-500/15 border-rose-500/40 text-rose-500 shadow-xs'
-											: 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-rose-400'
-									}`}
+									className={`w-9 h-9 rounded-full border transition-all flex items-center justify-center cursor-pointer ${isFav ? 'bg-rose-500/15 border-rose-500/40 text-rose-500 shadow-xs' : 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-rose-400'}`}
 									title={isFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
 								>
 									<Heart size={15} className={isFav ? 'fill-rose-500 text-rose-500' : ''} />

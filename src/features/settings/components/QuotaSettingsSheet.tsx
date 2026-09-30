@@ -96,9 +96,7 @@ export function QuotaSettingsSheet({
 
 	const content = (
 		<div
-			className={`relative bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full flex flex-col ${
-				!isEmbedded ? 'flex-1 overflow-hidden border border-white/20 h-[85vh] sm:h-[80vh] rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-[600px] z-10' : 'h-full max-w-full bg-transparent'
-			}`}
+			className={`relative bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full flex flex-col ${!isEmbedded ? 'flex-1 overflow-hidden border border-white/20 h-[85vh] sm:h-[80vh] rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-[600px] z-10' : 'h-full max-w-full bg-transparent'}`}
 		>
 			{/* Header */}
 			<div className="flex-shrink-0 p-3 sm:p-4 border-b border-white/10 flex flex-col gap-3 bg-transparent rounded-2xl mb-2">
@@ -134,17 +132,13 @@ export function QuotaSettingsSheet({
 				<div className="flex bg-white/10 p-1 rounded-xl border border-white/15">
 					<button
 						onClick={() => setActiveTab('VERTEX_API')}
-						className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-							activeTab === 'VERTEX_API' ? 'bg-primary/20 text-primary border border-primary/50 shadow-xs' : 'text-on-surface-variant hover:text-on-surface'
-						}`}
+						className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'VERTEX_API' ? 'bg-primary/20 text-primary border border-primary/50 shadow-xs' : 'text-on-surface-variant hover:text-on-surface'}`}
 					>
 						VERTEX API
 					</button>
 					<button
 						onClick={() => setActiveTab('AI_STUDIO')}
-						className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-							activeTab === 'AI_STUDIO' ? 'bg-primary/20 text-primary border border-primary/50 shadow-xs' : 'text-on-surface-variant hover:text-on-surface'
-						}`}
+						className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'AI_STUDIO' ? 'bg-primary/20 text-primary border border-primary/50 shadow-xs' : 'text-on-surface-variant hover:text-on-surface'}`}
 					>
 						AI STUDIO
 					</button>
@@ -164,9 +158,7 @@ export function QuotaSettingsSheet({
 									<QuotaEditor formData={formData} setFormData={setFormData} onSave={handleSave} onCancel={() => setEditingId(null)} />
 								) : (
 									<div
-										className={`p-3 rounded-2xl border transition-all ${
-											q.isActive ? 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08]' : 'border-white/10 bg-white/[0.02] opacity-60'
-										}`}
+										className={`p-3 rounded-2xl border transition-all ${q.isActive ? 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08]' : 'border-white/10 bg-white/[0.02] opacity-60'}`}
 									>
 										<div className="flex items-center justify-between gap-3">
 											<div className="flex-1 min-w-0">

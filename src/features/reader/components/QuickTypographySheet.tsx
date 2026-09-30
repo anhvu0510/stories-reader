@@ -120,9 +120,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
 									}}
 									title={t.name}
 									aria-label={t.name}
-									className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-white/30 transition-all cursor-pointer relative ${
-										isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-slate-900 shadow-xs' : 'opacity-70 hover:opacity-100'
-									}`}
+									className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-white/30 transition-all cursor-pointer relative ${isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-slate-900 shadow-xs' : 'opacity-70 hover:opacity-100'}`}
 									style={{ backgroundColor: t.bg, color: t.text }}
 								>
 									{isSelected && <Check size={13} strokeWidth={3} />}
@@ -144,11 +142,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
 									triggerHaptic('selection');
 									setFont(f.id);
 								}}
-								className={`px-3 py-2 rounded-xl border text-[11px] font-bold shrink-0 transition-all flex items-center gap-1 cursor-pointer ${
-									isSelected
-										? 'bg-gradient-to-b from-primary via-primary-fixed to-primary-fixed-dim text-on-primary border-primary/70 shadow-[0_2px_8px_var(--primary)] font-black'
-										: 'bg-white/10 border-white/20 text-on-surface-variant hover:text-on-surface hover:bg-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]'
-								}`}
+								className={`px-3 py-2 rounded-xl border text-[11px] font-bold shrink-0 transition-all flex items-center gap-1 cursor-pointer ${isSelected ? 'bg-gradient-to-b from-primary via-primary-fixed to-primary-fixed-dim text-on-primary border-primary/70 shadow-[0_2px_8px_var(--primary)] font-black' : 'bg-white/10 border-white/20 text-on-surface-variant hover:text-on-surface hover:bg-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]'}`}
 							>
 								{f.name}
 								{isSelected && <Check size={11} strokeWidth={3} />}
@@ -243,9 +237,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
 							triggerHaptic('selection');
 							setIsEnabledReplace(!isEnabledReplace);
 						}}
-						className={`w-11 h-6 rounded-full p-0.5 transition-colors duration-200 ease-in-out shrink-0 cursor-pointer ${
-							isEnabledReplace ? 'bg-gradient-to-b from-primary to-primary-fixed' : 'bg-white/10 border border-white/20'
-						}`}
+						className={`w-11 h-6 rounded-full p-0.5 transition-colors duration-200 ease-in-out shrink-0 cursor-pointer ${isEnabledReplace ? 'bg-gradient-to-b from-primary to-primary-fixed' : 'bg-white/10 border border-white/20'}`}
 						title="Bật/tắt bộ thay thế từ ngữ"
 						aria-label="Bật/tắt bộ thay thế từ ngữ"
 					>

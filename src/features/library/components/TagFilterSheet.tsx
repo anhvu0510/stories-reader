@@ -156,11 +156,7 @@ export function TagFilterSheet({ isOpen, selectedTags, onApply, onClose }: TagFi
 											key={tag}
 											type="button"
 											onClick={() => toggleTag(tag)}
-											className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs border transition-all active:scale-95 ${
-												isSelected
-													? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary shadow-[0_4px_16px_var(--primary),_inset_0_1px_1px_rgba(255,255,255,0.6)] font-extrabold'
-													: 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 text-on-surface font-medium'
-											}`}
+											className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs border transition-all active:scale-95 ${isSelected ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary shadow-[0_4px_16px_var(--primary),_inset_0_1px_1px_rgba(255,255,255,0.6)] font-extrabold' : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 text-on-surface font-medium'}`}
 											data-testid={`tag-chip-${tag}`}
 										>
 											{isSelected && <Check size={12} className="shrink-0 stroke-[2.5]" />}

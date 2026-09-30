@@ -182,11 +182,7 @@ export function ReaderSettingsTab() {
 									triggerHaptic('selection');
 									setTheme(item.id);
 								}}
-								className={`py-2 px-3 rounded-xl border flex items-center gap-2 transition-all text-xs cursor-pointer ${
-									isSelected
-										? 'bg-primary/20 hover:bg-primary/25 border-primary/50 text-primary font-black shadow-xs'
-										: 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface'
-								}`}
+								className={`py-2 px-3 rounded-xl border flex items-center gap-2 transition-all text-xs cursor-pointer ${isSelected ? 'bg-primary/20 hover:bg-primary/25 border-primary/50 text-primary font-black shadow-xs' : 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface'}`}
 							>
 								<div className="w-3.5 h-3.5 rounded-full border border-white/30 shrink-0 shadow-xs" style={{ backgroundColor: item.bg }} />
 								<span className="font-bold text-xs truncate">{item.label}</span>
@@ -211,11 +207,7 @@ export function ReaderSettingsTab() {
 								triggerHaptic('selection');
 								setFont(item.id);
 							}}
-							className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all text-center truncate cursor-pointer ${
-								font === item.id
-									? 'bg-primary/20 hover:bg-primary/25 border-primary/50 text-primary font-black shadow-xs'
-									: 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface'
-							}`}
+							className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all text-center truncate cursor-pointer ${font === item.id ? 'bg-primary/20 hover:bg-primary/25 border-primary/50 text-primary font-black shadow-xs' : 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface'}`}
 						>
 							{item.label}
 						</motion.button>

@@ -43,11 +43,7 @@ export function LibraryHeader({ searchQuery, onSearchChange, onOpenSettings, onS
 							triggerHaptic('selection');
 							setOfflineMode(!isOfflineMode);
 						}}
-						className={`w-9 h-9 rounded-full border transition-all shadow-sm flex items-center justify-center cursor-pointer ${
-							isOfflineMode
-								? 'bg-primary/20 border-primary/50 text-primary'
-								: 'bg-white/5 dark:bg-white/5 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-white/10 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.25)]'
-						}`}
+						className={`w-9 h-9 rounded-full border transition-all shadow-sm flex items-center justify-center cursor-pointer ${isOfflineMode ? 'bg-primary/20 border-primary/50 text-primary' : 'bg-white/5 dark:bg-white/5 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-white/10 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.25)]'}`}
 						title={isOfflineMode ? 'Đang ở chế độ Ngoại tuyến (Bấm để chuyển Online)' : 'Đang ở chế độ Trực tuyến (Bấm để chuyển Offline)'}
 					>
 						{isOfflineMode ? <WifiOff size={16} /> : <Wifi size={16} />}

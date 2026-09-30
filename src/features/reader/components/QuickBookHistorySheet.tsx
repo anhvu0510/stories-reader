@@ -112,11 +112,7 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
 			>
 				{/* Left Side: Ultra-Compact TỔNG Badge */}
 				<div
-					className={`w-9 h-9 rounded-lg flex flex-col items-center justify-center flex-shrink-0 font-mono shadow-2xs ${
-						isPinned
-							? 'bg-primary/30 border border-primary/70 text-primary font-extrabold shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.5)]'
-							: 'bg-primary/10 border border-primary/30 text-primary/90 font-bold'
-					}`}
+					className={`w-9 h-9 rounded-lg flex flex-col items-center justify-center flex-shrink-0 font-mono shadow-2xs ${isPinned ? 'bg-primary/30 border border-primary/70 text-primary font-extrabold shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.5)]' : 'bg-primary/10 border border-primary/30 text-primary/90 font-bold'}`}
 				>
 					<span className={`text-[7px] font-extrabold uppercase tracking-wider leading-none flex items-center gap-0.5 ${isPinned ? 'text-primary/80' : 'text-primary/80'}`}>
 						<Layers size={8} /> TỔNG
@@ -137,11 +133,7 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
 					{book.lastReadChapter?.chapterId && (
 						<div className="flex items-center gap-1.5 text-xs min-w-0 overflow-hidden">
 							<span
-								className={`px-1.5 py-0.5 min-w-[28px] h-5 rounded-md font-mono font-extrabold text-[9.5px] whitespace-nowrap flex items-center justify-center shrink-0 shadow-2xs ${
-									isPinned
-										? 'bg-primary/25 border border-primary/50 text-primary'
-										: 'bg-emerald-500/15 border border-emerald-400/30 text-emerald-400 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]'
-								}`}
+								className={`px-1.5 py-0.5 min-w-[28px] h-5 rounded-md font-mono font-extrabold text-[9.5px] whitespace-nowrap flex items-center justify-center shrink-0 shadow-2xs ${isPinned ? 'bg-primary/25 border border-primary/50 text-primary' : 'bg-emerald-500/15 border border-emerald-400/30 text-emerald-400 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]'}`}
 							>
 								Ch.{book.lastReadChapter.chapterNumber}
 							</span>
@@ -161,18 +153,14 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
 						</div>
 
 						<span
-							className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md font-bold shrink-0 ${
-								isPinned ? 'border border-emerald-400/40 bg-emerald-400/20 text-emerald-300' : 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-							}`}
+							className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md font-bold shrink-0 ${isPinned ? 'border border-emerald-400/40 bg-emerald-400/20 text-emerald-300' : 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}
 						>
 							<BookOpen size={10} className={isPinned ? 'text-emerald-300' : 'text-emerald-400'} />
 							<span>{readCount}</span>
 						</span>
 
 						<span
-							className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md font-bold shrink-0 ${
-								isPinned ? 'border border-primary/40 bg-primary/20 text-primary' : 'border border-primary/30 bg-primary/10 text-primary'
-							}`}
+							className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md font-bold shrink-0 ${isPinned ? 'border border-primary/40 bg-primary/20 text-primary' : 'border border-primary/30 bg-primary/10 text-primary'}`}
 						>
 							<Sparkles size={10} className={isPinned ? 'text-primary' : 'text-primary'} />
 							<span>{book.totalTranslated}</span>

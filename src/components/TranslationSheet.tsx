@@ -1232,13 +1232,7 @@ function TabButton({ active, children, onClick, disabled }: { active: boolean; c
 				}
 			}}
 			disabled={disabled}
-			className={`flex-1 py-1.5 min-h-[32px] text-xs font-bold rounded-md transition-all duration-200 flex items-center justify-center ${
-				disabled
-					? 'opacity-30 cursor-not-allowed bg-transparent text-on-surface-variant'
-					: active
-						? 'bg-primary/20 text-primary font-black border border-primary/50 shadow-xs'
-						: 'text-on-surface-variant/80 hover:text-on-surface border border-transparent cursor-pointer'
-			}`}
+			className={`flex-1 py-1.5 min-h-[32px] text-xs font-bold rounded-md transition-all duration-200 flex items-center justify-center ${disabled ? 'opacity-30 cursor-not-allowed bg-transparent text-on-surface-variant' : active ? 'bg-primary/20 text-primary font-black border border-primary/50 shadow-xs' : 'text-on-surface-variant/80 hover:text-on-surface border border-transparent cursor-pointer'}`}
 		>
 			{children}
 		</motion.button>

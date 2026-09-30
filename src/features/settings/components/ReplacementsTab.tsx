@@ -116,11 +116,7 @@ export function ReplacementsTab({ initialMatch = '', currentBookId, currentChapt
 									key={item.id}
 									type="button"
 									onClick={() => setScope(item.id as any)}
-									className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-95 ${
-										isActive
-											? 'bg-primary/20 border border-primary/60 text-primary shadow-xs'
-											: 'text-on-surface-variant hover:text-on-surface hover:bg-white/10 border border-transparent'
-									}`}
+									className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-95 ${isActive ? 'bg-primary/20 border border-primary/60 text-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10 border border-transparent'}`}
 								>
 									{item.label}
 								</button>
@@ -164,11 +160,7 @@ export function ReplacementsTab({ initialMatch = '', currentBookId, currentChapt
 								key={item.id}
 								type="button"
 								onClick={() => setScopeFilter(item.id as any)}
-								className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-95 whitespace-nowrap ${
-									isActive
-										? 'bg-primary/20 border border-primary/60 text-primary shadow-xs'
-										: 'text-on-surface-variant hover:text-on-surface hover:bg-white/10 border border-transparent'
-								}`}
+								className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-95 whitespace-nowrap ${isActive ? 'bg-primary/20 border border-primary/60 text-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10 border border-transparent'}`}
 							>
 								{item.label}
 							</button>

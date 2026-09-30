@@ -117,17 +117,11 @@ export function SortSheet({ isOpen, currentSortBy, currentSortOrder, defaultSort
 							key={opt.id}
 							type="button"
 							onClick={() => handleSelect(opt.sortBy, opt.sortOrder)}
-							className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all active:scale-[0.99] text-left ${
-								isSelected
-									? 'bg-primary/20 hover:bg-primary/25 border-2 border-primary text-primary shadow-xs'
-									: 'bg-surface-container hover:bg-surface-container-high border-2 border-outline-variant/50 hover:border-primary/60 text-on-surface'
-							}`}
+							className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all active:scale-[0.99] text-left ${isSelected ? 'bg-primary/20 hover:bg-primary/25 border-2 border-primary text-primary shadow-xs' : 'bg-surface-container hover:bg-surface-container-high border-2 border-outline-variant/50 hover:border-primary/60 text-on-surface'}`}
 						>
 							<div className="flex items-center gap-3">
 								<div
-									className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-										isSelected ? 'bg-primary/30 border border-primary/70 text-primary font-extrabold' : 'bg-primary/10 border border-primary/30 text-primary'
-									}`}
+									className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-primary/30 border border-primary/70 text-primary font-extrabold' : 'bg-primary/10 border border-primary/30 text-primary'}`}
 								>
 									{opt.icon}
 								</div>
@@ -138,9 +132,7 @@ export function SortSheet({ isOpen, currentSortBy, currentSortOrder, defaultSort
 							</div>
 
 							<div
-								className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-									isSelected ? 'bg-primary/30 border border-primary/70 text-primary font-bold' : 'border border-outline-variant/60'
-								}`}
+								className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-primary/30 border border-primary/70 text-primary font-bold' : 'border border-outline-variant/60'}`}
 							>
 								{isSelected && <Check size={12} strokeWidth={3} />}
 							</div>

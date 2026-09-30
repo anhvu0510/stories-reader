@@ -271,11 +271,7 @@ export function VoiceSettingsTab() {
 							setVoiceUri(vieneuVoices[0].id);
 						}
 					}}
-					className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 ${
-						ttsEngine === 'vieneu'
-							? 'bg-primary/20 hover:bg-primary/25 border border-primary/60 text-primary font-black shadow-xs'
-							: 'text-on-surface-variant hover:text-on-surface border border-transparent'
-					}`}
+					className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 ${ttsEngine === 'vieneu' ? 'bg-primary/20 hover:bg-primary/25 border border-primary/60 text-primary font-black shadow-xs' : 'text-on-surface-variant hover:text-on-surface border border-transparent'}`}
 				>
 					<Sparkles size={12} className={ttsEngine === 'vieneu' ? 'text-primary' : 'opacity-70'} />
 					<span>VieNeu AI</span>
@@ -286,11 +282,7 @@ export function VoiceSettingsTab() {
 					onClick={() => {
 						setTTSEngine('edge');
 					}}
-					className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 ${
-						ttsEngine === 'edge'
-							? 'bg-primary/20 hover:bg-primary/25 border border-primary/60 text-primary font-black shadow-xs'
-							: 'text-on-surface-variant hover:text-on-surface border border-transparent'
-					}`}
+					className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 ${ttsEngine === 'edge' ? 'bg-primary/20 hover:bg-primary/25 border border-primary/60 text-primary font-black shadow-xs' : 'text-on-surface-variant hover:text-on-surface border border-transparent'}`}
 				>
 					<Cpu size={12} className={ttsEngine === 'edge' ? 'text-primary' : 'opacity-70'} />
 					<span>Edge TTS</span>
@@ -299,11 +291,7 @@ export function VoiceSettingsTab() {
 				<button
 					type="button"
 					onClick={() => setTTSEngine('browser')}
-					className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 ${
-						ttsEngine === 'browser'
-							? 'bg-primary/20 hover:bg-primary/25 border border-primary/60 text-primary font-black shadow-xs'
-							: 'text-on-surface-variant hover:text-on-surface border border-transparent'
-					}`}
+					className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 ${ttsEngine === 'browser' ? 'bg-primary/20 hover:bg-primary/25 border border-primary/60 text-primary font-black shadow-xs' : 'text-on-surface-variant hover:text-on-surface border border-transparent'}`}
 				>
 					<Globe size={12} className={ttsEngine === 'browser' ? 'text-primary' : 'opacity-70'} />
 					<span>Native</span>
@@ -556,11 +544,7 @@ export function VoiceSettingsTab() {
 														handleTestVoice(v.id);
 													}}
 													title={`${v.name} (${v.gender === 'male' ? 'Nam' : v.gender === 'female' ? 'Nữ' : 'Không xác định'})`}
-													className={`py-1.5 px-1.5 rounded-xl border text-center transition-all active:scale-95 flex flex-col items-center justify-center gap-0.5 cursor-pointer min-w-0 ${
-														isSelected
-															? 'bg-primary/20 hover:bg-primary/25 border-primary/60 text-primary font-black shadow-xs'
-															: 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface font-bold'
-													}`}
+													className={`py-1.5 px-1.5 rounded-xl border text-center transition-all active:scale-95 flex flex-col items-center justify-center gap-0.5 cursor-pointer min-w-0 ${isSelected ? 'bg-primary/20 hover:bg-primary/25 border-primary/60 text-primary font-black shadow-xs' : 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface font-bold'}`}
 												>
 													<div className="flex items-center justify-center gap-1 w-full min-w-0">
 														{isSelected && isTestingAudio ? (
@@ -571,9 +555,7 @@ export function VoiceSettingsTab() {
 														<span className="text-xs truncate leading-tight">{v.name}</span>
 													</div>
 													<span
-														className={`text-[8.5px] font-mono font-black px-1.5 py-0.2 rounded-md border leading-none ${
-															v.gender === 'male' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : 'bg-pink-500/15 text-pink-400 border-pink-500/30'
-														}`}
+														className={`text-[8.5px] font-mono font-black px-1.5 py-0.2 rounded-md border leading-none ${v.gender === 'male' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : 'bg-pink-500/15 text-pink-400 border-pink-500/30'}`}
 													>
 														{v.gender === 'male' ? 'Nam' : v.gender === 'female' ? 'Nữ' : 'Khác'}
 													</span>
@@ -600,11 +582,7 @@ export function VoiceSettingsTab() {
 										handleTestVoice(v.id);
 									}}
 									title={v.desc || v.name}
-									className={`py-2 px-2 rounded-xl border text-left transition-all active:scale-95 flex flex-col justify-center gap-0.5 cursor-pointer min-w-0 ${
-										isSelected
-											? 'bg-primary/20 hover:bg-primary/25 border-primary/60 text-primary font-black shadow-xs'
-											: 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface font-bold'
-									}`}
+									className={`py-2 px-2 rounded-xl border text-left transition-all active:scale-95 flex flex-col justify-center gap-0.5 cursor-pointer min-w-0 ${isSelected ? 'bg-primary/20 hover:bg-primary/25 border-primary/60 text-primary font-black shadow-xs' : 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface font-bold'}`}
 								>
 									<div className="flex items-center gap-1.5 w-full min-w-0">
 										{isSelected && isTestingAudio ? (

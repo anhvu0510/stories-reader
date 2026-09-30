@@ -185,9 +185,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
 								<button
 									type="button"
 									onClick={handleToggleFavorite}
-									className={`p-0.5 rounded-full transition-all active:scale-90 cursor-pointer ${
-										isFav ? 'text-rose-500 hover:text-rose-600' : 'text-on-surface-variant/40 hover:text-rose-400 hover:bg-rose-500/10'
-									}`}
+									className={`p-0.5 rounded-full transition-all active:scale-90 cursor-pointer ${isFav ? 'text-rose-500 hover:text-rose-600' : 'text-on-surface-variant/40 hover:text-rose-400 hover:bg-rose-500/10'}`}
 									title={isFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
 									aria-label={isFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
 								>

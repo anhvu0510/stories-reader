@@ -77,11 +77,7 @@ export function QuickReplacementModal({ matchText, bookId, chapterId, onClose, o
 									key={item.id}
 									type="button"
 									onClick={() => setScope(item.id as any)}
-									className={`py-1 px-2 rounded-lg text-xs font-bold transition-all text-center ${
-										isActive
-											? 'bg-primary/20 border border-primary/60 text-primary shadow-xs'
-											: 'text-on-surface-variant hover:text-on-surface hover:bg-white/10 border border-transparent'
-									}`}
+									className={`py-1 px-2 rounded-lg text-xs font-bold transition-all text-center ${isActive ? 'bg-primary/20 border border-primary/60 text-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10 border border-transparent'}`}
 								>
 									{item.label}
 								</button>

@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { LocateFixed, Volume2, Play, Pause, Square, SkipBack, SkipForward, Loader2, Music } from 'lucide-react';
-import { ChapterDetailItem } from '@/shared/types';
 import { isEdgeReadAloudActive } from '@/hooks/useEdgeReadAloudBgm';
-import { motion } from 'motion/react';
 import { triggerHaptic } from '@/hooks/useHaptic';
+import { ChapterDetailItem } from '@/shared/types';
+import { Loader2, LocateFixed, Music, Pause, Play, SkipBack, SkipForward, Square, Volume2 } from 'lucide-react';
+import { motion } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
 
 export interface VerticalBatchChapterNavProps {
 	chapters?: ChapterDetailItem[];
@@ -88,9 +88,7 @@ export function VerticalBatchChapterNav({
 	return (
 		<div
 			aria-hidden="true"
-			className={`fixed bottom-[100px] left-0 right-0 z-40 w-full max-w-md mx-auto px-4 pointer-events-none box-border overflow-x-hidden transition-all duration-300 cubic-bezier(0.16,1,0.3,1) transform-gpu ${
-				isVisible ? 'translate-x-0 opacity-100' : '-translate-x-14 opacity-0 pointer-events-none'
-			}`}
+			className={`fixed bottom-[100px] left-0 right-0 z-40 w-full max-w-md mx-auto px-4 pointer-events-none box-border overflow-x-hidden transition-all duration-300 cubic-bezier(0.16,1,0.3,1) transform-gpu ${isVisible ? 'translate-x-0 opacity-100' : '-translate-x-14 opacity-0 pointer-events-none'}`}
 		>
 			<div ref={containerRef} className="w-fit flex flex-col items-center gap-2 pointer-events-auto box-border transition-all duration-300 transform-gpu">
 				{!isTTSActive ? (
@@ -122,11 +120,7 @@ export function VerticalBatchChapterNav({
 									triggerHaptic('light');
 									onToggleBgm();
 								}}
-								className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 cursor-pointer backdrop-blur-[2px] shadow-[0_3px_12px_rgba(0,0,0,0.4),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 ${
-									isBgmActive
-										? 'bg-primary/25 text-primary border border-primary/60 shadow-[0_3px_12px_rgba(59,130,246,0.45)]'
-										: 'bg-black/20 dark:bg-black/40 border border-primary/50 text-on-surface hover:text-primary'
-								}`}
+								className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 cursor-pointer backdrop-blur-[2px] shadow-[0_3px_12px_rgba(0,0,0,0.4),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 ${isBgmActive ? 'bg-primary/25 text-primary border border-primary/60 shadow-[0_3px_12px_rgba(59,130,246,0.45)]' : 'bg-black/20 dark:bg-black/40 border border-primary/50 text-on-surface hover:text-primary'}`}
 								title={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
 								aria-label={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
 							>
@@ -181,11 +175,7 @@ export function VerticalBatchChapterNav({
 									triggerHaptic('light');
 									onToggleBgm();
 								}}
-								className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 cursor-pointer backdrop-blur-[2px] shadow-[0_3px_12px_rgba(0,0,0,0.4),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 ${
-									isBgmActive
-										? 'bg-primary/25 text-primary border border-primary/60 shadow-[0_3px_12px_rgba(59,130,246,0.45)]'
-										: 'bg-black/20 dark:bg-black/40 border border-primary/50 text-on-surface hover:text-primary'
-								}`}
+								className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 cursor-pointer backdrop-blur-[2px] shadow-[0_3px_12px_rgba(0,0,0,0.4),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 ${isBgmActive ? 'bg-primary/25 text-primary border border-primary/60 shadow-[0_3px_12px_rgba(59,130,246,0.45)]' : 'bg-black/20 dark:bg-black/40 border border-primary/50 text-on-surface hover:text-primary'}`}
 								title={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
 								aria-label={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
 							>

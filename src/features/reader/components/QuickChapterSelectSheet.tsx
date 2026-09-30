@@ -331,13 +331,7 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 								disabled={Boolean(downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting'))}
 								title={isDownloaded ? 'Xóa dữ liệu ngoại tuyến' : 'Tải bộ truyện về đọc offline'}
 								aria-label={isDownloaded ? 'Xóa dữ liệu ngoại tuyến' : 'Tải bộ truyện về đọc offline'}
-								className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-									isDownloaded
-										? 'text-rose-500 bg-rose-500/10 hover:bg-rose-500/20'
-										: downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting')
-											? 'text-primary bg-primary/10'
-											: 'text-on-surface-variant hover:text-on-surface hover:bg-white/10'
-								}`}
+								className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${isDownloaded ? 'text-rose-500 bg-rose-500/10 hover:bg-rose-500/20' : downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting') ? 'text-primary bg-primary/10' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10'}`}
 							>
 								{downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting') ? (
 									<RefreshCw size={16} className="animate-spin text-primary" />

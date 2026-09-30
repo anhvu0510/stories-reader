@@ -218,11 +218,7 @@ export function BottomDock({ page = 1, totalPages = 1, total = 0, loading = fals
 												triggerHaptic('selection');
 												setTargetPage(presetNum);
 											}}
-											className={`py-2 px-1 rounded-xl text-[10px] font-mono font-extrabold border transition-all text-center truncate cursor-pointer ${
-												isSelected
-													? 'bg-primary/25 border-2 border-primary text-primary shadow-[0_2px_10px_rgba(0,0,0,0.2)]'
-													: 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border border-outline-variant/60 text-on-surface-variant hover:text-on-surface'
-											}`}
+											className={`py-2 px-1 rounded-xl text-[10px] font-mono font-extrabold border transition-all text-center truncate cursor-pointer ${isSelected ? 'bg-primary/25 border-2 border-primary text-primary shadow-[0_2px_10px_rgba(0,0,0,0.2)]' : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border border-outline-variant/60 text-on-surface-variant hover:text-on-surface'}`}
 										>
 											{label}
 										</motion.button>

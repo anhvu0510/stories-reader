@@ -74,9 +74,7 @@ export function ReaderQuickControl({
 	return (
 		<div
 			aria-hidden="true"
-			className={`fixed bottom-4 left-0 right-0 z-50 w-full max-w-[420px] sm:max-w-md mx-auto px-3 sm:px-4 pointer-events-none box-border transition-all duration-300 cubic-bezier(0.16,1,0.3,1) ${
-				isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-16 opacity-0 scale-95'
-			}`}
+			className={`fixed bottom-4 left-0 right-0 z-50 w-full max-w-[420px] sm:max-w-md mx-auto px-3 sm:px-4 pointer-events-none box-border transition-all duration-300 cubic-bezier(0.16,1,0.3,1) ${isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-16 opacity-0 scale-95'}`}
 		>
 			{/* Permanently Ultra-Translucent Pure Crystal Glass Dock Container */}
 			<div
