@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
 import { getAssetUrl } from '@/shared/utils/assetUrl';
+import { describe, expect, it } from 'vitest';
 
 describe('getAssetUrl Utility', () => {
 	it('QC-1: Trả về nguyên mẫu với URL tuyệt đối HTTP/HTTPS hoặc Data URL', () => {

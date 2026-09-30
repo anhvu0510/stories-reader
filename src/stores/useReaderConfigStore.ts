@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { ReaderConfig, ThemeType, FontType } from '@/shared/types';
-import { useAppStore } from './useAppStore';
 import { SettingsRepository } from '@/repositories/SettingsRepository';
+import { FontType, ReaderConfig, ThemeType } from '@/shared/types';
+import { create } from 'zustand';
+import { useAppStore } from './useAppStore';
 
 const SETTINGS_KEY = 'stories.ui.config';
 
