@@ -29,97 +29,94 @@ self.onmessage = function(e) {
 };
 `;
 
-export async function generateBgmBufferInWorker(
-  ctx: AudioContext,
-  duration = 4.0
-): Promise<AudioBuffer | null> {
-  if (typeof ctx.createBuffer !== 'function') return null;
-  const sampleRate = ctx.sampleRate || 44100;
+export async function generateBgmBufferInWorker(ctx: AudioContext, duration = 4.0): Promise<AudioBuffer | null> {
+	if (typeof ctx.createBuffer !== 'function') return null;
+	const sampleRate = ctx.sampleRate || 44100;
 
-  return new Promise((resolve) => {
-    let worker: Worker | null = null;
-    let resolved = false;
+	return new Promise((resolve) => {
+		let worker: Worker | null = null;
+		let resolved = false;
 
-    const cleanup = () => {
-      if (worker) {
-        try {
-          worker.terminate();
-        } catch {}
-        worker = null;
-      }
-    };
+		const cleanup = () => {
+			if (worker) {
+				try {
+					worker.terminate();
+				} catch {}
+				worker = null;
+			}
+		};
 
-    const fallbackMainThread = () => {
-      if (resolved) return;
-      resolved = true;
-      cleanup();
+		const fallbackMainThread = () => {
+			if (resolved) return;
+			resolved = true;
+			cleanup();
 
-      try {
-        const numSamples = Math.floor(sampleRate * duration);
-        const buffer = ctx.createBuffer(2, numSamples, sampleRate);
-        const left = buffer.getChannelData(0);
-        const right = buffer.getChannelData(1);
+			try {
+				const numSamples = Math.floor(sampleRate * duration);
+				const buffer = ctx.createBuffer(2, numSamples, sampleRate);
+				const left = buffer.getChannelData(0);
+				const right = buffer.getChannelData(1);
 
-        for (let i = 0; i < numSamples; i++) {
-          const t = i / sampleRate;
-          const lfo = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.25 * t);
-          const note1 = Math.sin(2 * Math.PI * 261.63 * t) * 0.12;
-          const note2 = Math.sin(2 * Math.PI * 329.63 * t) * 0.10;
-          const note3 = Math.sin(2 * Math.PI * 392.00 * t) * 0.08;
-          const wave = (note1 + note2 + note3) * lfo;
+				for (let i = 0; i < numSamples; i++) {
+					const t = i / sampleRate;
+					const lfo = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.25 * t);
+					const note1 = Math.sin(2 * Math.PI * 261.63 * t) * 0.12;
+					const note2 = Math.sin(2 * Math.PI * 329.63 * t) * 0.1;
+					const note3 = Math.sin(2 * Math.PI * 392.0 * t) * 0.08;
+					const wave = (note1 + note2 + note3) * lfo;
 
-          left[i] = wave;
-          right[i] = wave;
-        }
-        resolve(buffer);
-      } catch {
-        resolve(null);
-      }
-    };
+					left[i] = wave;
+					right[i] = wave;
+				}
+				resolve(buffer);
+			} catch {
+				resolve(null);
+			}
+		};
 
-    try {
-      if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
-        const blob = new Blob([INLINE_WORKER_CODE], { type: 'application/javascript' });
-        const blobUrl = URL.createObjectURL(blob);
-        worker = new Worker(blobUrl);
+		try {
+			if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
+				const blob = new Blob([INLINE_WORKER_CODE], { type: 'application/javascript' });
+				const blobUrl = URL.createObjectURL(blob);
+				worker = new Worker(blobUrl);
 
-        worker.onmessage = (event: MessageEvent<{ left: Float32Array; right: Float32Array }>) => {
-          if (resolved) return;
-          resolved = true;
-          URL.revokeObjectURL(blobUrl);
+				worker.onmessage = (event: MessageEvent<{ left: Float32Array; right: Float32Array }>) => {
+					if (resolved) return;
+					resolved = true;
+					URL.revokeObjectURL(blobUrl);
 
-          try {
-            const { left, right } = event.data;
-            const numSamples = left.length;
-            const buffer = ctx.createBuffer(2, numSamples, sampleRate);
-            buffer.copyToChannel(left, 0);
-            buffer.copyToChannel(right, 1);
-            cleanup();
-            resolve(buffer);
-          } catch {
-            fallbackMainThread();
-          }
-        };
+					try {
+						const { left, right } = event.data;
+						const numSamples = left.length;
+						const buffer = ctx.createBuffer(2, numSamples, sampleRate);
+						buffer.copyToChannel(left, 0);
+						buffer.copyToChannel(right, 1);
+						cleanup();
+						resolve(buffer);
+					} catch {
+						fallbackMainThread();
+					}
+				};
 
-        worker.onerror = () => {
-          URL.revokeObjectURL(blobUrl);
-          fallbackMainThread();
-        };
+				worker.onerror = () => {
+					URL.revokeObjectURL(blobUrl);
+					fallbackMainThread();
+				};
 
-        worker.postMessage({ sampleRate, duration });
+				worker.postMessage({ sampleRate, duration });
 
-        // Safety timeout if worker hangs
-        setTimeout(() => {
-          if (!resolved) {
-            URL.revokeObjectURL(blobUrl);
-            fallbackMainThread();
-          }
-        }, 1000);
-      } else {
-        fallbackMainThread();
-      }
-    } catch {
-      fallbackMainThread();
-    }
-  });
+				// Safety timeout if worker hangs
+				setTimeout(() => {
+					if (!resolved) {
+						URL.revokeObjectURL(blobUrl);
+						fallbackMainThread();
+					}
+				}, 1000);
+			} else {
+				fallbackMainThread();
+			}
+		} catch {
+			fallbackMainThread();
+		}
+	});
 }

@@ -5,239 +5,199 @@ import { TagRepository } from '../../../repositories/TagRepository';
 import { BottomSheet } from '../../../components/BottomSheet';
 
 interface TagFilterSheetProps {
-  isOpen: boolean;
-  selectedTags: string[];
-  onApply: (tags: string[]) => void;
-  onClose: () => void;
+	isOpen: boolean;
+	selectedTags: string[];
+	onApply: (tags: string[]) => void;
+	onClose: () => void;
 }
 
-export function TagFilterSheet({
-  isOpen,
-  selectedTags,
-  onApply,
-  onClose,
-}: TagFilterSheetProps) {
-  const [categories, setCategories] = useState<TagCategory[]>([]);
-  const [draftTags, setDraftTags] = useState<string[]>(selectedTags);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+export function TagFilterSheet({ isOpen, selectedTags, onApply, onClose }: TagFilterSheetProps) {
+	const [categories, setCategories] = useState<TagCategory[]>([]);
+	const [draftTags, setDraftTags] = useState<string[]>(selectedTags);
+	const [searchQuery, setSearchQuery] = useState('');
+	const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch latest categories from backend when component mounts or opens
-  useEffect(() => {
-    if (!isOpen) return;
-    setIsLoading(true);
-    TagRepository.getTags()
-      .then((res) => {
-        if (res && Array.isArray(res.categories)) {
-          setCategories(res.categories);
-        }
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [isOpen]);
+	// Fetch latest categories from backend when component mounts or opens
+	useEffect(() => {
+		if (!isOpen) return;
+		setIsLoading(true);
+		TagRepository.getTags()
+			.then((res) => {
+				if (res && Array.isArray(res.categories)) {
+					setCategories(res.categories);
+				}
+			})
+			.finally(() => {
+				setIsLoading(false);
+			});
+	}, [isOpen]);
 
-  // Sync draftTags whenever the sheet opens or external selectedTags changes
-  useEffect(() => {
-    if (isOpen) {
-      setDraftTags(selectedTags);
-      setSearchQuery('');
-    }
-  }, [isOpen, selectedTags]);
+	// Sync draftTags whenever the sheet opens or external selectedTags changes
+	useEffect(() => {
+		if (isOpen) {
+			setDraftTags(selectedTags);
+			setSearchQuery('');
+		}
+	}, [isOpen, selectedTags]);
 
-  const toggleTag = (tag: string) => {
-    setDraftTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
+	const toggleTag = (tag: string) => {
+		setDraftTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+	};
 
-  const handleClearAll = () => {
-    setDraftTags([]);
-  };
+	const handleClearAll = () => {
+		setDraftTags([]);
+	};
 
-  const handleApply = () => {
-    onApply(draftTags);
-    onClose();
-  };
+	const handleApply = () => {
+		onApply(draftTags);
+		onClose();
+	};
 
-  // Filter categories and tags based on search query
-  const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return categories;
-    const q = searchQuery.toLowerCase();
-    return categories
-      .map((category) => ({
-        ...category,
-        tags: category.tags.filter((t) => t.toLowerCase().includes(q)),
-      }))
-      .filter((category) => category.tags.length > 0);
-  }, [categories, searchQuery]);
+	// Filter categories and tags based on search query
+	const filteredCategories = useMemo(() => {
+		if (!searchQuery.trim()) return categories;
+		const q = searchQuery.toLowerCase();
+		return categories
+			.map((category) => ({
+				...category,
+				tags: category.tags.filter((t) => t.toLowerCase().includes(q))
+			}))
+			.filter((category) => category.tags.length > 0);
+	}, [categories, searchQuery]);
 
-  return (
-    <BottomSheet
-      isOpen={isOpen}
-      onClose={onClose}
-      ariaLabel="Bộ lọc Thể loại & Tags"
-      maxHeight="max-h-[88vh]"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-blue-500/20 dark:border-blue-400/20 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-primary/15 text-primary border border-primary/30 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]">
-            <Tag size={16} />
-          </div>
-          <div>
-            <h2 className="text-sm font-bold text-on-surface">Bộ lọc Thể loại & Tags</h2>
-            <p className="text-[10px] text-on-surface-variant/70">
-              Chọn một hoặc nhiều tags (điều kiện HOẶC)
-            </p>
-          </div>
-        </div>
+	return (
+		<BottomSheet isOpen={isOpen} onClose={onClose} ariaLabel="Bộ lọc Thể loại & Tags" maxHeight="max-h-[88vh]">
+			{/* Header */}
+			<div className="flex items-center justify-between px-4 py-2 border-b border-blue-500/20 dark:border-blue-400/20 flex-shrink-0">
+				<div className="flex items-center gap-2">
+					<div className="p-1.5 rounded-lg bg-primary/15 text-primary border border-primary/30 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]">
+						<Tag size={16} />
+					</div>
+					<div>
+						<h2 className="text-sm font-bold text-on-surface">Bộ lọc Thể loại & Tags</h2>
+						<p className="text-[10px] text-on-surface-variant/70">Chọn một hoặc nhiều tags (điều kiện HOẶC)</p>
+					</div>
+				</div>
 
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-full bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] text-on-surface-variant hover:text-on-surface hover:bg-white/15 active:scale-95 transition-all"
-          aria-label="Đóng bộ lọc"
-          data-testid="tag-filter-close-btn"
-        >
-          <X size={16} />
-        </button>
-      </div>
+				<button
+					onClick={onClose}
+					className="p-1.5 rounded-full bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] text-on-surface-variant hover:text-on-surface hover:bg-white/15 active:scale-95 transition-all"
+					aria-label="Đóng bộ lọc"
+					data-testid="tag-filter-close-btn"
+				>
+					<X size={16} />
+				</button>
+			</div>
 
-      {/* Tag Search Box */}
-      <div className="p-3 border-b border-white/10 bg-transparent flex-shrink-0">
-        <div className="relative">
-          <Search
-            size={13}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60"
-          />
-          <input
-            type="text"
-            placeholder="Tìm nhanh tag..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3),_inset_0_-1px_0.5px_rgba(0,0,0,0.3)] text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 transition-all"
-            data-testid="tag-search-input"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-on-surface-variant/60 hover:text-on-surface"
-            >
-              <X size={12} />
-            </button>
-          )}
-        </div>
-      </div>
+			{/* Tag Search Box */}
+			<div className="p-3 border-b border-white/10 bg-transparent flex-shrink-0">
+				<div className="relative">
+					<Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
+					<input
+						type="text"
+						placeholder="Tìm nhanh tag..."
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+						className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3),_inset_0_-1px_0.5px_rgba(0,0,0,0.3)] text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 transition-all"
+						data-testid="tag-search-input"
+					/>
+					{searchQuery && (
+						<button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-on-surface-variant/60 hover:text-on-surface">
+							<X size={12} />
+						</button>
+					)}
+				</div>
+			</div>
 
-      {/* Selected Tags Preview Bar */}
-      {draftTags.length > 0 && (
-        <div className="px-3.5 py-2 border-b border-blue-500/20 dark:border-blue-400/20 bg-primary/10 flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar flex-shrink-0">
-          <div className="flex items-center gap-1.5 flex-nowrap">
-            <span className="text-[11px] font-semibold text-primary shrink-0">
-              Đã chọn ({draftTags.length}):
-            </span>
-            {draftTags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-bold bg-primary text-on-primary border border-primary/70 shrink-0 shadow-xs"
-              >
-                {tag}
-                <button
-                  onClick={() => toggleTag(tag)}
-                  className="hover:opacity-80 active:scale-90"
-                  aria-label={`Bỏ chọn ${tag}`}
-                >
-                  <X size={11} />
-                </button>
-              </span>
-            ))}
-          </div>
+			{/* Selected Tags Preview Bar */}
+			{draftTags.length > 0 && (
+				<div className="px-3.5 py-2 border-b border-blue-500/20 dark:border-blue-400/20 bg-primary/10 flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar flex-shrink-0">
+					<div className="flex items-center gap-1.5 flex-nowrap">
+						<span className="text-[11px] font-semibold text-primary shrink-0">Đã chọn ({draftTags.length}):</span>
+						{draftTags.map((tag) => (
+							<span
+								key={tag}
+								className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-bold bg-primary text-on-primary border border-primary/70 shrink-0 shadow-xs"
+							>
+								{tag}
+								<button onClick={() => toggleTag(tag)} className="hover:opacity-80 active:scale-90" aria-label={`Bỏ chọn ${tag}`}>
+									<X size={11} />
+								</button>
+							</span>
+						))}
+					</div>
 
-          <button
-            onClick={handleClearAll}
-            className="text-[10.5px] font-bold text-rose-400 hover:underline shrink-0 flex items-center gap-0.5 ml-1"
-          >
-            <RotateCcw size={10} />
-            Xóa hết
-          </button>
-        </div>
-      )}
+					<button onClick={handleClearAll} className="text-[10.5px] font-bold text-rose-400 hover:underline shrink-0 flex items-center gap-0.5 ml-1">
+						<RotateCcw size={10} />
+						Xóa hết
+					</button>
+				</div>
+			)}
 
-      {/* Categories and Tag List (Scrollable Area) */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 min-h-0 hide-scrollbar">
-        {isLoading && categories.length === 0 ? (
-          <div className="py-12 text-center text-xs text-on-surface-variant/60 animate-pulse">
-            Đang tải danh mục tags từ hệ thống...
-          </div>
-        ) : filteredCategories.length === 0 ? (
-          <div className="py-8 text-center text-xs text-on-surface-variant/60">
-            {searchQuery ? `Không tìm thấy tag phù hợp với từ khóa "${searchQuery}"` : 'Chưa có dữ liệu tags'}
-          </div>
-        ) : (
-          filteredCategories.map((category) => (
-            <div key={category.name} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-                  {category.name}
-                </h3>
-                <span className="text-[10px] text-on-surface-variant/50">
-                  {category.tags.length} tags
-                </span>
-              </div>
+			{/* Categories and Tag List (Scrollable Area) */}
+			<div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 min-h-0 hide-scrollbar">
+				{isLoading && categories.length === 0 ? (
+					<div className="py-12 text-center text-xs text-on-surface-variant/60 animate-pulse">Đang tải danh mục tags từ hệ thống...</div>
+				) : filteredCategories.length === 0 ? (
+					<div className="py-8 text-center text-xs text-on-surface-variant/60">{searchQuery ? `Không tìm thấy tag phù hợp với từ khóa "${searchQuery}"` : 'Chưa có dữ liệu tags'}</div>
+				) : (
+					filteredCategories.map((category) => (
+						<div key={category.name} className="space-y-2">
+							<div className="flex items-center justify-between">
+								<h3 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{category.name}</h3>
+								<span className="text-[10px] text-on-surface-variant/50">{category.tags.length} tags</span>
+							</div>
 
-              <div className="flex flex-wrap gap-1.5">
-                {category.tags.map((tag) => {
-                  const isSelected = draftTags.includes(tag);
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs border transition-all active:scale-95 ${
-                        isSelected
-                          ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary shadow-[0_4px_16px_var(--primary),_inset_0_1px_1px_rgba(255,255,255,0.6)] font-extrabold'
-                          : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 text-on-surface font-medium'
-                      }`}
-                      data-testid={`tag-chip-${tag}`}
-                    >
-                      {isSelected && <Check size={12} className="shrink-0 stroke-[2.5]" />}
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+							<div className="flex flex-wrap gap-1.5">
+								{category.tags.map((tag) => {
+									const isSelected = draftTags.includes(tag);
+									return (
+										<button
+											key={tag}
+											type="button"
+											onClick={() => toggleTag(tag)}
+											className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs border transition-all active:scale-95 ${
+												isSelected
+													? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary shadow-[0_4px_16px_var(--primary),_inset_0_1px_1px_rgba(255,255,255,0.6)] font-extrabold'
+													: 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 text-on-surface font-medium'
+											}`}
+											data-testid={`tag-chip-${tag}`}
+										>
+											{isSelected && <Check size={12} className="shrink-0 stroke-[2.5]" />}
+											{tag}
+										</button>
+									);
+								})}
+							</div>
+						</div>
+					))
+				)}
+			</div>
 
-      {/* Footer Actions */}
-      <div className="p-3 border-t border-outline-variant/20 bg-white/[0.03] dark:bg-white/[0.03] backdrop-blur-md flex items-center justify-between gap-3 flex-shrink-0">
-        <button
-          type="button"
-          onClick={handleClearAll}
-          disabled={draftTags.length === 0}
-          className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 backdrop-blur-md border-2 border-outline-variant/60 text-xs font-bold text-on-surface shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1.5px_rgba(255,255,255,0.4)] disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95"
-          data-testid="tag-filter-reset-btn"
-        >
-          Đặt lại
-        </button>
+			{/* Footer Actions */}
+			<div className="p-3 border-t border-outline-variant/20 bg-white/[0.03] dark:bg-white/[0.03] backdrop-blur-md flex items-center justify-between gap-3 flex-shrink-0">
+				<button
+					type="button"
+					onClick={handleClearAll}
+					disabled={draftTags.length === 0}
+					className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 backdrop-blur-md border-2 border-outline-variant/60 text-xs font-bold text-on-surface shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1.5px_rgba(255,255,255,0.4)] disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95"
+					data-testid="tag-filter-reset-btn"
+				>
+					Đặt lại
+				</button>
 
-        <button
-          type="button"
-          onClick={handleApply}
-          className="flex-1 py-2.5 px-4 rounded-xl bg-primary/25 hover:bg-primary/35 backdrop-blur-md border-2 border-primary/70 text-primary text-xs font-extrabold shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] transition-all active:scale-95 flex items-center justify-center gap-1.5"
-          data-testid="tag-filter-apply-btn"
-        >
-          <span>Áp dụng bộ lọc</span>
-          {draftTags.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-primary/40 text-primary font-mono text-[10px] font-black border border-primary/60">
-              {draftTags.length}
-            </span>
-          )}
-        </button>
-      </div>
-    </BottomSheet>
-  );
+				<button
+					type="button"
+					onClick={handleApply}
+					className="flex-1 py-2.5 px-4 rounded-xl bg-primary/25 hover:bg-primary/35 backdrop-blur-md border-2 border-primary/70 text-primary text-xs font-extrabold shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] transition-all active:scale-95 flex items-center justify-center gap-1.5"
+					data-testid="tag-filter-apply-btn"
+				>
+					<span>Áp dụng bộ lọc</span>
+					{draftTags.length > 0 && (
+						<span className="px-1.5 py-0.2 rounded-full bg-primary/40 text-primary font-mono text-[10px] font-black border border-primary/60">{draftTags.length}</span>
+					)}
+				</button>
+			</div>
+		</BottomSheet>
+	);
 }
-

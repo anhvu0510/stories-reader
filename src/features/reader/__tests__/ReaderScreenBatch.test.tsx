@@ -9,200 +9,206 @@ import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
 import { useAppStore } from '../../../stores/useAppStore';
 
 vi.mock('../../../repositories/ChapterRepository', () => ({
-  ChapterRepository: {
-    getChapterContent: vi.fn(),
-    getChapters: vi.fn().mockResolvedValue({ chapters: [], pagination: {} }),
-  },
+	ChapterRepository: {
+		getChapterContent: vi.fn(),
+		getChapters: vi.fn().mockResolvedValue({ chapters: [], pagination: {} })
+	}
 }));
 
 vi.mock('../../../hooks/useReadAloud', () => ({
-  useReadAloud: () => ({
-    isPlaying: true,
-    isPaused: false,
-    currentChunkIndex: 0,
-    activeParagraphIndex: 0,
-    startReading: vi.fn(),
-    pauseReading: vi.fn(),
-    stopReading: vi.fn(),
-    nextSection: vi.fn(),
-    prevSection: vi.fn(),
-  }),
+	useReadAloud: () => ({
+		isPlaying: true,
+		isPaused: false,
+		currentChunkIndex: 0,
+		activeParagraphIndex: 0,
+		startReading: vi.fn(),
+		pauseReading: vi.fn(),
+		stopReading: vi.fn(),
+		nextSection: vi.fn(),
+		prevSection: vi.fn()
+	})
 }));
 
 describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    window.scrollTo = vi.fn();
-    useReaderConfigStore.setState({ batchChapterSize: 3, groupLines: 1, isEnabledReplace: false });
-    useAppStore.setState({ isOfflineMode: false });
-  });
+	beforeEach(() => {
+		vi.clearAllMocks();
+		window.scrollTo = vi.fn();
+		useReaderConfigStore.setState({
+			batchChapterSize: 3,
+			groupLines: 1,
+			isEnabledReplace: false
+		});
+		useAppStore.setState({ isOfflineMode: false });
+	});
 
-  afterEach(() => {
-    cleanup();
-  });
+	afterEach(() => {
+		cleanup();
+	});
 
-  it('renders all chapters in batch and displays batch section titles', async () => {
-    const mockData = {
-      chapter: {
-        chapterId: 'c1',
-        chapterNumber: 1,
-        title: 'Tiêu đề Chương 1',
-        bookName: 'Truyện Đỉnh Cao',
-        state: 'SUCCEEDED',
-        totalTokens: 100,
-        content: ['Đoạn văn 1 của chương 1'],
-        rootTab: '',
-      },
-      chapters: [
-        {
-          chapterId: 'c1',
-          chapterNumber: 1,
-          title: 'Tiêu đề Chương 1',
-          bookName: 'Truyện Đỉnh Cao',
-          state: 'SUCCEEDED',
-          totalTokens: 100,
-          content: ['Đoạn văn 1 của chương 1'],
-          rootTab: '',
-        },
-        {
-          chapterId: 'c2',
-          chapterNumber: 2,
-          title: 'Tiêu đề Chương 2',
-          bookName: 'Truyện Đỉnh Cao',
-          state: 'SUCCEEDED',
-          totalTokens: 100,
-          content: ['Đoạn văn 1 của chương 2'],
-          rootTab: '',
-        },
-        {
-          chapterId: 'c3',
-          chapterNumber: 3,
-          title: 'Tiêu đề Chương 3',
-          bookName: 'Truyện Đỉnh Cao',
-          state: 'SUCCEEDED',
-          totalTokens: 100,
-          content: ['Đoạn văn 1 của chương 3'],
-          rootTab: '',
-        },
-      ],
-      navigation: {
-        prev: null,
-        next: { chapterId: 'c4', chapterNumber: 4, title: 'Tiêu đề Chương 4' },
-      },
-    };
+	it('renders all chapters in batch and displays batch section titles', async () => {
+		const mockData = {
+			chapter: {
+				chapterId: 'c1',
+				chapterNumber: 1,
+				title: 'Tiêu đề Chương 1',
+				bookName: 'Truyện Đỉnh Cao',
+				state: 'SUCCEEDED',
+				totalTokens: 100,
+				content: ['Đoạn văn 1 của chương 1'],
+				rootTab: ''
+			},
+			chapters: [
+				{
+					chapterId: 'c1',
+					chapterNumber: 1,
+					title: 'Tiêu đề Chương 1',
+					bookName: 'Truyện Đỉnh Cao',
+					state: 'SUCCEEDED',
+					totalTokens: 100,
+					content: ['Đoạn văn 1 của chương 1'],
+					rootTab: ''
+				},
+				{
+					chapterId: 'c2',
+					chapterNumber: 2,
+					title: 'Tiêu đề Chương 2',
+					bookName: 'Truyện Đỉnh Cao',
+					state: 'SUCCEEDED',
+					totalTokens: 100,
+					content: ['Đoạn văn 1 của chương 2'],
+					rootTab: ''
+				},
+				{
+					chapterId: 'c3',
+					chapterNumber: 3,
+					title: 'Tiêu đề Chương 3',
+					bookName: 'Truyện Đỉnh Cao',
+					state: 'SUCCEEDED',
+					totalTokens: 100,
+					content: ['Đoạn văn 1 của chương 3'],
+					rootTab: ''
+				}
+			],
+			navigation: {
+				prev: null,
+				next: { chapterId: 'c4', chapterNumber: 4, title: 'Tiêu đề Chương 4' }
+			}
+		};
 
-    vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue(mockData as any);
+		vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue(mockData as any);
 
-    render(
-      <MemoryRouter initialEntries={['/book/b1/chapter/c1']}>
-        <Routes>
-          <Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
-        </Routes>
-      </MemoryRouter>
-    );
+		render(
+			<MemoryRouter initialEntries={['/book/b1/chapter/c1']}>
+				<Routes>
+					<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+				</Routes>
+			</MemoryRouter>
+		);
 
-    await waitFor(() => {
-      expect(screen.getByText(/Chương 1: Tiêu đề Chương 1/)).toBeDefined();
-      expect(screen.getByText(/Chương 2: Tiêu đề Chương 2/)).toBeDefined();
-      expect(screen.getByText(/Chương 3: Tiêu đề Chương 3/)).toBeDefined();
-    }, { timeout: 3000 });
+		await waitFor(
+			() => {
+				expect(screen.getByText(/Chương 1: Tiêu đề Chương 1/)).toBeDefined();
+				expect(screen.getByText(/Chương 2: Tiêu đề Chương 2/)).toBeDefined();
+				expect(screen.getByText(/Chương 3: Tiêu đề Chương 3/)).toBeDefined();
+			},
+			{ timeout: 3000 }
+		);
 
-    expect(ChapterRepository.getChapterContent).toHaveBeenCalledWith('c1', 1, false, '', 3);
-  });
+		expect(ChapterRepository.getChapterContent).toHaveBeenCalledWith('c1', 1, false, '', 3);
+	});
 
-  it('assigns globally unique paragraph indexes across a chapter batch', async () => {
-    vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
-      chapter: {
-        chapterId: 'c1',
-        chapterNumber: 1,
-        title: 'Một',
-        bookName: 'Truyện',
-        content: ['Đoạn 1', 'Đoạn 2'],
-      },
-      chapters: [
-        {
-          chapterId: 'c1',
-          chapterNumber: 1,
-          title: 'Một',
-          bookName: 'Truyện',
-          content: ['Đoạn 1', 'Đoạn 2'],
-        },
-        {
-          chapterId: 'c2',
-          chapterNumber: 2,
-          title: 'Hai',
-          bookName: 'Truyện',
-          content: ['Đoạn 3', 'Đoạn 4'],
-        },
-      ],
-      navigation: { prev: null, next: null },
-    } as never);
+	it('assigns globally unique paragraph indexes across a chapter batch', async () => {
+		vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
+			chapter: {
+				chapterId: 'c1',
+				chapterNumber: 1,
+				title: 'Một',
+				bookName: 'Truyện',
+				content: ['Đoạn 1', 'Đoạn 2']
+			},
+			chapters: [
+				{
+					chapterId: 'c1',
+					chapterNumber: 1,
+					title: 'Một',
+					bookName: 'Truyện',
+					content: ['Đoạn 1', 'Đoạn 2']
+				},
+				{
+					chapterId: 'c2',
+					chapterNumber: 2,
+					title: 'Hai',
+					bookName: 'Truyện',
+					content: ['Đoạn 3', 'Đoạn 4']
+				}
+			],
+			navigation: { prev: null, next: null }
+		} as never);
 
-    const { container } = render(
-      <MemoryRouter initialEntries={['/book/b1/chapter/c1']}>
-        <Routes>
-          <Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
-        </Routes>
-      </MemoryRouter>
-    );
+		const { container } = render(
+			<MemoryRouter initialEntries={['/book/b1/chapter/c1']}>
+				<Routes>
+					<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+				</Routes>
+			</MemoryRouter>
+		);
 
-    await waitFor(() => expect(container.querySelectorAll('[data-paragraph-index]')).toHaveLength(4));
+		await waitFor(() => expect(container.querySelectorAll('[data-paragraph-index]')).toHaveLength(4));
 
-    expect(
-      Array.from(container.querySelectorAll('[data-paragraph-index]')).map((element) =>
-        element.getAttribute('data-paragraph-index')
-      )
-    ).toEqual(['0', '1', '2', '3']);
-    expect(container.querySelectorAll('article > div.ring-2')).toHaveLength(0);
-  });
+		expect(Array.from(container.querySelectorAll('[data-paragraph-index]')).map((element) => element.getAttribute('data-paragraph-index'))).toEqual(['0', '1', '2', '3']);
+		expect(container.querySelectorAll('article > div.ring-2')).toHaveLength(0);
+	});
 
-  it('QC-6 [Tier 3 - Offline Mode Support]: preserves batchChapterSize when offline mode is active', async () => {
-    useAppStore.setState({ isOfflineMode: true });
-    useReaderConfigStore.setState({ batchChapterSize: 5 });
+	it('QC-6 [Tier 3 - Offline Mode Support]: preserves batchChapterSize when offline mode is active', async () => {
+		useAppStore.setState({ isOfflineMode: true });
+		useReaderConfigStore.setState({ batchChapterSize: 5 });
 
-    const mockBatchOfflineData = {
-      chapter: {
-        chapterId: 'c1',
-        chapterNumber: 1,
-        title: 'Chương 1 Offline',
-        bookName: 'Truyện Đỉnh Cao',
-        state: 'SUCCEEDED',
-        totalTokens: 100,
-        content: ['Nội dung offline ch1'],
-        rootTab: '',
-      },
-      chapters: [
-        {
-          chapterId: 'c1',
-          chapterNumber: 1,
-          title: 'Chương 1 Offline',
-          bookName: 'Truyện Đỉnh Cao',
-          state: 'SUCCEEDED',
-          totalTokens: 100,
-          content: ['Nội dung offline ch1'],
-          rootTab: '',
-        },
-      ],
-      navigation: {
-        prev: null,
-        next: null,
-      },
-    };
+		const mockBatchOfflineData = {
+			chapter: {
+				chapterId: 'c1',
+				chapterNumber: 1,
+				title: 'Chương 1 Offline',
+				bookName: 'Truyện Đỉnh Cao',
+				state: 'SUCCEEDED',
+				totalTokens: 100,
+				content: ['Nội dung offline ch1'],
+				rootTab: ''
+			},
+			chapters: [
+				{
+					chapterId: 'c1',
+					chapterNumber: 1,
+					title: 'Chương 1 Offline',
+					bookName: 'Truyện Đỉnh Cao',
+					state: 'SUCCEEDED',
+					totalTokens: 100,
+					content: ['Nội dung offline ch1'],
+					rootTab: ''
+				}
+			],
+			navigation: {
+				prev: null,
+				next: null
+			}
+		};
 
-    vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue(mockBatchOfflineData as any);
+		vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue(mockBatchOfflineData as any);
 
-    render(
-      <MemoryRouter initialEntries={['/book/b1/chapter/c1']}>
-        <Routes>
-          <Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
-        </Routes>
-      </MemoryRouter>
-    );
+		render(
+			<MemoryRouter initialEntries={['/book/b1/chapter/c1']}>
+				<Routes>
+					<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+				</Routes>
+			</MemoryRouter>
+		);
 
-    await waitFor(() => {
-      expect(screen.getAllByText('Chương 1 Offline').length).toBeGreaterThan(0);
-    }, { timeout: 3000 });
+		await waitFor(
+			() => {
+				expect(screen.getAllByText('Chương 1 Offline').length).toBeGreaterThan(0);
+			},
+			{ timeout: 3000 }
+		);
 
-    expect(ChapterRepository.getChapterContent).toHaveBeenCalledWith('c1', 1, false, '', 5);
-  });
+		expect(ChapterRepository.getChapterContent).toHaveBeenCalledWith('c1', 1, false, '', 5);
+	});
 });

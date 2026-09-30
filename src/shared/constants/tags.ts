@@ -1,4 +1,4 @@
 export interface TagCategory {
-  name: string;
-  tags: string[];
+	name: string;
+	tags: string[];
 }

@@ -1,0 +1,19 @@
+{
+  "editor.tabSize": 4,
+  "editor.insertSpaces": false,
+  "editor.detectIndentation": false,
+  "editor.guides.indentation": true,
+  "editor.guides.highlightActiveIndentation": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[typescript]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": false,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": false,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+}
