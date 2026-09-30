@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { getAssetUrl } from '../shared/utils/assetUrl';
-import { generateBgmBufferInWorker } from '../services/bgmAudioWorkerService';
+import { getAssetUrl } from '@/shared/utils/assetUrl';
+import { generateBgmBufferInWorker } from '@/services/bgmAudioWorkerService';
 
 export interface EdgeReadAloudBgmOptions {
 	audioUrl: string;

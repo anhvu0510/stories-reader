@@ -1,4 +1,4 @@
-import { clearReadingProgress } from '../../hooks/useReadingProgress';
+import { clearReadingProgress } from '@/hooks/useReadingProgress';
 
 export function openChapter(bookId: string, chapterId: string, options?: { resetScroll?: boolean }) {
 	if (!bookId || !chapterId) return;

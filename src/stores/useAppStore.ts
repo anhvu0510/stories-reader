@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ApiDomain } from '../shared/types';
+import { ApiDomain } from '@/shared/types';
 
 interface AppStore {
 	isOfflineMode: boolean;

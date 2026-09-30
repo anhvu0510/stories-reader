@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { downloadManager, DownloadTask } from '../lib/DownloadManager';
+import { downloadManager, DownloadTask } from '@/lib/DownloadManager';
 
 export function GlobalDownloadProgress() {
 	const [tasks, setTasks] = useState<DownloadTask[]>([]);

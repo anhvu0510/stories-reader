@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check, ArrowUpDown, RotateCcw, Clock, Calendar } from 'lucide-react';
-import { SortByField, SortOrderDirection } from '../../../stores/useLibraryStore';
-import { BottomSheet } from '../../../components/BottomSheet';
+import { SortByField, SortOrderDirection } from '@/stores/useLibraryStore';
+import { BottomSheet } from '@/components/BottomSheet';
 
 export interface SortOption {
 	id: string;

@@ -3,10 +3,10 @@ import 'fake-indexeddb/auto';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
-import { SortSheet, SORT_OPTIONS } from '../components/SortSheet';
-import { LibraryHeader } from '../components/LibraryHeader';
-import { LibraryScreen } from '../LibraryScreen';
-import { BookRepository } from '../../../repositories/BookRepository';
+import { SortSheet, SORT_OPTIONS } from '@/features/library/components/SortSheet';
+import { LibraryHeader } from '@/features/library/components/LibraryHeader';
+import { LibraryScreen } from '@/features/library/LibraryScreen';
+import { BookRepository } from '@/repositories/BookRepository';
 
 vi.mock('../../../repositories/BookRepository', () => ({
 	BookRepository: {

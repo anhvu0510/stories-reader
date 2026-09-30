@@ -1,4 +1,4 @@
-import { useAppStore } from '../stores/useAppStore';
+import { useAppStore } from '@/stores/useAppStore';
 
 export class ApiError extends Error {
 	constructor(

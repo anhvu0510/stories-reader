@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LocateFixed, Volume2, Play, Pause, Square, SkipBack, SkipForward, Loader2, Music } from 'lucide-react';
-import { ChapterDetailItem } from '../../../shared/types';
-import { isEdgeReadAloudActive } from '../../../hooks/useEdgeReadAloudBgm';
+import { ChapterDetailItem } from '@/shared/types';
+import { isEdgeReadAloudActive } from '@/hooks/useEdgeReadAloudBgm';
 import { motion } from 'motion/react';
-import { triggerHaptic } from '../../../hooks/useHaptic';
+import { triggerHaptic } from '@/hooks/useHaptic';
 
 export interface VerticalBatchChapterNavProps {
 	chapters?: ChapterDetailItem[];

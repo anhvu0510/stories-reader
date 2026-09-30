@@ -1,21 +1,21 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChapterRepository } from '../../repositories/ChapterRepository';
-import { BookRepository } from '../../repositories/BookRepository';
-import { Chapter, Book } from '../../shared/types';
-import { useToastStore } from '../../stores/useToastStore';
+import { ChapterRepository } from '@/repositories/ChapterRepository';
+import { BookRepository } from '@/repositories/BookRepository';
+import { Chapter, Book } from '@/shared/types';
+import { useToastStore } from '@/stores/useToastStore';
 import { ChapterItem } from './components/ChapterItem';
 import { ChapterRangeSelector } from './components/ChapterRangeSelector';
-import { BottomDock } from '../../components/BottomDock';
-import { LoadingOverlay } from '../../components/LoadingOverlay';
-import { GlobalSettingsSheet } from '../settings/GlobalSettingsSheet';
-import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import { useFavoriteStore } from '../../stores/useFavoriteStore';
-import { useReaderConfigStore } from '../../stores/useReaderConfigStore';
+import { BottomDock } from '@/components/BottomDock';
+import { LoadingOverlay } from '@/components/LoadingOverlay';
+import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useFavoriteStore } from '@/stores/useFavoriteStore';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { ArrowLeft, Search, RefreshCw, Download, Heart } from 'lucide-react';
-import { downloadManager } from '../../lib/DownloadManager';
+import { downloadManager } from '@/lib/DownloadManager';
 import { motion } from 'motion/react';
-import { triggerHaptic } from '../../hooks/useHaptic';
+import { triggerHaptic } from '@/hooks/useHaptic';
 
 export function ChapterListScreen() {
 	const { bookId } = useParams<{ bookId: string }>();

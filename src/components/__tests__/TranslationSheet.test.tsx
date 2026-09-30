@@ -2,10 +2,10 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
-import { TranslationSheet } from '../TranslationSheet';
-import { ChapterRepository } from '../../repositories/ChapterRepository';
-import { AIRepository } from '../../repositories/AIRepository';
-import { SettingsRepository } from '../../repositories/SettingsRepository';
+import { TranslationSheet } from '@/components/TranslationSheet';
+import { ChapterRepository } from '@/repositories/ChapterRepository';
+import { AIRepository } from '@/repositories/AIRepository';
+import { SettingsRepository } from '@/repositories/SettingsRepository';
 
 vi.mock('../../repositories/ChapterRepository', () => ({
 	ChapterRepository: {

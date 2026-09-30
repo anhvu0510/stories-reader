@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight, ChevronUp, X, Check, Minus, Plus } from 'lucide-react';
 import { BottomSheet } from './BottomSheet';
-import { triggerHaptic } from '../hooks/useHaptic';
+import { triggerHaptic } from '@/hooks/useHaptic';
 
 interface BottomDockProps {
 	page?: number;

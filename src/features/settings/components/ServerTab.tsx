@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Server, Plus, RefreshCw, Check, Trash2, Edit3, Loader2, Wifi, WifiOff } from 'lucide-react';
-import { useAppStore } from '../../../stores/useAppStore';
-import { useToastStore } from '../../../stores/useToastStore';
-import { apiClient } from '../../../services/apiClient';
-import { SettingsRepository } from '../../../repositories/SettingsRepository';
-import { ApiDomain } from '../../../shared/types';
+import { useAppStore } from '@/stores/useAppStore';
+import { useToastStore } from '@/stores/useToastStore';
+import { apiClient } from '@/services/apiClient';
+import { SettingsRepository } from '@/repositories/SettingsRepository';
+import { ApiDomain } from '@/shared/types';
 
 export function ServerTab() {
 	const { domains, activeDomainId, isOfflineMode, setOfflineMode, setDomains, setActiveDomainId, addDomain, removeDomain } = useAppStore();

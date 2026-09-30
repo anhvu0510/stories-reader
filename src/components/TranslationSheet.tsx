@@ -24,17 +24,17 @@ import {
 	Clock,
 	AlertCircle
 } from 'lucide-react';
-import { Book, Chapter } from '../shared/types';
-import { BookRepository } from '../repositories/BookRepository';
-import { ChapterRepository } from '../repositories/ChapterRepository';
-import { AIRepository } from '../repositories/AIRepository';
-import { SettingsRepository } from '../repositories/SettingsRepository';
-import { useToastStore } from '../stores/useToastStore';
-import { useReaderConfigStore } from '../stores/useReaderConfigStore';
+import { Book, Chapter } from '@/shared/types';
+import { BookRepository } from '@/repositories/BookRepository';
+import { ChapterRepository } from '@/repositories/ChapterRepository';
+import { AIRepository } from '@/repositories/AIRepository';
+import { SettingsRepository } from '@/repositories/SettingsRepository';
+import { useToastStore } from '@/stores/useToastStore';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { BottomSheet } from './BottomSheet';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 import { motion } from 'motion/react';
-import { triggerHaptic } from '../hooks/useHaptic';
+import { triggerHaptic } from '@/hooks/useHaptic';
 
 type Tab = 'current' | 'batch_chapter' | 'story';
 

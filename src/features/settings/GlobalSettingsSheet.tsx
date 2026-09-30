@@ -1,8 +1,8 @@
 import { X, Server, BookOpen, Volume2, Sparkles, RefreshCw, Music } from 'lucide-react';
-import { useModalStore } from '../../stores/useModalStore';
-import { BottomSheet } from '../../components/BottomSheet';
+import { useModalStore } from '@/stores/useModalStore';
+import { BottomSheet } from '@/components/BottomSheet';
 import { motion } from 'motion/react';
-import { triggerHaptic } from '../../hooks/useHaptic';
+import { triggerHaptic } from '@/hooks/useHaptic';
 import { ServerTab } from './components/ServerTab';
 import { ReaderSettingsTab } from './components/ReaderSettingsTab';
 import { VoiceSettingsTab } from './components/VoiceSettingsTab';

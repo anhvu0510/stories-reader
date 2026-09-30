@@ -4,10 +4,10 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { LibraryScreen } from '../LibraryScreen';
-import { BookRepository } from '../../../repositories/BookRepository';
-import { useFavoriteStore } from '../../../stores/useFavoriteStore';
-import { useLibraryStore } from '../../../stores/useLibraryStore';
+import { LibraryScreen } from '@/features/library/LibraryScreen';
+import { BookRepository } from '@/repositories/BookRepository';
+import { useFavoriteStore } from '@/stores/useFavoriteStore';
+import { useLibraryStore } from '@/stores/useLibraryStore';
 
 vi.mock('../../../repositories/BookRepository', () => ({
 	BookRepository: {

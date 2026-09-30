@@ -1,13 +1,12 @@
 // @vitest-environment jsdom
-import React from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import { ReaderScreen } from '../ReaderScreen';
-import { ChapterRepository } from '../../../repositories/ChapterRepository';
-import { BookRepository } from '../../../repositories/BookRepository';
-import { useToastStore } from '../../../stores/useToastStore';
-import { useAppStore } from '../../../stores/useAppStore';
+import { ReaderScreen } from '@/features/reader/ReaderScreen';
+import { BookRepository } from '@/repositories/BookRepository';
+import { ChapterRepository } from '@/repositories/ChapterRepository';
+import { useAppStore } from '@/stores/useAppStore';
+import { useToastStore } from '@/stores/useToastStore';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../../repositories/ChapterRepository', () => ({
 	ChapterRepository: {

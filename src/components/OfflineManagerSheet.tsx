@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, Wifi, Download, Trash2, CheckCircle2, RotateCw } from 'lucide-react';
-import { Book } from '../shared/types';
-import { offlineDb } from '../lib/offlineDb';
-import { useAppStore } from '../stores/useAppStore';
-import { useToastStore } from '../stores/useToastStore';
+import { Book } from '@/shared/types';
+import { offlineDb } from '@/lib/offlineDb';
+import { useAppStore } from '@/stores/useAppStore';
+import { useToastStore } from '@/stores/useToastStore';
 import { BottomSheet } from './BottomSheet';
 import { motion } from 'motion/react';
-import { triggerHaptic } from '../hooks/useHaptic';
+import { triggerHaptic } from '@/hooks/useHaptic';
 
 export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?: () => void; isEmbedded?: boolean }) {
 	const isOffline = useAppStore((state) => state.isOfflineMode);

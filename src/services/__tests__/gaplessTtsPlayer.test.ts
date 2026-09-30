@@ -11,7 +11,7 @@ import {
 	type PcmStreamPlayback,
 	type ScheduledAudio,
 	type SpeechSegment
-} from '../gaplessTtsPlayer';
+} from '@/services/gaplessTtsPlayer';
 
 function createPendingPromise(): Promise<void> {
 	return new Promise(() => {});

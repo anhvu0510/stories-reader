@@ -1,6 +1,6 @@
-import { apiClient } from '../services/apiClient';
-import { useAppStore } from '../stores/useAppStore';
-import { TagCategory } from '../shared/constants/tags';
+import { apiClient } from '@/services/apiClient';
+import { useAppStore } from '@/stores/useAppStore';
+import { TagCategory } from '@/shared/constants/tags';
 
 export interface GetTagsResult {
 	categories: TagCategory[];

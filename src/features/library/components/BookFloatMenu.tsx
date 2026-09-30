@@ -1,10 +1,10 @@
 import React from 'react';
-import { Book } from '../../../shared/types';
-import { BottomSheet } from '../../../components/BottomSheet';
+import { Book } from '@/shared/types';
+import { BottomSheet } from '@/components/BottomSheet';
 import { BookOpen, Sparkles, Download, ExternalLink, Heart, ListTree, X, RefreshCw, Languages, Users, Tags, ChevronRight, Trash2 } from 'lucide-react';
-import { triggerHaptic } from '../../../hooks/useHaptic';
-import { useToastStore } from '../../../stores/useToastStore';
-import { AIRepository } from '../../../repositories/AIRepository';
+import { triggerHaptic } from '@/hooks/useHaptic';
+import { useToastStore } from '@/stores/useToastStore';
+import { AIRepository } from '@/repositories/AIRepository';
 
 export interface BookFloatMenuProps {
 	book: Book;

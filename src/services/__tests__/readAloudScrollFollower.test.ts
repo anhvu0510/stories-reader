@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { ReadAloudScrollFollower } from '../readAloudScrollFollower';
+import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
 
 describe('ReadAloudScrollFollower', () => {
 	it('coalesces changing line targets into one interruptible animation', () => {

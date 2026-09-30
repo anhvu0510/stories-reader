@@ -2,8 +2,8 @@
 import React from 'react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
-import { TagFilterSheet } from '../TagFilterSheet';
-import { TagRepository } from '../../../../repositories/TagRepository';
+import { TagFilterSheet } from '@/features/library/components/TagFilterSheet';
+import { TagRepository } from '@/repositories/TagRepository';
 
 const MOCK_CATEGORIES = [
 	{

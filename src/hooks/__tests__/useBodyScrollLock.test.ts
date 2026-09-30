@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { useBodyScrollLock } from '../useBodyScrollLock';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 describe('useBodyScrollLock', () => {
 	beforeEach(() => {

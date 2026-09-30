@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ChapterRepository } from '../ChapterRepository';
-import { offlineDb } from '../../lib/offlineDb';
-import { useAppStore } from '../../stores/useAppStore';
+import { ChapterRepository } from '@/repositories/ChapterRepository';
+import { offlineDb } from '@/lib/offlineDb';
+import { useAppStore } from '@/stores/useAppStore';
 
 vi.mock('../../lib/offlineDb', () => ({
 	offlineDb: {

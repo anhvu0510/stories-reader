@@ -4,10 +4,10 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { BookCard } from '../BookCard';
-import { useFavoriteStore } from '../../../../stores/useFavoriteStore';
-import { BookRepository } from '../../../../repositories/BookRepository';
-import { Book } from '../../../../shared/types';
+import { BookCard } from '@/features/library/components/BookCard';
+import { useFavoriteStore } from '@/stores/useFavoriteStore';
+import { BookRepository } from '@/repositories/BookRepository';
+import { Book } from '@/shared/types';
 
 const mockBook: Book = {
 	bookId: 'book-fav-test-1',

@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { BookRepository } from '../BookRepository';
-import { apiClient } from '../../services/apiClient';
-import { offlineDb } from '../../lib/offlineDb';
-import { useAppStore } from '../../stores/useAppStore';
-import { useFavoriteStore } from '../../stores/useFavoriteStore';
+import { BookRepository } from '@/repositories/BookRepository';
+import { apiClient } from '@/services/apiClient';
+import { offlineDb } from '@/lib/offlineDb';
+import { useAppStore } from '@/stores/useAppStore';
+import { useFavoriteStore } from '@/stores/useFavoriteStore';
 
 vi.mock('../../services/apiClient', () => ({
 	apiClient: {

@@ -2,9 +2,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import 'fake-indexeddb/auto';
 import oboe from 'oboe';
-import { downloadManager } from '../DownloadManager';
-import { offlineDb } from '../offlineDb';
-import { useAppStore } from '../../stores/useAppStore';
+import { downloadManager } from '@/lib/DownloadManager';
+import { offlineDb } from '@/lib/offlineDb';
+import { useAppStore } from '@/stores/useAppStore';
 
 let oboeNodeHandlers: Record<string, Function> = {};
 let doneHandler: Function = () => {};

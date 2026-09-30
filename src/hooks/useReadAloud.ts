@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useReaderConfigStore } from '../stores/useReaderConfigStore';
-import { TTSService, DEFAULT_VIENEU_SERVER_URL, type VieNeuRequestContext } from '../services/ttsService';
-import { EdgeTTSService, type EdgeSpeechWithBoundaries } from '../services/edgeTtsService';
-import { GaplessTtsPlayer, splitByDatabaseBoundaries, type SentenceChunk, WebAudioPlaybackEngine } from '../services/gaplessTtsPlayer';
-import { DomWordHighlighter } from '../services/domWordHighlighter';
-import { useAppStore } from '../stores/useAppStore';
-import { ReadAloudScrollFollower } from '../services/readAloudScrollFollower';
-import { useTTSStore } from '../features/reader/stores/useTTSStore';
-import { BackgroundAudioKeepAlive } from '../services/backgroundAudioKeepAlive';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+import { TTSService, DEFAULT_VIENEU_SERVER_URL, type VieNeuRequestContext } from '@/services/ttsService';
+import { EdgeTTSService, type EdgeSpeechWithBoundaries } from '@/services/edgeTtsService';
+import { GaplessTtsPlayer, splitByDatabaseBoundaries, type SentenceChunk, WebAudioPlaybackEngine } from '@/services/gaplessTtsPlayer';
+import { DomWordHighlighter } from '@/services/domWordHighlighter';
+import { useAppStore } from '@/stores/useAppStore';
+import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
+import { useTTSStore } from '@/features/reader/stores/useTTSStore';
+import { BackgroundAudioKeepAlive } from '@/services/backgroundAudioKeepAlive';
 
-export { splitParagraphIntoSentences } from '../services/gaplessTtsPlayer';
+export { splitParagraphIntoSentences } from '@/services/gaplessTtsPlayer';
 
 const WORD_HIGHLIGHT_CLASS = 'msreadout-word-highlight';
 // Keep a grouped source line in one request whenever possible. The API accepts

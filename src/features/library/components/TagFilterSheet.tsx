@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Search, Check, Tag, RotateCcw } from 'lucide-react';
-import { TagCategory } from '../../../shared/constants/tags';
-import { TagRepository } from '../../../repositories/TagRepository';
-import { BottomSheet } from '../../../components/BottomSheet';
+import { TagCategory } from '@/shared/constants/tags';
+import { TagRepository } from '@/repositories/TagRepository';
+import { BottomSheet } from '@/components/BottomSheet';
 
 interface TagFilterSheetProps {
 	isOpen: boolean;

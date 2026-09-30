@@ -1,5 +1,5 @@
-import { apiClient } from '../services/apiClient';
-import { useAppStore } from '../stores/useAppStore';
+import { apiClient } from '@/services/apiClient';
+import { useAppStore } from '@/stores/useAppStore';
 
 const settingsCache: { [key: string]: { data: any; timestamp: number } } = {};
 

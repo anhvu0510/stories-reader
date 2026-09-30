@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ChapterRepository } from '../../../repositories/ChapterRepository';
-import { Chapter } from '../../../shared/types';
-import { X, Search, Clock, RefreshCw, Download, Trash2 } from 'lucide-react';
-import { ChapterItem } from '../../chapter-list/components/ChapterItem';
-import { downloadManager, DownloadTask } from '../../../lib/DownloadManager';
-import { offlineDb } from '../../../lib/offlineDb';
-import { useToastStore } from '../../../stores/useToastStore';
-import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
-import { BottomSheet } from '../../../components/BottomSheet';
-import { openChapter } from '../../../shared/utils/openChapter';
+import { BottomSheet } from '@/components/BottomSheet';
+import { ChapterItem } from '@/features/chapter-list/components/ChapterItem';
+import { triggerHaptic } from '@/hooks/useHaptic';
+import { downloadManager, DownloadTask } from '@/lib/DownloadManager';
+import { offlineDb } from '@/lib/offlineDb';
+import { ChapterRepository } from '@/repositories/ChapterRepository';
+import { Chapter } from '@/shared/types';
+import { openChapter } from '@/shared/utils/openChapter';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+import { useToastStore } from '@/stores/useToastStore';
+import { Download, RefreshCw, Search, Trash2, X } from 'lucide-react';
 import { motion } from 'motion/react';
-import { triggerHaptic } from '../../../hooks/useHaptic';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function ChapterSkeletonItem() {
 	return (

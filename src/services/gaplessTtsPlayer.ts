@@ -1,6 +1,6 @@
-import { INVISIBLE_SENTENCE_DELIMITER } from '../shared/constants/textBoundaries';
+import { INVISIBLE_SENTENCE_DELIMITER } from '@/shared/constants/textBoundaries';
 
-export { INVISIBLE_SENTENCE_DELIMITER } from '../shared/constants/textBoundaries';
+export { INVISIBLE_SENTENCE_DELIMITER } from '@/shared/constants/textBoundaries';
 
 export interface SentenceChunk {
 	pIdx: number;

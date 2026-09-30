@@ -4,9 +4,9 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { BookCard } from '../BookCard';
-import { Book } from '../../../../shared/types';
-import * as useHapticModule from '../../../../hooks/useHaptic';
+import { BookCard } from '@/features/library/components/BookCard';
+import { Book } from '@/shared/types';
+import * as useHapticModule from '@/hooks/useHaptic';
 
 const mockBook: Book = {
 	bookId: 'book-action-test-1',
@@ -83,7 +83,7 @@ describe('BookCard Quick Action Menu & Long Press', () => {
 	});
 
 	it('triggers AI API calls when clicking Dịch tiêu đề, Dịch tên, Dịch POV without waiting', async () => {
-		const { AIRepository } = await import('../../../../repositories/AIRepository');
+		const { AIRepository } = await import('@/repositories/AIRepository');
 		vi.spyOn(AIRepository, 'translateChineseTitles').mockResolvedValue({});
 		vi.spyOn(AIRepository, 'detectProperNouns').mockResolvedValue({});
 		vi.spyOn(AIRepository, 'detectTagsAndPov').mockResolvedValue({

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Trash2, Edit3, ArrowRight, Loader2, Save } from 'lucide-react';
-import { ReplacementRepository } from '../../../repositories/ReplacementRepository';
-import { Replacement } from '../../../shared/types';
-import { useToastStore } from '../../../stores/useToastStore';
+import { ReplacementRepository } from '@/repositories/ReplacementRepository';
+import { Replacement } from '@/shared/types';
+import { useToastStore } from '@/stores/useToastStore';
 
 interface ReplacementsTabProps {
 	initialMatch?: string;

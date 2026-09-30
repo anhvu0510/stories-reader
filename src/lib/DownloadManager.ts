@@ -1,6 +1,6 @@
-import { Book, Chapter } from '../shared/types';
+import { Book, Chapter } from '@/shared/types';
 import { offlineDb } from './offlineDb';
-import { useAppStore } from '../stores/useAppStore';
+import { useAppStore } from '@/stores/useAppStore';
 import oboe from 'oboe';
 
 // Suppress Oboe's attempt to set Content-Length which causes an ugly red browser warning

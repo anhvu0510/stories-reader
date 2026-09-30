@@ -1,12 +1,12 @@
 import React from 'react';
 import { ChevronsLeft, ChevronsRight, Settings, Sparkles, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAppStore } from '../../../stores/useAppStore';
-import { useModalStore } from '../../../stores/useModalStore';
-import { ChapterDetailItem } from '../../../shared/types';
-import { openChapter, openNextChapter, openPrevChapter } from '../../../shared/utils/openChapter';
+import { useAppStore } from '@/stores/useAppStore';
+import { useModalStore } from '@/stores/useModalStore';
+import { ChapterDetailItem } from '@/shared/types';
+import { openChapter, openNextChapter, openPrevChapter } from '@/shared/utils/openChapter';
 import { motion } from 'motion/react';
-import { triggerHaptic } from '../../../hooks/useHaptic';
+import { triggerHaptic } from '@/hooks/useHaptic';
 
 interface ReaderQuickControlProps {
 	bookId: string;

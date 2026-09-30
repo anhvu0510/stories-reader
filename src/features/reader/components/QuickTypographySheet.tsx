@@ -1,10 +1,10 @@
 import React from 'react';
 import { X, Type, Minus, Plus, Palette, AlignJustify, Layers, Sliders, Check } from 'lucide-react';
-import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
-import { FontType, ThemeType } from '../../../shared/types';
-import { BottomSheet } from '../../../components/BottomSheet';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+import { FontType, ThemeType } from '@/shared/types';
+import { BottomSheet } from '@/components/BottomSheet';
 import { motion } from 'motion/react';
-import { triggerHaptic } from '../../../hooks/useHaptic';
+import { triggerHaptic } from '@/hooks/useHaptic';
 
 interface QuickTypographySheetProps {
 	onClose: () => void;

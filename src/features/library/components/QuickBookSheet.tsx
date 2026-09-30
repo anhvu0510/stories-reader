@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChapterRepository } from '../../../repositories/ChapterRepository';
-import { Book, Chapter } from '../../../shared/types';
+import { ChapterRepository } from '@/repositories/ChapterRepository';
+import { Book, Chapter } from '@/shared/types';
 import { X, Download, Search, RefreshCw, Trash2, Sparkles } from 'lucide-react';
-import { ChapterItem } from '../../chapter-list/components/ChapterItem';
-import { downloadManager } from '../../../lib/DownloadManager';
-import { useToastStore } from '../../../stores/useToastStore';
-import { useAppStore } from '../../../stores/useAppStore';
-import { offlineDb } from '../../../lib/offlineDb';
-import { TranslationSheet } from '../../../components/TranslationSheet';
-import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
-import { BottomSheet } from '../../../components/BottomSheet';
-import { openChapter } from '../../../shared/utils/openChapter';
+import { ChapterItem } from '@/features/chapter-list/components/ChapterItem';
+import { downloadManager } from '@/lib/DownloadManager';
+import { useToastStore } from '@/stores/useToastStore';
+import { useAppStore } from '@/stores/useAppStore';
+import { offlineDb } from '@/lib/offlineDb';
+import { TranslationSheet } from '@/components/TranslationSheet';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+import { BottomSheet } from '@/components/BottomSheet';
+import { openChapter } from '@/shared/utils/openChapter';
 import { motion } from 'motion/react';
-import { triggerHaptic } from '../../../hooks/useHaptic';
+import { triggerHaptic } from '@/hooks/useHaptic';
 
 interface QuickBookSheetProps {
 	book: Book;

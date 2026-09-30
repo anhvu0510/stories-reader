@@ -1,8 +1,8 @@
 import React from 'react';
 import { Search, Wifi, WifiOff, Settings, BookOpenCheck, X, Tag, ArrowUpDown, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useAppStore } from '../../../stores/useAppStore';
-import { triggerHaptic } from '../../../hooks/useHaptic';
+import { useAppStore } from '@/stores/useAppStore';
+import { triggerHaptic } from '@/hooks/useHaptic';
 
 interface LibraryHeaderProps {
 	searchQuery: string;

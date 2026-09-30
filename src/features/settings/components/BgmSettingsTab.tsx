@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Music, Volume2, VolumeX, Play, Pause, Sliders, RotateCcw, Sparkles, Radio, Clock, ExternalLink, Waves, CloudRain, Piano, Info } from 'lucide-react';
-import { useReaderConfigStore } from '../../../stores/useReaderConfigStore';
-import { getAssetUrl } from '../../../shared/utils/assetUrl';
-import { computeSubtleBgmVolume } from '../../../hooks/useEdgeReadAloudBgm';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+import { getAssetUrl } from '@/shared/utils/assetUrl';
+import { computeSubtleBgmVolume } from '@/hooks/useEdgeReadAloudBgm';
 
 const PRESET_MUSIC_LIST = [
 	{

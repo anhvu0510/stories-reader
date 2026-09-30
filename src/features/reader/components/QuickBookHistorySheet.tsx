@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { BookRepository } from '../../../repositories/BookRepository';
-import { Book } from '../../../shared/types';
-import { X, Clock, BookOpen, Sparkles, Layers, Search, RefreshCw } from 'lucide-react';
-import { useGlobalLoading } from '../../../hooks/useGlobalLoading';
-import { BottomSheet } from '../../../components/BottomSheet';
-import { openChapter } from '../../../shared/utils/openChapter';
+import { BookOpen, Clock, Layers, Search, Sparkles, X } from 'lucide-react';
 import { motion } from 'motion/react';
-import { triggerHaptic } from '../../../hooks/useHaptic';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+import { BottomSheet } from '@/components/BottomSheet';
+import { useGlobalLoading } from '@/hooks/useGlobalLoading';
+import { triggerHaptic } from '@/hooks/useHaptic';
+import { BookRepository } from '@/repositories/BookRepository';
+import { openChapter } from '@/shared/utils/openChapter';
+
+import type { Book } from '@/shared/types';
 
 interface QuickBookHistorySheetProps {
 	currentBookId?: string;

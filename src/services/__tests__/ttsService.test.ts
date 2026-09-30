@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { TTSService } from '../ttsService';
+import { TTSService } from '@/services/ttsService';
 
 describe('TTSService.synthesizeSpeech', () => {
 	afterEach(() => {

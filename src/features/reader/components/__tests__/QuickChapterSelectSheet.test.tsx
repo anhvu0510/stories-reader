@@ -3,9 +3,9 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { QuickChapterSelectSheet } from '../QuickChapterSelectSheet';
-import { downloadManager } from '../../../../lib/DownloadManager';
-import { offlineDb } from '../../../../lib/offlineDb';
+import { QuickChapterSelectSheet } from '@/features/reader/components/QuickChapterSelectSheet';
+import { downloadManager } from '@/lib/DownloadManager';
+import { offlineDb } from '@/lib/offlineDb';
 
 vi.mock('../../../../lib/DownloadManager', () => ({
 	downloadManager: {

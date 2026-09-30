@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import { BgmSettingsTab } from '../BgmSettingsTab';
-import { useReaderConfigStore } from '../../../../stores/useReaderConfigStore';
+import { BgmSettingsTab } from '@/features/settings/components/BgmSettingsTab';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 
 describe('BgmSettingsTab Component UI & Store Integration', () => {
 	let mockAudioContext: any;

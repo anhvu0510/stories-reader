@@ -3,11 +3,11 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import { ReaderScreen } from '../ReaderScreen';
-import { ChapterListScreen } from '../../chapter-list/ChapterListScreen';
-import { ChapterRepository } from '../../../repositories/ChapterRepository';
-import { BookRepository } from '../../../repositories/BookRepository';
-import { DEFAULT_APP_TITLE } from '../../../hooks/useDocumentTitle';
+import { ReaderScreen } from '@/features/reader/ReaderScreen';
+import { ChapterListScreen } from '@/features/chapter-list/ChapterListScreen';
+import { ChapterRepository } from '@/repositories/ChapterRepository';
+import { BookRepository } from '@/repositories/BookRepository';
+import { DEFAULT_APP_TITLE } from '@/hooks/useDocumentTitle';
 
 vi.mock('../../../repositories/ChapterRepository', () => ({
 	ChapterRepository: {

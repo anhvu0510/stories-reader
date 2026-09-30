@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DomWordHighlighter } from '../domWordHighlighter';
+import { DomWordHighlighter } from '@/services/domWordHighlighter';
 
 const originalHighlight = Reflect.get(globalThis, 'Highlight');
 const originalCss = globalThis.CSS;

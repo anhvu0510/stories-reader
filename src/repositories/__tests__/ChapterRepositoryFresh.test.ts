@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ChapterRepository } from '../ChapterRepository';
-import { apiClient } from '../../services/apiClient';
-import { offlineDb } from '../../lib/offlineDb';
-import { useAppStore } from '../../stores/useAppStore';
+import { ChapterRepository } from '@/repositories/ChapterRepository';
+import { apiClient } from '@/services/apiClient';
+import { offlineDb } from '@/lib/offlineDb';
+import { useAppStore } from '@/stores/useAppStore';
 
 vi.mock('../../services/apiClient', () => ({
 	apiClient: {

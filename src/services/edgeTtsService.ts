@@ -1,4 +1,4 @@
-import { useAppStore } from '../stores/useAppStore';
+import { useAppStore } from '@/stores/useAppStore';
 
 export interface EdgeVoice {
 	id: string;

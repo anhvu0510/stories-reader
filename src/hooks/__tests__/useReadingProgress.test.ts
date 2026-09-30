@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useReadingProgress } from '../useReadingProgress';
+import { useReadingProgress } from '@/hooks/useReadingProgress';
 
 describe('useReadingProgress Hook', () => {
 	const bookId = 'book_123';

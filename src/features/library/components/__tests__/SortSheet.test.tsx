@@ -3,7 +3,7 @@ import 'fake-indexeddb/auto';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { SortSheet, SORT_OPTIONS } from '../SortSheet';
+import { SortSheet, SORT_OPTIONS } from '@/features/library/components/SortSheet';
 
 describe('SortSheet Component Tests', () => {
 	const mockOnApply = vi.fn();

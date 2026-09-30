@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import React from 'react';
-import { VerticalBatchChapterNav } from '../VerticalBatchChapterNav';
+import { VerticalBatchChapterNav } from '@/features/reader/components/VerticalBatchChapterNav';
 
 describe('VerticalBatchChapterNav Component', () => {
 	const mockChapters = [

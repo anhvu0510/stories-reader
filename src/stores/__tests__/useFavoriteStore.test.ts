@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useFavoriteStore } from '../useFavoriteStore';
+import { useFavoriteStore } from '@/stores/useFavoriteStore';
 
 describe('useFavoriteStore', () => {
 	beforeEach(() => {

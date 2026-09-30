@@ -1,4 +1,4 @@
-import { Book, Chapter, Replacement } from '../shared/types';
+import { Book, Chapter, Replacement } from '@/shared/types';
 
 export const MOCK_BOOKS: Book[] = [
 	{
