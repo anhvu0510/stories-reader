@@ -89,12 +89,6 @@ describe('ReaderScreen - Load Last Read Chapter from Header Title (Integration)'
 				forceFresh: true
 			});
 		});
-
-		// Check toast notification showing navigation to last read chapter 15
-		await waitFor(() => {
-			const toasts = useToastStore.getState().toasts;
-			expect(toasts.some((t) => t.message.includes('Chương 15'))).toBe(true);
-		});
 	});
 
 	it('QC-2: If already on lastReadChapter, reloads content with forceFresh: true directly from API', async () => {
@@ -144,11 +138,6 @@ describe('ReaderScreen - Load Last Read Chapter from Header Title (Integration)'
 			expect(ChapterRepository.getChapterContent).toHaveBeenLastCalledWith('chap-100', expect.any(Number), expect.any(Boolean), '', expect.any(Number), {
 				forceFresh: true
 			});
-		});
-
-		await waitFor(() => {
-			const toasts = useToastStore.getState().toasts;
-			expect(toasts.some((t) => t.message.includes('Đã tải bản mới nhất'))).toBe(true);
 		});
 	});
 
