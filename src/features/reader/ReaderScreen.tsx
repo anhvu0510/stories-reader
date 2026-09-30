@@ -521,14 +521,23 @@ export function ReaderScreen() {
 			// 1. Prioritize user's lastReadChapter from server API (same as history tab)
 			const lastRead = await Promise.resolve(
 				BookRepository.getLastReadChapter(bookId, { forceFresh: true })
-			).catch(() => null);
+			).catch(err => {
+				console.warn('[ReaderScreen] Không thể lấy lastRead từ server, thử fallback sang latest:', err);
+				return null;
+			});
 
 			const latest = !lastRead
-				? await Promise.resolve(ChapterRepository.getLatestChapter(bookId, { forceFresh: true })).catch(() => null)
+				? await Promise.resolve(ChapterRepository.getLatestChapter(bookId, { forceFresh: true })).catch(err => {
+						console.warn('[ReaderScreen] Không thể lấy latest từ server, thử fallback sang offlineDb:', err);
+						return null;
+				  })
 				: null;
 
 			const offlineBook = !lastRead && !latest
-				? await Promise.resolve(offlineDb.getBook(bookId)).catch(() => null)
+				? await Promise.resolve(offlineDb.getBook(bookId)).catch(err => {
+						console.warn('[ReaderScreen] Không thể lấy book từ offlineDb:', err);
+						return null;
+				  })
 				: null;
 
 			const targetChapter =
