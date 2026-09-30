@@ -62,11 +62,7 @@ export const ReaderHeader = memo(function ReaderHeader({
 		triggerHaptic('light');
 		clickTimerRef.current = setTimeout(() => {
 			clickTimerRef.current = null;
-			if (onTitleClick) {
-				onTitleClick();
-			} else {
-				window.scrollTo({ top: 0, behavior: 'smooth' });
-			}
+			onTitleClick?.();
 		}, 250);
 	};
 

@@ -147,7 +147,7 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 		document.body.removeChild(highlightSpan);
 	});
 
-	it('QC-3: Single click header title falls back to window.scrollTo top if no read-aloud element is found', async () => {
+	it('QC-3: Single click header title does not trigger scroll when no read-aloud element is found', async () => {
 		vi.useFakeTimers();
 
 		vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
@@ -174,6 +174,9 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 
 		expect(screen.getByText('Đại Phụng Đả Canh Nhân')).toBeDefined();
 
+		// Clear initial mount/reading progress scrollTo calls
+		vi.mocked(window.scrollTo).mockClear();
+
 		const titleBtn = screen.getByText(/Đại Phụng/).closest('button')!;
 		fireEvent.click(titleBtn);
 
@@ -181,10 +184,7 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 			vi.advanceTimersByTime(250);
 		});
 
-		expect(window.scrollTo).toHaveBeenCalledWith({
-			top: 0,
-			behavior: 'smooth'
-		});
+		expect(window.scrollTo).not.toHaveBeenCalled();
 	});
 
 	it('QC-4: Handles network error gracefully on double click with error toast feedback', async () => {

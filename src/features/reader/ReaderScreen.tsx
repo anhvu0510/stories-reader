@@ -509,12 +509,8 @@ export function ReaderScreen() {
 			const paragraphEl = document.querySelector(`[data-paragraph-index="${activeParagraphIndex}"]`);
 			if (paragraphEl && typeof paragraphEl.scrollIntoView === 'function') {
 				paragraphEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-				return;
 			}
 		}
-
-		// 3. Fallback: scroll to top of page
-		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}, [isPlaying, isPaused, activeParagraphIndex]);
 
 	const handleTitleDoubleClick = useCallback(async () => {
