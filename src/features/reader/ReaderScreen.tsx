@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChapterRepository } from '../../repositories/ChapterRepository';
+import { BookRepository } from '../../repositories/BookRepository';
 import { ChapterContent, ChapterDetailItem } from '../../shared/types';
 import { useReaderConfigStore } from '../../stores/useReaderConfigStore';
 import { useAppStore } from '../../stores/useAppStore';
@@ -489,32 +490,34 @@ export function ReaderScreen() {
     setIsRefreshingLatest(true);
     stopReading();
     try {
-      showToast('Đang kiểm tra chương mới nhất...', 'info');
-      const latestChapter = await ChapterRepository.getLatestChapter(bookId, { forceFresh: true });
-      if (!latestChapter) {
-        showToast('Không tìm thấy chương nào từ máy chủ', 'info');
+      showToast('Đang kiểm tra chương đọc gần nhất...', 'info');
+      // 1. Prioritize user's lastReadChapter from server API (same as history tab)
+      const lastRead = await BookRepository.getLastReadChapter(bookId, { forceFresh: true });
+      // 2. Fallback to latest chapter if no lastReadChapter found
+      const targetChapter = lastRead || await ChapterRepository.getLatestChapter(bookId, { forceFresh: true });
+
+      if (!targetChapter) {
+        showToast('Không tìm thấy thông tin chương từ máy chủ', 'info');
         return;
       }
 
-      const isCurrentLatest =
-        latestChapter.chapterId === chapterId ||
-        (activeChapter && activeChapter.chapterNumber >= latestChapter.chapterNumber);
+      const isCurrent = targetChapter.chapterId === chapterId;
 
-      if (isCurrentLatest) {
-        showToast(`Đang tải lại bản mới nhất: Chương ${latestChapter.chapterNumber}`, 'info');
+      if (isCurrent) {
+        showToast(`Đang làm mới chương ${targetChapter.chapterNumber}...`, 'info');
         await loadChapter(true);
-        showToast(`Đã tải bản mới nhất: Chương ${latestChapter.chapterNumber}`, 'success');
+        showToast(`Đã tải bản mới nhất: Chương ${targetChapter.chapterNumber}`, 'success');
       } else {
-        showToast(`Chuyển đến chương mới nhất: Chương ${latestChapter.chapterNumber}`, 'success');
+        showToast(`Chuyển đến chương đọc gần nhất: Chương ${targetChapter.chapterNumber}`, 'success');
         forceFreshNextLoadRef.current = true;
-        navigate(`/book/${bookId}/chapter/${latestChapter.chapterId}`);
+        navigate(`/book/${bookId}/chapter/${targetChapter.chapterId}`);
       }
     } catch (err: any) {
-      showToast(err.message || 'Lỗi khi tải chương mới nhất từ máy chủ', 'error');
+      showToast(err.message || 'Lỗi khi tải chương từ máy chủ', 'error');
     } finally {
       setIsRefreshingLatest(false);
     }
-  }, [bookId, chapterId, activeChapter, isRefreshingLatest, stopReading, showToast, loadChapter, navigate]);
+  }, [bookId, chapterId, isRefreshingLatest, stopReading, showToast, loadChapter, navigate]);
 
   const handleOpenHistory = useCallback(() => setShowHistorySheet(true), []);
   const handleOpenChapterSelect = useCallback(() => setShowChapterSelectSheet(true), []);

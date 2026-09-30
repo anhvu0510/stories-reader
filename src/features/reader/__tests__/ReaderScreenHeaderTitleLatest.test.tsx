@@ -5,6 +5,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/re
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { ReaderScreen } from '../ReaderScreen';
 import { ChapterRepository } from '../../../repositories/ChapterRepository';
+import { BookRepository } from '../../../repositories/BookRepository';
 import { useToastStore } from '../../../stores/useToastStore';
 import { useAppStore } from '../../../stores/useAppStore';
 
@@ -13,6 +14,13 @@ vi.mock('../../../repositories/ChapterRepository', () => ({
     getChapterContent: vi.fn(),
     getChapters: vi.fn().mockResolvedValue({ chapters: [], pagination: {} }),
     getLatestChapter: vi.fn(),
+  },
+}));
+
+vi.mock('../../../repositories/BookRepository', () => ({
+  BookRepository: {
+    getLastReadChapter: vi.fn(),
+    getBook: vi.fn(),
   },
 }));
 
@@ -30,7 +38,7 @@ vi.mock('../../../hooks/useReadAloud', () => ({
   }),
 }));
 
-describe('ReaderScreen - Load Latest Chapter from Header Title (Integration)', () => {
+describe('ReaderScreen - Load Last Read Chapter from Header Title (Integration)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.scrollTo = vi.fn();
@@ -41,7 +49,7 @@ describe('ReaderScreen - Load Latest Chapter from Header Title (Integration)', (
     cleanup();
   });
 
-  it('QC-1: Clicks header title, detects newer latest chapter, and navigates with force-fresh', async () => {
+  it('QC-1: Clicks header title, loads lastReadChapter from server API (like history tab), and navigates with force-fresh', async () => {
     vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
       chapter: {
         chapterId: 'chap-1',
@@ -52,13 +60,10 @@ describe('ReaderScreen - Load Latest Chapter from Header Title (Integration)', (
       },
     });
 
-    vi.mocked(ChapterRepository.getLatestChapter).mockResolvedValueOnce({
-      chapterId: 'chap-99',
-      chapterNumber: 99,
-      title: 'Chương 99: Đột Phá',
-      state: 'SUCCEEDED',
-      updatedAt: new Date().toISOString(),
-      bookId: 'book-1',
+    vi.mocked(BookRepository.getLastReadChapter).mockResolvedValueOnce({
+      chapterId: 'chap-15',
+      chapterNumber: 15,
+      title: 'Chương 15: Manh Mối',
     });
 
     render(
@@ -78,19 +83,21 @@ describe('ReaderScreen - Load Latest Chapter from Header Title (Integration)', (
     const titleBtn = screen.getByTitle('Bấm để tải chương mới nhất từ máy chủ');
     fireEvent.click(titleBtn);
 
-    // Verify ChapterRepository.getLatestChapter was called with forceFresh: true
+    // Verify BookRepository.getLastReadChapter was called with forceFresh: true
     await waitFor(() => {
-      expect(ChapterRepository.getLatestChapter).toHaveBeenCalledWith('book-1', {
+      expect(BookRepository.getLastReadChapter).toHaveBeenCalledWith('book-1', {
         forceFresh: true,
       });
     });
 
-    // Check toast notification
-    const toasts = useToastStore.getState().toasts;
-    expect(toasts.some((t) => t.message.includes('Chương 99'))).toBe(true);
+    // Check toast notification showing navigation to last read chapter 15
+    await waitFor(() => {
+      const toasts = useToastStore.getState().toasts;
+      expect(toasts.some((t) => t.message.includes('Chương 15'))).toBe(true);
+    });
   });
 
-  it('QC-2: If already on latest chapter, reloads content with forceFresh: true directly from API', async () => {
+  it('QC-2: If already on lastReadChapter, reloads content with forceFresh: true directly from API', async () => {
     vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
       chapter: {
         chapterId: 'chap-100',
@@ -101,13 +108,10 @@ describe('ReaderScreen - Load Latest Chapter from Header Title (Integration)', (
       },
     });
 
-    vi.mocked(ChapterRepository.getLatestChapter).mockResolvedValueOnce({
+    vi.mocked(BookRepository.getLastReadChapter).mockResolvedValueOnce({
       chapterId: 'chap-100',
       chapterNumber: 100,
       title: 'Chương 100: Đại Kết Cục',
-      state: 'SUCCEEDED',
-      updatedAt: new Date().toISOString(),
-      bookId: 'book-1',
     });
 
     render(
@@ -136,7 +140,7 @@ describe('ReaderScreen - Load Latest Chapter from Header Title (Integration)', (
     fireEvent.click(titleBtn);
 
     await waitFor(() => {
-      expect(ChapterRepository.getLatestChapter).toHaveBeenCalledWith('book-1', {
+      expect(BookRepository.getLastReadChapter).toHaveBeenCalledWith('book-1', {
         forceFresh: true,
       });
     });
@@ -170,7 +174,7 @@ describe('ReaderScreen - Load Latest Chapter from Header Title (Integration)', (
       },
     });
 
-    vi.mocked(ChapterRepository.getLatestChapter).mockRejectedValueOnce(
+    vi.mocked(BookRepository.getLastReadChapter).mockRejectedValueOnce(
       new Error('Mạng bị mất kết nối')
     );
 

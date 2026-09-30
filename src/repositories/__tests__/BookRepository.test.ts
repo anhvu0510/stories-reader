@@ -114,4 +114,56 @@ describe('BookRepository Favorite Server Management', () => {
 
     expect(res.books.map((b) => b.bookName)).toEqual(['Áo Trắng', 'Bất Hủ', 'Đại Đạo']);
   });
+
+  it('QC-7 [Online]: getLastReadChapter queries API with bookId query param and forceFresh headers', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      books: [
+        {
+          bookId: 'b-99',
+          bookName: 'Truyện Hay',
+          lastReadChapter: {
+            chapterId: 'c-20',
+            chapterNumber: 20,
+            title: 'Chương 20: Chiến Thắng',
+          },
+        },
+      ],
+    });
+
+    const res = await BookRepository.getLastReadChapter('b-99', { forceFresh: true });
+
+    expect(res).toEqual({
+      chapterId: 'c-20',
+      chapterNumber: 20,
+      title: 'Chương 20: Chiến Thắng',
+    });
+
+    const [calledUrl, calledOptions] = vi.mocked(apiClient.get).mock.calls[0];
+    expect(calledUrl).toContain('/api/books?bookId=b-99&limit=1');
+    expect(calledUrl).toContain('_t=');
+    expect(calledOptions).toMatchObject({
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+      },
+      cache: 'no-store',
+    });
+  });
+
+  it('QC-8 [Online]: getBook correctly queries /api/books?bookId=... instead of 404 path', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      books: [
+        {
+          bookId: 'b-55',
+          bookName: 'Quyển 55',
+        },
+      ],
+    });
+
+    const res = await BookRepository.getBook('b-55');
+
+    expect(res?.bookId).toBe('b-55');
+    const [calledUrl] = vi.mocked(apiClient.get).mock.calls[0];
+    expect(calledUrl).toBe('/api/books?bookId=b-55&limit=1');
+  });
 });

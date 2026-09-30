@@ -175,21 +175,96 @@ export const BookRepository = {
     return { bookId, isFavorite: nextFavorite };
   },
 
-  async getBook(bookId: string): Promise<Book | undefined> {
+  async getBook(bookId: string, options?: { forceFresh?: boolean }): Promise<Book | undefined> {
     const isOffline = useAppStore.getState().isOfflineMode;
     if (isOffline) {
       return await offlineDb.getBook(bookId);
     }
     try {
-      const data = await apiClient.get<any>(`/api/books/${bookId}`);
-      const book = data?.data || data;
-      if (book) {
-        useFavoriteStore.getState().syncFromBooks([book]);
+      let url = `/api/books?bookId=${encodeURIComponent(bookId)}&limit=1`;
+      const requestOptions: any = { timeout: 3500, retries: 0 };
+      if (options?.forceFresh) {
+        url += `&_t=${Date.now()}`;
+        requestOptions.headers = {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+        };
+        requestOptions.cache = 'no-store';
       }
-      return book;
+      const data = await apiClient.get<any>(url, requestOptions);
+      const books = data?.books || data?.data || (Array.isArray(data) ? data : []);
+      const book = books.length > 0 ? books[0] : (data?.book || data);
+      if (book && book.bookId) {
+        useFavoriteStore.getState().syncFromBooks([book]);
+        await offlineDb.saveBook(book).catch(() => {});
+        return book;
+      }
     } catch (e) {
+      if (options?.forceFresh) {
+        throw new Error('Không thể tải thông tin truyện từ máy chủ');
+      }
       return await offlineDb.getBook(bookId);
     }
+    return await offlineDb.getBook(bookId);
+  },
+
+  async getLastReadChapter(
+    bookId: string,
+    options?: { forceFresh?: boolean }
+  ): Promise<{ chapterId: string; chapterNumber?: number; title?: string } | null> {
+    const isOffline = useAppStore.getState().isOfflineMode;
+
+    if (!isOffline) {
+      try {
+        let url = `/api/books?bookId=${encodeURIComponent(bookId)}&limit=1`;
+        const requestOptions: any = { timeout: 4000, retries: 0, silent: true };
+        if (options?.forceFresh) {
+          url += `&_t=${Date.now()}`;
+          requestOptions.headers = {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
+          };
+          requestOptions.cache = 'no-store';
+        }
+        const res = await apiClient.get<any>(url, requestOptions);
+        const books = res?.books || res?.data || (Array.isArray(res) ? res : []);
+        const book = books.length > 0 ? books[0] : (res?.book || null);
+        if (book?.lastReadChapter?.chapterId) {
+          const offlineBook = await offlineDb.getBook(bookId);
+          if (offlineBook) {
+            offlineBook.lastReadChapter = book.lastReadChapter;
+            offlineBook.lastedReadAt = book.lastedReadAt || new Date().toISOString();
+            await offlineDb.saveBook(offlineBook);
+          }
+          return {
+            chapterId: book.lastReadChapter.chapterId,
+            chapterNumber: typeof book.lastReadChapter.chapterNumber === 'number'
+              ? book.lastReadChapter.chapterNumber
+              : parseInt(book.lastReadChapter.chapterNumber, 10) || 1,
+            title: book.lastReadChapter.title || `Chương ${book.lastReadChapter.chapterNumber || 1}`,
+          };
+        }
+      } catch (e: any) {
+        console.warn('Failed to fetch last read chapter online:', e);
+        if (options?.forceFresh) {
+          throw new Error(e?.message || 'Không thể lấy thông tin chương đọc gần nhất từ máy chủ');
+        }
+      }
+    }
+
+    if (options?.forceFresh && isOffline) {
+      throw new Error('Đang ở chế độ offline, không thể tải từ máy chủ');
+    }
+
+    const offlineBook = await offlineDb.getBook(bookId);
+    if (!offlineBook?.lastReadChapter?.chapterId) return null;
+    return {
+      chapterId: offlineBook.lastReadChapter.chapterId,
+      chapterNumber: typeof offlineBook.lastReadChapter.chapterNumber === 'number'
+        ? offlineBook.lastReadChapter.chapterNumber
+        : parseInt(offlineBook.lastReadChapter.chapterNumber, 10) || 1,
+      title: offlineBook.lastReadChapter.title || `Chương ${offlineBook.lastReadChapter.chapterNumber || 1}`,
+    };
   },
 
   async deleteBook(bookId: string): Promise<boolean> {
