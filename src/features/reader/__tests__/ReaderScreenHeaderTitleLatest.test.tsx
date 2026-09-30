@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { ReaderScreen } from '@/features/reader/ReaderScreen';
+import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
 import { useAppStore } from '@/stores/useAppStore';
 import { useToastStore } from '@/stores/useToastStore';
@@ -50,7 +51,7 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 		vi.useRealTimers();
 	});
 
-	it('QC-1: Double click header title reloads current chapter with forceFresh: true directly from API', async () => {
+	it('QC-1: Double click header title fetches lastReadChapter from server DB and reloads current chapter with forceFresh: true', async () => {
 		vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
 			chapter: {
 				chapterId: 'chap-1',
@@ -59,6 +60,12 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 				bookName: 'Đại Phụng Đả Canh Nhân',
 				content: ['Nội dung chương 1']
 			}
+		});
+
+		vi.mocked(BookRepository.getLastReadChapter).mockResolvedValueOnce({
+			chapterId: 'chap-1',
+			chapterNumber: 1,
+			title: 'Chương 1: Khởi đầu'
 		});
 
 		render(
@@ -83,6 +90,12 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 		fireEvent.click(titleBtn);
 
 		await waitFor(() => {
+			expect(BookRepository.getLastReadChapter).toHaveBeenCalledWith('book-1', {
+				forceFresh: true
+			});
+		});
+
+		await waitFor(() => {
 			expect(ChapterRepository.getChapterContent).toHaveBeenLastCalledWith(
 				'chap-1',
 				expect.any(Number),
@@ -91,6 +104,53 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 				expect.any(Number),
 				{ forceFresh: true }
 			);
+		});
+	});
+
+	it('QC-1b: Double click header title fetches lastReadChapter from server DB and navigates if different chapter', async () => {
+		vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
+			chapter: {
+				chapterId: 'chap-1',
+				chapterNumber: 1,
+				title: 'Chương 1: Khởi đầu',
+				bookName: 'Đại Phụng Đả Canh Nhân',
+				content: ['Nội dung chương 1']
+			}
+		});
+
+		vi.mocked(BookRepository.getLastReadChapter).mockResolvedValueOnce({
+			chapterId: 'chap-15',
+			chapterNumber: 15,
+			title: 'Chương 15: Manh Mối'
+		});
+
+		render(
+			<MemoryRouter initialEntries={['/book/book-1/chapter/chap-1']}>
+				<Routes>
+					<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+					<Route path="/book/:bookId/chapter/chap-15" element={<div>Màn hình Chương 15</div>} />
+				</Routes>
+			</MemoryRouter>
+		);
+
+		await waitFor(() => {
+			expect(screen.getByText('Đại Phụng Đả Canh Nhân')).toBeDefined();
+		});
+
+		const titleBtn = screen.getByText(/Đại Phụng/).closest('button')!;
+
+		// Double click: 2 clicks within 100ms
+		fireEvent.click(titleBtn);
+		fireEvent.click(titleBtn);
+
+		await waitFor(() => {
+			expect(BookRepository.getLastReadChapter).toHaveBeenCalledWith('book-1', {
+				forceFresh: true
+			});
+		});
+
+		await waitFor(() => {
+			expect(screen.getByText('Màn hình Chương 15')).toBeDefined();
 		});
 	});
 

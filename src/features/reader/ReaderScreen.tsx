@@ -518,17 +518,22 @@ export function ReaderScreen() {
 		setIsRefreshingLatest(true);
 		stopReading();
 		try {
-			const currentChapId = activeChapter?.chapterId || chapterId;
-			if (!currentChapId) return;
+			// 1. Prioritize user's lastReadChapter from server API (same as history tab)
+			const lastRead = await BookRepository.getLastReadChapter(bookId, { forceFresh: true });
+			// 2. Fallback to latest chapter if no lastReadChapter found
+			const targetChapter = lastRead || (await ChapterRepository.getLatestChapter(bookId, { forceFresh: true }));
 
-			if (currentChapId === chapterId) {
+			const targetChapId = targetChapter?.chapterId || activeChapter?.chapterId || chapterId;
+			if (!targetChapId) return;
+
+			if (targetChapId === chapterId) {
 				await loadChapter(true);
 			} else {
 				forceFreshNextLoadRef.current = true;
-				navigate(`/book/${bookId}/chapter/${currentChapId}`);
+				navigate(`/book/${bookId}/chapter/${targetChapId}`);
 			}
 		} catch (err: any) {
-			console.error('Lỗi khi tải lại chương:', err);
+			console.error('Lỗi khi tải lại chương từ máy chủ:', err);
 		} finally {
 			setIsRefreshingLatest(false);
 		}
