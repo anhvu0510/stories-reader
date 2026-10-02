@@ -58,3 +58,28 @@ jobs:
           name: StoriesReader-v${{ env.APP_VERSION }}
           path: android/release-output/StoriesReader-v${{ env.APP_VERSION }}.apk
           retention-days: 30
+
+      - name: Send APK to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || '5379136611:AAFvX2godRHlok9qzbU9ROxA0JJruumAlps' }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || '898218742' }}
+        run: |
+          APK_FILE="android/release-output/StoriesReader-v${{ env.APP_VERSION }}.apk"
+          if [ -f "$APK_FILE" ]; then
+            echo "Uploading $APK_FILE to Telegram..."
+            COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1)
+            CAPTION="📱 *Stories Reader v${{ env.APP_VERSION }}*
+🚀 *Build APK thành công!*
+📝 Commit: \`${COMMIT_MSG}\`
+⚡ Tải file APK đính kèm và cài đặt trực tiếp trên Android."
+
+            curl -s -F "chat_id=${TELEGRAM_CHAT_ID}" \
+                 -F "document=@${APK_FILE}" \
+                 -F "caption=${CAPTION}" \
+                 -F "parse_mode=Markdown" \
+                 https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument
+            echo "✔ Sent APK to Telegram successfully!"
+          else
+            echo "❌ APK file not found at $APK_FILE"
+            exit 1
+          fi

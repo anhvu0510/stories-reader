@@ -15,6 +15,8 @@
 		"cap:sync": "npm run build && npx cap sync android",
 		"cap:open": "npx cap open android",
 		"cap:build": "npm run build && npx cap sync android && cd android && ./gradlew assembleDebug",
+		"cap:telegram": "bash scripts/send-telegram.sh",
+		"cap:build:telegram": "npm run cap:build && bash scripts/send-telegram.sh",
 		"ota:pack": "bash scripts/pack-ota.sh",
 		"format": "npx prettier --write \"src/**/*.{ts,tsx,css,json}\""
 	},
