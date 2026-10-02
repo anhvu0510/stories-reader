@@ -668,7 +668,7 @@ export function ReaderScreen() {
 
 	return (
 		<div
-			className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200 selection:bg-primary/25 selection:text-primary ${fontClass}`}
+			className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden hide-scrollbar no-scrollbar transition-colors duration-200 selection:bg-primary/25 selection:text-primary ${fontClass}`}
 		>
 			{/* Pull-to-refresh floating reload indicator */}
 			<PullToRefresh

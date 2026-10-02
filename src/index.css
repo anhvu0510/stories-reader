@@ -229,6 +229,7 @@
 }
 
 @layer base {
+	html,
 	body {
 		background-color: var(--bg);
 		color: var(--on-bg);
@@ -239,6 +240,8 @@
 			sans-serif;
 		-webkit-font-smoothing: antialiased;
 		overflow-x: hidden;
+		scrollbar-width: none !important;
+		-ms-overflow-style: none !important;
 	}
 }
 
@@ -289,6 +292,9 @@
 }
 
 /* Custom Utilities */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar,
 .hide-scrollbar::-webkit-scrollbar,
 .no-scrollbar::-webkit-scrollbar,
 ::-webkit-scrollbar {
@@ -297,6 +303,9 @@
 	height: 0 !important;
 }
 
+html,
+body,
+*,
 .hide-scrollbar,
 .no-scrollbar {
 	-ms-overflow-style: none !important;
