@@ -1,0 +1,90 @@
+name: Deploy OTA Soft-Update
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'index.html'
+      - 'vite.config.*'
+    paths-ignore:
+      - 'android/**'
+      - 'README.md'
+      - '.github/workflows/build-apk.yml'
+
+jobs:
+  deploy-ota:
+    name: Package and Deploy OTA Update
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Application & Pack OTA
+        run: |
+          npm run build
+          VERSION=$(node -p "require('./package.json').version || '1.0.0'")
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1)
+
+          mkdir -p dist-ota
+          (cd dist && zip -r -q ../dist-ota/bundle.zip .)
+
+          cat <<EOF > dist-ota/version.json
+          {
+            "version": "${VERSION}",
+            "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
+            "releaseNotes": "${COMMIT_MSG}",
+            "updatedAt": "${TIMESTAMP}"
+          }
+          EOF
+
+          echo "APP_VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "COMMIT_MSG=${COMMIT_MSG}" >> $GITHUB_ENV
+
+      - name: Upload OTA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StoriesReader-OTA-v${{ env.APP_VERSION }}
+          path: dist-ota/
+          retention-days: 14
+
+      - name: Deploy OTA Bundle to VPS
+        if: env.VPS_HOST != ''
+        uses: appleboy/scp-action@v0.1.7
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "dist-ota/*"
+          target: "/home/ubuntu/gateway/services/www/public/app-update"
+          strip_components: 1
+
+      - name: Send OTA Notification to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || '5379136611:AAFvX2godRHlok9qzbU9ROxA0JJruumAlps' }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || '898218742' }}
+        run: |
+          MESSAGE=$(printf "⚡ *Stories Reader OTA Soft-Update*\n✅ Đã xuất bản OTA thành công: \`v%s\`\n📝 Commit: \`%s\`\n📱 Ứng dụng Android khi mở lên sẽ tự động nạp giao diện mới mà không cần cài lại APK." "${{ env.APP_VERSION }}" "${{ env.COMMIT_MSG }}")
+
+          curl -s -F "chat_id=${TELEGRAM_CHAT_ID}" \
+               -F "text=${MESSAGE}" \
+               -F "parse_mode=Markdown" \
+               https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage
+          echo "✔ Telegram OTA notification sent!"
