@@ -5,16 +5,8 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'package.json'
-      - 'index.html'
-      - 'vite.config.*'
     paths-ignore:
-      - 'android/**'
       - 'README.md'
-      - '.github/workflows/build-apk.yml'
 
 jobs:
   deploy-all:
@@ -78,7 +70,7 @@ jobs:
           retention-days: 14
 
       - name: Deploy OTA Bundle to VPS
-        if: ${{ secrets.VPS_HOST != '' }}
+        if: secrets.VPS_HOST != ''
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
