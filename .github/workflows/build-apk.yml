@@ -43,14 +43,18 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
-      - name: Build Debug APK with Gradle
+      - name: Build APK with Gradle
         run: |
           cd android
           ./gradlew assembleDebug --no-daemon --stacktrace
+          VERSION=$(node -p "require('../package.json').version || '1.0.0'")
+          mkdir -p release-output
+          cp app/build/outputs/apk/debug/*.apk release-output/StoriesReader-v${VERSION}.apk
+          echo "APP_VERSION=${VERSION}" >> $GITHUB_ENV
 
-      - name: Upload Debug APK Artifact
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: stories-reader-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: StoriesReader-v${{ env.APP_VERSION }}
+          path: android/release-output/StoriesReader-v${{ env.APP_VERSION }}.apk
           retention-days: 30
