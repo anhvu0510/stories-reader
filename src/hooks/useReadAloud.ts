@@ -13,7 +13,7 @@ import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 
 export { splitParagraphIntoSentences } from '@/services/gaplessTtsPlayer';
 
-const WORD_HIGHLIGHT_CLASS = 'msreadout-word-highlight';
+const WORD_HIGHLIGHT_CLASS = 'stories-tts-word-highlight';
 // Keep a grouped source line in one request whenever possible. The API accepts
 // up to 512 chars; 480 leaves headroom for request normalization.
 

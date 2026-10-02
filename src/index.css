@@ -260,15 +260,14 @@
 	will-change: transform;
 }
 
-/* 1. Word Highlight for Modern Chromium (CSS Custom Highlight API) */
-::highlight(msreadout-word) {
+/* 1. App Word Highlight for Modern Chromium (CSS Custom Highlight API) */
+::highlight(stories-tts-word) {
 	background-color: var(--primary, #3b82f6);
 	color: #ffffff;
 }
 
-/* 2. Word Highlight fallback (DOM wrapper span) */
-.msreadout-word-highlight,
-msreadoutspan {
+/* 2. App Word Highlight fallback (DOM wrapper span) */
+.stories-tts-word-highlight {
 	position: relative;
 	z-index: 5;
 	display: inline;

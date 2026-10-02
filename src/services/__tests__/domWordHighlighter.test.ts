@@ -27,13 +27,13 @@ describe('DomWordHighlighter', () => {
 		const highlighter = new DomWordHighlighter('active-word');
 
 		highlighter.highlight(root, 4, 4);
-		expect(root.querySelector('msreadoutspan')?.textContent).toBe('chào');
+		expect(root.querySelector('.active-word')?.textContent).toBe('chào');
 
 		highlighter.highlight(root, 9, 3);
 
 		expect(root.querySelector('strong')).toBe(strong);
-		expect(root.querySelectorAll('msreadoutspan')).toHaveLength(1);
-		expect(root.querySelector('msreadoutspan')?.textContent).toBe('bạn');
+		expect(root.querySelectorAll('.active-word')).toHaveLength(1);
+		expect(root.querySelector('.active-word')?.textContent).toBe('bạn');
 		expect(root.textContent).toBe('Xin chào bạn');
 	});
 
@@ -45,7 +45,7 @@ describe('DomWordHighlighter', () => {
 		highlighter.highlight(root, 4, 4);
 		highlighter.clear();
 
-		expect(root.querySelector('msreadoutspan')).toBeNull();
+		expect(root.querySelector('.active-word')).toBeNull();
 		expect(root.textContent).toBe('Xin chào');
 	});
 
@@ -63,7 +63,7 @@ describe('DomWordHighlighter', () => {
 			return range;
 		});
 		const getBoundingClientRect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
-			return this.tagName === 'MSREADOUTSPAN' ? new DOMRect(96, 52, 42, 32) : new DOMRect();
+			return this.classList.contains('active-word') ? new DOMRect(96, 52, 42, 32) : new DOMRect();
 		});
 		const highlighter = new DomWordHighlighter('active-word');
 
@@ -128,7 +128,7 @@ describe('DomWordHighlighter', () => {
 		}
 
 		expect(root.innerHTML).toBe(originalHtml);
-		expect(root.querySelector('msreadoutspan')).toBeNull();
+		expect(root.querySelector('.active-word')).toBeNull();
 		expect(highlights.set).toHaveBeenCalledTimes(30);
 		expect(paragraphLayoutReads).toBe(1);
 

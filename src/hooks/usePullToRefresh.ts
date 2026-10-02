@@ -1,9 +1,20 @@
 import { useState, useEffect, useRef, useCallback, type RefObject } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 import { triggerHaptic } from './useHaptic';
 
+export const isAndroidApp = (): boolean => {
+	if (typeof window === 'undefined') return false;
+	try {
+		return Capacitor.getPlatform() === 'android';
+	} catch {
+		return false;
+	}
+};
+
 export interface UsePullToRefreshOptions {
 	onRefresh: () => Promise<void> | void;
+	enabled?: boolean;
 	disabled?: boolean;
 	threshold?: number;
 	maxPull?: number;
@@ -23,6 +34,7 @@ export interface UsePullToRefreshReturn {
 
 export function usePullToRefresh({
 	onRefresh,
+	enabled,
 	disabled = false,
 	threshold = 65,
 	maxPull = 105,
@@ -30,6 +42,7 @@ export function usePullToRefresh({
 	containerRef,
 	targetRef
 }: UsePullToRefreshOptions): UsePullToRefreshReturn {
+	const isSupported = enabled !== undefined ? enabled : disabled ? false : isAndroidApp();
 	const [pullDistance, setPullDistance] = useState(0);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [isPulling, setIsPulling] = useState(false);
@@ -58,7 +71,7 @@ export function usePullToRefresh({
 	}, []);
 
 	useEffect(() => {
-		if (disabled || typeof window === 'undefined') return;
+		if (!isSupported || typeof window === 'undefined') return;
 
 		const target = targetRef?.current || containerRef?.current || window;
 
@@ -70,7 +83,7 @@ export function usePullToRefresh({
 		};
 
 		const handleTouchStart = (e: TouchEvent) => {
-			if (disabled || isRefreshingRef.current) return;
+			if (!isSupported || isRefreshingRef.current) return;
 			if (!e.touches || e.touches.length !== 1) return;
 
 			const scrollTop = getScrollTop();
@@ -87,7 +100,7 @@ export function usePullToRefresh({
 		};
 
 		const handleTouchMove = (e: TouchEvent) => {
-			if (!canPullRef.current || isRefreshingRef.current || disabled) return;
+			if (!canPullRef.current || isRefreshingRef.current || !isSupported) return;
 			if (!e.touches || e.touches.length === 0) return;
 
 			const currentY = e.touches[0].clientY;
@@ -117,6 +130,7 @@ export function usePullToRefresh({
 
 				// Resistance damping
 				const dampedDistance = Math.min(maxPull, Math.pow(deltaY, 0.82) * 1.45);
+				pullDistanceRef.current = dampedDistance;
 				setPullDistance(dampedDistance);
 
 				if (dampedDistance >= threshold) {
@@ -182,7 +196,7 @@ export function usePullToRefresh({
 			target.removeEventListener('touchend', handleTouchEnd as EventListener);
 			target.removeEventListener('touchcancel', handleTouchEnd as EventListener);
 		};
-	}, [disabled, onRefresh, threshold, maxPull, minDisplayTime, containerRef, targetRef]);
+	}, [isSupported, onRefresh, threshold, maxPull, minDisplayTime, containerRef, targetRef]);
 
 	const progress = Math.min(1, pullDistance / threshold);
 

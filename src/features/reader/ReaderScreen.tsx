@@ -2,14 +2,13 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from '
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertCircle, Home, RotateCcw } from 'lucide-react';
 
-import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
+import { PullToRefresh } from '@/components/PullToRefresh';
 import { TranslationSheet } from '@/components/TranslationSheet';
 import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { isEdgeReadAloudActive, useEdgeReadAloudBgm } from '@/hooks/useEdgeReadAloudBgm';
 import { useGlobalLoading } from '@/hooks/useGlobalLoading';
 import { triggerHaptic } from '@/hooks/useHaptic';
-import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { useReadingProgress } from '@/hooks/useReadingProgress';
 import { offlineDb } from '@/lib/offlineDb';
@@ -581,15 +580,6 @@ export function ReaderScreen() {
 		await loadChapter(true);
 	}, [stopReading, loadChapter]);
 
-	const {
-		pullDistance,
-		isRefreshing: isPullRefreshing,
-		hasTriggeredThreshold
-	} = usePullToRefresh({
-		onRefresh: handlePullRefresh,
-		disabled: loading || isRefreshingLatest
-	});
-
 	const fontClass =
 		font === 'bookerly'
 			? 'font-bookerly'
@@ -641,10 +631,9 @@ export function ReaderScreen() {
 	if (error || !contentData) {
 		return (
 			<div className="min-h-dvh w-full max-w-md mx-auto bg-background flex flex-col items-center justify-center p-6 text-center">
-				<PullToRefreshIndicator
-					pullDistance={pullDistance}
-					isRefreshing={isPullRefreshing}
-					hasTriggeredThreshold={hasTriggeredThreshold}
+				<PullToRefresh
+					onRefresh={handlePullRefresh}
+					disabled={loading || isRefreshingLatest}
 				/>
 				<AlertCircle size={40} className="text-error mb-3" />
 				<h2 className="text-sm font-bold text-on-surface mb-1">Không thể tải chương</h2>
@@ -682,10 +671,9 @@ export function ReaderScreen() {
 			className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200 selection:bg-primary/25 selection:text-primary ${fontClass}`}
 		>
 			{/* Pull-to-refresh floating reload indicator */}
-			<PullToRefreshIndicator
-				pullDistance={pullDistance}
-				isRefreshing={isPullRefreshing}
-				hasTriggeredThreshold={hasTriggeredThreshold}
+			<PullToRefresh
+				onRefresh={handlePullRefresh}
+				disabled={loading || isRefreshingLatest}
 			/>
 
 			{/* Subtle Top Ambient Lighting Glow */}

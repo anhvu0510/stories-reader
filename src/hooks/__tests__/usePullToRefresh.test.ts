@@ -2,11 +2,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
+import { Capacitor } from '@capacitor/core';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 
 describe('usePullToRefresh hook', () => {
 	beforeEach(() => {
 		vi.restoreAllMocks();
+		vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('android');
 		window.scrollY = 0;
 	});
 
@@ -236,5 +238,50 @@ describe('usePullToRefresh hook', () => {
 		expect(result.current.pullDistance).toBe(0);
 		expect(result.current.isPulling).toBe(false);
 		expect(result.current.isRefreshing).toBe(false);
+	});
+
+	it('disables pull-to-refresh on web platform by default', () => {
+		vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('web');
+		const onRefresh = vi.fn();
+		const { result } = renderHook(() => usePullToRefresh({ onRefresh }));
+
+		act(() => {
+			window.dispatchEvent(
+				new TouchEvent('touchstart', {
+					touches: [{ clientX: 50, clientY: 50 } as any]
+				})
+			);
+			window.dispatchEvent(
+				new TouchEvent('touchmove', {
+					touches: [{ clientX: 50, clientY: 150 } as any]
+				})
+			);
+		});
+
+		expect(result.current.pullDistance).toBe(0);
+		expect(result.current.isPulling).toBe(false);
+	});
+
+	it('enables pull-to-refresh on android platform by default', () => {
+		vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('android');
+		const onRefresh = vi.fn();
+		const { result } = renderHook(() => usePullToRefresh({ onRefresh }));
+
+		act(() => {
+			window.dispatchEvent(
+				new TouchEvent('touchstart', {
+					touches: [{ clientX: 50, clientY: 50 } as any]
+				})
+			);
+			window.dispatchEvent(
+				new TouchEvent('touchmove', {
+					touches: [{ clientX: 50, clientY: 150 } as any],
+					cancelable: true
+				})
+			);
+		});
+
+		expect(result.current.pullDistance).toBeGreaterThan(0);
+		expect(result.current.isPulling).toBe(true);
 	});
 });

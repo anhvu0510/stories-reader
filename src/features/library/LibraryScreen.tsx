@@ -5,11 +5,10 @@ import { BookOpen, Clock, Sparkles, Library, X, RotateCcw, Heart, Search, Tag, A
 import { BottomDock } from '@/components/BottomDock';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { OfflineManagerSheet } from '@/components/OfflineManagerSheet';
-import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
+import { PullToRefresh } from '@/components/PullToRefresh';
 import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { triggerHaptic } from '@/hooks/useHaptic';
-import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { BookRepository } from '@/repositories/BookRepository';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore, SortByField, SortOrderDirection } from '@/stores/useLibraryStore';
@@ -235,23 +234,13 @@ export function LibraryScreen() {
 		await fetchBooks(page, appliedSearch, tab, selectedTags, sortBy, sortOrder);
 	}, [fetchBooks, page, appliedSearch, tab, selectedTags, sortBy, sortOrder]);
 
-	const {
-		pullDistance,
-		isRefreshing: isPullRefreshing,
-		hasTriggeredThreshold
-	} = usePullToRefresh({
-		onRefresh: handlePullRefresh,
-		containerRef: mainScrollRef,
-		disabled: loading
-	});
-
 	return (
 		<div className="h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-200">
 			{/* Pull-to-refresh floating reload indicator */}
-			<PullToRefreshIndicator
-				pullDistance={pullDistance}
-				isRefreshing={isPullRefreshing}
-				hasTriggeredThreshold={hasTriggeredThreshold}
+			<PullToRefresh
+				onRefresh={handlePullRefresh}
+				containerRef={mainScrollRef}
+				disabled={loading}
 			/>
 
 			{/* Main Scroll Container covering entire screen so items scroll UNDER sticky glass header */}

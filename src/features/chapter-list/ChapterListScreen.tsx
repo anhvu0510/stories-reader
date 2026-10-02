@@ -5,11 +5,10 @@ import { ArrowLeft, Search, RefreshCw, Download, Heart } from 'lucide-react';
 
 import { BottomDock } from '@/components/BottomDock';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
-import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
+import { PullToRefresh } from '@/components/PullToRefresh';
 import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { triggerHaptic } from '@/hooks/useHaptic';
-import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { downloadManager } from '@/lib/DownloadManager';
 import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
@@ -167,22 +166,12 @@ export function ChapterListScreen() {
 		await fetchChapters(1, search, filterState, sortOrder, false);
 	}, [fetchChapters, search, filterState, sortOrder]);
 
-	const {
-		pullDistance,
-		isRefreshing: isPullRefreshing,
-		hasTriggeredThreshold
-	} = usePullToRefresh({
-		onRefresh: handlePullRefresh,
-		disabled: loading
-	});
-
 	return (
 		<div className="min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-28 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200">
 			{/* Pull-to-refresh floating reload indicator */}
-			<PullToRefreshIndicator
-				pullDistance={pullDistance}
-				isRefreshing={isPullRefreshing}
-				hasTriggeredThreshold={hasTriggeredThreshold}
+			<PullToRefresh
+				onRefresh={handlePullRefresh}
+				disabled={loading}
 			/>
 
 			{/* Sticky Header */}

@@ -17,7 +17,7 @@ export interface ReadAloudHighlightGeometry {
 	word: DOMRect;
 }
 
-const CSS_HIGHLIGHT_NAME = 'msreadout-word';
+const CSS_HIGHLIGHT_NAME = 'stories-tts-word';
 const LINE_Y_TOLERANCE = 2;
 
 export class DomWordHighlighter {
@@ -139,7 +139,7 @@ export class DomWordHighlighter {
 	}
 
 	private wrapRangeForFallback(range: Range): void {
-		const mark = document.createElement('msreadoutspan');
+		const mark = document.createElement('span');
 		mark.className = this.className;
 		mark.appendChild(range.extractContents());
 		range.insertNode(mark);
