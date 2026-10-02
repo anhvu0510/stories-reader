@@ -6,6 +6,8 @@ import { BookOpen } from 'lucide-react';
 import { GlobalApiLoading } from './components/GlobalApiLoading';
 import { GlobalDownloadProgress } from './components/GlobalDownloadProgress';
 import { ToastContainer } from './components/Toast';
+import { AppUpdateOverlay } from './components/AppUpdateOverlay';
+import { useAppUpdate } from './hooks/useAppUpdate';
 import { ChapterListScreen } from './features/chapter-list/ChapterListScreen';
 import { LibraryScreen } from './features/library/LibraryScreen';
 import { ReaderScreen } from './features/reader/ReaderScreen';
@@ -217,6 +219,18 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 	return <>{children}</>;
 }
 
+function AppUpdateManager() {
+	const { isUpdating, progress, statusMessage } = useAppUpdate();
+
+	return (
+		<AppUpdateOverlay
+			isUpdating={isUpdating}
+			progress={progress}
+			statusMessage={statusMessage}
+		/>
+	);
+}
+
 export default function App() {
 	return (
 		<Router>
@@ -225,6 +239,7 @@ export default function App() {
 				<AppContent />
 				<GlobalDownloadProgress />
 				<ToastContainer />
+				<AppUpdateManager />
 			</ApplicationGate>
 		</Router>
 	);
