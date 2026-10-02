@@ -279,7 +279,7 @@ export function LibraryScreen() {
 					<div className="p-1.5 border-t border-white/10 dark:border-white/5 bg-transparent">
 						<div className="flex items-center justify-between gap-1.5 w-full">
 							{/* Sliding Capsule Glass Tabs */}
-							<div className="h-9 flex items-center gap-0.5 p-1 bg-white/5 dark:bg-white/5 border border-white/10 dark:border-white/10 rounded-[16px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] overflow-x-auto hide-scrollbar shrink min-w-0 box-border">
+							<div className="h-10 flex items-center gap-0.5 p-1 bg-white/5 dark:bg-white/5 border border-white/10 dark:border-white/10 rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] overflow-x-auto hide-scrollbar shrink min-w-0 box-border">
 								{[
 									{
 										id: 'ALL',
@@ -325,7 +325,7 @@ export function LibraryScreen() {
 											whileTap={{ scale: 0.94 }}
 											onClick={() => handleTabChange(t.id as any)}
 											title={t.title}
-											className={`relative h-9 flex items-center justify-center gap-1 px-2 rounded-[11px] transition-colors duration-200 shrink-0 cursor-pointer ${isActive ? `${t.activeText} font-bold` : 'text-on-surface-variant/75 hover:text-on-surface'}`}
+											className={`relative h-8 flex items-center justify-center gap-1 px-2.5 rounded-full transition-colors duration-200 shrink-0 cursor-pointer ${isActive ? `${t.activeText} font-bold` : 'text-on-surface-variant/75 hover:text-on-surface'}`}
 										>
 											{isActive && (
 												<motion.div
@@ -335,7 +335,7 @@ export function LibraryScreen() {
 														stiffness: 320,
 														damping: 28
 													}}
-													className={`absolute inset-0 rounded-[11px] border ${t.activePill}`}
+													className={`absolute inset-0 rounded-full border ${t.activePill}`}
 												/>
 											)}
 											<t.Icon
@@ -354,7 +354,7 @@ export function LibraryScreen() {
 							</div>
 
 							{/* Sort & Tag Filter Action Buttons */}
-							<div className="flex items-center gap-1.5 shrink-0 h-9 ml-auto">
+							<div className="flex items-center gap-1.5 shrink-0 h-10 ml-auto">
 								{/* Sort Button */}
 								{tab === 'ALL' && (
 									<motion.button

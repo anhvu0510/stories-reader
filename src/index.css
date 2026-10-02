@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Newsreader:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Caveat:wght@500;600;700&family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..700&family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&display=swap');
 @import 'tailwindcss';
 
 /* 1. MẶC ĐỊNH (Dark Zinc & Amber Accent) */
@@ -310,13 +310,39 @@
 	scrollbar-width: none !important;
 }
 
-.font-serif {
-	font-family: 'Newsreader', Georgia, serif;
+/* Reading Typography Classes */
+.font-default,
+.font-sans-reading {
+	font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif !important;
 }
 
+.font-bookerly {
+	font-family: 'Bookerly', 'Literata', 'Merriweather', Georgia, serif !important;
+}
+
+.font-merriweather {
+	font-family: 'Merriweather', 'Lora', Georgia, serif !important;
+}
+
+.font-lora {
+	font-family: 'Lora', 'Newsreader', Georgia, serif !important;
+}
+
+.font-charter {
+	font-family: 'Charter', 'Newsreader', 'Lora', Georgia, serif !important;
+}
+
+.font-palatino {
+	font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, 'Lora', serif !important;
+}
+
+.font-viet-tay,
 .font-cursive {
-	font-family: 'Be Vietnam Pro', system-ui, sans-serif;
-	font-style: italic;
+	font-family: 'Caveat', 'Be Vietnam Pro', cursive !important;
+}
+
+.font-serif {
+	font-family: 'Newsreader', 'Lora', Georgia, serif !important;
 }
 
 /* Prevent native mobile OS long-press callout, text-selection and tap-highlight haptics */

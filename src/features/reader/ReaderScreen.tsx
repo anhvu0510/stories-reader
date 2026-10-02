@@ -574,7 +574,20 @@ export function ReaderScreen() {
 	const handleOpenChapterSelect = useCallback(() => setShowChapterSelectSheet(true), []);
 	const handleOpenTranslation = useCallback(() => setShowTranslateSheet(true), []);
 
-	const fontClass = font === 'font_viet_tay' ? 'font-mono' : font === 'default' ? 'font-sans' : 'font-serif';
+	const fontClass =
+		font === 'bookerly'
+			? 'font-bookerly'
+			: font === 'merriweather'
+				? 'font-merriweather'
+				: font === 'lora'
+					? 'font-lora'
+					: font === 'charter'
+						? 'font-charter'
+						: font === 'palatino'
+							? 'font-palatino'
+							: font === 'font_viet_tay'
+								? 'font-viet-tay'
+								: 'font-default';
 
 	if (loading && !contentData) {
 		return (

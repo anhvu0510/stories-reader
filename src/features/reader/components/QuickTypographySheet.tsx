@@ -136,6 +136,20 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
 				<div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-0.5">
 					{fonts.map((f) => {
 						const isSelected = font === f.id;
+						const fontStyleClass =
+							f.id === 'bookerly'
+								? 'font-bookerly'
+								: f.id === 'merriweather'
+									? 'font-merriweather'
+									: f.id === 'lora'
+										? 'font-lora'
+										: f.id === 'charter'
+											? 'font-charter'
+											: f.id === 'palatino'
+												? 'font-palatino'
+												: f.id === 'font_viet_tay'
+													? 'font-viet-tay'
+													: 'font-default';
 						return (
 							<motion.button
 								key={f.id}
@@ -144,7 +158,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
 									triggerHaptic('selection');
 									setFont(f.id);
 								}}
-								className={`px-3 py-2 rounded-xl border text-[11px] font-bold shrink-0 transition-all flex items-center gap-1 cursor-pointer ${isSelected ? 'bg-gradient-to-b from-primary via-primary-fixed to-primary-fixed-dim text-on-primary border-primary/70 shadow-[0_2px_8px_var(--primary)] font-black' : 'bg-white/10 border-white/20 text-on-surface-variant hover:text-on-surface hover:bg-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]'}`}
+								className={`px-3 py-2 rounded-xl border text-[11px] font-bold shrink-0 transition-all flex items-center gap-1 cursor-pointer ${fontStyleClass} ${isSelected ? 'bg-gradient-to-b from-primary via-primary-fixed to-primary-fixed-dim text-on-primary border-primary/70 shadow-[0_2px_8px_var(--primary)] font-black' : 'bg-white/10 border-white/20 text-on-surface-variant hover:text-on-surface hover:bg-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]'}`}
 							>
 								{f.name}
 								{isSelected && <Check size={11} strokeWidth={3} />}
