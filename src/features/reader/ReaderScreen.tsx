@@ -54,7 +54,7 @@ const ChapterContentSection = memo(function ChapterContentSection({
 	const paragraphOffsets = chapters.map((_, chapterIndex) => chapters.slice(0, chapterIndex).reduce((total, chapter) => total + chapter.content.length, 0));
 
 	return (
-		<main id="main-story-content" onDoubleClick={onDoubleClick} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="pt-20 pb-20 select-text relative z-10">
+		<main id="main-story-content" onDoubleClick={onDoubleClick} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="pt-[calc(max(env(safe-area-inset-top),0.75rem)+4.25rem)] sm:pt-24 pb-24 select-text relative z-10">
 			{chapters.map((chap, chapIdx) => (
 				<section
 					key={chap.chapterId || chapIdx}

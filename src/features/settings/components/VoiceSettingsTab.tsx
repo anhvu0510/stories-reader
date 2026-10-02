@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Volume2, Sliders, Cpu, Loader2, Minus, Plus, Sparkles, Globe, Server, RotateCcw, Radio } from 'lucide-react';
 
 import { EdgeTTSService, EdgeVoice } from '@/services/edgeTtsService';
+import { NativeTTSService, NativeVoice, NativeTTSEngine } from '@/services/nativeTtsService';
 import { TTSService, VieNeuVoice, VieNeuModel, DEFAULT_VIENEU_SERVER_URL } from '@/services/ttsService';
 import { useAppStore } from '@/stores/useAppStore';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
@@ -42,7 +43,9 @@ export function VoiceSettingsTab() {
 	const [vieneuVoices, setVieneuVoices] = useState<VieNeuVoice[]>([]);
 	const [vieneuModels, setVieneuModels] = useState<VieNeuModel[]>([]);
 	const [edgeVoices, setEdgeVoices] = useState<EdgeVoice[]>([]);
-	const [browserVoices, setBrowserVoices] = useState<SpeechSynthesisVoice[]>([]);
+	const [nativeVoices, setNativeVoices] = useState<NativeVoice[]>([]);
+	const [nativeEngines, setNativeEngines] = useState<NativeTTSEngine[]>([]);
+	const [activeEngine, setActiveEngine] = useState<string>('');
 	const [isLoadingVoices, setIsLoadingVoices] = useState(false);
 	const [isTestingAudio, setIsTestingAudio] = useState(false);
 	const [testError, setTestError] = useState<string | null>(null);
@@ -119,36 +122,83 @@ export function VoiceSettingsTab() {
 		};
 	}, [ttsEngine, activeDomain?.url]);
 
-	// Fetch Browser Web Speech Synthesis Voices
+	// Fetch Native Voices (Android TTS or Browser SpeechSynthesis)
 	useEffect(() => {
-		const updateBrowserVoices = () => {
-			if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-				const v = window.speechSynthesis.getVoices();
-				const vn = v.filter((item) => item.lang.includes('vi') || item.lang.includes('VI'));
-				setBrowserVoices(vn.length > 0 ? vn : v);
+		if (ttsEngine !== 'browser') return;
+		let isMounted = true;
+
+		const loadVoices = async () => {
+			setIsLoadingVoices(true);
+			try {
+				if (NativeTTSService.isNative()) {
+					const engineData = await NativeTTSService.getEngines();
+					if (isMounted) {
+						setNativeEngines(engineData.engines || []);
+						if (engineData.defaultEngine) setActiveEngine(engineData.defaultEngine);
+					}
+				}
+				const voices = await NativeTTSService.getVoices();
+				if (!isMounted) return;
+				setNativeVoices(voices);
+
+				const viVoices = NativeTTSService.getVietnameseVoices(voices);
+				if (viVoices.length > 0 && (!voiceUri || !voices.some((v) => v.name === voiceUri))) {
+					setVoiceUri(viVoices[0].name);
+				}
+			} catch (err) {
+				console.warn('[VoiceSettingsTab] Error loading native voices:', err);
+			} finally {
+				if (isMounted) setIsLoadingVoices(false);
 			}
 		};
 
-		updateBrowserVoices();
+		loadVoices();
+
 		if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-			window.speechSynthesis.onvoiceschanged = updateBrowserVoices;
+			window.speechSynthesis.onvoiceschanged = loadVoices;
 		}
-	}, []);
+
+		return () => {
+			isMounted = false;
+		};
+	}, [ttsEngine, setVoiceUri, voiceUri]);
+
+	const handleSwitchEngine = async (engineName: string) => {
+		setActiveEngine(engineName);
+		setIsLoadingVoices(true);
+		await NativeTTSService.setEngine(engineName);
+		const voices = await NativeTTSService.getVoices();
+		setNativeVoices(voices);
+		const viVoices = NativeTTSService.getVietnameseVoices(voices);
+		if (viVoices.length > 0) {
+			setVoiceUri(viVoices[0].name);
+		} else {
+			setVoiceUri('');
+		}
+		setIsLoadingVoices(false);
+	};
 
 	const handleTestVoice = async (overrideVoice?: string) => {
 		setTestError(null);
 
 		if (ttsEngine === 'browser') {
 			const targetVoice = overrideVoice || voiceUri;
-			if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-			window.speechSynthesis.cancel();
-			const utterance = new SpeechSynthesisUtterance('Xin chào, đây là giọng đọc thử nghiệm từ trình duyệt.');
-			utterance.rate = speechRate;
-			if (targetVoice) {
-				const v = browserVoices.find((item) => item.voiceURI === targetVoice);
-				if (v) utterance.voice = v;
+			try {
+				setIsTestingAudio(true);
+				await NativeTTSService.speak({
+					text: 'Xin chào, đây là giọng đọc thử nghiệm từ thiết bị của bạn.',
+					voice: targetVoice,
+					rate: speechRate,
+					onDone: () => setIsTestingAudio(false),
+					onError: (err) => {
+						setIsTestingAudio(false);
+						setTestError('Không thể phát giọng đọc native: ' + (typeof err === 'string' ? err : 'Lỗi thiết bị'));
+					}
+				});
+			} catch (err: any) {
+				setIsTestingAudio(false);
+				setTestError(err.message || 'Lỗi phát giọng đọc native');
 			}
-			window.speechSynthesis.speak(utterance);
 			return;
 		}
 
@@ -600,28 +650,92 @@ export function VoiceSettingsTab() {
 					</div>
 				)}
 
-				{ttsEngine === 'browser' && (
-					<div className="p-1.5 rounded-2xl bg-white/5 border border-white/10 shadow-xs">
-						<select
-							value={voiceUri}
-							onChange={(e) => {
-								const selected = e.target.value;
-								setVoiceUri(selected);
-								handleTestVoice(selected);
-							}}
-							className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/15 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/60 font-bold cursor-pointer"
-						>
-							<option value="" className="bg-background text-on-background">
-								Giọng mặc định thiết bị
-							</option>
-							{browserVoices.map((v) => (
-								<option key={v.voiceURI} value={v.voiceURI} className="bg-background text-on-background">
-									{v.name} ({v.lang})
-								</option>
-							))}
-						</select>
-					</div>
-				)}
+				{ttsEngine === 'browser' && (() => {
+					const viVoices = NativeTTSService.getVietnameseVoices(nativeVoices);
+					const otherVoices = nativeVoices.filter((v) => !viVoices.includes(v));
+
+					return (
+						<div className="space-y-2">
+							{nativeEngines.length > 1 && (
+								<div className="flex items-center gap-2 p-1.5 rounded-xl bg-white/5 border border-white/10 text-[11px]">
+									<Server size={12} className="text-primary shrink-0" />
+									<span className="font-semibold text-on-surface-variant shrink-0">Động cơ TTS:</span>
+									<select
+										value={activeEngine}
+										onChange={(e) => handleSwitchEngine(e.target.value)}
+										className="flex-1 bg-white/10 border border-white/15 rounded-lg px-2 py-1 text-xs text-on-surface font-semibold focus:outline-none"
+									>
+										{nativeEngines.map((eng) => (
+											<option key={eng.name} value={eng.name} className="bg-background text-on-background">
+												{eng.label || eng.name} {eng.isDefault ? '(Mặc định)' : ''}
+											</option>
+										))}
+									</select>
+								</div>
+							)}
+
+							{NativeTTSService.isNative() && viVoices.length === 0 && !isLoadingVoices && (
+								<div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-[11px] space-y-1">
+									<div className="font-bold flex items-center gap-1.5">
+										<span>⚠️ Chưa có gói giọng Tiếng Việt trên máy</span>
+									</div>
+									<p className="opacity-90 text-[10px] leading-relaxed">
+										Samsung S26 của bạn cần tải gói giọng tiếng Việt. Vào: <span className="font-semibold text-white">Cài đặt máy &gt; Quản lý chung &gt; Chuyển văn bản thành giọng nói</span> để tải, hoặc đổi sang <strong>VieNeu AI / Edge TTS</strong>.
+									</p>
+								</div>
+							)}
+
+							<div className="p-2 rounded-2xl bg-white/5 border border-white/10 shadow-xs space-y-2">
+								<select
+									value={voiceUri}
+									onChange={(e) => {
+										const selected = e.target.value;
+										setVoiceUri(selected);
+										handleTestVoice(selected);
+									}}
+									className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/15 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/60 font-bold cursor-pointer"
+								>
+									<option value="" className="bg-background text-on-background">
+										Giọng mặc định thiết bị
+									</option>
+									{viVoices.length > 0 && (
+										<optgroup label="🇻🇳 Giọng Tiếng Việt" className="bg-background text-on-background font-bold">
+											{viVoices.map((v) => (
+												<option key={v.name} value={v.name} className="bg-background text-on-background font-normal">
+													{v.displayName || v.name}
+												</option>
+											))}
+										</optgroup>
+									)}
+									{otherVoices.length > 0 && (
+										<optgroup label="🌐 Giọng khác" className="bg-background text-on-background font-bold">
+											{otherVoices.slice(0, 30).map((v) => (
+												<option key={v.name} value={v.name} className="bg-background text-on-background font-normal">
+													{v.displayName || v.name}
+												</option>
+											))}
+										</optgroup>
+									)}
+								</select>
+
+								<div className="flex items-center justify-between pt-1 border-t border-white/5">
+									<span className="text-[10px] text-on-surface-variant font-medium">
+										{viVoices.length > 0 ? `Đã tìm thấy ${viVoices.length} giọng tiếng Việt` : 'Đang dùng giọng mặc định'}
+									</span>
+									<button
+										type="button"
+										onClick={() => handleTestVoice()}
+										disabled={isTestingAudio}
+										className="px-2.5 py-1 rounded-lg bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary text-[11px] font-bold flex items-center gap-1 active:scale-95 disabled:opacity-50 cursor-pointer"
+									>
+										{isTestingAudio ? <Loader2 size={11} className="animate-spin" /> : <Volume2 size={11} />}
+										<span>Nghe thử giọng</span>
+									</button>
+								</div>
+							</div>
+						</div>
+					);
+				})()}
 			</div>
 
 			{/* 4. Speech Rate Stepper & Slider */}

@@ -81,7 +81,7 @@ export const ReaderHeader = memo(function ReaderHeader({
 	};
 
 	return (
-		<header className="fixed top-0 left-0 right-0 z-40 bg-black/5 dark:bg-black/10 backdrop-blur-[1.5px] border-b border-white/25 dark:border-white/25 shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1px_0_rgba(255,255,255,0.4)] px-3.5 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2 w-full max-w-md mx-auto overflow-x-hidden box-border transition-all duration-300">
+		<header className="fixed top-0 left-0 right-0 z-40 bg-background/85 dark:bg-background/90 backdrop-blur-md border-b border-white/15 dark:border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1px_0_rgba(255,255,255,0.15)] px-3.5 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2.5 w-full max-w-md mx-auto overflow-x-hidden box-border transition-all duration-300">
 			<div className="flex items-center justify-between gap-2">
 				{/* Left: Home Button (Mobile-Optimized 3D Glass Sphere) */}
 				<motion.button

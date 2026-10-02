@@ -5,6 +5,7 @@ import { BackgroundAudioKeepAlive } from '@/services/backgroundAudioKeepAlive';
 import { DomWordHighlighter } from '@/services/domWordHighlighter';
 import { EdgeTTSService, type EdgeSpeechWithBoundaries } from '@/services/edgeTtsService';
 import { GaplessTtsPlayer, splitByDatabaseBoundaries, type SentenceChunk, WebAudioPlaybackEngine } from '@/services/gaplessTtsPlayer';
+import { NativeTTSService } from '@/services/nativeTtsService';
 import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
 import { TTSService, DEFAULT_VIENEU_SERVER_URL, type VieNeuRequestContext } from '@/services/ttsService';
 import { useAppStore } from '@/stores/useAppStore';
@@ -379,6 +380,9 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		backgroundAudioRef.current?.stop();
 		wordHighlighterRef.current?.clear();
 		scrollFollowerRef.current?.cancel();
+		if (NativeTTSService.isNative()) {
+			void NativeTTSService.stop();
+		}
 		if (ownsBrowserSpeechQueue && synth) synth.cancel();
 		ownsBrowserSpeechQueueRef.current = false;
 		utteranceRef.current = null;
@@ -526,6 +530,72 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	}, []);
 
 	const playChunkViaBrowser = (index: number, startOffset: number = 0, sessionId: number) => {
+		if (NativeTTSService.isNative()) {
+			if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
+			if (index >= chunks.length) {
+				stopReading();
+				return;
+			}
+
+			currentChunkIdxRef.current = index;
+			setCurrentChunkIndex(index);
+			charIndexRef.current = startOffset;
+			charLengthRef.current = 0;
+			wordHighlighterRef.current?.clear();
+
+			const chunk = chunks[index];
+			const textToSpeak = startOffset > 0 ? chunk.text.substring(startOffset) : chunk.text;
+
+			if (!textToSpeak.trim()) {
+				playChunkViaBrowser(index + 1, 0, sessionId);
+				return;
+			}
+
+			NativeTTSService.speak({
+				text: textToSpeak,
+				voice: voiceUri,
+				rate: speechRate,
+				utteranceId: `${sessionId}-${index}`,
+				onStart: () => {
+					if (playSessionIdRef.current === sessionId && isPlayingRef.current) {
+						setIsLoading(false);
+						setIsPlaying(true);
+					}
+				},
+				onRangeStart: (start, end) => {
+					if (playSessionIdRef.current === sessionId) {
+						let charLen = end - start;
+						if (charLen <= 0) {
+							const remaining = textToSpeak.slice(start);
+							const nextDelim = remaining.search(/[\s.,!?:;'"(){}\[\]“”‘’\-–—]/);
+							charLen = nextDelim > 0 ? nextDelim : Math.min(remaining.length, 6);
+						}
+						updateWordHighlight(index, startOffset + start, charLen);
+					}
+				},
+				onDone: () => {
+					if (playSessionIdRef.current !== sessionId) return;
+					if (isPlayingRef.current && !isPausedRef.current) {
+						playChunk(index + 1, 0);
+					}
+				},
+				onError: (err) => {
+					if (playSessionIdRef.current !== sessionId) return;
+					console.warn('[NativeTTS] Playback error:', err);
+					if (isPlayingRef.current && !isPausedRef.current) {
+						playChunk(index + 1, 0);
+					}
+				}
+			}).catch((err) => {
+				if (playSessionIdRef.current !== sessionId) return;
+				console.warn('[NativeTTS] Speak exception:', err);
+				if (isPlayingRef.current && !isPausedRef.current) {
+					playChunk(index + 1, 0);
+				}
+			});
+			return;
+		}
+
 		if (!synth || !isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
 		if (index >= chunks.length) {
 			stopReading();
@@ -565,7 +635,13 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		utterance.onboundary = (e) => {
 			if (playSessionIdRef.current !== sessionId) return;
 			if (e.name === 'word') {
-				updateWordHighlight(index, startOffset + e.charIndex, e.charLength);
+				let charLen = e.charLength || 0;
+				if (charLen <= 0) {
+					const remaining = textToSpeak.slice(e.charIndex);
+					const nextDelim = remaining.search(/[\s.,!?:;'"(){}\[\]“”‘’\-–—]/);
+					charLen = nextDelim > 0 ? nextDelim : Math.min(remaining.length, 6);
+				}
+				updateWordHighlight(index, startOffset + e.charIndex, charLen);
 			}
 		};
 
@@ -699,8 +775,12 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 			if (ttsEngine === 'vieneu' && gaplessPlayerRef.current) {
 				void gaplessPlayerRef.current.resume().catch(() => playChunk(currentChunkIdxRef.current));
-			} else if (ttsEngine === 'browser' && synth) {
-				synth.resume();
+			} else if (ttsEngine === 'browser') {
+				if (NativeTTSService.isNative()) {
+					playChunk(currentChunkIdxRef.current, charIndexRef.current > 0 ? charIndexRef.current : 0);
+				} else if (synth) {
+					synth.resume();
+				}
 			} else if (ttsEngine === 'edge' && edgeAudioRef.current) {
 				void edgeAudioRef.current.play().catch(() => playChunk(currentChunkIdxRef.current));
 			} else {
@@ -741,8 +821,12 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		if (gaplessPlayerRef.current) {
 			void gaplessPlayerRef.current.pause();
 		}
-		if (ttsEngine === 'browser' && ownsBrowserSpeechQueueRef.current && synth) {
-			synth.pause();
+		if (ttsEngine === 'browser') {
+			if (NativeTTSService.isNative()) {
+				void NativeTTSService.stop();
+			} else if (ownsBrowserSpeechQueueRef.current && synth) {
+				synth.pause();
+			}
 		} else if (ttsEngine === 'edge') {
 			edgeAudioRef.current?.pause();
 		}
