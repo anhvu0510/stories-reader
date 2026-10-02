@@ -1,15 +1,27 @@
-name: Deploy to GitHub Pages
+name: Deploy Web and OTA Update
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'index.html'
+      - 'vite.config.*'
+    paths-ignore:
+      - 'android/**'
+      - 'README.md'
+      - '.github/workflows/build-apk.yml'
 
 jobs:
-  build-and-deploy:
+  deploy-all:
+    name: Deploy to GitHub Pages & Publish OTA
     runs-on: ubuntu-latest
     permissions:
-      contents: write # To push to the gh-pages branch
+      contents: write
 
     steps:
       - name: Checkout Repository
@@ -24,14 +36,67 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Project
+      - name: Build Web for GitHub Pages (Browser)
         env:
           VITE_BASE_PATH: /stories-reader/
         run: npm run build
 
-      - name: Deploy to gh-pages branch
+      - name: Deploy to GitHub Pages branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           publish_branch: gh-pages
+
+      - name: Build & Package OTA for Android App
+        run: |
+          npm run build
+          VERSION=$(node -p "require('./package.json').version || '1.0.0'")
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1)
+
+          mkdir -p dist-ota
+          (cd dist && zip -r -q ../dist-ota/bundle.zip .)
+
+          cat <<EOF > dist-ota/version.json
+          {
+            "version": "${VERSION}",
+            "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
+            "releaseNotes": "${COMMIT_MSG}",
+            "updatedAt": "${TIMESTAMP}"
+          }
+          EOF
+
+          echo "APP_VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "COMMIT_MSG=${COMMIT_MSG}" >> $GITHUB_ENV
+
+      - name: Upload OTA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StoriesReader-OTA-v${{ env.APP_VERSION }}
+          path: dist-ota/
+          retention-days: 14
+
+      - name: Deploy OTA Bundle to VPS
+        if: ${{ secrets.VPS_HOST != '' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "dist-ota/*"
+          target: "/home/ubuntu/gateway/services/www/public/app-update"
+          strip_components: 1
+
+      - name: Send Deployment Notification to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || '5379136611:AAFvX2godRHlok9qzbU9ROxA0JJruumAlps' }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || '898218742' }}
+        run: |
+          CAPTION=$(printf "🚀 *Stories Reader Deploy Thành Công!*\n🌐 *Web Browser*: https://anhvu0510.github.io/stories-reader/\n⚡ *Android OTA*: Phiên bản \`v%s\` đã sẵn sàng\n📝 Commit: \`%s\`" "${{ env.APP_VERSION }}" "${{ env.COMMIT_MSG }}")
+
+          curl -s -F "chat_id=${TELEGRAM_CHAT_ID}" \
+               -F "text=${CAPTION}" \
+               -F "parse_mode=Markdown" \
+               https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage
+          echo "✔ Telegram deploy notification sent!"
