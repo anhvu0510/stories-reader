@@ -30,10 +30,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Web for GitHub Pages (Browser)
+      - name: Build Web Application & Prepare OTA
         env:
           VITE_BASE_PATH: /stories-reader/
-        run: npm run build
+        run: |
+          npm run build
+          VERSION=$(node -p "require('./package.json').version || '1.0.1'")
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1)
+
+          # Prepare OTA folder inside dist so it deploys to GitHub Pages CDN
+          mkdir -p dist/ota
+          (cd dist && zip -r -q ota/bundle.zip . -x "ota/*")
+
+          cat <<EOF > dist/ota/version.json
+          {
+            "version": "${VERSION}",
+            "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
+            "releaseNotes": "${COMMIT_MSG}",
+            "updatedAt": "${TIMESTAMP}"
+          }
+          EOF
+
+          mkdir -p dist-ota
+          cp dist/ota/* dist-ota/
+
+          echo "APP_VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "COMMIT_MSG=${COMMIT_MSG}" >> $GITHUB_ENV
 
       - name: Deploy to GitHub Pages branch
         uses: peaceiris/actions-gh-pages@v3
@@ -41,28 +64,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           publish_branch: gh-pages
-
-      - name: Build & Package OTA for Android App
-        run: |
-          npm run build
-          VERSION=$(node -p "require('./package.json').version || '1.0.0'")
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1)
-
-          mkdir -p dist-ota
-          (cd dist && zip -r -q ../dist-ota/bundle.zip .)
-
-          cat <<EOF > dist-ota/version.json
-          {
-            "version": "${VERSION}",
-            "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-            "releaseNotes": "${COMMIT_MSG}",
-            "updatedAt": "${TIMESTAMP}"
-          }
-          EOF
-
-          echo "APP_VERSION=${VERSION}" >> $GITHUB_ENV
-          echo "COMMIT_MSG=${COMMIT_MSG}" >> $GITHUB_ENV
 
       - name: Upload OTA Artifact
         uses: actions/upload-artifact@v4

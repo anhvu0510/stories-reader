@@ -9,7 +9,8 @@ export interface UpdateManifest {
 }
 
 export const CURRENT_APP_VERSION = '1.0.0';
-export const DEFAULT_UPDATE_ENDPOINT = 'https://api-anhvu0510.duckdns.org/api/app-update/version';
+export const DEFAULT_UPDATE_ENDPOINT = 'https://anhvu0510.github.io/stories-reader/ota/version.json';
+export const FALLBACK_UPDATE_ENDPOINT = 'https://api-anhvu0510.duckdns.org/api/app-update/version';
 
 /**
  * Compare two semantic version strings (e.g. "1.0.1" vs "1.0.0")
@@ -58,12 +59,28 @@ export class AppUpdateService {
 		}
 
 		try {
-			const res = await fetch(endpoint, {
-				headers: { Accept: 'application/json' },
-				cache: 'no-store'
-			});
+			let res: Response | null = null;
+			try {
+				res = await fetch(endpoint, {
+					headers: { Accept: 'application/json' },
+					cache: 'no-store'
+				});
+			} catch {
+				// Primary failed, will attempt fallback below
+			}
 
-			if (!res.ok) {
+			if (!res || !res.ok) {
+				try {
+					res = await fetch(FALLBACK_UPDATE_ENDPOINT, {
+						headers: { Accept: 'application/json' },
+						cache: 'no-store'
+					});
+				} catch {
+					return null;
+				}
+			}
+
+			if (!res || !res.ok) {
 				return null;
 			}
 

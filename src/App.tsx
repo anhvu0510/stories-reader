@@ -32,7 +32,7 @@ function AppContent() {
 	}, [location.pathname]);
 
 	return (
-		<div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-on-background flex flex-col box-border">
+		<div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-on-background flex flex-col box-border hide-scrollbar no-scrollbar">
 			<AnimatePresence mode="wait">
 				<motion.div
 					key={location.pathname}

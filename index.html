@@ -26,6 +26,31 @@
         { passive: false }
       );
     </script>
+    <style>
+      /* Complete scrollbar elimination for all viewports & WebView */
+      html, body, #root, * {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+      }
+      ::-webkit-scrollbar {
+        width: 0px !important;
+        height: 0px !important;
+        display: none !important;
+        background: transparent !important;
+      }
+      ::-webkit-scrollbar-thumb {
+        display: none !important;
+        background: transparent !important;
+      }
+      ::-webkit-scrollbar-track {
+        display: none !important;
+        background: transparent !important;
+      }
+      ::-webkit-scrollbar-corner {
+        display: none !important;
+        background: transparent !important;
+      }
+    </style>
   </head>
   <body>
     <div id="root" lang="vi"></div>
