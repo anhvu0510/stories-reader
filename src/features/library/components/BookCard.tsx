@@ -29,7 +29,7 @@ interface BookCardProps {
 	onTagClick?: (tag: string) => void;
 }
 
-export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMode, onTagClick }: BookCardProps) {
+export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMode }: BookCardProps) {
 	const navigate = useNavigate();
 	const [showQuickSheet, setShowQuickSheet] = useState(false);
 	const [showActionSheet, setShowActionSheet] = useState(false);
@@ -170,7 +170,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
 					{/* Left: Compact Square Book Icon Badge (3D Glass Mold) */}
 					<div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-b from-primary/30 via-primary/20 to-primary/10 border-2 border-primary/70 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.6),_0_4px_14px_rgba(245,158,11,0.2)] flex flex-col items-center justify-center p-0.5 shrink-0 overflow-hidden group-hover:border-primary group-hover:scale-105 transition-all">
 						<BookOpen size={16} className="text-primary shrink-0 drop-shadow-xs" />
-						<span className="text-[7.5px] font-mono font-black text-primary leading-tight whitespace-nowrap px-0.5 text-center mt-0.5">
+						<span className="text-[9px] font-mono font-black text-primary leading-tight whitespace-nowrap px-0.5 text-center mt-0.5">
 							{book.chapterCount > 9999 ? `${(book.chapterCount / 1000).toFixed(1)}k` : book.chapterCount} ch
 						</span>
 						{isDownloaded && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" title="Đã tải offline" />}
@@ -210,7 +210,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
 									<MoreVertical size={13} />
 								</button>
 
-								<span className="text-[9px] font-mono text-on-surface-variant/60 whitespace-nowrap ml-0.5">{formattedDate}</span>
+								<span className="text-[10px] font-mono text-on-surface-variant/60 whitespace-nowrap ml-0.5">{formattedDate}</span>
 							</div>
 						</div>
 
@@ -219,7 +219,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
 							<div className="flex items-center gap-1.5 text-[10.5px] text-on-surface-variant min-w-0">
 								{book.lastReadChapter?.chapterId ? (
 									<>
-										<span className="px-1.5 py-0.25 rounded-md bg-gradient-to-b from-emerald-400/30 via-emerald-500/20 to-emerald-600/10 border border-emerald-400/70 text-emerald-300 font-mono font-black text-[9px] shrink-0 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.5),_0_2px_8px_rgba(52,211,153,0.3)]">
+										<span className="px-1.5 py-0.25 rounded-md bg-gradient-to-b from-emerald-400/30 via-emerald-500/20 to-emerald-600/10 border border-emerald-400/70 text-emerald-300 font-mono font-black text-[10px] shrink-0 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.5),_0_2px_8px_rgba(52,211,153,0.3)]">
 											Ch.{book.lastReadChapter.chapterNumber}
 										</span>
 										<span className="truncate text-on-surface-variant/90 text-[10px] font-medium min-w-0 flex-1">
@@ -241,38 +241,30 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
 							)}
 						</div>
 
-						{/* Row 3: Tags Chips & Micro Stats Badges (Combined Single Row) */}
-						<div className="flex items-center justify-between gap-1 min-w-0 overflow-hidden pt-0.5">
-							{/* Left: Tags */}
-							<div className="flex items-center gap-1 min-w-0 overflow-hidden shrink">
-								{book.tags && book.tags.length > 0 ? (
-									<>
-										{book.tags.slice(0, 2).map((tag) => (
-											<span
-												key={tag}
-												onClick={(e) => {
-													if (onTagClick) {
-														e.stopPropagation();
-														triggerHaptic('light');
-														onTagClick(tag);
-													}
-												}}
-												className="inline-flex items-center px-1.5 py-0.25 rounded-md text-[8.5px] font-bold bg-primary/15 text-primary truncate max-w-[65px] border border-primary/30 cursor-pointer hover:bg-primary/25"
-											>
-												#{tag}
-											</span>
-										))}
-										{book.tags.length > 2 && (
-											<span className="text-[8.5px] px-1 py-0.25 rounded-md bg-white/10 border border-white/15 text-on-surface-variant font-mono font-bold shrink-0">
-												+{book.tags.length - 2}
-											</span>
-										)}
-									</>
-								) : null}
+						{/* Row 3: Reading Status / Progress Badge (Left) & Micro Stats (Right) */}
+						<div className="flex items-center justify-between gap-1.5 min-w-0 pt-0.5">
+							{/* Left: Reading Status & Progress Badge */}
+							<div className="flex items-center gap-1 min-w-0">
+								{readCount === 0 ? (
+									<span className="inline-flex items-center gap-1 px-1.5 py-0.25 rounded-md text-[10px] font-semibold bg-white/5 text-on-surface-variant/70 border border-white/10 shrink-0">
+										<span className="w-1.5 h-1.5 rounded-full bg-on-surface-variant/40 shrink-0" />
+										<span>Chưa đọc</span>
+									</span>
+								) : progressPct >= 100 ? (
+									<span className="inline-flex items-center gap-1 px-1.5 py-0.25 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0 shadow-[0_1px_4px_rgba(52,211,153,0.15)]">
+										<span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+										<span>Đã xong • 100%</span>
+									</span>
+								) : (
+									<span className="inline-flex items-center gap-1 px-1.5 py-0.25 rounded-md text-[10px] font-bold bg-primary/15 text-primary border border-primary/30 shrink-0 shadow-[0_1px_4px_rgba(245,158,11,0.15)]">
+										<span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+										<span>Đang đọc • {progressPct}%</span>
+									</span>
+								)}
 							</div>
 
 							{/* Right: Inline Micro Stats */}
-							<div className="flex items-center gap-1 text-[9px] font-mono whitespace-nowrap shrink-0 ml-auto">
+							<div className="flex items-center gap-1 text-[10px] font-mono whitespace-nowrap shrink-0 ml-auto">
 								<span
 									className="inline-flex items-center gap-0.5 px-1.5 py-0.25 rounded-md bg-primary/15 text-primary font-bold border border-primary/30"
 									title={`Đã đọc: ${readCount}/${book.chapterCount} (${progressPct}%)`}

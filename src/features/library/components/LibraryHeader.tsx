@@ -31,7 +31,7 @@ export function LibraryHeader({ searchQuery, onSearchChange, onOpenSettings, onS
 
 					<div className="leading-none space-y-0.5">
 						<h1 className="text-base font-black text-on-surface tracking-tight">Stories Reader</h1>
-						<p className="text-[9.5px] font-mono font-semibold text-on-surface-variant/60 uppercase tracking-widest">Mobile Edition</p>
+						<p className="text-[10px] font-mono font-semibold text-on-surface-variant/60 uppercase tracking-widest">Mobile Edition</p>
 					</div>
 				</div>
 

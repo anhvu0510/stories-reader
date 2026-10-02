@@ -76,7 +76,7 @@ export function ReaderQuickControl({
 	return (
 		<div
 			aria-hidden="true"
-			className={`fixed bottom-4 left-0 right-0 z-50 w-full max-w-[420px] sm:max-w-md mx-auto px-3 sm:px-4 pointer-events-none box-border transition-all duration-300 cubic-bezier(0.16,1,0.3,1) ${isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-16 opacity-0 scale-95'}`}
+			className={`fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-0 right-0 z-50 w-full max-w-[420px] sm:max-w-md mx-auto px-3 sm:px-4 pointer-events-none box-border transition-all duration-300 cubic-bezier(0.16,1,0.3,1) ${isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-16 opacity-0 scale-95'}`}
 		>
 			{/* Permanently Ultra-Translucent Pure Crystal Glass Dock Container */}
 			<div
@@ -95,7 +95,7 @@ export function ReaderQuickControl({
 							}
 						}}
 						disabled={!hasPrev}
-						className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-150 ${
+						className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-150 ${
 							hasPrev
 								? 'bg-white/10 border border-primary/50 text-on-surface shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 cursor-pointer opacity-100'
 								: 'bg-white/[0.06] text-on-surface-variant/40 border border-primary/30 shadow-[0_2px_8px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.35)] opacity-70 cursor-not-allowed pointer-events-none'
@@ -115,7 +115,7 @@ export function ReaderQuickControl({
 							}
 						}}
 						disabled={!hasNext}
-						className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-150 ${
+						className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-150 ${
 							hasNext
 								? 'bg-primary/25 text-primary font-bold border border-primary/60 shadow-[0_4px_12px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.45)] hover:bg-primary/35 cursor-pointer opacity-100'
 								: 'bg-white/[0.06] text-on-surface-variant/40 border border-primary/30 shadow-[0_2px_8px_rgba(0,0,0,0.3),_inset_0_1px_0.5px_rgba(255,255,255,0.35)] opacity-70 cursor-not-allowed pointer-events-none'
@@ -143,7 +143,7 @@ export function ReaderQuickControl({
 										triggerHaptic('selection');
 										onOpenChapterSelect();
 									}}
-									className="w-7 h-7 rounded-full bg-primary/20 hover:bg-primary/30 border border-primary/60 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.4)] flex items-center justify-center transition-all cursor-pointer shrink-0"
+									className="w-8 h-8 rounded-full bg-primary/20 hover:bg-primary/30 border border-primary/60 text-primary shadow-[0_3px_10px_rgba(0,0,0,0.35),_inset_0_1px_1px_rgba(255,255,255,0.4)] flex items-center justify-center transition-all cursor-pointer shrink-0"
 									title="Mở danh sách tất cả các chương"
 								>
 									<List size={14} strokeWidth={2.5} />

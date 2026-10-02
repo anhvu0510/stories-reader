@@ -107,7 +107,7 @@ export const ReaderHeader = memo(function ReaderHeader({
 				>
 					<div className="flex items-center justify-center gap-1.5 pointer-events-none select-none">
 						{isRefreshingLatest && <Loader2 size={12} className="animate-spin text-primary shrink-0" />}
-						<p className="text-[10.5px] font-bold text-on-surface-variant/75 truncate tracking-tight text-center">{bookName || 'Đang tải...'}</p>
+						<p className="text-[11px] font-bold text-on-surface-variant/75 truncate tracking-tight text-center">{bookName || 'Đang tải...'}</p>
 					</div>
 					<div className="mt-0.5 overflow-hidden w-full mx-auto max-w-[200px] sm:max-w-[250px] pointer-events-none select-none">
 						<h2 className="text-xs font-extrabold text-on-surface truncate tracking-tight text-center" title={chapterTitle}>

@@ -25,6 +25,8 @@ export function BottomDock({ page = 1, totalPages = 1, total = 0, loading = fals
 	const canPrev = page > 1 && !loading;
 	const canNext = page < totalPages && !loading;
 
+	if (totalPages <= 1 && !onPageChange) return null;
+
 	const handleGoToPage = (target: number) => {
 		triggerHaptic('success');
 		const validTarget = Math.max(1, Math.min(target, totalPages));
@@ -37,7 +39,7 @@ export function BottomDock({ page = 1, totalPages = 1, total = 0, loading = fals
 
 	return (
 		<>
-			<nav className="fixed bottom-4 left-0 right-0 z-40 w-full max-w-md mx-auto px-4 pointer-events-none box-border overflow-x-hidden transition-colors duration-200">
+			<nav className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-0 right-0 z-40 w-full max-w-md mx-auto px-4 pointer-events-none box-border overflow-x-hidden transition-colors duration-200">
 				<div className="bg-background/90 dark:bg-background/95 backdrop-blur-md border border-outline-variant/40 shadow-[0_16px_36px_rgba(0,0,0,0.5),_inset_0_1px_0.5px_0_rgba(255,255,255,0.35),_inset_0_-1px_0.5px_0_rgba(0,0,0,0.4)] rounded-full px-2.5 py-1.5 flex items-center justify-between pointer-events-auto transition-all duration-200 gap-2">
 					{/* Prev Page Button (Rich "Trang X" format) */}
 					<motion.button

@@ -11,7 +11,7 @@ const SETTINGS_KEY = 'stories.ui.config';
 const defaultSettings: ReaderConfig = {
 	theme: 'default',
 	font: 'default',
-	fontSize: 20,
+	fontSize: 18,
 	lineHeight: 1.4,
 	groupLines: 1,
 	batchChapterSize: 1,
