@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { X, Server, BookOpen, Volume2, Sparkles, RefreshCw, Music } from 'lucide-react';
 
 import { BottomSheet } from '@/components/BottomSheet';
+import { useAppUpdate } from '@/hooks/useAppUpdate';
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { useModalStore } from '@/stores/useModalStore';
 
@@ -19,6 +20,7 @@ interface GlobalSettingsSheetProps {
 
 export function GlobalSettingsSheet({ currentBookId, currentChapterId }: GlobalSettingsSheetProps) {
 	const { isSettingsOpen, activeSettingsTab, closeSettings, setSettingsTab } = useModalStore();
+	const { appInfo } = useAppUpdate({ autoCheck: false });
 
 	const tabs = [
 		{ id: 'servers', label: 'Server API', icon: Server },
@@ -39,7 +41,12 @@ export function GlobalSettingsSheet({ currentBookId, currentChapterId }: GlobalS
 				{/* Header */}
 				<div className="flex items-center justify-between">
 					<div>
-						<h2 className="text-sm sm:text-base font-black text-on-surface tracking-tight flex items-center gap-2">Cấu hình Hệ thống</h2>
+						<div className="flex items-center gap-2">
+							<h2 className="text-sm sm:text-base font-black text-on-surface tracking-tight">Cấu hình Hệ thống</h2>
+							<span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/15 text-primary border border-primary/30 shadow-xs">
+								v{appInfo.version}
+							</span>
+						</div>
 						<p className="text-[9px] font-mono text-on-surface-variant/70 uppercase tracking-wider">Settings & Preferences</p>
 					</div>
 					<motion.button

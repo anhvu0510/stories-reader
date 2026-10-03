@@ -65,54 +65,90 @@ export function LibraryHeader({ searchQuery, onSearchChange, onOpenSettings, onS
 				</div>
 			</div>
 
-			{/* Search Input Bar with Mobile-Safe Font & Enhanced Tap Targets */}
-			<div className="relative w-full">
-				<button
-					type="button"
-					onClick={() => {
-						triggerHaptic('light');
-						onSubmitSearch?.();
-					}}
-					className="absolute left-0 top-0 bottom-0 w-9 flex items-center justify-center text-on-surface-variant/60 hover:text-primary transition-colors cursor-pointer z-10"
-					title="Bấm để tìm kiếm"
-				>
-					<Search size={15} />
-				</button>
-				<input
-					type="text"
-					placeholder="Tìm tên truyện, tác giả..."
-					value={searchQuery}
-					onChange={(e) => onSearchChange(e.target.value)}
-					onKeyDown={(e) => {
-						if (e.key === 'Enter') {
-							triggerHaptic('light');
-							onSubmitSearch?.();
-						}
-					}}
-					className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/15 text-sm sm:text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] box-border"
-				/>
-				{searchQuery && (
-					<motion.button
-						whileTap={{ scale: 0.85 }}
+			{/* Search Input Bar with Action Buttons Alongside */}
+			<div className="flex items-center gap-1.5 w-full">
+				<div className="relative flex-1 min-w-0">
+					<button
+						type="button"
 						onClick={() => {
 							triggerHaptic('light');
-							onSearchChange('');
+							onSubmitSearch?.();
 						}}
-						className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant/60 hover:text-on-surface hover:bg-white/10 transition-all z-10 cursor-pointer"
-						title="Xóa từ khóa"
+						className="absolute left-0 top-0 bottom-0 w-9 flex items-center justify-center text-on-surface-variant/60 hover:text-primary transition-colors cursor-pointer z-10"
+						title="Bấm để tìm kiếm"
 					>
-						<X size={14} />
+						<Search size={15} />
+					</button>
+					<input
+						type="text"
+						placeholder="Tìm tên truyện, tác giả..."
+						value={searchQuery}
+						onChange={(e) => onSearchChange(e.target.value)}
+						onKeyDown={(e) => {
+							if (e.key === 'Enter') {
+								triggerHaptic('light');
+								onSubmitSearch?.();
+							}
+						}}
+						className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-white/10 dark:bg-white/5 border border-white/20 dark:border-white/15 text-sm sm:text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 font-medium transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] box-border"
+					/>
+					{searchQuery && (
+						<motion.button
+							whileTap={{ scale: 0.85 }}
+							onClick={() => {
+								triggerHaptic('light');
+								onSearchChange('');
+							}}
+							className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant/60 hover:text-on-surface hover:bg-white/10 transition-all z-10 cursor-pointer"
+							title="Xóa từ khóa"
+						>
+							<X size={14} />
+						</motion.button>
+					)}
+				</div>
+
+				{/* Sort Button (Shown when onOpenSort is provided) */}
+				{onOpenSort && (
+					<motion.button
+						type="button"
+						whileTap={{ scale: 0.9 }}
+						onClick={() => {
+							triggerHaptic('light');
+							onOpenSort();
+						}}
+						className={`relative w-9.5 h-9.5 rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-xs ${isCustomSortActive ? 'bg-primary/20 border-primary/50 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]' : 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-on-surface hover:bg-white/10'}`}
+						title="Sắp xếp danh sách"
+						aria-label="Sắp xếp danh sách"
+						data-testid="sort-trigger-btn"
+					>
+						<ArrowUpDown size={15} className={isCustomSortActive ? 'text-primary' : 'text-on-surface-variant/70'} />
+						{isCustomSortActive && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary border-2 border-surface" />}
+					</motion.button>
+				)}
+
+				{/* Tag Filter Button (Shown when onOpenTagFilter is provided) */}
+				{onOpenTagFilter && (
+					<motion.button
+						type="button"
+						whileTap={{ scale: 0.9 }}
+						onClick={() => {
+							triggerHaptic('light');
+							onOpenTagFilter();
+						}}
+						className={`relative w-9.5 h-9.5 rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-xs ${activeTagsCount > 0 ? 'bg-primary border-primary text-on-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)]' : 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-on-surface hover:bg-white/10'}`}
+						title="Lọc theo Thể loại & Tags"
+						aria-label="Lọc theo Thể loại & Tags"
+						data-testid="tag-filter-trigger-btn"
+					>
+						<Tag size={15} className={activeTagsCount > 0 ? 'text-on-primary' : 'text-on-surface-variant/70'} />
+						{activeTagsCount > 0 && (
+							<span className="absolute -top-1 -right-1 px-1 min-w-3.5 h-3.5 rounded-full bg-error text-on-error text-[8.5px] font-bold font-mono flex items-center justify-center border border-surface leading-none">
+								{activeTagsCount}
+							</span>
+						)}
 					</motion.button>
 				)}
 			</div>
-
-			{/* Standalone Fallback for Unit Tests if onOpenSort / onOpenTagFilter passed directly to LibraryHeader */}
-			{(onOpenSort || onOpenTagFilter) && !onSubmitSearch && (
-				<div className="hidden">
-					{onOpenSort && <button type="button" onClick={onOpenSort} data-testid="sort-trigger-btn" aria-label="Sắp xếp danh sách" />}
-					{onOpenTagFilter && <button type="button" onClick={onOpenTagFilter} data-testid="tag-filter-trigger-btn" aria-label="Lọc theo Thể loại & Tags" />}
-				</div>
-			)}
 		</header>
 	);
 }

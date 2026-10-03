@@ -287,126 +287,79 @@ export function LibraryScreen() {
 						</div>
 					)}
 
-					{/* Navigation Tabs + Filters Horizontal Row */}
-					<div className="p-1.5 border-t border-white/10 dark:border-white/5 bg-transparent">
-						<div className="flex items-center justify-between gap-1.5 w-full">
-							{/* Sliding Capsule Glass Tabs */}
-							<div className="h-10 flex items-center gap-0.5 p-1 bg-white/5 dark:bg-white/5 border border-white/10 dark:border-white/10 rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] overflow-x-auto hide-scrollbar shrink min-w-0 box-border">
-								{[
-									{
-										id: 'ALL',
-										label: 'Tất cả',
-										title: 'Tất cả',
-										Icon: Library,
-										activeText: 'text-primary font-bold',
-										activePill: 'bg-gradient-to-b from-primary/30 to-primary/10 border-primary/50 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]',
-										activeBadge: 'bg-primary/20 text-primary border-primary/30'
-									},
-									{
-										id: 'HISTORY',
-										label: 'Lịch sử',
-										title: 'Lịch sử',
-										Icon: Clock,
-										activeText: 'text-primary font-bold',
-										activePill: 'bg-gradient-to-b from-primary/30 to-primary/10 border-primary/50 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]',
-										activeBadge: 'bg-primary/20 text-primary border-primary/30'
-									},
-									{
-										id: 'FAVORITE',
-										label: 'Yêu thích',
-										title: 'Truyện yêu thích',
-										Icon: Heart,
-										activeText: 'text-rose-400 font-bold',
-										activePill: 'bg-gradient-to-b from-rose-500/30 to-rose-500/10 border-rose-500/50 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]',
-										activeBadge: 'bg-rose-500/20 text-rose-400 border-rose-500/30'
-									},
-									{
-										id: 'AI',
-										label: 'Dịch AI',
-										title: 'Dịch AI',
-										Icon: Sparkles,
-										activeText: 'text-emerald-400 font-bold',
-										activePill: 'bg-gradient-to-b from-emerald-500/30 to-emerald-500/10 border-emerald-400/50 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]',
-										activeBadge: 'bg-emerald-500/20 text-emerald-400 border-emerald-400/30'
-									}
-								].map((t) => {
-									const isActive = tab === t.id;
-									return (
-										<motion.button
-											key={t.id}
-											whileTap={{ scale: 0.94 }}
-											onClick={() => handleTabChange(t.id as any)}
-											title={t.title}
-											className={`relative h-8 flex items-center justify-center gap-1 px-2.5 rounded-full transition-colors duration-200 shrink-0 cursor-pointer ${isActive ? `${t.activeText} font-bold` : 'text-on-surface-variant/75 hover:text-on-surface'}`}
-										>
-											{isActive && (
-												<motion.div
-													layoutId="active-tab-glass-pill"
-													transition={{
-														type: 'spring',
-														stiffness: 320,
-														damping: 28
-													}}
-													className={`absolute inset-0 rounded-full border ${t.activePill}`}
-												/>
-											)}
-											<t.Icon
-												size={13}
-												className={`shrink-0 relative z-10 ${t.id === 'FAVORITE' && isActive ? 'fill-rose-500 text-rose-500' : isActive ? t.activeText : 'text-on-surface-variant/60'}`}
-											/>
-											<span className="text-[11px] tracking-tight font-bold relative z-10 whitespace-nowrap">{t.label}</span>
-											{isActive && (
-												<span className={`text-[10px] font-mono font-bold px-1.5 py-[0.5px] rounded-full border shrink-0 leading-none relative z-10 ${t.activeBadge}`}>
-													{total}
-												</span>
-											)}
-										</motion.button>
-									);
-								})}
-							</div>
-
-							{/* Sort & Tag Filter Action Buttons */}
-							<div className="flex items-center gap-1.5 shrink-0 h-10 ml-auto">
-								{/* Sort Button */}
-								{tab === 'ALL' && (
+					{/* Navigation Tabs (Full Width One UI Segmented Capsule) */}
+					<div className="px-3.5 pt-1 pb-2 border-t border-white/10 dark:border-white/5 bg-transparent">
+						{/* Full-Width Spacious Segmented Capsule Tabs */}
+						<div className="grid grid-cols-4 gap-1 p-1 bg-white/[0.04] dark:bg-white/[0.04] border border-white/10 dark:border-white/10 rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)] box-border">
+							{[
+								{
+									id: 'ALL',
+									label: 'Tất cả',
+									title: 'Tất cả truyện',
+									Icon: Library,
+									activeText: 'text-primary font-bold',
+									activePill: 'bg-gradient-to-b from-primary/30 to-primary/10 border-primary/50 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]'
+								},
+								{
+									id: 'HISTORY',
+									label: 'Lịch sử',
+									title: 'Lịch sử đọc',
+									Icon: Clock,
+									activeText: 'text-primary font-bold',
+									activePill: 'bg-gradient-to-b from-primary/30 to-primary/10 border-primary/50 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]'
+								},
+								{
+									id: 'FAVORITE',
+									label: 'Yêu thích',
+									title: 'Truyện yêu thích',
+									Icon: Heart,
+									activeText: 'text-rose-400 font-bold',
+									activePill: 'bg-gradient-to-b from-rose-500/30 to-rose-500/10 border-rose-500/50 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]'
+								},
+								{
+									id: 'AI',
+									label: 'Dịch AI',
+									title: 'Truyện dịch AI',
+									Icon: Sparkles,
+									activeText: 'text-emerald-400 font-bold',
+									activePill: 'bg-gradient-to-b from-emerald-500/30 to-emerald-500/10 border-emerald-400/50 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]'
+								}
+							].map((t) => {
+								const isActive = tab === t.id;
+								return (
 									<motion.button
-										type="button"
-										whileTap={{ scale: 0.9 }}
-										onClick={() => {
-											triggerHaptic('light');
-											setIsSortSheetOpen(true);
-										}}
-										className={`relative h-10 w-10 rounded-[14px] border transition-all flex items-center justify-center shrink-0 box-border cursor-pointer ${isCustomSortActive ? 'bg-primary/20 border-primary/60 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)]' : 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-primary hover:border-primary/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'}`}
-										title="Sắp xếp danh sách"
-										aria-label="Sắp xếp danh sách"
-										data-testid="sort-trigger-btn"
+										key={t.id}
+										whileTap={{ scale: 0.95 }}
+										onClick={() => handleTabChange(t.id as any)}
+										title={t.title}
+										className={`relative h-9 flex items-center justify-center gap-1.5 rounded-full transition-colors duration-200 cursor-pointer ${isActive ? `${t.activeText} font-bold` : 'text-on-surface-variant/75 hover:text-on-surface'}`}
 									>
-										<ArrowUpDown size={14} />
-										{isCustomSortActive && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary border-2 border-surface" />}
-									</motion.button>
-								)}
-
-								{/* Tag Filter Button */}
-								<motion.button
-									type="button"
-									whileTap={{ scale: 0.9 }}
-									onClick={() => {
-										triggerHaptic('light');
-										setIsTagFilterOpen(true);
-									}}
-									className={`relative h-10 w-10 rounded-[14px] border transition-all flex items-center justify-center shrink-0 box-border cursor-pointer ${selectedTags.length > 0 ? 'bg-primary border-primary text-on-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-primary hover:border-primary/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'}`}
-									title="Lọc theo Thể loại & Tags"
-									aria-label="Lọc theo Thể loại & Tags"
-									data-testid="tag-filter-trigger-btn"
-								>
-									<Tag size={14} />
-									{selectedTags.length > 0 && (
-										<span className="absolute -top-1 -right-1 px-1 py-0.2 min-w-3.5 h-3.5 rounded-full bg-error text-on-error text-[8.5px] font-bold font-mono flex items-center justify-center border border-surface">
-											{selectedTags.length}
+										{isActive && (
+											<motion.div
+												layoutId="active-tab-glass-pill"
+												transition={{
+													type: 'spring',
+													stiffness: 340,
+													damping: 30
+												}}
+												className={`absolute inset-0 rounded-full border ${t.activePill}`}
+											/>
+										)}
+										<t.Icon
+											size={13.5}
+											className={`shrink-0 relative z-10 ${t.id === 'FAVORITE' && isActive ? 'fill-rose-500 text-rose-500' : isActive ? t.activeText : 'text-on-surface-variant/60'}`}
+										/>
+										<span className="text-xs tracking-tight font-bold relative z-10 whitespace-nowrap flex items-center">
+											{t.label}
+											{isActive && total > 0 && (
+												<sup className="text-[9px] font-mono font-semibold ml-0.5 -top-1 opacity-80 leading-none">
+													{total}
+												</sup>
+											)}
 										</span>
-									)}
-								</motion.button>
-							</div>
+									</motion.button>
+								);
+							})}
 						</div>
 					</div>
 				</div>
