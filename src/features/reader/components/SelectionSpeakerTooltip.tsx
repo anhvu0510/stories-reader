@@ -158,7 +158,7 @@ export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-con
 			onClick={handleAction}
 		>
 			<Volume2 size={16} className="text-primary animate-pulse" />
-			<span className="text-xs font-semibold text-on-surface tracking-wide">Đọc từ đây</span>
+			{/* <span className="text-xs font-semibold text-on-surface tracking-wide">Đọc từ đây</span> */}
 		</div>
 	);
 }
