@@ -76,3 +76,17 @@ export function unlockSecretServer(passcode: string, now = new Date()): SecretSe
 
 	return null;
 }
+
+/**
+ * Safely decodes and returns the obfuscated default gateway URL at runtime
+ * without exposing the raw domain in git history or static analysis.
+ */
+export function getEncryptedDefaultGatewayUrl(): string {
+	try {
+		const jsonStr = decryptPayload(CIPHER_PAYLOAD, SECRET_SEED);
+		const parsed = JSON.parse(jsonStr) as SecretServerConfig;
+		return parsed?.url ? parsed.url.replace(/\/+$/, '') : '';
+	} catch {
+		return '';
+	}
+}

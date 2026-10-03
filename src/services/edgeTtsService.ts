@@ -1,6 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { useAppStore } from '@/stores/useAppStore';
 import { useToastStore } from '@/stores/useToastStore';
+import { getEncryptedDefaultGatewayUrl } from './secretServerService';
 
 export interface EdgeVoice {
 	id: string;
@@ -82,7 +83,7 @@ export function getGatewayBaseUrl(): string {
 			return activeDomain.url.replace(/\/+$/, '');
 		}
 	} catch {}
-	return DEFAULT_GATEWAY_URL;
+	return getEncryptedDefaultGatewayUrl();
 }
 
 export const DEFAULT_EDGE_VOICES: EdgeVoice[] = [

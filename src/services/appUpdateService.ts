@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { useAppStore } from '@/stores/useAppStore';
+import { getEncryptedDefaultGatewayUrl } from './secretServerService';
 
 export interface UpdateManifest {
 	version: string;
@@ -122,8 +123,8 @@ export class AppUpdateService {
 			}
 
 			if (!res || !res.ok) {
-				const activeDomainUrl = useAppStore.getState().activeDomain?.url;
-				const fallback = activeDomainUrl ? `${activeDomainUrl.replace(/\/+$/, '')}/api/app-update/version` : FALLBACK_UPDATE_ENDPOINT;
+				const activeDomainUrl = useAppStore.getState().activeDomain?.url || getEncryptedDefaultGatewayUrl();
+				const fallback = activeDomainUrl ? `${activeDomainUrl.replace(/\/+$/, '')}/api/app-update/version` : '';
 				if (fallback) {
 					try {
 						res = await fetch(fallback, {
