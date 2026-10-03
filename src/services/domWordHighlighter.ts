@@ -1,14 +1,24 @@
+interface HighlightLike {
+	priority?: number;
+}
+
 interface HighlightRegistryLike {
 	set(name: string, highlight: unknown): void;
 	delete(name: string): boolean;
 }
 
 interface HighlightConstructorLike {
-	new (...ranges: Range[]): unknown;
+	new (...ranges: Range[]): HighlightLike;
+}
+
+interface CachedLineItem {
+	rect: DOMRect;
+	startOffset: number;
+	endOffset: number;
 }
 
 interface CachedLineLayout {
-	lines: DOMRect[];
+	lines: CachedLineItem[];
 	textLength: number;
 }
 
@@ -17,7 +27,8 @@ export interface ReadAloudHighlightGeometry {
 	word: DOMRect;
 }
 
-const CSS_HIGHLIGHT_NAME = 'stories-tts-word';
+const CSS_WORD_HIGHLIGHT_NAME = 'stories-tts-word';
+const CSS_LINE_HIGHLIGHT_NAME = 'stories-tts-line';
 const LINE_Y_TOLERANCE = 2;
 
 export class DomWordHighlighter {
@@ -55,7 +66,9 @@ export class DomWordHighlighter {
 		let wordRects: DOMRect[];
 
 		if (registry && HighlightConstructor) {
-			registry.set(CSS_HIGHLIGHT_NAME, new HighlightConstructor(wordRange));
+			const wordHighlight = new HighlightConstructor(wordRange);
+			wordHighlight.priority = 2;
+			registry.set(CSS_WORD_HIGHLIGHT_NAME, wordHighlight);
 			wordRects = Array.from(wordRange.getClientRects());
 		} else {
 			this.wrapRangeForFallback(wordRange);
@@ -72,7 +85,13 @@ export class DomWordHighlighter {
 		const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
 		const viewportWordRect = this.unionRects(visibleWordRects);
 		const documentWordRect = new DOMRect(viewportWordRect.left + scrollX, viewportWordRect.top + scrollY, viewportWordRect.width, viewportWordRect.height);
-		const documentLineRect = this.findLineRect(rootElement, documentWordRect, scrollX, scrollY);
+		const { lineRect: documentLineRect, lineRange } = this.findLineLayout(rootElement, documentWordRect, scrollX, scrollY);
+
+		if (registry && HighlightConstructor && lineRange) {
+			const lineHighlight = new HighlightConstructor(lineRange);
+			lineHighlight.priority = 1;
+			registry.set(CSS_LINE_HIGHLIGHT_NAME, lineHighlight);
+		}
 
 		this.updateLineHighlight(documentLineRect);
 		return { line: documentLineRect, word: documentWordRect };
@@ -147,7 +166,9 @@ export class DomWordHighlighter {
 	}
 
 	private clearWordHighlight(): void {
-		this.getHighlightRegistry()?.delete(CSS_HIGHLIGHT_NAME);
+		const registry = this.getHighlightRegistry();
+		registry?.delete(CSS_WORD_HIGHLIGHT_NAME);
+		registry?.delete(CSS_LINE_HIGHLIGHT_NAME);
 		const parents = new Set<Node>();
 		this.marks.forEach((mark) => {
 			const parent = mark.parentNode;
@@ -159,7 +180,7 @@ export class DomWordHighlighter {
 		this.marks = [];
 	}
 
-	private findLineRect(rootElement: HTMLElement, wordRect: DOMRect, scrollX: number, scrollY: number): DOMRect {
+	private getLineLayout(rootElement: HTMLElement, scrollX: number, scrollY: number): CachedLineLayout {
 		const textLength = rootElement.textContent?.length ?? 0;
 		let cachedLayout = this.lineLayoutCache.get(rootElement);
 		if (!cachedLayout || cachedLayout.textLength !== textLength) {
@@ -168,8 +189,26 @@ export class DomWordHighlighter {
 			const documentRects = Array.from(contentRange.getClientRects())
 				.filter((rect) => rect.width > 0 && rect.height > 0)
 				.map((rect) => new DOMRect(rect.left + scrollX, rect.top + scrollY, rect.width, rect.height));
+
+			const mergedRects = this.mergeLineFragments(documentRects);
+			mergedRects.sort((a, b) => a.top - b.top);
+
+			const lineItems: CachedLineItem[] = [];
+			if (mergedRects.length <= 1) {
+				const rect = mergedRects[0] ?? new DOMRect(0, 0, 0, 0);
+				lineItems.push({ rect, startOffset: 0, endOffset: textLength });
+			} else {
+				let prevBoundary = 0;
+				for (let i = 0; i < mergedRects.length - 1; i++) {
+					const boundary = this.findBoundaryOffset(rootElement, mergedRects[i], mergedRects[i + 1], prevBoundary, textLength, scrollY);
+					lineItems.push({ rect: mergedRects[i], startOffset: prevBoundary, endOffset: boundary });
+					prevBoundary = boundary;
+				}
+				lineItems.push({ rect: mergedRects[mergedRects.length - 1], startOffset: prevBoundary, endOffset: textLength });
+			}
+
 			cachedLayout = {
-				lines: this.mergeLineFragments(documentRects),
+				lines: lineItems,
 				textLength
 			};
 			this.lineLayoutCache.set(rootElement, cachedLayout);
@@ -180,8 +219,71 @@ export class DomWordHighlighter {
 			}
 		}
 
+		return cachedLayout;
+	}
+
+	private findBoundaryOffset(
+		rootElement: HTMLElement,
+		_currentLine: DOMRect,
+		nextLine: DOMRect,
+		minOffset: number,
+		maxOffset: number,
+		scrollY: number
+	): number {
+		let low = minOffset;
+		let high = maxOffset;
+		let boundary = maxOffset;
+		const targetY = nextLine.top - LINE_Y_TOLERANCE;
+
+		while (low <= high) {
+			const mid = Math.floor((low + high) / 2);
+			if (mid >= maxOffset) break;
+
+			const range = this.createTextRange(rootElement, mid, 1);
+			if (!range) break;
+
+			const rects = range.getClientRects();
+			const rect = rects.length > 0 ? rects[0] : range.getBoundingClientRect();
+
+			let effectiveY = (rect && rect.height > 0 ? rect.top : 0) + scrollY;
+			if ((!rect || rect.width === 0 || rect.height === 0) && mid + 1 < maxOffset) {
+				const nextRange = this.createTextRange(rootElement, mid + 1, 1);
+				const nextRects = nextRange?.getClientRects();
+				if (nextRects && nextRects.length > 0 && nextRects[0].width > 0) {
+					effectiveY = nextRects[0].top + scrollY;
+				}
+			}
+
+			if (effectiveY >= targetY) {
+				boundary = mid;
+				high = mid - 1;
+			} else {
+				low = mid + 1;
+			}
+		}
+
+		if (boundary <= minOffset || boundary > maxOffset) {
+			return Math.min(maxOffset, Math.max(minOffset, Math.round((minOffset + maxOffset) / 2)));
+		}
+		return boundary;
+	}
+
+	private findLineLayout(
+		rootElement: HTMLElement,
+		wordRect: DOMRect,
+		scrollX: number,
+		scrollY: number
+	): { lineRect: DOMRect; lineRange: Range | null } {
+		const cachedLayout = this.getLineLayout(rootElement, scrollX, scrollY);
 		const wordMiddleY = wordRect.top + wordRect.height / 2;
-		return cachedLayout.lines.find((line) => wordMiddleY >= line.top - 1 && wordMiddleY <= line.bottom + 1) ?? wordRect;
+		const lineItem = cachedLayout.lines.find((line) => wordMiddleY >= line.rect.top - 1 && wordMiddleY <= line.rect.bottom + 1);
+
+		if (!lineItem) {
+			return { lineRect: wordRect, lineRange: null };
+		}
+
+		const lineRange = this.createTextRange(rootElement, lineItem.startOffset, Math.max(1, lineItem.endOffset - lineItem.startOffset));
+		return { lineRect: lineItem.rect, lineRange };
 	}
 
 	private mergeLineFragments(rects: DOMRect[]): DOMRect[] {

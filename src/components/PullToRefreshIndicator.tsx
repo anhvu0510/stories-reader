@@ -15,19 +15,21 @@ export function PullToRefreshIndicator({
 	isRefreshing,
 	isPulling = false,
 	threshold = 65,
-	topOffset = 'calc(max(env(safe-area-inset-top), 0.75rem) + 8px)'
+	topOffset = 'calc(max(env(safe-area-inset-top), 0.75rem) + 4px)'
 }: PullToRefreshIndicatorProps) {
 	const isVisible = pullDistance > 0 || isRefreshing;
 	const progress = Math.min(1, pullDistance / threshold);
 
 	// Damped translateY positioning centered horizontally with GPU translate3d
 	const translateY = isRefreshing
-		? Math.min(threshold, 52)
+		? Math.min(threshold, 48)
 		: pullDistance > 0
-		? pullDistance
-		: -70;
+		? Math.min(threshold + 15, pullDistance * 0.75)
+		: -60;
 
 	const rotation = isRefreshing ? 0 : progress * 360;
+	const scale = isVisible ? (isRefreshing ? 1 : 0.6 + progress * 0.45) : 0.5;
+	const opacity = isVisible ? (isRefreshing ? 1 : Math.min(1, progress * 1.2)) : 0;
 
 	return (
 		<div
@@ -38,23 +40,23 @@ export function PullToRefreshIndicator({
 					? 'transition-none'
 					: isRefreshing
 					? 'transition-all duration-300 ease-out'
-					: 'transition-all duration-250 ease-out'
+					: 'transition-all duration-200 ease-in'
 			}`}
 			style={{
 				top: topOffset,
-				transform: `translate3d(-50%, ${translateY}px, 0) scale(${isVisible ? (isRefreshing ? 1 : 0.85 + progress * 0.15) : 0.7})`,
-				opacity: isVisible ? (isRefreshing ? 1 : Math.min(1, 0.4 + progress * 0.6)) : 0
+				transform: `translate3d(-50%, ${translateY}px, 0) scale(${scale})`,
+				opacity
 			}}
 		>
-			{/* Native mobile floating round reload circle with 0 text */}
-			<div className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest/98 dark:bg-surface-container-high/98 border border-outline-variant/30 shadow-2xl backdrop-blur-md ring-1 ring-black/10 dark:ring-white/10">
-				<RotateCw
-					size={20}
-					strokeWidth={2.4}
-					className={`text-primary transition-transform ${isRefreshing ? 'animate-spin' : ''}`}
-					style={!isRefreshing ? { transform: `rotate(${rotation}deg)` } : undefined}
-				/>
-			</div>
+			{/* Pure native vector icon without any circular background */}
+			<RotateCw
+				size={26}
+				strokeWidth={2.6}
+				className={`text-primary drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] transition-transform ${
+					isRefreshing ? 'animate-spin' : ''
+				}`}
+				style={!isRefreshing ? { transform: `rotate(${rotation}deg)` } : undefined}
+			/>
 		</div>
 	);
 }

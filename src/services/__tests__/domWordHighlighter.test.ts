@@ -129,10 +129,11 @@ describe('DomWordHighlighter', () => {
 
 		expect(root.innerHTML).toBe(originalHtml);
 		expect(root.querySelector('.active-word')).toBeNull();
-		expect(highlights.set).toHaveBeenCalledTimes(30);
+		expect(highlights.set).toHaveBeenCalledTimes(60);
 		expect(paragraphLayoutReads).toBe(1);
 
 		highlighter.clear();
-		expect(highlights.delete).toHaveBeenCalled();
+		expect(highlights.delete).toHaveBeenCalledWith('stories-tts-word');
+		expect(highlights.delete).toHaveBeenCalledWith('stories-tts-line');
 	});
 });

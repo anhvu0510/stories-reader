@@ -24,6 +24,33 @@ public class NativeTTSPlugin extends Plugin {
     private boolean isInitialized = false;
     private final List<Runnable> pendingInitTasks = new ArrayList<>();
     private PluginCall currentSpeakCall = null;
+    private android.os.PowerManager.WakeLock wakeLock = null;
+
+    private synchronized void acquireWakeLock() {
+        try {
+            if (wakeLock == null && getContext() != null) {
+                android.os.PowerManager pm = (android.os.PowerManager) getContext().getSystemService(android.content.Context.POWER_SERVICE);
+                if (pm != null) {
+                    wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "stories:NativeTTSWakeLock");
+                }
+            }
+            if (wakeLock != null && !wakeLock.isHeld()) {
+                wakeLock.acquire(20 * 60 * 1000L); // 20 minutes safety timeout
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Could not acquire wake lock: " + e.getMessage());
+        }
+    }
+
+    private synchronized void releaseWakeLock() {
+        try {
+            if (wakeLock != null && wakeLock.isHeld()) {
+                wakeLock.release();
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Could not release wake lock: " + e.getMessage());
+        }
+    }
 
     @Override
     public void load() {
@@ -252,6 +279,7 @@ public class NativeTTSPlugin extends Plugin {
                     currentSpeakCall = call;
                 }
 
+                acquireWakeLock();
                 Bundle params = new Bundle();
                 params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId);
                 int result = tts.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId);
@@ -259,12 +287,14 @@ public class NativeTTSPlugin extends Plugin {
                     synchronized (NativeTTSPlugin.this) {
                         currentSpeakCall = null;
                     }
+                    releaseWakeLock();
                     call.reject("TTS speak failed with code: " + result);
                 }
             } catch (Exception e) {
                 synchronized (NativeTTSPlugin.this) {
                     currentSpeakCall = null;
                 }
+                releaseWakeLock();
                 call.reject("TTS speak error: " + e.getMessage());
             }
         }, call);
@@ -273,6 +303,7 @@ public class NativeTTSPlugin extends Plugin {
     @PluginMethod
     public void stop(PluginCall call) {
         try {
+            releaseWakeLock();
             if (tts != null) {
                 tts.stop();
             }
@@ -298,6 +329,7 @@ public class NativeTTSPlugin extends Plugin {
             }
             tts = null;
         }
+        releaseWakeLock();
         super.handleOnDestroy();
     }
 }

@@ -245,7 +245,7 @@
 	}
 }
 
-/* Edge-style Read Aloud: one quiet rendered line plus one strongly focused word. */
+/* Edge-style Read Aloud: soft pastel blue rendered line wash with dark text plus bright yellow focused word. */
 .stories-tts-line-wash {
 	position: absolute;
 	top: 0;
@@ -253,17 +253,33 @@
 	z-index: 4;
 	display: block;
 	pointer-events: none;
-	background: #b8d5f2;
-	box-shadow:
-		inset 0 0 0 1px rgba(147, 197, 253, 0.6),
-		0 2px 8px rgba(184, 213, 242, 0.4);
+	background: #9ec4ea;
+	box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.4);
 	border-radius: 0.25em;
 	transform-origin: top left;
-	transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
-	will-change: transform;
+	transition: none;
+	will-change: transform, opacity;
 }
 
-/* 1. App Word Highlight for Modern Chromium (CSS Custom Highlight API) */
+.stories-tts-line-wash-fade {
+	animation: stories-tts-line-dissolve 180ms ease-out;
+}
+
+@keyframes stories-tts-line-dissolve {
+	0% {
+		opacity: 0.3;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+/* 1. App Line & Word Highlight for Modern Chromium (CSS Custom Highlight API) */
+::highlight(stories-tts-line) {
+	background-color: #9ec4ea;
+	color: #000000;
+}
+
 ::highlight(stories-tts-word) {
 	background-color: #ffff00;
 	color: #000000;
@@ -340,7 +356,11 @@ body,
 /* Reading Typography Classes */
 .font-default,
 .font-sans-reading {
-	font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif !important;
+	font-family:
+		'Be Vietnam Pro',
+		system-ui,
+		-apple-system,
+		sans-serif !important;
 }
 
 .font-bookerly {
@@ -412,12 +432,7 @@ select {
 }
 
 .skeleton-shimmer {
-	background: linear-gradient(
-		90deg,
-		var(--surface-container) 25%,
-		var(--surface-container-high) 50%,
-		var(--surface-container) 75%
-	);
+	background: linear-gradient(90deg, var(--surface-container) 25%, var(--surface-container-high) 50%, var(--surface-container) 75%);
 	background-size: 200% 100%;
 	animation: shimmer 1.5s ease-in-out infinite;
 }

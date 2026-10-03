@@ -14,10 +14,7 @@ interface TooltipPosition {
 	charOffset: number;
 }
 
-export function SelectionSpeakerTooltip({
-	onSpeak,
-	containerId = 'main-story-content'
-}: SelectionSpeakerTooltipProps) {
+export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-content' }: SelectionSpeakerTooltipProps) {
 	const [position, setPosition] = useState<TooltipPosition | null>(null);
 	const isInteractingRef = useRef(false);
 

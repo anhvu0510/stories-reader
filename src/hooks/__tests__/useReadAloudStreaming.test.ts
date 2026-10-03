@@ -6,6 +6,7 @@ import { useReadAloud } from '@/hooks/useReadAloud';
 import { DomWordHighlighter } from '@/services/domWordHighlighter';
 import { EdgeTTSService } from '@/services/edgeTtsService';
 import { splitParagraphIntoSentences } from '@/services/gaplessTtsPlayer';
+import { NativeTTSService } from '@/services/nativeTtsService';
 import { TTSService } from '@/services/ttsService';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 
@@ -461,6 +462,47 @@ describe('useReadAloud browser speech ownership', () => {
 
 		act(() => result.current.stopReading());
 		expect(speechSynthesis.cancel).toHaveBeenCalledTimes(1);
+		unmount();
+	});
+
+	it('saves resume position when stopped mid-chapter and restores upon restarting', async () => {
+		const chapterId = 'test-chapter-123';
+		const paragraphs = ['Câu một.', '\u2063 Câu hai.', '\u2063 Câu ba kết thúc.'];
+		useReaderConfigStore.setState({ ttsEngine: 'browser' });
+		const speakSpy = vi.spyOn(NativeTTSService, 'speak').mockImplementation(async () => {});
+		vi.spyOn(NativeTTSService, 'isNative').mockReturnValue(true);
+
+		const { result, unmount } = renderHook(() =>
+			useReadAloud(paragraphs, { chapterId, bookId: 'b1', chapterNumber: 1 })
+		);
+
+		// Start reading sentence 1
+		act(() => result.current.startReading());
+		expect(speakSpy).toHaveBeenCalledWith(expect.objectContaining({ text: 'Câu một.' }));
+
+		// Advance to sentence 2
+		act(() => result.current.nextSection());
+		expect(speakSpy).toHaveBeenCalledWith(expect.objectContaining({ text: 'Câu hai.' }));
+
+		// User stops reading at sentence 2
+		act(() => result.current.stopReading());
+
+		// Verify saved in localStorage
+		const saved = localStorage.getItem(`stories_tts_pos_${chapterId}`);
+		expect(saved).not.toBeNull();
+		const parsed = JSON.parse(saved!);
+		expect(parsed.chunkIndex).toBe(1);
+
+		// User restarts reading: should resume from sentence 2 (index 1) rather than index 0
+		act(() => result.current.startReading());
+		expect(speakSpy).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'Câu hai.' }));
+
+		// Advance to end of chapter
+		act(() => result.current.nextSection());
+		// Next again past last sentence ends chapter and clears cache
+		act(() => result.current.nextSection());
+		expect(localStorage.getItem(`stories_tts_pos_${chapterId}`)).toBeNull();
+
 		unmount();
 	});
 });
