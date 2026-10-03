@@ -86,6 +86,32 @@ export function usePullToRefresh({
 			if (!isSupported || isRefreshingRef.current) return;
 			if (!e.touches || e.touches.length !== 1) return;
 
+			// Do not trigger pull-to-refresh if a modal, sheet, or dialog is open, or body scroll is locked
+			if (
+				document.body.classList.contains('overflow-hidden') ||
+				document.querySelector('[role="dialog"], [aria-modal="true"], [data-sheet-open="true"]')
+			) {
+				canPullRef.current = false;
+				return;
+			}
+
+			// Do not trigger if touch originated inside a modal, dialog, bottom sheet, or popover
+			const targetEl = e.target as HTMLElement | null;
+			if (targetEl && targetEl.closest && targetEl.closest('[role="dialog"], [aria-modal="true"], .bottom-sheet, [data-modal], [data-sheet], [data-dialog]')) {
+				canPullRef.current = false;
+				return;
+			}
+
+			// Do not trigger if target is inside an inner scrollable element with scrollTop > 0
+			let currentParent = targetEl;
+			while (currentParent && currentParent !== document.body && currentParent !== document.documentElement) {
+				if (currentParent.scrollTop > 1) {
+					canPullRef.current = false;
+					return;
+				}
+				currentParent = currentParent.parentElement;
+			}
+
 			const scrollTop = getScrollTop();
 			if (scrollTop > 1) {
 				canPullRef.current = false;
@@ -102,6 +128,18 @@ export function usePullToRefresh({
 		const handleTouchMove = (e: TouchEvent) => {
 			if (!canPullRef.current || isRefreshingRef.current || !isSupported) return;
 			if (!e.touches || e.touches.length === 0) return;
+
+			// If a modal or dialog appeared mid-gesture, immediately abort
+			if (
+				document.body.classList.contains('overflow-hidden') ||
+				document.querySelector('[role="dialog"], [aria-modal="true"]')
+			) {
+				canPullRef.current = false;
+				if (isPullingRef.current) {
+					reset();
+				}
+				return;
+			}
 
 			const currentY = e.touches[0].clientY;
 			const currentX = e.touches[0].clientX;

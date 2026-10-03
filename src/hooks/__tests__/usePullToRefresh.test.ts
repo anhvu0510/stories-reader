@@ -284,4 +284,57 @@ describe('usePullToRefresh hook', () => {
 		expect(result.current.pullDistance).toBeGreaterThan(0);
 		expect(result.current.isPulling).toBe(true);
 	});
+
+	it('does not engage pull when body is scroll-locked (overflow-hidden)', () => {
+		document.body.classList.add('overflow-hidden');
+		const onRefresh = vi.fn();
+		const { result } = renderHook(() => usePullToRefresh({ onRefresh }));
+
+		act(() => {
+			window.dispatchEvent(
+				new TouchEvent('touchstart', {
+					touches: [{ clientX: 50, clientY: 50 } as any]
+				})
+			);
+			window.dispatchEvent(
+				new TouchEvent('touchmove', {
+					touches: [{ clientX: 50, clientY: 150 } as any]
+				})
+			);
+		});
+
+		expect(result.current.pullDistance).toBe(0);
+		expect(result.current.isPulling).toBe(false);
+		document.body.classList.remove('overflow-hidden');
+	});
+
+	it('does not engage pull when touch starts inside a dialog or bottom sheet', () => {
+		const dialog = document.createElement('div');
+		dialog.setAttribute('role', 'dialog');
+		const child = document.createElement('div');
+		dialog.appendChild(child);
+		document.body.appendChild(dialog);
+
+		const onRefresh = vi.fn();
+		const { result } = renderHook(() => usePullToRefresh({ onRefresh }));
+
+		act(() => {
+			child.dispatchEvent(
+				new TouchEvent('touchstart', {
+					bubbles: true,
+					touches: [{ clientX: 50, clientY: 50 } as any]
+				})
+			);
+			child.dispatchEvent(
+				new TouchEvent('touchmove', {
+					bubbles: true,
+					touches: [{ clientX: 50, clientY: 150 } as any]
+				})
+			);
+		});
+
+		expect(result.current.pullDistance).toBe(0);
+		expect(result.current.isPulling).toBe(false);
+		dialog.remove();
+	});
 });

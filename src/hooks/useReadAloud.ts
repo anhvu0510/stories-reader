@@ -28,6 +28,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	const voiceUri = useReaderConfigStore((state) => state.voiceUri);
 	const edgeVoiceUri = useReaderConfigStore((state) => state.edgeVoiceUri || 'vi-VN-HoaiMyNeural');
 	const speechRate = useReaderConfigStore((state) => state.speechRate);
+	const speechRateRef = useRef(speechRate);
+	speechRateRef.current = speechRate;
 	const ttsEngine = useReaderConfigStore((state) => state.ttsEngine || 'vieneu');
 	const vieneuServerUrl = useReaderConfigStore((state) => state.vieneuServerUrl || DEFAULT_VIENEU_SERVER_URL);
 	const vieneuModel = useReaderConfigStore((state) => state.vieneuModel || undefined);
@@ -231,7 +233,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			edgeRequestAbortRef.current = new AbortController();
 		}
 
-		const promise = EdgeTTSService.synthesizeSpeechWithBoundaries(chunk.text, edgeVoiceUri, speechRate, activeDomain?.url, edgeRequestAbortRef.current.signal).catch((err) => {
+		const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.0;
+		const promise = EdgeTTSService.synthesizeSpeechWithBoundaries(chunk.text, edgeVoiceUri, currentSpeechRate, activeDomain?.url, edgeRequestAbortRef.current.signal).catch((err) => {
 			edgePrefetchCacheRef.current.delete(index);
 			throw err;
 		});
@@ -402,7 +405,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		if (ttsEngine === 'vieneu') {
 			stopReading();
 		}
-	}, [vieneuModel, voiceUri, ttsEngine, speechRate, vieneuOptions]);
+	}, [vieneuModel, voiceUri, ttsEngine, vieneuOptions]);
 
 	const lastInteractionTime = useRef(0);
 
@@ -559,10 +562,11 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 				return;
 			}
 
+			const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.0;
 			NativeTTSService.speak({
 				text: textToSpeak,
 				voice: voiceUri,
-				rate: speechRate,
+				rate: currentSpeechRate,
 				utteranceId: `${sessionId}-${index}`,
 				onStart: () => {
 					if (playSessionIdRef.current === sessionId && isPlayingRef.current) {
@@ -625,7 +629,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		}
 
 		const utterance = new SpeechSynthesisUtterance(textToSpeak);
-		utterance.rate = speechRate;
+		utterance.rate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.0;
 
 		const voices = synth.getVoices();
 		const selectedVoice = voices.find((v) => v.voiceURI === voiceUri || v.name === voiceUri);
@@ -911,6 +915,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		isPlaying,
 		isPaused,
 		isLoading,
+		isTTSActive: isPlaying || isPaused || isLoading,
 		currentChunkIndex,
 		activeParagraphIndex,
 		startReading,

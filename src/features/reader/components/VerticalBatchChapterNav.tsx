@@ -200,6 +200,20 @@ export function VerticalBatchChapterNav({
 							>
 								<Pause size={16} fill="currentColor" />
 							</motion.button>
+						) : isTTSLoading ? (
+							<motion.button
+								whileTap={{ scale: 0.88 }}
+								onClick={(e) => {
+									e.stopPropagation();
+									triggerHaptic('medium');
+									if (onTTSPause) onTTSPause();
+								}}
+								className="w-9.5 h-9.5 rounded-full flex items-center justify-center bg-primary/25 text-primary border border-primary/60 backdrop-blur-[2px] shadow-[0_3px_12px_rgba(0,0,0,0.4),_inset_0_1px_1px_rgba(255,255,255,0.45)] hover:bg-primary/35 transition-colors cursor-pointer"
+								title="Đang tải câu tiếp..."
+								aria-label="Đang tải câu tiếp"
+							>
+								<Loader2 size={16} className="animate-spin text-primary" />
+							</motion.button>
 						) : (
 							<motion.button
 								whileTap={{ scale: 0.88 }}

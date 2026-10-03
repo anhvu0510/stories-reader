@@ -24,6 +24,7 @@ import { QuickChapterSelectSheet } from './components/QuickChapterSelectSheet';
 import { QuickTypographySheet } from './components/QuickTypographySheet';
 import { ReaderHeader } from './components/ReaderHeader';
 import { ReaderQuickControl } from './components/ReaderQuickControl';
+import { SelectionSpeakerTooltip } from './components/SelectionSpeakerTooltip';
 import { VerticalBatchChapterNav } from './components/VerticalBatchChapterNav';
 
 import type { ChapterContent, ChapterDetailItem } from '@/shared/types';
@@ -157,13 +158,15 @@ export function ReaderScreen() {
 		isPlaying,
 		isPaused,
 		isLoading: isTTSLoading,
+		isTTSActive,
 		currentChunkIndex,
 		activeParagraphIndex,
 		startReading,
 		pauseReading,
 		stopReading,
 		nextSection,
-		prevSection
+		prevSection,
+		jumpToContent
 	} = useReadAloud(
 		allParagraphs,
 		{
@@ -687,9 +690,9 @@ export function ReaderScreen() {
 				chapterTitle={currentViewingTitle}
 				progress={scrollProgress}
 				isVisible={true}
-				isTTSActive={isPlaying || isPaused}
+				isTTSActive={isTTSActive}
 				isRefreshingLatest={isRefreshingLatest}
-				onToggleTTS={() => (isPlaying || isPaused || isTTSLoading ? stopReading() : startReading())}
+				onToggleTTS={() => (isTTSActive ? stopReading() : startReading())}
 				onOpenHistory={handleOpenHistory}
 				onTitleClick={handleTitleSingleClick}
 				onTitleDoubleClick={handleTitleDoubleClick}
@@ -699,15 +702,15 @@ export function ReaderScreen() {
 			<VerticalBatchChapterNav
 				chapters={displayChapters}
 				activeChapterId={activeChapter?.chapterId}
-				isVisible={showZenControls && (showTTSControlOnReader || isPlaying || isPaused || isTTSLoading || hasEdgeReadAloud)}
-				isTTSActive={isPlaying || isPaused}
+				isVisible={showZenControls && (showTTSControlOnReader || isTTSActive || hasEdgeReadAloud)}
+				isTTSActive={isTTSActive}
 				isTTSLoading={isTTSLoading}
 				isTTSPlaying={isPlaying}
 				isBgmActive={isBgmPlaying}
 				showTTSControl={showTTSControlOnReader}
 				onToggleBgm={handleToggleBgm}
 				currentParagraphIndex={activeParagraphIndex}
-				onToggleTTS={() => (isPlaying || isPaused || isTTSLoading ? stopReading() : startReading())}
+				onToggleTTS={() => (isTTSActive ? stopReading() : startReading())}
 				onTTSPlay={startReading}
 				onTTSPause={pauseReading}
 				onTTSStop={stopReading}
@@ -776,6 +779,13 @@ export function ReaderScreen() {
 					/>
 				)}
 			</div>
+
+			{/* Floating Selection Speaker Tooltip for Speaking from Selected Word/Sentence */}
+			<SelectionSpeakerTooltip
+				onSpeak={(paragraphIndex, charOffset) => {
+					jumpToContent(paragraphIndex, charOffset);
+				}}
+			/>
 
 			{/* Visual Touch Double-Tap Ripple Feedback */}
 			{ripple && (
