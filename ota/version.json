@@ -1,7 +1,7 @@
 {
-  "version": "1.0.284",
+  "version": "1.0.285",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "5494df223727aef966a3d259026a1bc32c51d741e8b84822569027ab05b39b2f",
-  "releaseNotes": "feat: support starting read aloud and pull-to-refresh edge gesture exclusion from specific text offsets",
-  "updatedAt": "2026-10-03T19:51:41Z"
+  "checksum": "eee13416334f918198b312db69c5a40b1ed82a4a10f01b703b3f1038c464d89f",
+  "releaseNotes": "feat: add swipe gesture hook and screen navigation support",
+  "updatedAt": "2026-10-03T20:04:20Z"
 }
