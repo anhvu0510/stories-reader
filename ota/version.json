@@ -1,7 +1,7 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "8471fb8a12e421b4793241ec5557fe83e10b05fcaa42f31e4ce2505c108d2106",
-  "releaseNotes": "fix(ota): add sha256 checksum to bundle manifest and trigger [apk] build",
-  "updatedAt": "2026-10-03T15:56:05Z"
+  "checksum": "acd5e37345438b3e037b48211f2929cb37102e30eda063177251737da61f7264",
+  "releaseNotes": "feat(ui): add ota live badge to library header and release v1.0.3",
+  "updatedAt": "2026-10-03T16:01:13Z"
 }
