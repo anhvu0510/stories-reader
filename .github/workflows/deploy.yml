@@ -32,7 +32,7 @@ jobs:
 
       - name: Build Web Application & Prepare OTA
         env:
-          VITE_BASE_PATH: /stories-reader/
+          VITE_BASE_PATH: ./
         run: |
           npm run build
           VERSION=$(node -p "require('./package.json').version || '1.0.1'")

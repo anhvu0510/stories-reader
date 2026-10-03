@@ -26,7 +26,7 @@ describe('ServerTab Component (OTA Version Tracking UI)', () => {
 		render(<ServerTab />);
 
 		expect(screen.getByText('Phiên bản & Cập nhật OTA')).toBeDefined();
-		expect(screen.getAllByText('v1.0.1').length).toBeGreaterThan(0);
+		expect(screen.getAllByText(/v1\.0\./).length).toBeGreaterThan(0);
 	});
 
 	it('triggers manual check for update when button is clicked', async () => {

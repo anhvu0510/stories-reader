@@ -7,7 +7,7 @@ import {defineConfig} from 'vitest/config';
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
-    base: env.VITE_BASE_PATH || '/',
+    base: env.VITE_BASE_PATH || './',
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
