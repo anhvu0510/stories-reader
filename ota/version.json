@@ -1,6 +1,6 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "releaseNotes": "feat(settings): add app version tracking and manual OTA update check in UI",
-  "updatedAt": "2026-10-03T15:43:59Z"
+  "releaseNotes": "fix(ota): use relative base path for seamless capacitor android bundle execution and bump to 1.0.2",
+  "updatedAt": "2026-10-03T15:49:18Z"
 }
