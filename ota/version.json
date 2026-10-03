@@ -1,7 +1,7 @@
 {
-  "version": "1.0.281",
+  "version": "1.0.282",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "17eb4e5b1ed36ed25e77d8c7056ca699985dfe584d90136bcc8ef6a8e142f166",
-  "releaseNotes": "feat: add Android wake lock and back navigation support, and improve read-aloud text highlighting",
-  "updatedAt": "2026-10-03T19:32:51Z"
+  "checksum": "4d91d22f787f9674432c2948061a9b7c7b1337846a99e5086e23fee66f180377",
+  "releaseNotes": "refactor: remove previous section navigation button and associated tests from VerticalBatchChapterNav",
+  "updatedAt": "2026-10-03T19:34:51Z"
 }
