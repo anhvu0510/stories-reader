@@ -47,34 +47,6 @@ export const DEFAULT_EDGE_VOICES: EdgeVoice[] = [
 		language: 'vi-VN',
 		gender: 'male',
 		desc: 'Giọng nam tiếng Việt truyền cảm'
-	},
-	{
-		id: 'en-US-AvaNeural',
-		name: 'Ava (Female - English US)',
-		language: 'en-US',
-		gender: 'female',
-		desc: 'Giọng nữ tiếng Anh tự nhiên (US)'
-	},
-	{
-		id: 'en-US-AndrewNeural',
-		name: 'Andrew (Male - English US)',
-		language: 'en-US',
-		gender: 'male',
-		desc: 'Giọng nam tiếng Anh truyền cảm (US)'
-	},
-	{
-		id: 'en-US-EmmaNeural',
-		name: 'Emma (Female - English US)',
-		language: 'en-US',
-		gender: 'female',
-		desc: 'Giọng nữ tiếng Anh chuẩn'
-	},
-	{
-		id: 'en-US-BrianNeural',
-		name: 'Brian (Male - English US)',
-		language: 'en-US',
-		gender: 'male',
-		desc: 'Giọng nam tiếng Anh ấm áp'
 	}
 ];
 
