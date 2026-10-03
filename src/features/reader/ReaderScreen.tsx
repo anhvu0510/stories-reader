@@ -181,6 +181,13 @@ export function ReaderScreen() {
 		paragraphChapterContexts
 	);
 
+	const handleSelectionSpeak = useCallback(
+		(paragraphIndex: number, charOffset: number) => {
+			jumpToContent(paragraphIndex, charOffset);
+		},
+		[jumpToContent]
+	);
+
 	// Keep single global LoadingOverlay active until chapter data is rendered in React state
 	useGlobalLoading(loading || isRefreshingLatest);
 
@@ -430,6 +437,12 @@ export function ReaderScreen() {
 
 	const handleTouchEnd = useCallback(
 		(e?: React.TouchEvent) => {
+			const selection = typeof window !== 'undefined' ? window.getSelection() : null;
+			if (selection && !selection.isCollapsed && selection.toString().trim()) {
+				touchStartPosRef.current = null;
+				return;
+			}
+
 			const now = Date.now();
 			let isMoved = false;
 
@@ -823,9 +836,7 @@ export function ReaderScreen() {
 			{/* Floating Selection Speaker Tooltip for Speaking from Selected Word/Sentence */}
 			<SelectionSpeakerTooltip
 				isTTSActive={isTTSActive}
-				onSpeak={(paragraphIndex, charOffset) => {
-					jumpToContent(paragraphIndex, charOffset);
-				}}
+				onSpeak={handleSelectionSpeak}
 			/>
 
 			{/* Visual Touch Double-Tap Ripple Feedback */}

@@ -18,45 +18,46 @@ interface TooltipPosition {
 export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-content', isTTSActive = false }: SelectionSpeakerTooltipProps) {
 	const [position, setPosition] = useState<TooltipPosition | null>(null);
 	const isInteractingRef = useRef(false);
+	const onSpeakRef = useRef(onSpeak);
+	const selectionDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const updateSelection = useCallback(() => {
-		if (typeof window === 'undefined') return;
-		if (isTTSActive || isInteractingRef.current) {
-			setPosition(null);
-			return;
-		}
+	useEffect(() => {
+		onSpeakRef.current = onSpeak;
+	});
+
+	const extractSelectionTarget = useCallback((): {
+		paragraphIndex: number;
+		charOffset: number;
+		rect: DOMRect;
+	} | null => {
+		if (typeof window === 'undefined') return null;
 
 		const selection = window.getSelection();
 		if (!selection || selection.isCollapsed || !selection.rangeCount) {
-			setPosition(null);
-			return;
+			return null;
 		}
 
 		const selectedText = selection.toString().trim();
 		if (!selectedText) {
-			setPosition(null);
-			return;
+			return null;
 		}
 
 		const range = selection.getRangeAt(0);
 		const container = document.getElementById(containerId);
 		if (!container || !container.contains(range.startContainer)) {
-			setPosition(null);
-			return;
+			return null;
 		}
 
 		// Find the closest paragraph element with data-paragraph-index
 		const startNode = range.startContainer;
 		const paraEl = (startNode instanceof Element ? startNode : startNode.parentElement)?.closest('[data-paragraph-index]');
 		if (!paraEl) {
-			setPosition(null);
-			return;
+			return null;
 		}
 
 		const pIdx = Number(paraEl.getAttribute('data-paragraph-index'));
 		if (Number.isNaN(pIdx)) {
-			setPosition(null);
-			return;
+			return null;
 		}
 
 		// Calculate character offset from the beginning of the paragraph
@@ -71,32 +72,92 @@ export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-con
 		}
 
 		const rect = range.getBoundingClientRect();
-		if (rect.width === 0 && rect.height === 0) {
+		return {
+			paragraphIndex: pIdx,
+			charOffset,
+			rect
+		};
+	}, [containerId]);
+
+	const executeAutoJumpInReadMode = useCallback(() => {
+		if (!isTTSActive || isInteractingRef.current) return;
+
+		const target = extractSelectionTarget();
+		if (!target) return;
+
+		if (selectionDebounceTimerRef.current) {
+			clearTimeout(selectionDebounceTimerRef.current);
+			selectionDebounceTimerRef.current = null;
+		}
+
+		isInteractingRef.current = true;
+		triggerHaptic('light');
+		onSpeakRef.current(target.paragraphIndex, target.charOffset);
+
+		// Clear selection so Android OS text selection handles & action bar close cleanly
+		try {
+			const sel = window.getSelection();
+			if (sel && sel.removeAllRanges) {
+				sel.removeAllRanges();
+			}
+		} catch {}
+
+		// Suppress duplicate re-triggers while removeAllRanges() settles
+		setTimeout(() => {
+			isInteractingRef.current = false;
+		}, 400);
+	}, [isTTSActive, extractSelectionTarget]);
+
+	const updateSelection = useCallback(() => {
+		if (typeof window === 'undefined') return;
+
+		if (isTTSActive) {
+			setPosition(null);
+			if (isInteractingRef.current) return;
+
+			if (selectionDebounceTimerRef.current) {
+				clearTimeout(selectionDebounceTimerRef.current);
+			}
+
+			// When holding down ("nhấn giữ") on mobile, selectionchange fires and settles.
+			// Debounce ~250ms to allow mobile touch handles to settle before jumping.
+			selectionDebounceTimerRef.current = setTimeout(() => {
+				executeAutoJumpInReadMode();
+			}, 250);
+			return;
+		}
+
+		if (isInteractingRef.current) {
 			setPosition(null);
 			return;
 		}
 
-		// Position tooltip BELOW the selection to avoid colliding with the Android OS Action Mode menu
-		// (which renders directly above the selection rect.top)
+		const target = extractSelectionTarget();
+		if (!target || (target.rect.width === 0 && target.rect.height === 0)) {
+			setPosition(null);
+			return;
+		}
+
+		// Position tooltip BELOW the selection to avoid colliding with native mobile Action Mode menu
 		const TOOLTIP_HEIGHT = 38;
 		const GAP = 12;
-		let top = rect.bottom + GAP;
+		let top = target.rect.bottom + GAP;
 
 		// If too close to the bottom edge of the viewport, position it safely above or clamp
 		if (top + TOOLTIP_HEIGHT > window.innerHeight - 70) {
-			top = Math.max(16, rect.top - TOOLTIP_HEIGHT - GAP);
+			top = Math.max(16, target.rect.top - TOOLTIP_HEIGHT - GAP);
 		}
 
 		const TOOLTIP_WIDTH = 110;
-		const left = Math.max(16, Math.min(window.innerWidth - TOOLTIP_WIDTH - 16, rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2));
+		const left = Math.max(16, Math.min(window.innerWidth - TOOLTIP_WIDTH - 16, target.rect.left + target.rect.width / 2 - TOOLTIP_WIDTH / 2));
 
 		setPosition({
 			top,
 			left,
-			paragraphIndex: pIdx,
-			charOffset
+			paragraphIndex: target.paragraphIndex,
+			charOffset: target.charOffset
 		});
-	}, [containerId, isTTSActive]);
+	}, [isTTSActive, extractSelectionTarget, executeAutoJumpInReadMode]);
 
 	useEffect(() => {
 		if (isTTSActive) {
@@ -108,7 +169,6 @@ export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-con
 		if (typeof document === 'undefined') return;
 
 		const handleSelectionChange = () => {
-			// Debounce slightly to allow mobile touch handles to settle
 			requestAnimationFrame(() => {
 				updateSelection();
 			});
@@ -122,62 +182,43 @@ export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-con
 			document.removeEventListener('selectionchange', handleSelectionChange);
 			window.removeEventListener('resize', handleSelectionChange);
 			window.removeEventListener('scroll', handleSelectionChange);
+			if (selectionDebounceTimerRef.current) {
+				clearTimeout(selectionDebounceTimerRef.current);
+			}
 		};
 	}, [updateSelection]);
 
-	// When in TTS read mode: if user selects text, immediately jump to that position upon selection completion
+	// Native Android gesture / long-press / touch end event listeners for TTS mode
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
 
-		const handleInteractionEnd = () => {
+		const handleImmediateJump = (e?: Event) => {
 			if (!isTTSActive) return;
-
+			// Prevent default contextmenu popup if user selected text in TTS read mode
+			if (e && e.type === 'contextmenu') {
+				const target = extractSelectionTarget();
+				if (target) {
+					e.preventDefault();
+				}
+			}
 			requestAnimationFrame(() => {
-				const selection = window.getSelection();
-				if (!selection || selection.isCollapsed || !selection.rangeCount) return;
-
-				const selectedText = selection.toString().trim();
-				if (!selectedText) return;
-
-				const range = selection.getRangeAt(0);
-				const container = document.getElementById(containerId);
-				if (!container || !container.contains(range.startContainer)) return;
-
-				const startNode = range.startContainer;
-				const paraEl = (startNode instanceof Element ? startNode : startNode.parentElement)?.closest('[data-paragraph-index]');
-				if (!paraEl) return;
-
-				const pIdx = Number(paraEl.getAttribute('data-paragraph-index'));
-				if (Number.isNaN(pIdx)) return;
-
-				let charOffset = 0;
-				try {
-					const preRange = document.createRange();
-					preRange.selectNodeContents(paraEl);
-					preRange.setEnd(range.startContainer, range.startOffset);
-					charOffset = preRange.toString().length;
-				} catch {
-					charOffset = 0;
-				}
-
-				triggerHaptic('light');
-				onSpeak(pIdx, charOffset);
-
-				// Clear selection so Android/browser action menu doesn't block the screen
-				if (window.getSelection) {
-					window.getSelection()?.removeAllRanges();
-				}
+				executeAutoJumpInReadMode();
 			});
 		};
 
-		window.addEventListener('mouseup', handleInteractionEnd);
-		window.addEventListener('touchend', handleInteractionEnd);
+		// Android long-press fires contextmenu / touchcancel when native text selection mode activates
+		window.addEventListener('contextmenu', handleImmediateJump);
+		window.addEventListener('touchcancel', handleImmediateJump);
+		window.addEventListener('touchend', handleImmediateJump);
+		window.addEventListener('mouseup', handleImmediateJump);
 
 		return () => {
-			window.removeEventListener('mouseup', handleInteractionEnd);
-			window.removeEventListener('touchend', handleInteractionEnd);
+			window.removeEventListener('contextmenu', handleImmediateJump);
+			window.removeEventListener('touchcancel', handleImmediateJump);
+			window.removeEventListener('touchend', handleImmediateJump);
+			window.removeEventListener('mouseup', handleImmediateJump);
 		};
-	}, [isTTSActive, containerId, onSpeak]);
+	}, [isTTSActive, executeAutoJumpInReadMode, extractSelectionTarget]);
 
 
 	const handleAction = (e: React.MouseEvent | React.TouchEvent) => {

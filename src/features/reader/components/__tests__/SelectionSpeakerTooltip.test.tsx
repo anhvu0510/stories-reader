@@ -159,5 +159,100 @@ describe('SelectionSpeakerTooltip Component', () => {
 		expect(onSpeak).toHaveBeenCalledWith(2, 5);
 		expect(removeAllRanges).toHaveBeenCalled();
 	});
+
+	it('in TTS active mode, automatically jumps to selection on Android touchcancel or contextmenu without mouseup/touchend', async () => {
+		const p = document.createElement('div');
+		p.setAttribute('data-paragraph-index', '7');
+		p.textContent = 'Mục được chọn khi người dùng nhấn giữ trên mobile.';
+		containerDiv.appendChild(p);
+
+		const onSpeak = vi.fn();
+		const removeAllRanges = vi.fn();
+		render(<SelectionSpeakerTooltip onSpeak={onSpeak} isTTSActive={true} />);
+
+		const range = {
+			startContainer: p.firstChild!,
+			startOffset: 4,
+			endContainer: p.firstChild!,
+			endOffset: 18,
+			commonAncestorContainer: p,
+			getBoundingClientRect: () => ({
+				top: 200,
+				bottom: 220,
+				left: 50,
+				right: 200,
+				width: 150,
+				height: 20
+			})
+		} as unknown as Range;
+
+		vi.spyOn(window, 'getSelection').mockReturnValue({
+			isCollapsed: false,
+			rangeCount: 1,
+			toString: () => 'được chọn khi',
+			getRangeAt: () => range,
+			removeAllRanges
+		} as any);
+
+		// Android long-press fires contextmenu / touchcancel when native ActionMode appears
+		act(() => {
+			window.dispatchEvent(new MouseEvent('contextmenu', { cancelable: true }));
+		});
+
+		expect(onSpeak).toHaveBeenCalledWith(7, 4);
+		expect(removeAllRanges).toHaveBeenCalled();
+	});
+
+	it('in TTS active mode, automatically jumps when user presses and holds (selectionchange stabilizes)', async () => {
+		vi.useFakeTimers();
+		try {
+			const p = document.createElement('div');
+			p.setAttribute('data-paragraph-index', '9');
+			p.textContent = 'Người dùng cuộn xuống nhấn giữ đoạn này.';
+			containerDiv.appendChild(p);
+
+			const onSpeak = vi.fn();
+			const removeAllRanges = vi.fn();
+			render(<SelectionSpeakerTooltip onSpeak={onSpeak} isTTSActive={true} />);
+
+			const range = {
+				startContainer: p.firstChild!,
+				startOffset: 11,
+				endContainer: p.firstChild!,
+				endOffset: 25,
+				commonAncestorContainer: p,
+				getBoundingClientRect: () => ({
+					top: 300,
+					bottom: 320,
+					left: 50,
+					right: 220,
+					width: 170,
+					height: 20
+				})
+			} as unknown as Range;
+
+			vi.spyOn(window, 'getSelection').mockReturnValue({
+				isCollapsed: false,
+				rangeCount: 1,
+				toString: () => 'cuộn xuống nhấn',
+				getRangeAt: () => range,
+				removeAllRanges
+			} as any);
+
+			act(() => {
+				document.dispatchEvent(new Event('selectionchange'));
+			});
+
+			// Still holding down: advance timers past debounce threshold
+			act(() => {
+				vi.advanceTimersByTime(300);
+			});
+
+			expect(onSpeak).toHaveBeenCalledWith(9, 11);
+			expect(removeAllRanges).toHaveBeenCalled();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
 });
 
