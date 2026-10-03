@@ -1,7 +1,7 @@
 {
-  "version": "1.0.288",
+  "version": "1.0.289",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "bfe1121f1f91573161729fc25e381fedc1970edb22610b9c389d886d35b2da94",
-  "releaseNotes": "refactor: enhance read-aloud streaming, jump seeking, quick chapter sheet scrolling, and add unit tests",
-  "updatedAt": "2026-10-03T20:33:41Z"
+  "checksum": "698035070e34538a436e5747cf01fad6f2d3a434eebe48c77aa682ac36f0826a",
+  "releaseNotes": "feat: enhance Edge TTS read-aloud prefetching and sliding window caching with concurrency control",
+  "updatedAt": "2026-10-03T20:34:40Z"
 }
