@@ -1,7 +1,7 @@
 {
-  "version": "1.0.290",
+  "version": "1.0.291",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "d13a6b1c8719208f050d096f3d6aab2aad03d1189d47275a16de9721fc01e13c",
-  "releaseNotes": "style: update bottom sheet and dock glassmorphic styling and transparency",
-  "updatedAt": "2026-10-03T20:51:57Z"
+  "checksum": "013d56bf9d773ac1ad3cf4ec181b2a05507e6e0236a69a4a6e43d181139df742",
+  "releaseNotes": "feat: add comprehensive logging and caching utilities for EdgeTTS and repository operations",
+  "updatedAt": "2026-10-03T21:04:45Z"
 }
