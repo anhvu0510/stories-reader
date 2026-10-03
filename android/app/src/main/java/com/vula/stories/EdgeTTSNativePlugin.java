@@ -100,11 +100,14 @@ public class EdgeTTSNativePlugin extends Plugin {
         String pitch = call.getString("pitch", "+0Hz");
 
         try {
+            final long startTime = System.currentTimeMillis();
+            Log.i(TAG, "[EdgeTTS] Yêu cầu tổng hợp giọng nói: textLen=" + text.length() + ", voice=" + voice + ", rate=" + rate);
             String secMsGec = generateSecMsGec();
             String wssUrl = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1"
                     + "?TrustedClientToken=" + TRUSTED_CLIENT_TOKEN
                     + "&Sec-MS-GEC=" + secMsGec
                     + "&Sec-MS-GEC-Version=" + SEC_MS_GEC_VERSION;
+            Log.i(TAG, "[EdgeTTS] Đang kết nối tới máy chủ Edge: " + wssUrl);
 
             Request request = new Request.Builder()
                     .url(wssUrl)
@@ -128,6 +131,7 @@ public class EdgeTTSNativePlugin extends Plugin {
                 @Override
                 public void onOpen(WebSocket webSocket, Response response) {
                     try {
+                        Log.i(TAG, "[EdgeTTS] Đã kết nối thành công tới máy chủ Edge (HTTP " + response.code() + "). Đang gửi cấu hình và SSML (requestId=" + requestId + ")...");
                         // 1. Send speech.config
                         String configPayload = "{\"context\":{\"synthesis\":{\"audio\":{\"metadataoptions\":{\"sentenceBoundaryEnabled\":\"false\",\"wordBoundaryEnabled\":\"true\"},\"outputFormat\":\"audio-24khz-48kbitrate-mono-mp3\"}}}}";
                         String configMsg = "X-Timestamp: " + getTimestampIso() + "\r\n"
@@ -244,9 +248,12 @@ public class EdgeTTSNativePlugin extends Plugin {
                                 if (!isResolved[0]) {
                                     isResolved[0] = true;
                                     byte[] audioBytes = audioBuffer.toByteArray();
+                                    long elapsed = System.currentTimeMillis() - startTime;
                                     if (audioBytes.length == 0) {
+                                        Log.w(TAG, "[EdgeTTS] Không nhận được âm thanh từ máy chủ Edge sau " + elapsed + "ms");
                                         call.reject("No audio received from Edge TTS", "NO_AUDIO");
                                     } else {
+                                        Log.i(TAG, "[EdgeTTS] Hoàn tất tổng hợp âm thanh từ máy chủ Edge sau " + elapsed + "ms (audioBytes=" + audioBytes.length + ", boundaries=" + wordBoundaries.length() + ")");
                                         String base64 = Base64.encodeToString(audioBytes, Base64.NO_WRAP);
                                         JSObject ret = new JSObject();
                                         ret.put("audioBase64", base64);
@@ -259,15 +266,21 @@ public class EdgeTTSNativePlugin extends Plugin {
                             webSocket.close(1000, "Done");
                         }
                     } catch (Exception ex) {
-                        Log.e(TAG, "Error handling WebSocket text frame", ex);
+                        Log.e(TAG, "[EdgeTTS] Lỗi xử lý khung tin nhắn từ máy chủ Edge", ex);
                     }
                 }
 
                 @Override
+                public void onClosed(WebSocket webSocket, int code, String reason) {
+                    Log.d(TAG, "[EdgeTTS] Đã đóng kết nối với máy chủ Edge: code=" + code + ", reason=" + reason);
+                }
+
+                @Override
                 public void onFailure(WebSocket webSocket, Throwable t, Response response) {
-                    String errorMsg = t.getMessage();
+                    long elapsed = System.currentTimeMillis() - startTime;
+                    String errorMsg = t != null ? t.getMessage() : "Unknown error";
                     int statusCode = response != null ? response.code() : 0;
-                    Log.e(TAG, "WebSocket synthesis failed. Code: " + statusCode + ", Err: " + errorMsg);
+                    Log.e(TAG, "[EdgeTTS] Kết nối/xử lý với máy chủ Edge THẤT BẠI sau " + elapsed + "ms. Code: " + statusCode + ", Err: " + errorMsg, t);
 
                     synchronized (isResolved) {
                         if (!isResolved[0]) {

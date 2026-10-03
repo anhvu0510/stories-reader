@@ -17,6 +17,7 @@ import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { offlineDb } from '@/lib/offlineDb';
 import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
+import { clearAllCaches } from '@/shared/utils/cacheUtils';
 import { openNextChapter, openPrevChapter } from '@/shared/utils/openChapter';
 import { useAppStore } from '@/stores/useAppStore';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
@@ -601,8 +602,10 @@ export function ReaderScreen() {
 
 	const handlePullRefresh = useCallback(async () => {
 		stopReading();
+		await clearAllCaches();
 		await loadChapter(true);
-	}, [stopReading, loadChapter]);
+		showToast('Đã tải lại chương mới nhất từ máy chủ', 'success');
+	}, [stopReading, loadChapter, showToast]);
 
 	// Native Swipe Gestures for Mobile Chapter Navigation with Smooth Page Transitions
 	const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);

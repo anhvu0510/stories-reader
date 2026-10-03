@@ -15,7 +15,8 @@ export const ChapterRepository = {
 		state?: string,
 		search?: string,
 		fromChapterNumber?: number,
-		toChapterNumber?: number
+		toChapterNumber?: number,
+		options?: { forceFresh?: boolean }
 	): Promise<{ chapters: Chapter[]; pagination: any }> {
 		const isOffline = useAppStore.getState().isOfflineMode;
 
@@ -31,8 +32,20 @@ export const ChapterRepository = {
 				if (search) query.append('search', search);
 				if (fromChapterNumber !== undefined) query.append('fromChapterNumber', fromChapterNumber.toString());
 				if (toChapterNumber !== undefined) query.append('toChapterNumber', toChapterNumber.toString());
+				if (options?.forceFresh) {
+					query.append('_t', Date.now().toString());
+				}
 
-				const res = await apiClient.get<any>(`/api/books/${bookId}/chapters?${query.toString()}`, { timeout: 2500, retries: 0, silent: true });
+				const requestOptions: any = { timeout: 2500, retries: 0, silent: true };
+				if (options?.forceFresh) {
+					requestOptions.headers = {
+						'Cache-Control': 'no-cache, no-store, must-revalidate',
+						Pragma: 'no-cache'
+					};
+					requestOptions.cache = 'no-store';
+				}
+
+				const res = await apiClient.get<any>(`/api/books/${bookId}/chapters?${query.toString()}`, requestOptions);
 				if (res) {
 					const rawItems = res.chapters || res.data || res.items || (Array.isArray(res) ? res : []);
 					const rawChapters: Chapter[] = rawItems.map((c: any, idx: number) => ({

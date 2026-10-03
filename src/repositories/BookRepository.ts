@@ -14,8 +14,21 @@ export interface GetBooksResult {
 	};
 }
 
+export interface GetBooksOptions {
+	forceFresh?: boolean;
+}
+
 export const BookRepository = {
-	async getBooks(page: number = 1, limit: number = 20, search?: string, tab?: string, sortBy: string = 'createdAt', sortOrder: string = 'DESC', tags?: string[]): Promise<GetBooksResult> {
+	async getBooks(
+		page: number = 1,
+		limit: number = 20,
+		search?: string,
+		tab?: string,
+		sortBy: string = 'createdAt',
+		sortOrder: string = 'DESC',
+		tags?: string[],
+		options?: GetBooksOptions
+	): Promise<GetBooksResult> {
 		const isOffline = useAppStore.getState().isOfflineMode;
 
 		let allBooks: Book[] = [];
@@ -37,11 +50,23 @@ export const BookRepository = {
 				if (tags && tags.length > 0) {
 					query.append('tags', tags.join(','));
 				}
+				if (options?.forceFresh) {
+					query.append('_t', Date.now().toString());
+				}
 
-				const res = await apiClient.get<any>(`/api/books?${query.toString()}`, {
+				const requestOptions: any = {
 					timeout: 2500,
 					retries: 0
-				});
+				};
+				if (options?.forceFresh) {
+					requestOptions.headers = {
+						'Cache-Control': 'no-cache, no-store, must-revalidate',
+						Pragma: 'no-cache'
+					};
+					requestOptions.cache = 'no-store';
+				}
+
+				const res = await apiClient.get<any>(`/api/books?${query.toString()}`, requestOptions);
 				if (res) {
 					const books = res.books || res.data || (Array.isArray(res) ? res : []);
 					const pag = res.pagination || {};

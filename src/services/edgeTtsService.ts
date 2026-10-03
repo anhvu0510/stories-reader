@@ -56,21 +56,29 @@ function base64ToBlob(base64: string, mimeType = 'audio/mpeg'): Blob {
 }
 
 async function reportClientError(baseUrl: string | undefined, error: unknown, context: Record<string, unknown>) {
+	const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
+	const targetUrl = `${rootUrl}/api/logs/client-error`;
+	const errorMsg = error instanceof Error ? error.message : String(error);
+	console.info(`[EdgeTTS] Gửi báo cáo lỗi client/native lên server gateway (${targetUrl}): ${errorMsg}`, context);
 	try {
-		const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
-		await fetch(`${rootUrl}/api/logs/client-error`, {
+		const res = await fetch(targetUrl, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				platform: 'android',
 				source: 'EdgeTTSNative',
 				level: 'error',
-				error: error instanceof Error ? error.message : String(error),
+				error: errorMsg,
 				details: context
 			})
 		});
-	} catch {
-		// Silent catch for logger network failure
+		if (!res.ok) {
+			console.warn(`[EdgeTTS] Server gateway phản hồi lỗi khi nhận log: HTTP ${res.status}`);
+		} else {
+			console.info('[EdgeTTS] Đã gửi báo cáo lỗi thành công lên server gateway');
+		}
+	} catch (logErr) {
+		console.warn('[EdgeTTS] Không thể kết nối tới server gateway để gửi log lỗi:', logErr);
 	}
 }
 
@@ -154,18 +162,22 @@ export function mapEdgeWordBoundaries(
 
 export class EdgeTTSService {
 	public static async fetchVoices(baseUrl?: string): Promise<EdgeVoice[]> {
+		const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
+		const targetUrl = `${rootUrl}/tts/edge/voices`;
+		console.info(`[EdgeTTS:Voices] Đang lấy danh sách giọng từ server gateway: ${targetUrl}`);
 		try {
-			const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
-			const targetUrl = `${rootUrl}/tts/edge/voices`;
+			const startTime = performance.now();
 			const response = await fetch(targetUrl, {
 				method: 'GET',
 				headers: { Accept: 'application/json' }
 			});
+			const elapsed = Math.round(performance.now() - startTime);
 			if (!response.ok) {
 				throw new Error(`HTTP error ${response.status}`);
 			}
 			const data = await response.json();
 			if (Array.isArray(data?.voices) && data.voices.length > 0) {
+				console.info(`[EdgeTTS:Voices] Đã lấy thành công ${data.voices.length} giọng từ server gateway (${elapsed}ms)`);
 				return data.voices;
 			}
 		} catch (err) {
@@ -183,6 +195,8 @@ export class EdgeTTSService {
 
 		// Android Native flow: in-memory bypass via OkHttp WebSocket
 		if (Capacitor.isNativePlatform()) {
+			console.info(`[EdgeTTS:Native] Bắt đầu tổng hợp native: voice=${voice}, speed=${speed} (${ratePercentage}), textLen=${text.length}`);
+			const startTime = performance.now();
 			try {
 				const res = await EdgeTTSNative.synthesize({
 					text: text.trim(),
@@ -190,11 +204,16 @@ export class EdgeTTSService {
 					rate: ratePercentage,
 					pitch: '+0Hz'
 				});
-				return base64ToBlob(res.audioBase64, res.mimeType || 'audio/mpeg');
+				const elapsed = Math.round(performance.now() - startTime);
+				const blob = base64ToBlob(res.audioBase64, res.mimeType || 'audio/mpeg');
+				console.info(`[EdgeTTS:Native] Tổng hợp native thành công sau ${elapsed}ms: size=${blob.size} bytes`);
+				return blob;
 			} catch (err) {
+				const elapsed = Math.round(performance.now() - startTime);
 				const errMsg = err instanceof Error ? err.message : String(err);
+				console.error(`[EdgeTTS:Native] Tổng hợp native thất bại sau ${elapsed}ms: ${errMsg}`, err);
 				useToastStore.getState().showToast(`Lỗi Edge TTS: ${errMsg}`, 'error');
-				void reportClientError(baseUrl, err, { text: text.slice(0, 80), voice, speed });
+				void reportClientError(baseUrl, err, { text: text.slice(0, 80), voice, speed, elapsedMs: elapsed });
 				throw err;
 			}
 		}
@@ -202,6 +221,8 @@ export class EdgeTTSService {
 		// Web Browser fallback via Gateway API
 		const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
 		const targetUrl = `${rootUrl}/tts/edge/synthesize`;
+		console.info(`[EdgeTTS:Server] Đang gửi yêu cầu tổng hợp âm thanh lên server gateway (${targetUrl}): voice=${voice}, speed=${speed} (${ratePercentage}), textLen=${text.length}`);
+		const startTime = performance.now();
 
 		const response = await fetch(targetUrl, {
 			method: 'POST',
@@ -217,12 +238,16 @@ export class EdgeTTSService {
 			signal
 		});
 
+		const elapsed = Math.round(performance.now() - startTime);
 		if (!response.ok) {
 			const errText = await response.text().catch(() => '');
+			console.error(`[EdgeTTS:Server] Server gateway trả về lỗi sau ${elapsed}ms: HTTP ${response.status} - ${errText}`);
 			throw new Error(`Edge TTS synthesis failed (${response.status}): ${errText}`);
 		}
 
-		return await response.blob();
+		const blob = await response.blob();
+		console.info(`[EdgeTTS:Server] Server gateway hoàn tất tổng hợp sau ${elapsed}ms: size=${blob.size} bytes`);
+		return blob;
 	}
 
 	public static async synthesizeSpeechWithBoundaries(
@@ -240,6 +265,8 @@ export class EdgeTTSService {
 
 		// Android Native flow: in-memory bypass with word boundaries
 		if (Capacitor.isNativePlatform()) {
+			console.info(`[EdgeTTS:Native] Bắt đầu tổng hợp native kèm word boundaries: voice=${voice}, speed=${speed} (${ratePercentage}), textLen=${text.length}`);
+			const startTime = performance.now();
 			try {
 				const res = await EdgeTTSNative.synthesize({
 					text: text.trim(),
@@ -247,18 +274,23 @@ export class EdgeTTSService {
 					rate: ratePercentage,
 					pitch: '+0Hz'
 				});
+				const elapsed = Math.round(performance.now() - startTime);
 				const blob = base64ToBlob(res.audioBase64, res.mimeType || 'audio/mpeg');
 				const rawBoundaries = res.wordBoundaries || [];
 				const mappedBoundaries = mapEdgeWordBoundaries(text, rawBoundaries);
+				const finalBoundaries = mappedBoundaries.length > 0 ? mappedBoundaries : rawBoundaries;
+				console.info(`[EdgeTTS:Native] Tổng hợp native thành công sau ${elapsed}ms: size=${blob.size} bytes, boundaries=${finalBoundaries.length}`);
 
 				return {
 					audio: blob,
-					wordBoundaries: mappedBoundaries.length > 0 ? mappedBoundaries : rawBoundaries
+					wordBoundaries: finalBoundaries
 				};
 			} catch (err) {
+				const elapsed = Math.round(performance.now() - startTime);
 				const errMsg = err instanceof Error ? err.message : String(err);
+				console.error(`[EdgeTTS:Native] Tổng hợp native thất bại sau ${elapsed}ms: ${errMsg}`, err);
 				useToastStore.getState().showToast(`Lỗi Edge TTS: ${errMsg}`, 'error');
-				void reportClientError(baseUrl, err, { text: text.slice(0, 80), voice, speed });
+				void reportClientError(baseUrl, err, { text: text.slice(0, 80), voice, speed, elapsedMs: elapsed });
 				throw err;
 			}
 		}
@@ -266,6 +298,8 @@ export class EdgeTTSService {
 		// Web Browser fallback via Gateway API
 		const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
 		const targetUrl = `${rootUrl}/tts/edge/synthesize`;
+		console.info(`[EdgeTTS:Server] Đang gửi yêu cầu tổng hợp kèm word boundaries lên server gateway (${targetUrl}): voice=${voice}, speed=${speed} (${ratePercentage}), textLen=${text.length}`);
+		const startTime = performance.now();
 		const response = await fetch(targetUrl, {
 			method: 'POST',
 			headers: {
@@ -281,13 +315,16 @@ export class EdgeTTSService {
 			signal
 		});
 
+		const elapsed = Math.round(performance.now() - startTime);
 		if (!response.ok) {
 			const errText = await response.text().catch(() => '');
+			console.error(`[EdgeTTS:Server] Server gateway trả về lỗi sau ${elapsed}ms: HTTP ${response.status} - ${errText}`);
 			throw new Error(`Edge TTS synthesis failed (${response.status}): ${errText}`);
 		}
 
 		const encodedBoundaries = response.headers.get('X-Word-Boundaries');
 		if (!encodedBoundaries) {
+			console.error(`[EdgeTTS:Server] Server gateway phản hồi nhưng thiếu header X-Word-Boundaries sau ${elapsed}ms`);
 			throw new Error('Edge TTS response did not include word boundaries');
 		}
 
@@ -312,8 +349,11 @@ export class EdgeTTSService {
 			endSeconds: boundary.end_seconds
 		}));
 
+		const blob = await response.blob();
+		console.info(`[EdgeTTS:Server] Server gateway hoàn tất tổng hợp sau ${elapsed}ms: size=${blob.size} bytes, boundaries=${wordBoundaries.length}`);
+
 		return {
-			audio: await response.blob(),
+			audio: blob,
 			wordBoundaries
 		};
 	}

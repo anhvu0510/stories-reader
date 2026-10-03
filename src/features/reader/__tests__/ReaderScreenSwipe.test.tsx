@@ -43,6 +43,9 @@ describe('ReaderScreen - Swipe Gesture Chapter Navigation', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		window.scrollTo = vi.fn();
+		if (typeof document !== 'undefined') {
+			document.body.style.overflow = '';
+		}
 	});
 
 	afterEach(() => {

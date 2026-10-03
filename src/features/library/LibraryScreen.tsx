@@ -10,6 +10,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { BookRepository } from '@/repositories/BookRepository';
+import { clearAllCaches } from '@/shared/utils/cacheUtils';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore, SortByField, SortOrderDirection } from '@/stores/useLibraryStore';
 import { useModalStore } from '@/stores/useModalStore';
@@ -78,7 +79,15 @@ export function LibraryScreen() {
 
 	// Fetch paginated books directly from backend API with tab, tags, and sort filter
 	const fetchBooks = useCallback(
-		async (targetPage: number, querySearch?: string, activeTab?: string, filterTags?: string[], currentSortBy?: SortByField, currentSortOrder?: SortOrderDirection) => {
+		async (
+			targetPage: number,
+			querySearch?: string,
+			activeTab?: string,
+			filterTags?: string[],
+			currentSortBy?: SortByField,
+			currentSortOrder?: SortOrderDirection,
+			options?: { forceFresh?: boolean }
+		) => {
 			const fetchId = ++fetchIdRef.current;
 			setLoading(true);
 			const q = querySearch !== undefined ? querySearch : appliedSearch;
@@ -99,7 +108,9 @@ export function LibraryScreen() {
 			}
 
 			try {
-				const res = await BookRepository.getBooks(targetPage, bookLimit, q, t, sBy, sOrder, tg);
+				const res = options
+					? await BookRepository.getBooks(targetPage, bookLimit, q, t, sBy, sOrder, tg, options)
+					: await BookRepository.getBooks(targetPage, bookLimit, q, t, sBy, sOrder, tg);
 				if (fetchId !== fetchIdRef.current) return;
 				const fetchedBooks = res.books || [];
 				const { currentPage, totalPages: pagesCount, total: totalCount } = res.pagination || {};
@@ -289,8 +300,12 @@ export function LibraryScreen() {
 	const isCustomSortActive = tab === 'ALL' && (sortBy !== defaultSortBy || sortOrder !== defaultSortOrder);
 
 	const handlePullRefresh = useCallback(async () => {
-		await fetchBooks(page, appliedSearch, tab, selectedTags, sortBy, sortOrder);
-	}, [fetchBooks, page, appliedSearch, tab, selectedTags, sortBy, sortOrder]);
+		tabCacheRef.current = {};
+		await clearAllCaches();
+		setPage(1);
+		await fetchBooks(1, appliedSearch, tab, selectedTags, sortBy, sortOrder, { forceFresh: true });
+		showToast('Đã làm mới dữ liệu và xóa bộ nhớ đệm', 'success');
+	}, [fetchBooks, appliedSearch, tab, selectedTags, sortBy, sortOrder, showToast]);
 
 	return (
 		<div className="h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-200">

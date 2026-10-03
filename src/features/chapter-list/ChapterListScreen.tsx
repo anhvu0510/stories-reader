@@ -12,6 +12,7 @@ import { triggerHaptic } from '@/hooks/useHaptic';
 import { downloadManager } from '@/lib/DownloadManager';
 import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
+import { clearAllCaches } from '@/shared/utils/cacheUtils';
 import { useFavoriteStore } from '@/stores/useFavoriteStore';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { useToastStore } from '@/stores/useToastStore';
@@ -69,7 +70,14 @@ export function ChapterListScreen() {
 
 	// Fetch chapters with pagination, sorting & state filter
 	const fetchChapters = useCallback(
-		async (targetPage: number, searchQuery: string, targetState: string, targetSort: 'ASC' | 'DESC', isAppend: boolean = false) => {
+		async (
+			targetPage: number,
+			searchQuery: string,
+			targetState: string,
+			targetSort: 'ASC' | 'DESC',
+			isAppend: boolean = false,
+			options?: { forceFresh?: boolean }
+		) => {
 			if (!bookId) return;
 			const fetchId = ++fetchIdRef.current;
 			if (isAppend) {
@@ -84,7 +92,18 @@ export function ChapterListScreen() {
 					if (bookData) setBook(bookData);
 				}
 
-				const res = await ChapterRepository.getChapters(bookId, targetPage, chapterLimit, 'chapterNumber', targetSort, targetState, searchQuery);
+				const res = await ChapterRepository.getChapters(
+					bookId,
+					targetPage,
+					chapterLimit,
+					'chapterNumber',
+					targetSort,
+					targetState,
+					searchQuery,
+					undefined,
+					undefined,
+					options
+				);
 
 				if (fetchId !== fetchIdRef.current) return;
 
@@ -163,8 +182,10 @@ export function ChapterListScreen() {
 	});
 
 	const handlePullRefresh = useCallback(async () => {
-		await fetchChapters(1, search, filterState, sortOrder, false);
-	}, [fetchChapters, search, filterState, sortOrder]);
+		await clearAllCaches();
+		await fetchChapters(1, search, filterState, sortOrder, false, { forceFresh: true });
+		showToast('Đã làm mới danh sách chương', 'success');
+	}, [fetchChapters, search, filterState, sortOrder, showToast]);
 
 	return (
 		<div className="min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-28 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200">
