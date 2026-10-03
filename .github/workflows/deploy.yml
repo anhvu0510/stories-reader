@@ -34,10 +34,16 @@ jobs:
         env:
           VITE_BASE_PATH: ./
         run: |
-          npm run build
-          VERSION=$(node -p "require('./package.json').version || '1.0.1'")
+          BASE_VERSION=$(node -p "require('./package.json').version || '1.0.0'")
+          MAJOR=$(echo "$BASE_VERSION" | cut -d. -f1)
+          MINOR=$(echo "$BASE_VERSION" | cut -d. -f2)
+          # Tự động sinh version tăng dần theo mỗi lần push/build dựa vào GITHUB_RUN_NUMBER
+          VERSION="${MAJOR}.${MINOR}.${GITHUB_RUN_NUMBER}"
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1)
+
+          echo "🚀 Building Stories Reader v${VERSION}..."
+          VITE_APP_VERSION="${VERSION}" npm run build
 
           # Prepare OTA folder inside dist so it deploys to GitHub Pages CDN
           mkdir -p dist/ota

@@ -6,7 +6,7 @@ import { ServerTab } from '../ServerTab';
 import { AppUpdateService } from '@/services/appUpdateService';
 import { useToastStore } from '@/stores/useToastStore';
 
-describe('ServerTab Component (OTA Version Tracking UI)', () => {
+describe('ServerTab Component (Sync and OTA Update Check UI)', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		useToastStore.setState({ toasts: [] });
@@ -16,60 +16,67 @@ describe('ServerTab Component (OTA Version Tracking UI)', () => {
 		cleanup();
 	});
 
-	it('renders version tracking section and displays active version', async () => {
+	it('renders server API list and update reload button without separate OTA card', async () => {
 		vi.spyOn(AppUpdateService, 'getCurrentAppInfo').mockResolvedValue({
-			version: '1.0.1',
+			version: '1.0.3',
 			isBuiltin: true,
-			native: '1.0.1'
+			native: '1.0.3'
 		});
 
 		render(<ServerTab />);
 
-		expect(screen.getByText('Phiên bản & Cập nhật OTA')).toBeDefined();
-		expect(screen.getAllByText(/v1\.0\./).length).toBeGreaterThan(0);
+		expect(screen.getByText('Danh sách Máy chủ API')).toBeDefined();
+		expect(screen.getByRole('button', { name: /Cập nhật/i })).toBeDefined();
+		// OTA card section was removed
+		expect(screen.queryByText('Phiên bản & Cập nhật OTA')).toBeNull();
 	});
 
-	it('triggers manual check for update when button is clicked', async () => {
+	it('triggers check for update when reload button is clicked and shows toast if latest', async () => {
 		vi.spyOn(AppUpdateService, 'getCurrentAppInfo').mockResolvedValue({
-			version: '1.0.1',
+			version: '1.0.3',
 			isBuiltin: true,
-			native: '1.0.1'
+			native: '1.0.3'
 		});
 
 		const checkSpy = vi.spyOn(AppUpdateService, 'checkForUpdate').mockResolvedValue(null);
 
 		render(<ServerTab />);
 
-		const checkButton = screen.getByRole('button', { name: /Kiểm tra cập nhật/i });
-		fireEvent.click(checkButton);
+		const updateButton = screen.getByRole('button', { name: /Cập nhật/i });
+		fireEvent.click(updateButton);
 
 		await waitFor(() => {
 			expect(checkSpy).toHaveBeenCalled();
+			expect(useToastStore.getState().toasts.some((t) => t.message.includes('phiên bản mới nhất'))).toBe(true);
 		});
 	});
 
-	it('shows update available banner when a newer version is found', async () => {
+	it('downloads and applies update when newer version is found on reload', async () => {
 		vi.spyOn(AppUpdateService, 'getCurrentAppInfo').mockResolvedValue({
-			version: '1.0.0',
+			version: '1.0.3',
 			isBuiltin: true,
-			native: '1.0.0'
+			native: '1.0.3'
 		});
 
-		vi.spyOn(AppUpdateService, 'checkForUpdate').mockResolvedValue({
-			version: '1.0.2',
+		const checkSpy = vi.spyOn(AppUpdateService, 'checkForUpdate').mockResolvedValue({
+			version: '1.0.4',
 			bundleUrl: 'https://example.com/ota/bundle.zip',
-			releaseNotes: 'Cập nhật tính năng mới'
+			checksum: 'dummy-checksum'
 		});
+
+		const applySpy = vi.spyOn(AppUpdateService, 'downloadAndApplyUpdate').mockResolvedValue(true);
 
 		render(<ServerTab />);
 
-		const checkButton = screen.getByRole('button', { name: /Kiểm tra cập nhật/i });
-		fireEvent.click(checkButton);
+		const updateButton = screen.getByRole('button', { name: /Cập nhật/i });
+		fireEvent.click(updateButton);
 
 		await waitFor(() => {
-			expect(screen.getByText(/Có bản cập nhật mới v1.0.2/)).toBeDefined();
-			expect(screen.getByText('Cập nhật ngay')).toBeDefined();
-			expect(screen.getByText('Cập nhật tính năng mới')).toBeDefined();
+			expect(checkSpy).toHaveBeenCalled();
+			expect(applySpy).toHaveBeenCalledWith(
+				expect.objectContaining({ version: '1.0.4' }),
+				expect.any(Function)
+			);
 		});
 	});
 });

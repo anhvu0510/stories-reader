@@ -17,32 +17,28 @@ Hệ thống CI/CD được thiết lập tự động hoàn toàn dựa trên G
 
 ---
 
-## 🚀 Trường hợp 1: Cập nhật mềm OTA (95% các lần cập nhật)
+## 🚀 Trường hợp 1: Cập nhật mềm OTA (Tự động 100% khi push code FE)
 
 Dùng cho toàn bộ thay đổi liên quan đến **Frontend / React / TypeScript / CSS**. Người dùng điện thoại không cần cài đè file mới, chỉ cần mở app là tự cập nhật.
 
 ### Các bước thao tác:
 
-1. **Sửa code** trong thư mục `src/`.
-2. **Tăng version** trong file [package.json](file:///Users/vula/Workspace/VuLA/stories/stories-reader/package.json):
-   ```json
-   "version": "1.0.4"
-   ```
-   *(Hệ thống so sánh phiên bản semver để kích hoạt tải OTA)*.
-3. **Commit & Push lên GitHub** (Tuyệt đối **KHÔNG** chứa chữ `[apk]`):
+1. **Sửa code** bình thường trong `src/` (hoặc bất kỳ file frontend nào).
+   *(💡 **Bạn KHÔNG cần sửa version bằng tay**: Hệ thống CI/CD sẽ tự động tăng version `v1.0.<build_number>` tăng dần theo mỗi lần push)*.
+2. **Commit & Push lên GitHub** (bình thường, **KHÔNG** chứa chữ `[apk]`):
    ```bash
    git add -A
-   git commit -m "feat(reader): thêm hiệu ứng lật trang và sửa giao diện"
+   git commit -m "feat(reader): thêm tính năng mới hoặc sửa giao diện"
    git push origin main
    ```
-4. **Hệ thống tự động thực hiện**:
+3. **Hệ thống tự động thực hiện hoàn toàn**:
    - GitHub Actions chạy workflow `Deploy Web and OTA Update`.
-   - Tự động biên dịch web bundle, nén `bundle.zip`, tính mã băm SHA-256 vào `version.json`.
-   - Deploy trực tiếp lên GitHub Pages CDN.
-   - **Bỏ qua** bước build APK (không gửi file rác về Telegram).
-5. **Kiểm tra trên điện thoại**:
-   - Vuốt tắt app Stories Reader trong đa nhiệm rồi mở lại.
-   - App tự động hiện màn hình `Đang tải bản cập nhật mới...` trong **3 - 5 giây** và tự reload sang bản mới.
+   - Tự động sinh số phiên bản mới, biên dịch web bundle, nén `bundle.zip`, tính mã SHA-256 vào `version.json`.
+   - Deploy trực tiếp đồng thời lên **GitHub Pages CDN (Web)** và **OTA Server (Android)**.
+   - Gửi thông báo xác nhận qua Telegram bot.
+4. **Kiểm tra trên điện thoại**:
+   - Cách 1: Mở app -> Vào **Cài đặt** -> Tab **Server API** -> Bấm nút **Cập nhật** (icon xoay).
+   - Cách 2: Vuốt tắt app trong đa nhiệm rồi mở lại, app sẽ tự động tải bản cập nhật mới nhất.
 
 ---
 

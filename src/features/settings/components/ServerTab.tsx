@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Server, Plus, RefreshCw, Check, Trash2, Edit3, Loader2, Wifi, WifiOff, Smartphone, Sparkles } from 'lucide-react';
+import { Server, Plus, RefreshCw, Check, Trash2, Edit3, Loader2, Wifi, WifiOff } from 'lucide-react';
 
-import { SettingsRepository } from '@/repositories/SettingsRepository';
 import { useAppUpdate } from '@/hooks/useAppUpdate';
-import { apiClient } from '@/services/apiClient';
 import { useAppStore } from '@/stores/useAppStore';
 import { useToastStore } from '@/stores/useToastStore';
 
-import type { UpdateManifest } from '@/services/appUpdateService';
 import type { ApiDomain } from '@/shared/types';
 
 export function ServerTab() {
@@ -20,7 +17,6 @@ export function ServerTab() {
 	const [domainName, setDomainName] = useState('');
 	const [domainUrl, setDomainUrl] = useState('');
 	const [testingId, setTestingId] = useState<string | null>(null);
-	const [isFetching, setIsFetching] = useState(false);
 
 	const {
 		appInfo,
@@ -28,58 +24,27 @@ export function ServerTab() {
 		isUpdating,
 		progress,
 		statusMessage,
-		error: updateError,
 		checkForUpdate,
 		applyUpdate
 	} = useAppUpdate({ autoCheck: false });
-	const [pendingUpdate, setPendingUpdate] = useState<UpdateManifest | null>(null);
 
-	const handleManualCheckUpdate = async () => {
+	const handleCheckAndDownloadUpdate = async () => {
 		try {
 			const manifest = await checkForUpdate();
 			if (manifest) {
-				setPendingUpdate(manifest);
-				showToast(`Tìm thấy bản cập nhật mới v${manifest.version}!`, 'info');
+				showToast(`Tìm thấy bản cập nhật mới v${manifest.version}. Đang tải về...`, 'info');
+				const success = await applyUpdate(manifest);
+				if (success) {
+					showToast('Cập nhật hoàn tất! Ứng dụng đang khởi động lại...', 'success');
+				} else {
+					showToast('Tải bản cập nhật mới thất bại', 'error');
+				}
 			} else {
-				setPendingUpdate(null);
-				showToast(`Bạn đang sử dụng phiên bản mới nhất (v${appInfo.version})`, 'success');
+				showToast(`Ứng dụng đang ở phiên bản mới nhất (v${appInfo.version})`, 'success');
 			}
-		} catch {
+		} catch (err) {
+			console.error('[ServerTab] Check update error:', err);
 			showToast('Kiểm tra bản cập nhật thất bại', 'error');
-		}
-	};
-
-	const handleFetchDomains = async () => {
-		setIsFetching(true);
-		try {
-			const dataAPI = await SettingsRepository.getSettings('stories.ui.domain');
-			const data = dataAPI?.value ?? [];
-
-			if (Array.isArray(data)) {
-				const fetched: ApiDomain[] = data.map((item: any) => ({
-					id: String(item.id),
-					name: item.name || '',
-					url: item.url || ''
-				}));
-
-				let newDomains: ApiDomain[] = [];
-				if (domains.length > 0) {
-					newDomains.push(domains[0]);
-				}
-				for (const fd of fetched) {
-					if (fd.id && fd.url && fd.id !== newDomains[0]?.id) {
-						newDomains.push(fd);
-					}
-				}
-				setDomains(newDomains);
-				showToast('Đã tải và cập nhật danh sách máy chủ', 'success');
-			} else {
-				showToast('Dữ liệu máy chủ không hợp lệ', 'error');
-			}
-		} catch {
-			showToast('Lỗi khi tải danh sách máy chủ', 'error');
-		} finally {
-			setIsFetching(false);
 		}
 	};
 
@@ -152,13 +117,16 @@ export function ServerTab() {
 						<span className="hidden sm:inline">{isOfflineMode ? 'Offline' : 'Online'}</span>
 					</button>
 					<button
-						onClick={handleFetchDomains}
-						disabled={isFetching}
-						className="p-1.5 rounded-xl bg-white/10 border border-white/15 text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all text-xs flex items-center gap-1 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]"
-						title="Đồng bộ từ hệ thống"
+						onClick={handleCheckAndDownloadUpdate}
+						disabled={isChecking || isUpdating}
+						className="p-1.5 rounded-xl bg-white/10 border border-white/15 text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all text-xs flex items-center gap-1 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] disabled:opacity-50 cursor-pointer"
+						title="Kiểm tra & Cập nhật phiên bản mới"
+						aria-label="Kiểm tra & Cập nhật phiên bản mới"
 					>
-						<RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />
-						<span className="hidden sm:inline">Đồng bộ</span>
+						<RefreshCw size={14} className={isChecking || isUpdating ? 'animate-spin' : ''} />
+						<span className="hidden sm:inline">
+							{isUpdating ? `Đang tải ${progress}%` : isChecking ? 'Đang kiểm tra...' : 'Cập nhật'}
+						</span>
 					</button>
 					<button
 						onClick={() => {
@@ -167,12 +135,28 @@ export function ServerTab() {
 							setDomainUrl('');
 							setShowForm(true);
 						}}
-						className="p-1.5 rounded-xl bg-primary/20 border border-primary/50 text-primary hover:bg-primary/30 transition-all text-xs flex items-center gap-1 font-bold shadow-xs"
+						className="p-1.5 rounded-xl bg-primary/20 border border-primary/50 text-primary hover:bg-primary/30 transition-all text-xs flex items-center gap-1 font-bold shadow-xs cursor-pointer"
 					>
 						<Plus size={14} />
 					</button>
 				</div>
 			</div>
+
+			{/* Progress bar during OTA download */}
+			{isUpdating && (
+				<div className="p-3 rounded-2xl bg-primary/10 border border-primary/30 space-y-1.5 animate-in fade-in">
+					<div className="flex items-center justify-between text-xs">
+						<span className="text-primary font-bold">{statusMessage || 'Đang tải bản cập nhật...'}</span>
+						<span className="text-primary font-mono font-bold">{progress}%</span>
+					</div>
+					<div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+						<div
+							className="h-full bg-gradient-to-r from-primary to-primary-fixed transition-all duration-300 rounded-full"
+							style={{ width: `${progress}%` }}
+						/>
+					</div>
+				</div>
+			)}
 
 			{showForm && (
 				<div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3 animate-in fade-in slide-in-from-top-2">
@@ -254,84 +238,6 @@ export function ServerTab() {
 						</div>
 					);
 				})}
-			</div>
-
-			{/* OTA App Update & Version Tracking Section */}
-			<div className="pt-4 border-t border-outline-variant/30 space-y-3">
-				<div className="flex items-center justify-between">
-					<h3 className="text-sm font-semibold text-on-surface flex items-center gap-2">
-						<Smartphone size={16} className="text-primary" /> Phiên bản & Cập nhật OTA
-					</h3>
-					<span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/30 font-bold">
-						v{appInfo.version}
-					</span>
-				</div>
-
-				<div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 space-y-3">
-					<div className="flex items-center justify-between text-xs">
-						<div className="space-y-0.5">
-							<div className="text-on-surface font-semibold flex items-center gap-1.5">
-								<span>Stories Reader</span>
-								<span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 text-on-surface-variant font-mono">
-									{appInfo.isBuiltin ? 'Bản gốc' : 'OTA Bundle'}
-								</span>
-							</div>
-							<div className="text-[11px] text-on-surface-variant/70 font-mono">
-								Native APK: v{appInfo.native} {appInfo.bundleId ? `• Bundle: ${appInfo.bundleId}` : ''}
-							</div>
-						</div>
-
-						<motion.button
-							whileTap={{ scale: 0.94 }}
-							disabled={isChecking || isUpdating}
-							onClick={handleManualCheckUpdate}
-							className="px-3 py-1.5 rounded-xl bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs disabled:opacity-50 cursor-pointer"
-						>
-							<RefreshCw size={13} className={isChecking ? 'animate-spin' : ''} />
-							<span>{isChecking ? 'Đang kiểm tra...' : 'Kiểm tra cập nhật'}</span>
-						</motion.button>
-					</div>
-
-					{/* Update Progress or Found Update Banner */}
-					{isUpdating && (
-						<div className="p-3 rounded-xl bg-primary/10 border border-primary/30 space-y-2 animate-in fade-in">
-							<div className="flex items-center justify-between text-xs">
-								<span className="text-primary font-bold">{statusMessage || 'Đang cập nhật...'}</span>
-								<span className="text-primary font-mono font-bold">{progress}%</span>
-							</div>
-							<div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
-								<div
-									className="h-full bg-gradient-to-r from-primary to-primary-fixed transition-all duration-300 rounded-full"
-									style={{ width: `${progress}%` }}
-								/>
-							</div>
-						</div>
-					)}
-
-					{pendingUpdate && !isUpdating && (
-						<div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2 animate-in fade-in">
-							<div className="flex items-center justify-between">
-								<div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-									<Sparkles size={14} /> Có bản cập nhật mới v{pendingUpdate.version}
-								</div>
-								<motion.button
-									whileTap={{ scale: 0.92 }}
-									onClick={() => applyUpdate(pendingUpdate)}
-									className="px-3 py-1 rounded-lg bg-emerald-500 text-on-primary text-xs font-extrabold shadow-sm hover:brightness-110 cursor-pointer"
-								>
-									Cập nhật ngay
-								</motion.button>
-							</div>
-							{pendingUpdate.releaseNotes && (
-								<p className="text-[11px] text-on-surface-variant/80">{pendingUpdate.releaseNotes}</p>
-							)}
-						</div>
-					)}
-
-					{updateError && !isUpdating && (
-						<p className="text-[11px] text-error font-medium">{updateError}</p>
-					)}
-				</div>
 			</div>
 		</div>
 	);

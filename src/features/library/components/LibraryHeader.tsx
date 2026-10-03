@@ -30,13 +30,8 @@ export function LibraryHeader({ searchQuery, onSearchChange, onOpenSettings, onS
 					</div>
 
 					<div className="leading-none space-y-0.5">
-						<div className="flex items-center gap-1.5">
-							<h1 className="text-base font-black text-on-surface tracking-tight">Stories Reader</h1>
-							<span className="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shadow-xs">
-								<span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> OTA Live
-							</span>
-						</div>
-						<p className="text-[10px] font-mono font-semibold text-on-surface-variant/60 uppercase tracking-widest">Mobile Edition • v1.0.3</p>
+						<h1 className="text-base font-black text-on-surface tracking-tight">Stories Reader</h1>
+						<p className="text-[10px] font-mono font-semibold text-on-surface-variant/60 uppercase tracking-widest">Mobile Edition</p>
 					</div>
 				</div>
 

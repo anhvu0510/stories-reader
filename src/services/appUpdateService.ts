@@ -16,7 +16,9 @@ export interface AppInfo {
 	bundleId?: string;
 }
 
-export const CURRENT_APP_VERSION = '1.0.3';
+declare const __APP_VERSION__: string | undefined;
+export const CURRENT_APP_VERSION =
+	typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__ ? __APP_VERSION__ : '1.0.4';
 export const DEFAULT_UPDATE_ENDPOINT = 'https://anhvu0510.github.io/stories-reader/ota/version.json';
 export const FALLBACK_UPDATE_ENDPOINT = 'https://api-anhvu0510.duckdns.org/api/app-update/version';
 
