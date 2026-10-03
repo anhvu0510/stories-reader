@@ -1,4 +1,6 @@
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { useAppStore } from '@/stores/useAppStore';
+import { useToastStore } from '@/stores/useToastStore';
 
 export interface EdgeVoice {
 	id: string;
@@ -19,6 +21,56 @@ export interface EdgeWordBoundary {
 export interface EdgeSpeechWithBoundaries {
 	audio: Blob;
 	wordBoundaries: EdgeWordBoundary[];
+}
+
+export interface EdgeTTSNativePluginInterface {
+	synthesize(options: {
+		text: string;
+		voice?: string;
+		rate?: string;
+		pitch?: string;
+	}): Promise<{
+		audioBase64: string;
+		mimeType?: string;
+		wordBoundaries: EdgeWordBoundary[];
+	}>;
+}
+
+export const EdgeTTSNative = registerPlugin<EdgeTTSNativePluginInterface>('EdgeTTSNative', {
+	web: () => ({
+		synthesize: async () => {
+			throw new Error('EdgeTTSNative is only available on native Android');
+		}
+	})
+});
+
+function base64ToBlob(base64: string, mimeType = 'audio/mpeg'): Blob {
+	const byteCharacters = atob(base64);
+	const byteNumbers = new Array(byteCharacters.length);
+	for (let i = 0; i < byteCharacters.length; i++) {
+		byteNumbers[i] = byteCharacters.charCodeAt(i);
+	}
+	const byteArray = new Uint8Array(byteNumbers);
+	return new Blob([byteArray], { type: mimeType });
+}
+
+async function reportClientError(baseUrl: string | undefined, error: unknown, context: Record<string, unknown>) {
+	try {
+		const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
+		await fetch(`${rootUrl}/api/logs/client-error`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				platform: 'android',
+				source: 'EdgeTTSNative',
+				level: 'error',
+				error: error instanceof Error ? error.message : String(error),
+				details: context
+			})
+		});
+	} catch {
+		// Silent catch for logger network failure
+	}
 }
 
 export const DEFAULT_GATEWAY_URL = 'https://api-anhvu0510.duckdns.org';
@@ -77,11 +129,29 @@ export class EdgeTTSService {
 			throw new Error('Text to synthesize cannot be empty');
 		}
 
+		const ratePercentage = speed !== 1.0 ? `${speed >= 1.0 ? '+' : ''}${Math.round((speed - 1.0) * 100)}%` : '+0%';
+
+		// Android Native flow: in-memory bypass via OkHttp WebSocket
+		if (Capacitor.isNativePlatform()) {
+			try {
+				const res = await EdgeTTSNative.synthesize({
+					text: text.trim(),
+					voice,
+					rate: ratePercentage,
+					pitch: '+0Hz'
+				});
+				return base64ToBlob(res.audioBase64, res.mimeType || 'audio/mpeg');
+			} catch (err) {
+				const errMsg = err instanceof Error ? err.message : String(err);
+				useToastStore.getState().showToast(`Lỗi Edge TTS: ${errMsg}`, 'error');
+				void reportClientError(baseUrl, err, { text: text.slice(0, 80), voice, speed });
+				throw err;
+			}
+		}
+
+		// Web Browser fallback via Gateway API
 		const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
 		const targetUrl = `${rootUrl}/tts/edge/synthesize`;
-
-		// Convert speed factor (e.g. 1.2 => '+20%', 0.8 => '-20%')
-		const ratePercentage = speed !== 1.0 ? `${speed >= 1.0 ? '+' : ''}${Math.round((speed - 1.0) * 100)}%` : '+0%';
 
 		const response = await fetch(targetUrl, {
 			method: 'POST',
@@ -116,9 +186,33 @@ export class EdgeTTSService {
 			throw new Error('Text to synthesize cannot be empty');
 		}
 
+		const ratePercentage = speed !== 1.0 ? `${speed >= 1.0 ? '+' : ''}${Math.round((speed - 1.0) * 100)}%` : '+0%';
+
+		// Android Native flow: in-memory bypass with word boundaries
+		if (Capacitor.isNativePlatform()) {
+			try {
+				const res = await EdgeTTSNative.synthesize({
+					text: text.trim(),
+					voice,
+					rate: ratePercentage,
+					pitch: '+0Hz'
+				});
+				const blob = base64ToBlob(res.audioBase64, res.mimeType || 'audio/mpeg');
+				return {
+					audio: blob,
+					wordBoundaries: res.wordBoundaries || []
+				};
+			} catch (err) {
+				const errMsg = err instanceof Error ? err.message : String(err);
+				useToastStore.getState().showToast(`Lỗi Edge TTS: ${errMsg}`, 'error');
+				void reportClientError(baseUrl, err, { text: text.slice(0, 80), voice, speed });
+				throw err;
+			}
+		}
+
+		// Web Browser fallback via Gateway API
 		const rootUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : getGatewayBaseUrl();
 		const targetUrl = `${rootUrl}/tts/edge/synthesize`;
-		const ratePercentage = speed !== 1.0 ? `${speed >= 1.0 ? '+' : ''}${Math.round((speed - 1.0) * 100)}%` : '+0%';
 		const response = await fetch(targetUrl, {
 			method: 'POST',
 			headers: {

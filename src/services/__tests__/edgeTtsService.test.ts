@@ -1,4 +1,23 @@
+const { mockEdgeTTSNative } = vi.hoisted(() => ({
+	mockEdgeTTSNative: {
+		synthesize: vi.fn()
+	}
+}));
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('@capacitor/core', async () => {
+	const actual = await vi.importActual<any>('@capacitor/core');
+	return {
+		...actual,
+		registerPlugin: (name: string, options?: any) => {
+			if (name === 'EdgeTTSNative') {
+				return mockEdgeTTSNative;
+			}
+			return actual.registerPlugin(name, options);
+		}
+	};
+});
 
 import { EdgeTTSService, DEFAULT_EDGE_VOICES } from '@/services/edgeTtsService';
 
@@ -94,5 +113,57 @@ describe('EdgeTTSService', () => {
 			include_word_boundaries: true,
 			rate: '+20%'
 		});
+	});
+
+	it('uses EdgeTTSNative plugin on Android native platform', async () => {
+		const { Capacitor } = await import('@capacitor/core');
+		const { EdgeTTSNative } = await import('@/services/edgeTtsService');
+
+		vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+		const nativeSpy = vi.spyOn(EdgeTTSNative, 'synthesize').mockResolvedValue({
+			audioBase64: Buffer.from('mock native audio').toString('base64'),
+			mimeType: 'audio/mpeg',
+			wordBoundaries: [
+				{ text: 'Xin', charIndex: 0, charLength: 3, startSeconds: 0.1, endSeconds: 0.3 }
+			]
+		});
+
+		const result = await EdgeTTSService.synthesizeSpeechWithBoundaries('Xin chào', 'vi-VN-HoaiMyNeural', 1.0);
+
+		expect(nativeSpy).toHaveBeenCalledWith({
+			text: 'Xin chào',
+			voice: 'vi-VN-HoaiMyNeural',
+			rate: '+0%',
+			pitch: '+0Hz'
+		});
+		expect(result.audio).toBeInstanceOf(Blob);
+		expect(result.wordBoundaries).toHaveLength(1);
+		expect(result.wordBoundaries[0].text).toBe('Xin');
+	});
+
+	it('alerts user and logs error to gateway when EdgeTTSNative fails on Android', async () => {
+		const { Capacitor } = await import('@capacitor/core');
+		const { EdgeTTSNative } = await import('@/services/edgeTtsService');
+		const { useToastStore } = await import('@/stores/useToastStore');
+
+		vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+		vi.spyOn(EdgeTTSNative, 'synthesize').mockRejectedValue(new Error('WebSocket 403 Forbidden'));
+		const toastSpy = vi.spyOn(useToastStore.getState(), 'showToast');
+
+		const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+		vi.stubGlobal('fetch', fetchMock);
+
+		await expect(
+			EdgeTTSService.synthesizeSpeechWithBoundaries('Xin chào', 'vi-VN-HoaiMyNeural', 1.0, 'https://api.test')
+		).rejects.toThrow('WebSocket 403 Forbidden');
+
+		expect(toastSpy).toHaveBeenCalledWith(expect.stringContaining('Lỗi Edge TTS: WebSocket 403 Forbidden'), 'error');
+		expect(fetchMock).toHaveBeenCalledWith(
+			'https://api.test/api/logs/client-error',
+			expect.objectContaining({
+				method: 'POST',
+				body: expect.stringContaining('"platform":"android"')
+			})
+		);
 	});
 });
