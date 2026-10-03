@@ -13,12 +13,14 @@ mkdir -p dist-ota
 
 # 4. Zip the dist folder contents into bundle.zip
 (cd dist && zip -r -q ../dist-ota/bundle.zip .)
+CHECKSUM=$(shasum -a 256 dist-ota/bundle.zip | cut -d ' ' -f 1)
 
 # 5. Generate version.json manifest
 cat <<EOF > dist-ota/version.json
 {
   "version": "${VERSION}",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
+  "checksum": "${CHECKSUM}",
   "releaseNotes": "Stories Reader cập nhật phiên bản ${VERSION}",
   "updatedAt": "${TIMESTAMP}"
 }

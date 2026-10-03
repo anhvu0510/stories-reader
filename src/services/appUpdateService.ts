@@ -4,6 +4,7 @@ import { CapacitorUpdater } from '@capgo/capacitor-updater';
 export interface UpdateManifest {
 	version: string;
 	bundleUrl: string;
+	checksum?: string;
 	releaseNotes?: string;
 	updatedAt?: string;
 }
@@ -165,7 +166,8 @@ export class AppUpdateService {
 
 			const bundle = await CapacitorUpdater.download({
 				url: manifest.bundleUrl,
-				version: manifest.version
+				version: manifest.version,
+				checksum: manifest.checksum
 			});
 
 			if (listenerHandle) {

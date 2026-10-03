@@ -88,7 +88,8 @@ describe('AppUpdateService Unit Tests (TDD)', () => {
 
 			const manifest = {
 				version: '1.0.1',
-				bundleUrl: 'https://mock.api/bundle.zip'
+				bundleUrl: 'https://mock.api/bundle.zip',
+				checksum: 'mock-sha256'
 			};
 
 			const onProgress = vi.fn();
@@ -97,7 +98,8 @@ describe('AppUpdateService Unit Tests (TDD)', () => {
 			expect(success).toBe(true);
 			expect(CapacitorUpdater.download).toHaveBeenCalledWith({
 				url: 'https://mock.api/bundle.zip',
-				version: '1.0.1'
+				version: '1.0.1',
+				checksum: 'mock-sha256'
 			});
 			expect(CapacitorUpdater.set).toHaveBeenCalledWith({
 				version: '1.0.1'

@@ -42,11 +42,13 @@ jobs:
           # Prepare OTA folder inside dist so it deploys to GitHub Pages CDN
           mkdir -p dist/ota
           (cd dist && zip -r -q ota/bundle.zip . -x "ota/*")
+          CHECKSUM=$(sha256sum dist/ota/bundle.zip | cut -d ' ' -f 1)
 
           cat <<EOF > dist/ota/version.json
           {
             "version": "${VERSION}",
             "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
+            "checksum": "${CHECKSUM}",
             "releaseNotes": "${COMMIT_MSG}",
             "updatedAt": "${TIMESTAMP}"
           }
