@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { Loader2, LocateFixed, Music, Pause, Play, SkipBack, SkipForward, Square, Volume2 } from 'lucide-react';
+import { Loader2, LocateFixed, Music, Pause, Play, SkipForward, Square, Volume2 } from 'lucide-react';
 
 import { isEdgeReadAloudActive } from '@/hooks/useEdgeReadAloudBgm';
 import { triggerHaptic } from '@/hooks/useHaptic';
@@ -230,20 +230,6 @@ export function VerticalBatchChapterNav({
 							</motion.button>
 						)}
 
-						{/* Prev Section Button */}
-						<motion.button
-							whileTap={{ scale: 0.88 }}
-							onClick={(e) => {
-								e.stopPropagation();
-								triggerHaptic('light');
-								if (onTTSPrev) onTTSPrev();
-							}}
-							className="w-9 h-9 rounded-full flex items-center justify-center bg-black/20 dark:bg-black/40 backdrop-blur-[2px] border border-primary/50 text-on-surface shadow-[0_3px_12px_rgba(0,0,0,0.4),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 hover:text-primary transition-colors cursor-pointer"
-							title="Đoạn trước"
-							aria-label="Đoạn trước"
-						>
-							<SkipBack size={16} />
-						</motion.button>
 
 						{/* Next Section Button */}
 						<motion.button

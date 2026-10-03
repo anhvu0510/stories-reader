@@ -28,7 +28,7 @@ describe('VerticalBatchChapterNav Component', () => {
 		render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={true} isTTSPlaying={true} currentParagraphIndex={2} />);
 
 		expect(screen.getByLabelText('Tạm dừng đọc')).toBeDefined();
-		expect(screen.getByLabelText('Đoạn trước')).toBeDefined();
+		expect(screen.queryByLabelText('Đoạn trước')).toBeNull();
 		expect(screen.getByLabelText('Đoạn sau')).toBeDefined();
 		expect(screen.getByLabelText('Dừng đọc')).toBeDefined();
 		// Verify paragraph index badge 'Đ3' is removed
@@ -55,13 +55,11 @@ describe('VerticalBatchChapterNav Component', () => {
 		expect(mockOnTTSStop).toHaveBeenCalledTimes(1);
 	});
 
-	it('QC-5 [Prev/Next Section]: Triggers onTTSPrev and onTTSNext when clicking navigation buttons', () => {
-		const mockOnTTSPrev = vi.fn();
+	it('QC-5 [Next Section]: Triggers onTTSNext when clicking Next button and does not render Prev button', () => {
 		const mockOnTTSNext = vi.fn();
-		render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={true} onTTSPrev={mockOnTTSPrev} onTTSNext={mockOnTTSNext} />);
+		render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={true} onTTSNext={mockOnTTSNext} />);
 
-		fireEvent.click(screen.getByLabelText('Đoạn trước'));
-		expect(mockOnTTSPrev).toHaveBeenCalledTimes(1);
+		expect(screen.queryByLabelText('Đoạn trước')).toBeNull();
 
 		fireEvent.click(screen.getByLabelText('Đoạn sau'));
 		expect(mockOnTTSNext).toHaveBeenCalledTimes(1);
