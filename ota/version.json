@@ -1,6 +1,7 @@
 {
   "version": "1.0.2",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "releaseNotes": "fix(ota): use relative base path for seamless capacitor android bundle execution and bump to 1.0.2",
-  "updatedAt": "2026-10-03T15:49:18Z"
+  "checksum": "8471fb8a12e421b4793241ec5557fe83e10b05fcaa42f31e4ce2505c108d2106",
+  "releaseNotes": "fix(ota): add sha256 checksum to bundle manifest and trigger [apk] build",
+  "updatedAt": "2026-10-03T15:56:05Z"
 }
