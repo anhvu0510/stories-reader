@@ -3,7 +3,6 @@ import { motion } from 'motion/react';
 import { BookOpen, Clock, Sparkles, Library, X, RotateCcw, Heart, Search, Tag, ArrowUpDown } from 'lucide-react';
 
 import { BottomDock } from '@/components/BottomDock';
-import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { OfflineManagerSheet } from '@/components/OfflineManagerSheet';
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
@@ -24,6 +23,8 @@ import { TagFilterSheet } from './components/TagFilterSheet';
 
 import type { Book } from '@/shared/types';
 
+const TABS: readonly ['ALL', 'HISTORY', 'FAVORITE', 'AI'] = ['ALL', 'HISTORY', 'FAVORITE', 'AI'] as const;
+
 export function LibraryScreen() {
 	useDocumentTitle();
 	const { savedPage, savedTab, savedSearch, savedTags, savedSortBy, savedSortOrder, savedScrollY, setLibraryState, setSort } = useLibraryStore();
@@ -37,6 +38,7 @@ export function LibraryScreen() {
 	const [search, setSearch] = useState(savedSearch || '');
 	const [appliedSearch, setAppliedSearch] = useState(savedSearch || '');
 	const [tab, setTab] = useState<'ALL' | 'HISTORY' | 'FAVORITE' | 'AI'>(savedTab);
+	const [tabDirection, setTabDirection] = useState<'left' | 'right' | null>(null);
 	const [selectedTags, setSelectedTags] = useState<string[]>(savedTags || []);
 	const initialSortBy: SortByField = savedSortBy === 'updatedAt' ? 'updatedAt' : 'createdAt';
 	const [sortBy, setSortByState] = useState<SortByField>(initialSortBy);
@@ -54,6 +56,7 @@ export function LibraryScreen() {
 	const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const isRestoredRef = useRef(false);
 	const fetchIdRef = useRef(0);
+	const tabCacheRef = useRef<Record<string, { books: Book[]; totalPages: number; total: number }>>({});
 
 	// Sync state to useLibraryStore whenever page, tab, search, selectedTags, sortBy, sortOrder changes
 	useEffect(() => {
@@ -106,6 +109,14 @@ export function LibraryScreen() {
 				setPage(currentPage || targetPage);
 				setTotalPages(pagesCount || 1);
 				setTotal(totalCount || fetchedBooks.length);
+
+				// Cache per-tab results for instantaneous 60fps tab switching
+				const cacheKey = `${t}-${targetPage}-${q}-${tg.join(',')}-${sBy}-${sOrder}`;
+				tabCacheRef.current[cacheKey] = {
+					books: fetchedBooks,
+					totalPages: pagesCount || 1,
+					total: totalCount || fetchedBooks.length
+				};
 			} catch {
 				if (fetchId === fetchIdRef.current) {
 					showToast('Không thể tải danh sách truyện', 'error');
@@ -197,40 +208,60 @@ export function LibraryScreen() {
 		(newTab: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI') => {
 			if (newTab === tab) return;
 			triggerHaptic('selection');
+
+			const currentIndex = TABS.indexOf(tab);
+			const nextIndex = TABS.indexOf(newTab);
+			setTabDirection(nextIndex > currentIndex ? 'left' : 'right');
+
 			setTab(newTab);
 			setPage(1);
+
+			// Fast cache lookup: if tab was previously loaded, show it immediately without flash
+			let sBy: SortByField = 'createdAt';
+			let sOrder: SortOrderDirection = 'DESC';
+			if (newTab === 'HISTORY') {
+				sBy = 'lastedReadAt';
+			} else if (newTab === 'ALL') {
+				sBy = sortBy === 'updatedAt' ? 'updatedAt' : 'createdAt';
+				sOrder = sortOrder;
+			}
+			const nextCacheKey = `${newTab}-1-${appliedSearch}-${selectedTags.join(',')}-${sBy}-${sOrder}`;
+			const cached = tabCacheRef.current[nextCacheKey];
+			if (cached) {
+				setBooks(cached.books);
+				setTotalPages(cached.totalPages);
+				setTotal(cached.total);
+			} else {
+				setBooks([]);
+			}
+
 			setLibraryState(1, newTab, search, selectedTags, sortBy, sortOrder, 0);
 			if (mainScrollRef.current) {
 				mainScrollRef.current.scrollTop = 0;
 			}
 		},
-		[tab, search, selectedTags, sortBy, sortOrder, setLibraryState]
+		[tab, sortBy, sortOrder, appliedSearch, selectedTags, search, setLibraryState]
 	);
 
 	// Native Swipe Gestures for Mobile Tab Switching with Smooth Transitions
-	const [tabDirection, setTabDirection] = useState<'left' | 'right' | null>(null);
-	const TABS: Array<'ALL' | 'HISTORY' | 'FAVORITE' | 'AI'> = useMemo(() => ['ALL', 'HISTORY', 'FAVORITE', 'AI'], []);
-
 	const handleSwipeLeft = useCallback(() => {
 		const currentIndex = TABS.indexOf(tab);
 		if (currentIndex < TABS.length - 1) {
-			setTabDirection('left');
 			handleTabChange(TABS[currentIndex + 1]);
 		}
-	}, [tab, TABS, handleTabChange]);
+	}, [tab, handleTabChange]);
 
 	const handleSwipeRight = useCallback(() => {
 		const currentIndex = TABS.indexOf(tab);
 		if (currentIndex > 0) {
-			setTabDirection('right');
 			handleTabChange(TABS[currentIndex - 1]);
 		}
-	}, [tab, TABS, handleTabChange]);
+	}, [tab, handleTabChange]);
 
 	useSwipeGesture({
 		onSwipeLeft: handleSwipeLeft,
 		onSwipeRight: handleSwipeRight,
-		threshold: 50,
+		threshold: 45,
 		disabled: isTagFilterOpen || isSortSheetOpen || isOfflineManagerOpen
 	});
 
@@ -399,10 +430,11 @@ export function LibraryScreen() {
 				{/* Book Cards List Content Container with native mobile tab transition */}
 				<motion.div
 					key={tab}
-					initial={{ opacity: 0, x: tabDirection === 'left' ? 32 : tabDirection === 'right' ? -32 : 0 }}
+					initial={{ opacity: 0, x: tabDirection === 'left' ? 36 : tabDirection === 'right' ? -36 : 0 }}
 					animate={{ opacity: 1, x: 0 }}
-					transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
-					className="px-3.5 pt-3.5 pb-28 space-y-3"
+					transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
+					style={{ willChange: 'transform, opacity' }}
+					className="px-3.5 pt-3.5 pb-28 space-y-3 transform-gpu"
 				>
 					{loading && books.length === 0 ? (
 						<div className="space-y-3 relative">
@@ -455,9 +487,6 @@ export function LibraryScreen() {
 					)}
 				</motion.div>
 			</main>
-
-			{/* Crystal See-Through Glass Loading Overlay */}
-			<LoadingOverlay isLoading={loading} />
 
 			{/* Global Settings & Modals */}
 			<GlobalSettingsSheet />

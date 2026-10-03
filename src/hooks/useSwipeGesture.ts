@@ -4,6 +4,7 @@ export interface SwipeGestureOptions {
 	onSwipeLeft?: () => void;
 	onSwipeRight?: () => void;
 	threshold?: number;
+	maxDuration?: number;
 	edgeIgnoreWidth?: number;
 	disabled?: boolean;
 }
@@ -12,6 +13,7 @@ export function useSwipeGesture({
 	onSwipeLeft,
 	onSwipeRight,
 	threshold = 60,
+	maxDuration = 800,
 	edgeIgnoreWidth = 28,
 	disabled = false
 }: SwipeGestureOptions) {
@@ -55,8 +57,14 @@ export function useSwipeGesture({
 			const deltaY = touch.clientY - touchStartRef.current.y;
 			const absX = Math.abs(deltaX);
 			const absY = Math.abs(deltaY);
+			const duration = Date.now() - touchStartRef.current.time;
 
 			touchStartRef.current = null;
+
+			// Ignore touches that lasted longer than maxDuration (e.g. held touches, slow scrolls, long presses)
+			if (duration > maxDuration) {
+				return;
+			}
 
 			// Do not trigger swipe if user has active text selection
 			const selection = window.getSelection();
@@ -65,7 +73,7 @@ export function useSwipeGesture({
 			}
 
 			// Horizontal swipe must be dominant and exceed threshold
-			if (absX >= threshold && absX > absY * 1.4) {
+			if (absX >= threshold && absX > absY * 1.3) {
 				if (deltaX < 0 && onSwipeLeft) {
 					onSwipeLeft();
 				} else if (deltaX > 0 && onSwipeRight) {
@@ -74,7 +82,6 @@ export function useSwipeGesture({
 			}
 		};
 
-
 		window.addEventListener('touchstart', handleTouchStart, { passive: true });
 		window.addEventListener('touchend', handleTouchEnd, { passive: true });
 
@@ -82,5 +89,5 @@ export function useSwipeGesture({
 			window.removeEventListener('touchstart', handleTouchStart);
 			window.removeEventListener('touchend', handleTouchEnd);
 		};
-	}, [onSwipeLeft, onSwipeRight, threshold, edgeIgnoreWidth, disabled]);
+	}, [onSwipeLeft, onSwipeRight, threshold, maxDuration, edgeIgnoreWidth, disabled]);
 }

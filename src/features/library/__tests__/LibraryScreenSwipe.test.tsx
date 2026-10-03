@@ -90,4 +90,41 @@ describe('LibraryScreen - Swipe Gesture Tab Switching', () => {
 			expect(useLibraryStore.getState().savedTab).toBe('ALL');
 		});
 	});
+
+	it('does not trigger tab swipe if touch duration exceeds maxDuration (long press / slow scroll)', async () => {
+		render(
+			<MemoryRouter>
+				<LibraryScreen />
+			</MemoryRouter>
+		);
+
+		await waitFor(() => {
+			expect(useLibraryStore.getState().savedTab).toBe('ALL');
+		});
+
+		const now = Date.now();
+		vi.spyOn(Date, 'now').mockReturnValue(now);
+
+		act(() => {
+			window.dispatchEvent(
+				new TouchEvent('touchstart', {
+					touches: [{ clientX: 240, clientY: 200 } as any]
+				})
+			);
+		});
+
+		// 1000ms later (simulating long press or slow drag)
+		vi.spyOn(Date, 'now').mockReturnValue(now + 1000);
+
+		act(() => {
+			window.dispatchEvent(
+				new TouchEvent('touchend', {
+					changedTouches: [{ clientX: 100, clientY: 205 } as any]
+				})
+			);
+		});
+
+		// Should NOT change tab
+		expect(useLibraryStore.getState().savedTab).toBe('ALL');
+	});
 });
