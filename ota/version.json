@@ -1,7 +1,7 @@
 {
-  "version": "1.0.287",
+  "version": "1.0.288",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "d97457c70602ac0c65edee67d299c7fb227ee2c00b136bb9dd199c1f8ce27852",
-  "releaseNotes": "feat: add caching and swipe duration constraints for smoother library tab transitions",
-  "updatedAt": "2026-10-03T20:17:04Z"
+  "checksum": "bfe1121f1f91573161729fc25e381fedc1970edb22610b9c389d886d35b2da94",
+  "releaseNotes": "refactor: enhance read-aloud streaming, jump seeking, quick chapter sheet scrolling, and add unit tests",
+  "updatedAt": "2026-10-03T20:33:41Z"
 }
