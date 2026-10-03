@@ -308,7 +308,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		edgePrefetchCacheRef.current.set(index, promise);
 	};
 
-	const playChunkViaEdge = (index: number, sessionId: number) => {
+	const playChunkViaEdge = (index: number, sessionId: number, startOffset: number = 0) => {
 		if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
 		if (index >= chunks.length) {
 			clearResumePosition();
@@ -321,20 +321,40 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 		const chunk = chunks[index];
 		if (!chunk || !chunk.text.trim()) {
-			playChunkViaEdge(index + 1, sessionId);
+			playChunkViaEdge(index + 1, sessionId, 0);
 			return;
 		}
 
 		releaseEdgeAudio();
 
-		// Put the audio the listener needs now at the front of the server's
-		// serialized Edge TTS queue. Starting speculative requests first can add
-		// multiple synthesis windows to initial playback latency.
-		prefetchEdgeChunk(index);
-		const fetchPromise = edgePrefetchCacheRef.current.get(index);
-		if (!fetchPromise) {
-			playChunkViaBrowser(index, 0, sessionId);
+		const textToSpeak = startOffset > 0 ? chunk.text.substring(startOffset) : chunk.text;
+		if (!textToSpeak.trim()) {
+			playChunkViaEdge(index + 1, sessionId, 0);
 			return;
+		}
+
+		const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.0;
+		if (!edgeRequestAbortRef.current || edgeRequestAbortRef.current.signal.aborted) {
+			edgeRequestAbortRef.current = new AbortController();
+		}
+
+		let fetchPromise: Promise<EdgeSpeechWithBoundaries>;
+		if (startOffset > 0) {
+			fetchPromise = EdgeTTSService.synthesizeSpeechWithBoundaries(
+				textToSpeak,
+				edgeVoiceUri,
+				currentSpeechRate,
+				activeDomain?.url,
+				edgeRequestAbortRef.current.signal
+			);
+		} else {
+			prefetchEdgeChunk(index);
+			const cached = edgePrefetchCacheRef.current.get(index);
+			if (!cached) {
+				playChunkViaBrowser(index, 0, sessionId);
+				return;
+			}
+			fetchPromise = cached;
 		}
 
 		// Prefetch upcoming chunks only after the current request is in flight.
@@ -366,7 +386,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 						nextBoundaryIndex += 1;
 					}
 					if (activeBoundary) {
-						updateWordHighlight(index, activeBoundary.charIndex, activeBoundary.charLength);
+						updateWordHighlight(index, activeBoundary.charIndex + startOffset, activeBoundary.charLength);
 					}
 				};
 				const startBoundaryTracking = () => {
@@ -401,7 +421,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 						clearResumePosition();
 					}
 					if (isPlayingRef.current && playSessionIdRef.current === sessionId) {
-						playChunkViaEdge(index + 1, sessionId);
+						playChunkViaEdge(index + 1, sessionId, 0);
 					}
 				};
 
@@ -435,9 +455,9 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		if (ttsEngine === 'browser') {
 			playChunkViaBrowser(index, startOffset, sessionId);
 		} else if (ttsEngine === 'edge') {
-			playChunkViaEdge(index, sessionId);
+			playChunkViaEdge(index, sessionId, startOffset);
 		} else {
-			playChunkViaVieNeu(index, sessionId);
+			playChunkViaVieNeu(index, sessionId, startOffset);
 		}
 	};
 
@@ -768,7 +788,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		synth.speak(utterance);
 	};
 
-	const playChunkViaVieNeu = (index: number, sessionId: number) => {
+	const playChunkViaVieNeu = (index: number, sessionId: number, startOffset: number = 0) => {
 		if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
 		if (index >= chunks.length) {
 			stopReading();
@@ -778,7 +798,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		const AudioContextConstructor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
 		if (!AudioContextConstructor) {
 			console.warn('Web Audio API is unavailable, falling back to browser voice.');
-			playChunkViaBrowser(index, 0, sessionId);
+			playChunkViaBrowser(index, startOffset, sessionId);
 			return;
 		}
 
@@ -824,7 +844,19 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		});
 		gaplessPlayerRef.current = player;
 
-		player.start(chunks.slice(index), {
+		const targetChunks = chunks.slice(index);
+		if (startOffset > 0 && targetChunks.length > 0) {
+			const first = targetChunks[0];
+			const partialText = first.text.substring(startOffset);
+			targetChunks[0] = {
+				...first,
+				text: partialText,
+				startOffset: first.startOffset + startOffset,
+				length: partialText.length
+			};
+		}
+
+		player.start(targetChunks, {
 			onSegmentStart: (relativeIndex) => {
 				if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
 				setIsLoading(false);
@@ -840,7 +872,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 					currentChunkIdxRef.current = activeIndex;
 					setCurrentChunkIndex(activeIndex);
 				}
-				updateWordHighlight(activeIndex, cue.charIndex, cue.charLength);
+				const baseOffset = relativeIndex === 0 ? startOffset : 0;
+				updateWordHighlight(activeIndex, cue.charIndex + baseOffset, cue.charLength);
 			},
 			onFinished: () => {
 				if (playSessionIdRef.current !== sessionId) return;
@@ -1008,6 +1041,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		}
 
 		if (targetIndex !== -1) {
+			const targetChunk = chunks[targetIndex];
+			const chunkOffset = Math.max(0, textOffset - (targetChunk?.startOffset ?? 0));
 			playSessionIdRef.current += 1;
 			stopAudioPlayer();
 			if (ownsBrowserSpeechQueueRef.current && synth) synth.cancel();
@@ -1020,7 +1055,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			isPlayingRef.current = true;
 			isPausedRef.current = false;
 			currentChunkIdxRef.current = targetIndex;
-			playChunk(targetIndex, textOffset);
+			playChunk(targetIndex, chunkOffset);
 		}
 	};
 

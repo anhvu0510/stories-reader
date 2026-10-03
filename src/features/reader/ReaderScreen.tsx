@@ -413,6 +413,10 @@ export function ReaderScreen() {
 	// Case 2: Double click / Double tap on reading screen to toggle bottom dock
 	const handleDoubleClick = useCallback(
 		(e?: React.MouseEvent) => {
+			const selection = typeof window !== 'undefined' ? window.getSelection() : null;
+			if (selection && !selection.isCollapsed && selection.toString().trim()) {
+				return;
+			}
 			if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
 			const coords = e ? { x: e.clientX, y: e.clientY } : undefined;
 			toggleZenControls(coords);
@@ -782,6 +786,7 @@ export function ReaderScreen() {
 
 			{/* Floating Selection Speaker Tooltip for Speaking from Selected Word/Sentence */}
 			<SelectionSpeakerTooltip
+				isTTSActive={isTTSActive}
 				onSpeak={(paragraphIndex, charOffset) => {
 					jumpToContent(paragraphIndex, charOffset);
 				}}

@@ -120,10 +120,18 @@ export function usePullToRefresh({
 
 			touchStartYRef.current = e.touches[0].clientY;
 			touchStartXRef.current = e.touches[0].clientX;
+
+			// Preserve Android native edge-swipe back navigation (edge touches < 28px or > innerWidth - 28px)
+			if (touchStartXRef.current < 28 || (typeof window !== 'undefined' && touchStartXRef.current > window.innerWidth - 28)) {
+				canPullRef.current = false;
+				return;
+			}
+
 			canPullRef.current = true;
 			isPullingRef.current = false;
 			hasTriggeredHapticRef.current = false;
 		};
+
 
 		const handleTouchMove = (e: TouchEvent) => {
 			if (!canPullRef.current || isRefreshingRef.current || !isSupported) return;

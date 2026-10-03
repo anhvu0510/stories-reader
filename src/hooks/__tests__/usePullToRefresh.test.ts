@@ -92,6 +92,30 @@ describe('usePullToRefresh hook', () => {
 		expect(result.current.pullDistance).toBe(0);
 	});
 
+	it('ignores touchstart near screen edge (clientX < 28) to preserve native Android edge swipe back gestures', () => {
+		window.scrollY = 0;
+		const onRefresh = vi.fn().mockResolvedValue(undefined);
+		const { result } = renderHook(() => usePullToRefresh({ onRefresh }));
+
+		act(() => {
+			window.dispatchEvent(
+				new TouchEvent('touchstart', {
+					touches: [{ clientX: 10, clientY: 100 } as any]
+				})
+			);
+			window.dispatchEvent(
+				new TouchEvent('touchmove', {
+					touches: [{ clientX: 30, clientY: 160 } as any],
+					cancelable: true
+				})
+			);
+		});
+
+		expect(result.current.isPulling).toBe(false);
+		expect(result.current.pullDistance).toBe(0);
+	});
+
+
 	it('resets pull distance on touchend when under threshold', () => {
 		window.scrollY = 0;
 		const onRefresh = vi.fn().mockResolvedValue(undefined);

@@ -109,4 +109,55 @@ describe('SelectionSpeakerTooltip Component', () => {
 		expect(screen.queryByTestId('selection-speaker-tooltip')).toBeNull();
 		outsideP.remove();
 	});
+
+	it('does NOT render speaker tooltip when isTTSActive is true, but jumps to selection on interaction end', async () => {
+		const p = document.createElement('div');
+		p.setAttribute('data-paragraph-index', '2');
+		p.textContent = 'Đoạn văn này đang được đọc to.';
+		containerDiv.appendChild(p);
+
+		const onSpeak = vi.fn();
+		const removeAllRanges = vi.fn();
+		render(<SelectionSpeakerTooltip onSpeak={onSpeak} isTTSActive={true} />);
+
+		const range = {
+			startContainer: p.firstChild!,
+			startOffset: 5,
+			endContainer: p.firstChild!,
+			endOffset: 12,
+			commonAncestorContainer: p,
+			getBoundingClientRect: () => ({
+				top: 100,
+				bottom: 120,
+				left: 50,
+				right: 150,
+				width: 100,
+				height: 20
+			})
+		} as unknown as Range;
+
+		vi.spyOn(window, 'getSelection').mockReturnValue({
+			isCollapsed: false,
+			rangeCount: 1,
+			toString: () => 'văn này',
+			getRangeAt: () => range,
+			removeAllRanges
+		} as any);
+
+		act(() => {
+			document.dispatchEvent(new Event('selectionchange'));
+		});
+
+		// Tooltip must NOT render when in TTS active mode
+		expect(screen.queryByTestId('selection-speaker-tooltip')).toBeNull();
+
+		// Trigger mouseup (or touchend) after text selection in TTS active mode
+		act(() => {
+			window.dispatchEvent(new MouseEvent('mouseup'));
+		});
+
+		expect(onSpeak).toHaveBeenCalledWith(2, 5);
+		expect(removeAllRanges).toHaveBeenCalled();
+	});
 });
+

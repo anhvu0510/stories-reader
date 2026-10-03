@@ -5,6 +5,7 @@ import { triggerHaptic } from '@/hooks/useHaptic';
 export interface SelectionSpeakerTooltipProps {
 	onSpeak: (paragraphIndex: number, charOffset: number) => void;
 	containerId?: string;
+	isTTSActive?: boolean;
 }
 
 interface TooltipPosition {
@@ -14,13 +15,16 @@ interface TooltipPosition {
 	charOffset: number;
 }
 
-export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-content' }: SelectionSpeakerTooltipProps) {
+export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-content', isTTSActive = false }: SelectionSpeakerTooltipProps) {
 	const [position, setPosition] = useState<TooltipPosition | null>(null);
 	const isInteractingRef = useRef(false);
 
 	const updateSelection = useCallback(() => {
 		if (typeof window === 'undefined') return;
-		if (isInteractingRef.current) return;
+		if (isTTSActive || isInteractingRef.current) {
+			setPosition(null);
+			return;
+		}
 
 		const selection = window.getSelection();
 		if (!selection || selection.isCollapsed || !selection.rangeCount) {
@@ -92,7 +96,13 @@ export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-con
 			paragraphIndex: pIdx,
 			charOffset
 		});
-	}, [containerId]);
+	}, [containerId, isTTSActive]);
+
+	useEffect(() => {
+		if (isTTSActive) {
+			setPosition(null);
+		}
+	}, [isTTSActive]);
 
 	useEffect(() => {
 		if (typeof document === 'undefined') return;
@@ -114,6 +124,61 @@ export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-con
 			window.removeEventListener('scroll', handleSelectionChange);
 		};
 	}, [updateSelection]);
+
+	// When in TTS read mode: if user selects text, immediately jump to that position upon selection completion
+	useEffect(() => {
+		if (typeof window === 'undefined') return;
+
+		const handleInteractionEnd = () => {
+			if (!isTTSActive) return;
+
+			requestAnimationFrame(() => {
+				const selection = window.getSelection();
+				if (!selection || selection.isCollapsed || !selection.rangeCount) return;
+
+				const selectedText = selection.toString().trim();
+				if (!selectedText) return;
+
+				const range = selection.getRangeAt(0);
+				const container = document.getElementById(containerId);
+				if (!container || !container.contains(range.startContainer)) return;
+
+				const startNode = range.startContainer;
+				const paraEl = (startNode instanceof Element ? startNode : startNode.parentElement)?.closest('[data-paragraph-index]');
+				if (!paraEl) return;
+
+				const pIdx = Number(paraEl.getAttribute('data-paragraph-index'));
+				if (Number.isNaN(pIdx)) return;
+
+				let charOffset = 0;
+				try {
+					const preRange = document.createRange();
+					preRange.selectNodeContents(paraEl);
+					preRange.setEnd(range.startContainer, range.startOffset);
+					charOffset = preRange.toString().length;
+				} catch {
+					charOffset = 0;
+				}
+
+				triggerHaptic('light');
+				onSpeak(pIdx, charOffset);
+
+				// Clear selection so Android/browser action menu doesn't block the screen
+				if (window.getSelection) {
+					window.getSelection()?.removeAllRanges();
+				}
+			});
+		};
+
+		window.addEventListener('mouseup', handleInteractionEnd);
+		window.addEventListener('touchend', handleInteractionEnd);
+
+		return () => {
+			window.removeEventListener('mouseup', handleInteractionEnd);
+			window.removeEventListener('touchend', handleInteractionEnd);
+		};
+	}, [isTTSActive, containerId, onSpeak]);
+
 
 	const handleAction = (e: React.MouseEvent | React.TouchEvent) => {
 		e.preventDefault();

@@ -505,4 +505,51 @@ describe('useReadAloud browser speech ownership', () => {
 
 		unmount();
 	});
+
+	it('jumpToContent speaks starting from the exact selected text offset instead of the whole sentence', async () => {
+		const paragraphs = ['Câu một rất dài và có nhiều từ được chọn.'];
+		useReaderConfigStore.setState({ ttsEngine: 'browser' });
+		const speakSpy = vi.spyOn(NativeTTSService, 'speak').mockImplementation(async () => {});
+		vi.spyOn(NativeTTSService, 'isNative').mockReturnValue(true);
+
+		const { result, unmount } = renderHook(() =>
+			useReadAloud(paragraphs, { chapterId: 'c1', bookId: 'b1', chapterNumber: 1 })
+		);
+
+		// Offset 16 is "và có nhiều từ được chọn."
+		act(() => result.current.jumpToContent(0, 16));
+
+		expect(speakSpy).toHaveBeenCalledWith(
+			expect.objectContaining({ text: 'và có nhiều từ được chọn.' })
+		);
+
+		unmount();
+	});
+
+	it('jumpToContent with Edge TTS synthesizes from exact text offset', async () => {
+		const paragraphs = ['Mặt trời dần buông xuống phía sau ngọn đồi.'];
+		useReaderConfigStore.setState({ ttsEngine: 'edge' });
+		const edgeSpy = vi.spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries').mockResolvedValue({
+			audio: new Blob(['fake audio'], { type: 'audio/mp3' }),
+			wordBoundaries: []
+		});
+
+		const { result, unmount } = renderHook(() =>
+			useReadAloud(paragraphs, { chapterId: 'c2', bookId: 'b1', chapterNumber: 1 })
+		);
+
+		// Offset 13 is "buông xuống phía sau ngọn đồi."
+		act(() => result.current.jumpToContent(0, 13));
+
+		expect(edgeSpy).toHaveBeenCalledWith(
+			'buông xuống phía sau ngọn đồi.',
+			expect.any(String),
+			expect.any(Number),
+			undefined,
+			expect.any(AbortSignal)
+		);
+
+		unmount();
+	});
 });
+

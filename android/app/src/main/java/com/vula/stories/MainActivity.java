@@ -3,6 +3,7 @@ package com.vula.stories;
 import android.os.Bundle;
 import android.view.View;
 import android.webkit.WebView;
+import androidx.activity.OnBackPressedCallback;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -20,26 +21,39 @@ public class MainActivity extends BridgeActivity {
             webView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
             webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         }
+
+        // Register modern OnBackPressedCallback for Android 10-15+ edge swipe-back gesture & navigation buttons
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                handleIntelligentBack();
+            }
+        });
     }
 
-    @Override
-    public void onBackPressed() {
+    private void handleIntelligentBack() {
         if (getBridge() != null && getBridge().getWebView() != null) {
             WebView webView = getBridge().getWebView();
             // Intelligent Android Back navigation:
             // 1. Close any open BottomSheet or Modal dialog first via Escape event
-            // 2. If no modal is open and user is on a sub-route (e.g. reader or chapter list), navigate back
+            // 2. Support both HashRouter (#/...) and BrowserRouter paths
             // 3. Only exit the application if on the root library screen with no open dialogs
             String jsCheck =
                 "(function() {" +
-                "  var dialog = document.querySelector('[role=\"dialog\"], [aria-modal=\"true\"]');" +
+                "  var dialog = document.querySelector('[role=\"dialog\"], [aria-modal=\"true\"], [data-sheet-open=\"true\"]');" +
                 "  if (dialog) {" +
                 "    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));" +
                 "    return true;" +
                 "  }" +
-                "  var path = window.location.pathname;" +
-                "  if (path !== '/' && path !== '/library' && window.history.length > 1) {" +
-                "    window.history.back();" +
+                "  var hash = window.location.hash || '';" +
+                "  var path = window.location.pathname || '';" +
+                "  var isSubRoute = (hash && hash !== '#/' && hash !== '#/library') || (path !== '/' && path !== '/library' && path !== '/index.html');" +
+                "  if (isSubRoute) {" +
+                "    if (window.history.length > 1) {" +
+                "      window.history.back();" +
+                "    } else {" +
+                "      window.location.hash = '#/';" +
+                "    }" +
                 "    return true;" +
                 "  }" +
                 "  return false;" +
@@ -47,11 +61,19 @@ public class MainActivity extends BridgeActivity {
 
             webView.evaluateJavascript(jsCheck, value -> {
                 if (!"true".equals(value)) {
-                    runOnUiThread(() -> super.onBackPressed());
+                    runOnUiThread(() -> {
+                        finish();
+                    });
                 }
             });
             return;
         }
-        super.onBackPressed();
+        finish();
+    }
+
+    @Override
+    public void onBackPressed() {
+        handleIntelligentBack();
     }
 }
+
