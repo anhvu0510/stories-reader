@@ -275,11 +275,14 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		}
 	};
 
-	const stopAudioPlayer = () => {
-		edgeRequestAbortRef.current?.abort();
-		edgeRequestAbortRef.current = null;
-		edgePrefetchCacheRef.current.clear();
+	const stopAudioPlayer = (clearPrefetch = false) => {
 		releaseEdgeAudio();
+		edgePrefetchQueueRef.current = [];
+		if (clearPrefetch) {
+			edgeRequestAbortRef.current?.abort();
+			edgeRequestAbortRef.current = null;
+			edgePrefetchCacheRef.current.clear();
+		}
 		const player = gaplessPlayerRef.current;
 		gaplessPlayerRef.current = null;
 		if (player) {
@@ -290,22 +293,76 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	};
 
 	const edgePrefetchCacheRef = useRef<Map<number, Promise<EdgeSpeechWithBoundaries>>>(new Map());
+	const edgePrefetchQueueRef = useRef<number[]>([]);
+	const edgeActivePrefetchCountRef = useRef(0);
+	const PREFETCH_CONCURRENCY_LIMIT = 2;
+	const PREFETCH_WINDOW_SIZE = 5;
 
-	const prefetchEdgeChunk = (index: number) => {
-		if (index < 0 || index >= chunks.length) return;
-		if (edgePrefetchCacheRef.current.has(index)) return;
+	const prefetchEdgeChunk = (index: number): Promise<EdgeSpeechWithBoundaries> => {
+		if (index < 0 || index >= chunks.length) {
+			return Promise.reject(new Error('Index out of range'));
+		}
+		const existing = edgePrefetchCacheRef.current.get(index);
+		if (existing) return existing;
+
 		const chunk = chunks[index];
-		if (!chunk || !chunk.text.trim()) return;
+		if (!chunk || !chunk.text.trim()) {
+			return Promise.reject(new Error('Empty chunk text'));
+		}
+
 		if (!edgeRequestAbortRef.current || edgeRequestAbortRef.current.signal.aborted) {
 			edgeRequestAbortRef.current = new AbortController();
 		}
 
 		const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.0;
-		const promise = EdgeTTSService.synthesizeSpeechWithBoundaries(chunk.text, edgeVoiceUri, currentSpeechRate, activeDomain?.url, edgeRequestAbortRef.current.signal).catch((err) => {
+		const promise = EdgeTTSService.synthesizeSpeechWithBoundaries(
+			chunk.text,
+			edgeVoiceUri,
+			currentSpeechRate,
+			activeDomain?.url,
+			edgeRequestAbortRef.current.signal
+		).catch((err) => {
 			edgePrefetchCacheRef.current.delete(index);
 			throw err;
 		});
+
 		edgePrefetchCacheRef.current.set(index, promise);
+		return promise;
+	};
+
+	const processPrefetchQueue = () => {
+		while (
+			edgeActivePrefetchCountRef.current < PREFETCH_CONCURRENCY_LIMIT &&
+			edgePrefetchQueueRef.current.length > 0
+		) {
+			const nextIdx = edgePrefetchQueueRef.current.shift();
+			if (nextIdx === undefined) break;
+			if (edgePrefetchCacheRef.current.has(nextIdx)) continue;
+			if (nextIdx < 0 || nextIdx >= chunks.length) continue;
+
+			const chunk = chunks[nextIdx];
+			if (!chunk || !chunk.text.trim()) continue;
+
+			edgeActivePrefetchCountRef.current += 1;
+			prefetchEdgeChunk(nextIdx)
+				.finally(() => {
+					edgeActivePrefetchCountRef.current = Math.max(0, edgeActivePrefetchCountRef.current - 1);
+					processPrefetchQueue();
+				})
+				.catch(() => {});
+		}
+	};
+
+	const queuePrefetchWindow = (fromIndex: number, count: number = PREFETCH_WINDOW_SIZE) => {
+		for (let i = 1; i <= count; i++) {
+			const targetIdx = fromIndex + i;
+			if (targetIdx < chunks.length && !edgePrefetchCacheRef.current.has(targetIdx)) {
+				if (!edgePrefetchQueueRef.current.includes(targetIdx)) {
+					edgePrefetchQueueRef.current.push(targetIdx);
+				}
+			}
+		}
+		processPrefetchQueue();
 	};
 
 	const playChunkViaEdge = (index: number, sessionId: number, startOffset: number = 0) => {
@@ -327,53 +384,65 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 		releaseEdgeAudio();
 
-		const textToSpeak = startOffset > 0 ? chunk.text.substring(startOffset) : chunk.text;
-		if (!textToSpeak.trim()) {
-			playChunkViaEdge(index + 1, sessionId, 0);
-			return;
-		}
-
-		const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.0;
 		if (!edgeRequestAbortRef.current || edgeRequestAbortRef.current.signal.aborted) {
 			edgeRequestAbortRef.current = new AbortController();
 		}
 
-		let fetchPromise: Promise<EdgeSpeechWithBoundaries>;
-		if (startOffset > 0) {
-			fetchPromise = EdgeTTSService.synthesizeSpeechWithBoundaries(
-				textToSpeak,
-				edgeVoiceUri,
-				currentSpeechRate,
-				activeDomain?.url,
-				edgeRequestAbortRef.current.signal
-			);
-		} else {
-			prefetchEdgeChunk(index);
-			const cached = edgePrefetchCacheRef.current.get(index);
-			if (!cached) {
-				playChunkViaBrowser(index, 0, sessionId);
-				return;
-			}
-			fetchPromise = cached;
+		// Ensure current chunk is in cache (or in flight)
+		let fetchPromise = edgePrefetchCacheRef.current.get(index);
+		if (!fetchPromise) {
+			edgeActivePrefetchCountRef.current += 1;
+			fetchPromise = prefetchEdgeChunk(index).finally(() => {
+				edgeActivePrefetchCountRef.current = Math.max(0, edgeActivePrefetchCountRef.current - 1);
+				processPrefetchQueue();
+			});
 		}
 
-		// Prefetch upcoming chunks only after the current request is in flight.
-		prefetchEdgeChunk(index + 1);
-		prefetchEdgeChunk(index + 2);
-
-		// Clean old prefetch entries
+		// Clean old entries (keep chunk index - 1 and forward)
 		for (const k of edgePrefetchCacheRef.current.keys()) {
-			if (k < index) edgePrefetchCacheRef.current.delete(k);
+			if (k < index - 1) edgePrefetchCacheRef.current.delete(k);
 		}
+
+		// Trigger sliding window prefetch for upcoming 5 chunks
+		queuePrefetchWindow(index, PREFETCH_WINDOW_SIZE);
 
 		fetchPromise
 			.then(({ audio: blob, wordBoundaries }) => {
 				if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
+
+				// Calculate initial seek time based on wordBoundaries if startOffset > 0
+				let initialSeekTime = 0;
+				let initialBoundaryIndex = 0;
+				if (startOffset > 0 && wordBoundaries.length > 0) {
+					// Find the closest word boundary matching startOffset
+					const targetBoundaryIdx = wordBoundaries.findIndex(
+						(wb) => wb.charIndex >= startOffset || wb.charIndex + wb.charLength > startOffset
+					);
+					if (targetBoundaryIdx !== -1) {
+						initialSeekTime = wordBoundaries[targetBoundaryIdx].startSeconds;
+						initialBoundaryIndex = targetBoundaryIdx;
+					}
+				}
+
 				const audioUrl = URL.createObjectURL(blob);
 				const audio = new Audio(audioUrl);
 				edgeAudioRef.current = audio;
 				edgeAudioUrlRef.current = audioUrl;
-				let nextBoundaryIndex = 0;
+
+				let initialSeekApplied = false;
+				const applyInitialSeek = () => {
+					if (initialSeekApplied || initialSeekTime <= 0) return;
+					try {
+						audio.currentTime = initialSeekTime;
+						initialSeekApplied = true;
+					} catch {}
+				};
+
+				audio.addEventListener?.('loadedmetadata', applyInitialSeek, { once: true });
+				audio.addEventListener?.('canplay', applyInitialSeek, { once: true });
+				applyInitialSeek();
+
+				let nextBoundaryIndex = initialBoundaryIndex;
 
 				const syncWordBoundary = () => {
 					if (edgeAudioRef.current !== audio || !isPlayingRef.current || playSessionIdRef.current !== sessionId) {
@@ -386,9 +455,10 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 						nextBoundaryIndex += 1;
 					}
 					if (activeBoundary) {
-						updateWordHighlight(index, activeBoundary.charIndex + startOffset, activeBoundary.charLength);
+						updateWordHighlight(index, activeBoundary.charIndex, activeBoundary.charLength);
 					}
 				};
+
 				const startBoundaryTracking = () => {
 					stopEdgeBoundaryTracking();
 					const tick = () => {
@@ -404,9 +474,17 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 				audio.ontimeupdate = syncWordBoundary;
 				audio.onplay = () => {
+					applyInitialSeek();
 					if (playSessionIdRef.current === sessionId && isPlayingRef.current) {
 						setIsLoading(false);
 						setIsPlaying(true);
+					}
+					// Immediate highlight of starting word if seeking into middle of chunk
+					if (initialSeekTime > 0) {
+						const startingBoundary = (initialBoundaryIndex < wordBoundaries.length && wordBoundaries[initialBoundaryIndex]) || wordBoundaries[0];
+						if (startingBoundary) {
+							updateWordHighlight(index, startingBoundary.charIndex, startingBoundary.charLength);
+						}
 					}
 					startBoundaryTracking();
 				};
@@ -435,12 +513,15 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 					playChunkViaBrowser(index, 0, sessionId);
 				};
 
-				audio.play().catch((err) => {
-					if (playSessionIdRef.current !== sessionId) return;
-					releaseEdgeAudio();
-					console.warn('[Edge TTS] Audio play error:', err);
-					playChunkViaBrowser(index, 0, sessionId);
-				});
+				const playPromise = audio.play();
+				if (playPromise && typeof playPromise.catch === 'function') {
+					playPromise.catch((err) => {
+						if (playSessionIdRef.current !== sessionId) return;
+						releaseEdgeAudio();
+						console.warn('[Edge TTS] Audio play error:', err);
+						playChunkViaBrowser(index, 0, sessionId);
+					});
+				}
 			})
 			.catch((err) => {
 				if (playSessionIdRef.current !== sessionId || !isPlayingRef.current) return;
@@ -477,7 +558,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		isPausedRef.current = false;
 		playSessionIdRef.current += 1;
 
-		stopAudioPlayer();
+		stopAudioPlayer(true);
 		backgroundAudioRef.current?.stop();
 		wordHighlighterRef.current?.clear();
 		scrollFollowerRef.current?.cancel();
@@ -494,6 +575,27 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		charLengthRef.current = 0;
 		useTTSStore.setState({ currentCharIndex: -1, currentCharLength: 0, isLoading: false });
 	};
+
+	// Idle pre-warming for initial chunks when TTS engine is Edge
+	useEffect(() => {
+		if (ttsEngine !== 'edge' || isPlaying || isPaused || chunks.length === 0) {
+			return;
+		}
+
+		const idleTimer = setTimeout(() => {
+			if (ttsEngine === 'edge' && !isPlayingRef.current && chunks.length > 0) {
+				const saved = getResumePosition();
+				const startIdx = saved && saved.chunkIndex < chunks.length ? saved.chunkIndex : 0;
+				for (let i = startIdx; i < Math.min(chunks.length, startIdx + 3); i++) {
+					prefetchEdgeChunk(i).catch(() => {});
+				}
+			}
+		}, 500);
+
+		return () => {
+			clearTimeout(idleTimer);
+		};
+	}, [chunks, ttsEngine, isPlaying, isPaused, getResumePosition]);
 
 	useEffect(() => {
 		stopReading();

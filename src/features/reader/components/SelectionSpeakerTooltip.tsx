@@ -120,10 +120,10 @@ export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-con
 			}
 
 			// When holding down ("nhấn giữ") on mobile, selectionchange fires and settles.
-			// Debounce ~250ms to allow mobile touch handles to settle before jumping.
+			// Debounce 120ms to allow mobile touch handles to settle before jumping quickly.
 			selectionDebounceTimerRef.current = setTimeout(() => {
 				executeAutoJumpInReadMode();
-			}, 250);
+			}, 120);
 			return;
 		}
 

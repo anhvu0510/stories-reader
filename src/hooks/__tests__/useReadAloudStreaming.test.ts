@@ -237,6 +237,13 @@ describe('useReadAloud Edge word boundaries', () => {
 			this.onpause?.();
 		});
 
+		public addEventListener = vi.fn((event: string, handler: EventListenerOrEventListenerObject) => {
+			if (event === 'loadedmetadata' || event === 'canplay') {
+				if (typeof handler === 'function') handler(new Event(event));
+				else if (handler && 'handleEvent' in handler) handler.handleEvent(new Event(event));
+			}
+		});
+		public removeEventListener = vi.fn();
 		public constructor(public readonly src: string) {
 			fakeAudios.push(this);
 		}
@@ -389,6 +396,148 @@ describe('useReadAloud Edge word boundaries', () => {
 
 		unmount();
 	});
+
+	it('jumpToContent with Edge TTS reuses prefetched chunk and seeks to word boundary without extra network calls', async () => {
+		const paragraphs = ['Mặt trời dần buông xuống phía sau ngọn đồi.'];
+		useReaderConfigStore.setState({ ttsEngine: 'edge' });
+		const edgeSpy = vi.spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries').mockResolvedValue({
+			audio: new Blob(['fake audio'], { type: 'audio/mp3' }),
+			wordBoundaries: [
+				{ text: 'Mặt', charIndex: 0, charLength: 3, startSeconds: 0, endSeconds: 0.3 },
+				{ text: 'trời', charIndex: 4, charLength: 4, startSeconds: 0.35, endSeconds: 0.7 },
+				{ text: 'dần', charIndex: 9, charLength: 3, startSeconds: 0.75, endSeconds: 1.0 },
+				{ text: 'buông', charIndex: 13, charLength: 5, startSeconds: 1.25, endSeconds: 1.6 }
+			]
+		});
+
+		const { result, unmount } = renderHook(() =>
+			useReadAloud(paragraphs, { chapterId: 'c2', bookId: 'b1', chapterNumber: 1 })
+		);
+
+		// First, start reading: chunk 0 is synthesized and cached
+		act(() => result.current.startReading());
+		await waitFor(() => expect(edgeSpy).toHaveBeenCalledTimes(1));
+		expect(fakeAudios).toHaveLength(1);
+
+		// Now, jump to offset 13 ("buông")
+		act(() => result.current.jumpToContent(0, 13));
+
+		// ZERO extra synthesis calls: chunk was already prefetched/cached!
+		expect(edgeSpy).toHaveBeenCalledTimes(1);
+
+		// Audio seeks to word boundary startSeconds (1.25s)
+		await waitFor(() => {
+			const latestAudio = fakeAudios[fakeAudios.length - 1];
+			expect(latestAudio.currentTime).toBeCloseTo(1.25, 2);
+		});
+
+		unmount();
+	});
+
+	it('jumpToContent with Edge TTS synthesizes full chunk and seeks when chunk was not yet cached', async () => {
+		const paragraphs = ['Mặt trời dần buông xuống phía sau ngọn đồi.'];
+		useReaderConfigStore.setState({ ttsEngine: 'edge' });
+		const edgeSpy = vi.spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries').mockResolvedValue({
+			audio: new Blob(['fake audio'], { type: 'audio/mp3' }),
+			wordBoundaries: [
+				{ text: 'Mặt', charIndex: 0, charLength: 3, startSeconds: 0, endSeconds: 0.3 },
+				{ text: 'buông', charIndex: 13, charLength: 5, startSeconds: 1.25, endSeconds: 1.6 }
+			]
+		});
+
+		const { result, unmount } = renderHook(() =>
+			useReadAloud(paragraphs, { chapterId: 'c3', bookId: 'b1', chapterNumber: 1 })
+		);
+
+		// Direct jump without prior reading: synthesizes FULL chunk so future reads are cached
+		act(() => result.current.jumpToContent(0, 13));
+
+		await waitFor(() => expect(edgeSpy).toHaveBeenCalledTimes(1));
+		expect(edgeSpy).toHaveBeenCalledWith(
+			'Mặt trời dần buông xuống phía sau ngọn đồi.',
+			expect.any(String),
+			expect.any(Number),
+			undefined,
+			expect.any(AbortSignal)
+		);
+
+		// Seeks to offset 13's word boundary
+		await waitFor(() => {
+			const latestAudio = fakeAudios[fakeAudios.length - 1];
+			expect(latestAudio.currentTime).toBeCloseTo(1.25, 2);
+		});
+
+		unmount();
+	});
+
+	it('idle pre-warming pre-synthesizes initial chunks when reader is idle', async () => {
+		vi.useFakeTimers();
+		const paragraphs = ['Câu một.', 'Câu hai.', 'Câu ba.', 'Câu bốn.'];
+		useReaderConfigStore.setState({ ttsEngine: 'edge' });
+		const edgeSpy = vi.spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries').mockResolvedValue({
+			audio: new Blob(['fake audio'], { type: 'audio/mp3' }),
+			wordBoundaries: []
+		});
+
+		const { unmount } = renderHook(() =>
+			useReadAloud(paragraphs, { chapterId: 'c4', bookId: 'b1', chapterNumber: 1 })
+		);
+
+		// Fast forward past idle debounce (500ms)
+		act(() => {
+			vi.advanceTimersByTime(600);
+		});
+
+		// Initial chunks should be pre-warmed into cache
+		expect(edgeSpy).toHaveBeenCalledWith('Câu một.', expect.any(String), expect.any(Number), undefined, expect.any(AbortSignal));
+		expect(edgeSpy).toHaveBeenCalledWith('Câu hai.', expect.any(String), expect.any(Number), undefined, expect.any(AbortSignal));
+
+		vi.useRealTimers();
+		unmount();
+	});
+
+	it('expanded sliding window prefetch buffers upcoming chunks with max 2 concurrent requests', async () => {
+		const paragraphs = [
+			'Đoạn một.',
+			'Đoạn hai.',
+			'Đoạn ba.',
+			'Đoạn bốn.',
+			'Đoạn năm.',
+			'Đoạn sáu.'
+		];
+		useReaderConfigStore.setState({ ttsEngine: 'edge' });
+		let concurrentCount = 0;
+		let maxConcurrentSeen = 0;
+
+		const edgeSpy = vi.spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries').mockImplementation(async () => {
+			concurrentCount += 1;
+			if (concurrentCount > maxConcurrentSeen) {
+				maxConcurrentSeen = concurrentCount;
+			}
+			await new Promise((r) => setTimeout(r, 10));
+			concurrentCount -= 1;
+			return {
+				audio: new Blob(['fake audio'], { type: 'audio/mp3' }),
+				wordBoundaries: []
+			};
+		});
+
+		const { result, unmount } = renderHook(() =>
+			useReadAloud(paragraphs, { chapterId: 'c5', bookId: 'b1', chapterNumber: 1 })
+		);
+
+		act(() => result.current.startReading());
+
+		await waitFor(() => {
+			// At least 4 chunks requested in sliding window
+			expect(edgeSpy.mock.calls.length).toBeGreaterThanOrEqual(4);
+		});
+
+		// Concurrency limit throttled to <= 2 simultaneous requests
+		expect(maxConcurrentSeen).toBeLessThanOrEqual(2);
+
+		unmount();
+	});
 });
 
 describe('useReadAloud browser speech ownership', () => {
@@ -525,31 +674,6 @@ describe('useReadAloud browser speech ownership', () => {
 
 		unmount();
 	});
-
-	it('jumpToContent with Edge TTS synthesizes from exact text offset', async () => {
-		const paragraphs = ['Mặt trời dần buông xuống phía sau ngọn đồi.'];
-		useReaderConfigStore.setState({ ttsEngine: 'edge' });
-		const edgeSpy = vi.spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries').mockResolvedValue({
-			audio: new Blob(['fake audio'], { type: 'audio/mp3' }),
-			wordBoundaries: []
-		});
-
-		const { result, unmount } = renderHook(() =>
-			useReadAloud(paragraphs, { chapterId: 'c2', bookId: 'b1', chapterNumber: 1 })
-		);
-
-		// Offset 13 is "buông xuống phía sau ngọn đồi."
-		act(() => result.current.jumpToContent(0, 13));
-
-		expect(edgeSpy).toHaveBeenCalledWith(
-			'buông xuống phía sau ngọn đồi.',
-			expect.any(String),
-			expect.any(Number),
-			undefined,
-			expect.any(AbortSignal)
-		);
-
-		unmount();
-	});
 });
+
 

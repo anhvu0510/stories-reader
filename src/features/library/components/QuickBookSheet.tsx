@@ -46,6 +46,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 	const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const isInitialScrollDoneRef = useRef(false);
 	const pendingPrependScrollRef = useRef<{ prevHeight: number; prevTop: number } | null>(null);
+	const lastScrollTopRef = useRef<number>(0);
 	const fetchIdRef = useRef(0);
 
 	useEffect(() => {
@@ -139,15 +140,14 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 		}
 	}, [loading, loadingTop, hasMoreTop, chapters.length]);
 
-	// Auto-scroll positioning active chapter directly visible
+	// Auto-scroll positioning active chapter comfortably in upper-third of viewport
 	const scrollToActive = useCallback(() => {
 		if (activeItemRef.current && scrollContainerRef.current) {
 			const container = scrollContainerRef.current;
 			const activeEl = activeItemRef.current;
-			const containerRect = container.getBoundingClientRect();
-			const activeRect = activeEl.getBoundingClientRect();
-			const targetScrollTop = container.scrollTop + (activeRect.top - containerRect.top);
-			container.scrollTop = Math.max(0, targetScrollTop);
+			const targetScrollTop = Math.max(0, activeEl.offsetTop - container.clientHeight / 3);
+			container.scrollTop = targetScrollTop;
+			lastScrollTopRef.current = targetScrollTop;
 		}
 	}, []);
 
@@ -157,15 +157,21 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 			const { prevHeight, prevTop } = pendingPrependScrollRef.current;
 			pendingPrependScrollRef.current = null;
 			const newHeight = scrollContainerRef.current.scrollHeight;
-			scrollContainerRef.current.scrollTop = prevTop + (newHeight - prevHeight);
+			const diff = newHeight - prevHeight;
+			if (diff > 0) {
+				scrollContainerRef.current.scrollTop = prevTop + diff;
+				lastScrollTopRef.current = prevTop + diff;
+			}
 		}
 	}, [chapters]);
 
 	useLayoutEffect(() => {
 		if (!loading && chapters.length > 0 && !isInitialScrollDoneRef.current) {
-			isInitialScrollDoneRef.current = true;
 			requestAnimationFrame(() => {
 				scrollToActive();
+				setTimeout(() => {
+					isInitialScrollDoneRef.current = true;
+				}, 100);
 			});
 		}
 	}, [loading, chapters, scrollToActive]);
@@ -205,9 +211,6 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 		if (loadingTop || !hasMoreTop || minChapterNum <= 1 || search || !isInitialScrollDoneRef.current) return;
 		setLoadingTop(true);
 
-		const container = scrollContainerRef.current;
-		const prevScrollHeight = container ? container.scrollHeight : 0;
-		const prevScrollTop = container ? container.scrollTop : 0;
 		const targetToChapter = minChapterNum - 1;
 		const targetFromChapter = Math.max(1, minChapterNum - configChapterLimit);
 
@@ -217,10 +220,11 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 			const newChapters = res.chapters || [];
 
 			if (newChapters.length > 0) {
+				const container = scrollContainerRef.current;
 				if (container) {
 					pendingPrependScrollRef.current = {
-						prevHeight: prevScrollHeight,
-						prevTop: prevScrollTop
+						prevHeight: container.scrollHeight,
+						prevTop: container.scrollTop
 					};
 				}
 
@@ -248,13 +252,17 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 		if (!scrollContainerRef.current || loading || !isInitialScrollDoneRef.current) return;
 		const { scrollTop, clientHeight, scrollHeight } = scrollContainerRef.current;
 
+		const isScrollingUp = scrollTop < lastScrollTopRef.current;
+		const isScrollingDown = scrollTop > lastScrollTopRef.current;
+		lastScrollTopRef.current = scrollTop;
+
 		// Scroll Down -> Load More Bottom (Prefetch early at 300px threshold)
-		if (scrollTop + clientHeight >= scrollHeight - 300) {
+		if (isScrollingDown && scrollTop + clientHeight >= scrollHeight - 300) {
 			fetchNextBottomPage();
 		}
 
 		// Scroll Up -> Load More Top (Only when user actually scrolls near top <= 80px)
-		if (scrollTop <= 80) {
+		if (isScrollingUp && scrollTop <= 80) {
 			fetchPrevTopPage();
 		}
 	};
@@ -277,7 +285,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 
 	return (
 		<>
-			<BottomSheet isOpen={true} onClose={onClose} ariaLabel={book.bookName} maxHeight="h-[82vh] max-h-[90dvh]" showDragHandle={false}>
+			<BottomSheet isOpen={true} onClose={onClose} ariaLabel={book.bookName} maxHeight="h-[82vh] max-h-[90dvh]" showDragHandle={false} disableDrag={true}>
 				{/* Top Header & Compact Mobile Info Area (Includes Drag Handle for 100% seamless unified background) */}
 				<div className="pt-2 px-3.5 pb-1.5 border-b border-white/10 space-y-1.5 flex-shrink-0 bg-transparent relative z-20">
 					{/* Drag Handle */}
@@ -413,13 +421,9 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 				<div ref={scrollContainerRef} onScroll={handleScroll} className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5">
 					{/* Scroll Up Top Loading Indicator */}
 					{loadingTop && (
-						<div className="space-y-1.5 mb-2">
-							{[1, 2, 3, 4, 5].map((idx) => (
-								<div key={`sk-top-${idx}`} className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 animate-pulse flex items-center justify-between">
-									<div className="h-4 w-36 bg-on-surface-variant/20 rounded" />
-									<div className="h-4 w-12 bg-primary/20 rounded-lg" />
-								</div>
-							))}
+						<div className="py-2.5 flex items-center justify-center gap-2 text-xs font-mono text-primary/80">
+							<RefreshCw size={14} className="animate-spin text-primary" />
+							<span>Đang tải thêm chương trước...</span>
 						</div>
 					)}
 
@@ -433,7 +437,10 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 					) : (
 						<>
 							{chapters.map((c, idx) => {
-								const isLastRead = book.lastReadChapter?.chapterId === c.chapterId;
+								const isLastRead = Boolean(
+									(book.lastReadChapter?.chapterId && c.chapterId === book.lastReadChapter.chapterId) ||
+									(book.lastReadChapter?.chapterNumber !== undefined && c.chapterNumber === Number(book.lastReadChapter.chapterNumber))
+								);
 
 								return (
 									<ChapterItem
