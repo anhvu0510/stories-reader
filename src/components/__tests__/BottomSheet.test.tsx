@@ -50,7 +50,7 @@ describe('BottomSheet Component', () => {
 		expect(mockOnClose).toHaveBeenCalledTimes(1);
 	});
 
-	it('applies frosted glass styling by default or when glassmorphic is true with high opacity', () => {
+	it('applies crystal transparent glass styling by default or when glassmorphic is true', () => {
 		render(
 			<BottomSheet isOpen={true} onClose={mockOnClose} ariaLabel="Glass Sheet">
 				<div>Sheet Content</div>
@@ -62,8 +62,8 @@ describe('BottomSheet Component', () => {
 
 		expect(sheetContainer.className).toContain('backdrop-blur-sm');
 		expect(sheetContainer.className).toContain('color-mix');
-		expect(sheetContainer.className).toContain('97%');
-		expect(backdrop.className).toContain('bg-black/60');
+		expect(backdrop.className).toContain('bg-black/15');
+		expect(backdrop.className).toContain('backdrop-blur-[1.5px]');
 	});
 
 	it('mounts directly to document.body via portal and not inside parent container', () => {

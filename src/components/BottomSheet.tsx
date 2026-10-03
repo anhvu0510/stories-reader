@@ -74,7 +74,7 @@ export function BottomSheet({
 						transition={{ duration: 0.25, ease: 'easeOut' }}
 						onClick={onClose}
 						onTouchMove={(e) => e.preventDefault()}
-						className="absolute inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-sm"
+						className="absolute inset-0 bg-black/15 backdrop-blur-[1.5px]"
 					/>
 
 					{/* Bottom Sheet Card Container */}
@@ -91,9 +91,9 @@ export function BottomSheet({
 						onDragEnd={handleDragEnd}
 						onClick={(e) => e.stopPropagation()}
 						className={cn(
-							'relative z-10 w-full max-w-md mx-auto text-on-surface rounded-t-[32px] border-t sm:border shadow-[0_-16px_48px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden hide-scrollbar no-scrollbar box-border transform-gpu transition-colors duration-200 will-change-transform',
+							'relative z-10 w-full max-w-md mx-auto text-on-surface rounded-t-[32px] border-t sm:border shadow-[0_-12px_40px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden hide-scrollbar no-scrollbar box-border transform-gpu transition-colors duration-200 will-change-transform',
 							glassmorphic
-								? 'bg-[color-mix(in_srgb,var(--surface)_97%,transparent)] dark:bg-[color-mix(in_srgb,var(--surface)_96%,#000000)] backdrop-blur-sm backdrop-saturate-150 border-white/15 dark:border-white/10'
+								? 'bg-[color-mix(in_srgb,color-mix(in_srgb,var(--surface)_40%,#000000)_40%,transparent)] backdrop-blur-sm backdrop-saturate-150 border-white/10 dark:border-white/10'
 								: 'bg-surface border-outline-variant/40',
 							maxHeight,
 							contentClassName
