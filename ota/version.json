@@ -1,7 +1,7 @@
 {
-  "version": "1.0.277",
+  "version": "1.0.278",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "2c829ea577a3cf7a599597a7c085465ddfeb091c1acc1fdad88c1af47bc597d5",
-  "releaseNotes": "refactor: remove hardcoded server URLs and use dynamic configuration for TTS, OTA, and updates",
-  "updatedAt": "2026-10-03T17:54:37Z"
+  "checksum": "8d63d4413eab2a8bbd04a32becb07c62b742992d90553000afcc25979c87de83",
+  "releaseNotes": "feat: add encrypted default gateway URL fallback for OTA packaging and services",
+  "updatedAt": "2026-10-03T18:02:08Z"
 }
