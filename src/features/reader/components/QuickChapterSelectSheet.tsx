@@ -108,6 +108,7 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 	const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const isInitialScrollDoneRef = useRef(false);
 	const pendingPrependScrollRef = useRef<{ prevHeight: number; prevTop: number } | null>(null);
+	const lastScrollTopRef = useRef<number>(0);
 	const fetchIdRef = useRef(0);
 
 	useEffect(() => {
@@ -175,10 +176,9 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 		if (activeItemRef.current && scrollContainerRef.current) {
 			const container = scrollContainerRef.current;
 			const activeEl = activeItemRef.current;
-			const containerRect = container.getBoundingClientRect();
-			const activeRect = activeEl.getBoundingClientRect();
-			const targetScrollTop = container.scrollTop + (activeRect.top - containerRect.top) - containerRect.height / 3;
-			container.scrollTop = Math.max(0, targetScrollTop);
+			const targetScrollTop = Math.max(0, activeEl.offsetTop - container.clientHeight / 3);
+			container.scrollTop = targetScrollTop;
+			lastScrollTopRef.current = targetScrollTop;
 		}
 	}, []);
 
@@ -188,17 +188,21 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 			const { prevHeight, prevTop } = pendingPrependScrollRef.current;
 			pendingPrependScrollRef.current = null;
 			const newHeight = scrollContainerRef.current.scrollHeight;
-			scrollContainerRef.current.scrollTop = prevTop + (newHeight - prevHeight);
+			const diff = newHeight - prevHeight;
+			if (diff > 0) {
+				scrollContainerRef.current.scrollTop = prevTop + diff;
+				lastScrollTopRef.current = prevTop + diff;
+			}
 		}
 	}, [chapters]);
 
 	useLayoutEffect(() => {
 		if (!loading && chapters.length > 0 && !isInitialScrollDoneRef.current) {
-			isInitialScrollDoneRef.current = true;
 			requestAnimationFrame(() => {
 				scrollToActive();
-				setTimeout(scrollToActive, 50);
-				setTimeout(scrollToActive, 150);
+				setTimeout(() => {
+					isInitialScrollDoneRef.current = true;
+				}, 100);
 			});
 		}
 	}, [loading, chapters, scrollToActive]);
@@ -238,9 +242,6 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 		if (loadingTop || !hasMoreTop || minChapterNum <= 1 || search || !isInitialScrollDoneRef.current) return;
 		setLoadingTop(true);
 
-		const container = scrollContainerRef.current;
-		const prevScrollHeight = container ? container.scrollHeight : 0;
-		const prevScrollTop = container ? container.scrollTop : 0;
 		const targetToChapter = minChapterNum - 1;
 		const targetFromChapter = Math.max(1, minChapterNum - configChapterLimit);
 
@@ -250,10 +251,11 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 			const newChapters = res.chapters || [];
 
 			if (newChapters.length > 0) {
+				const container = scrollContainerRef.current;
 				if (container) {
 					pendingPrependScrollRef.current = {
-						prevHeight: prevScrollHeight,
-						prevTop: prevScrollTop
+						prevHeight: container.scrollHeight,
+						prevTop: container.scrollTop
 					};
 				}
 
@@ -281,13 +283,17 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 		if (!scrollContainerRef.current || loading || !isInitialScrollDoneRef.current) return;
 		const { scrollTop, clientHeight, scrollHeight } = scrollContainerRef.current;
 
+		const isScrollingUp = scrollTop < lastScrollTopRef.current;
+		const isScrollingDown = scrollTop > lastScrollTopRef.current;
+		lastScrollTopRef.current = scrollTop;
+
 		// Scroll Down -> Load More Bottom (Prefetch early at 300px threshold)
-		if (scrollTop + clientHeight >= scrollHeight - 300) {
+		if (isScrollingDown && scrollTop + clientHeight >= scrollHeight - 300) {
 			fetchNextBottomPage();
 		}
 
 		// Scroll Up -> Load More Top (Only when user actually scrolls near top <= 80px)
-		if (scrollTop <= 80) {
+		if (isScrollingUp && scrollTop <= 80) {
 			fetchPrevTopPage();
 		}
 	};
@@ -310,7 +316,7 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 
 	return (
 		<>
-			<BottomSheet isOpen={true} onClose={onClose} ariaLabel="Danh Sách Chương" maxHeight="h-[78vh] max-h-[85dvh]" showDragHandle={false}>
+			<BottomSheet isOpen={true} onClose={onClose} ariaLabel="Danh Sách Chương" maxHeight="h-[78vh] max-h-[85dvh]" showDragHandle={false} disableDrag={true}>
 				{/* Header & Search (Includes Drag Handle for 100% seamless unified background) */}
 				<div className="pt-2.5 px-4 pb-2 border-b border-white/10 space-y-2 flex-shrink-0 bg-transparent relative z-20">
 					{/* Drag Handle */}

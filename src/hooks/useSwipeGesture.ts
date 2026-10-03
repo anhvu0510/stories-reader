@@ -28,6 +28,19 @@ export function useSwipeGesture({
 				return;
 			}
 
+			// Do not trigger swipe gestures if touching inside an open dialog, modal, or bottom sheet
+			const target = e.target as Element | null;
+			if (target && typeof target.closest === 'function' && target.closest('[role="dialog"], [aria-modal="true"], .fixed.inset-0')) {
+				touchStartRef.current = null;
+				return;
+			}
+
+			// Do not trigger swipe gestures if body scroll is locked by any open modal
+			if (typeof document !== 'undefined' && document.body.style.overflow === 'hidden') {
+				touchStartRef.current = null;
+				return;
+			}
+
 			const touch = e.touches[0];
 			// Ignore touches starting near screen edges to preserve native OS back gestures
 			if (
