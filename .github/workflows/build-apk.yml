@@ -55,6 +55,8 @@ jobs:
     needs: detect
     if: needs.detect.outputs.should_build == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Repository
@@ -122,3 +124,18 @@ jobs:
             echo "❌ APK file not found at $APK_FILE"
             exit 1
           fi
+
+      - name: Publish APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.APP_VERSION }}
+          name: Stories Reader v${{ env.APP_VERSION }}
+          body: |
+            ## 📱 Stories Reader v${{ env.APP_VERSION }}
+            - Commit: `${{ github.event.head_commit.message }}`
+            - ⚡ Tải file APK đính kèm bên dưới và cài đặt trực tiếp trên Android.
+          files: android/release-output/StoriesReader-v${{ env.APP_VERSION }}.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
