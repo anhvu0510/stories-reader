@@ -418,7 +418,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 				</div>
 
 				{/* Inline Chapter List Container with 2-way Infinite Scroll */}
-				<div ref={scrollContainerRef} onScroll={handleScroll} className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5">
+				<div ref={scrollContainerRef} onScroll={handleScroll} className="p-3 pb-8 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5">
 					{/* Scroll Up Top Loading Indicator */}
 					{loadingTop && (
 						<div className="py-2.5 flex items-center justify-center gap-2 text-xs font-mono text-primary/80">

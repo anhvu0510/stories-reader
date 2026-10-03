@@ -38,7 +38,6 @@ export function LibraryScreen() {
 	const [search, setSearch] = useState(savedSearch || '');
 	const [appliedSearch, setAppliedSearch] = useState(savedSearch || '');
 	const [tab, setTab] = useState<'ALL' | 'HISTORY' | 'FAVORITE' | 'AI'>(savedTab);
-	const [tabDirection, setTabDirection] = useState<'left' | 'right' | null>(null);
 	const [selectedTags, setSelectedTags] = useState<string[]>(savedTags || []);
 	const initialSortBy: SortByField = savedSortBy === 'updatedAt' ? 'updatedAt' : 'createdAt';
 	const [sortBy, setSortByState] = useState<SortByField>(initialSortBy);
@@ -208,10 +207,6 @@ export function LibraryScreen() {
 		(newTab: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI') => {
 			if (newTab === tab) return;
 			triggerHaptic('selection');
-
-			const currentIndex = TABS.indexOf(tab);
-			const nextIndex = TABS.indexOf(newTab);
-			setTabDirection(nextIndex > currentIndex ? 'left' : 'right');
 
 			setTab(newTab);
 			setPage(1);
@@ -427,15 +422,8 @@ export function LibraryScreen() {
 					</div>
 				</div>
 
-				{/* Book Cards List Content Container with native mobile tab transition */}
-				<motion.div
-					key={tab}
-					initial={{ opacity: 0, x: tabDirection === 'left' ? 36 : tabDirection === 'right' ? -36 : 0 }}
-					animate={{ opacity: 1, x: 0 }}
-					transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
-					style={{ willChange: 'transform, opacity' }}
-					className="px-3.5 pt-3.5 pb-28 space-y-3 transform-gpu"
-				>
+				{/* Book Cards List Content Container */}
+				<div className="px-3.5 pt-3.5 pb-28 space-y-3">
 					{loading && books.length === 0 ? (
 						<div className="space-y-3 relative">
 							{[1, 2, 3, 4].map((idx) => (
@@ -485,7 +473,7 @@ export function LibraryScreen() {
 							))}
 						</div>
 					)}
-				</motion.div>
+				</div>
 			</main>
 
 			{/* Global Settings & Modals */}

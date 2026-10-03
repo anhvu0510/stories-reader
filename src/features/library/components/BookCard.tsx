@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, BookOpen, Trash2, Heart, MoreVertical, AlertCircle } from 'lucide-react';
 
@@ -325,65 +326,68 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
 			)}
 
 			{/* Confirmation Modal for Online/Offline Delete */}
-			{deleteConfirmType && (
-				<div
-					className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
-					onClick={() => !isDeleting && setDeleteConfirmType(null)}
-				>
+			{deleteConfirmType &&
+				typeof document !== 'undefined' &&
+				createPortal(
 					<div
-						className="w-full max-w-sm bg-black/40 backdrop-blur-[6px] border border-blue-500/30 dark:border-blue-400/25 rounded-3xl p-5 shadow-[0_16px_36px_rgba(0,0,0,0.5),_inset_0_1px_0.5px_0_rgba(255,255,255,0.45)] space-y-4 animate-in zoom-in-95 duration-200"
-						onClick={(e) => e.stopPropagation()}
+						className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+						onClick={() => !isDeleting && setDeleteConfirmType(null)}
 					>
-						{/* Header */}
-						<div className="flex items-center gap-3">
-							<div className="w-11 h-11 rounded-2xl bg-rose-500/15 border border-rose-500/30 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] flex items-center justify-center text-rose-400 shrink-0">
-								<Trash2 size={22} />
+						<div
+							className="w-full max-w-sm bg-black/40 backdrop-blur-[6px] border border-blue-500/30 dark:border-blue-400/25 rounded-3xl p-5 shadow-[0_16px_36px_rgba(0,0,0,0.5),_inset_0_1px_0.5px_0_rgba(255,255,255,0.45)] space-y-4 animate-in zoom-in-95 duration-200"
+							onClick={(e) => e.stopPropagation()}
+						>
+							{/* Header */}
+							<div className="flex items-center gap-3">
+								<div className="w-11 h-11 rounded-2xl bg-rose-500/15 border border-rose-500/30 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] flex items-center justify-center text-rose-400 shrink-0">
+									<Trash2 size={22} />
+								</div>
+								<div>
+									<h3 className="text-base font-bold text-on-surface">{deleteConfirmType === 'ONLINE' ? 'Xóa truyện khỏi hệ thống?' : 'Xóa truyện khỏi máy?'}</h3>
+									<p className="text-xs font-mono text-on-surface-variant/70">Xác nhận thao tác xóa</p>
+								</div>
 							</div>
-							<div>
-								<h3 className="text-base font-bold text-on-surface">{deleteConfirmType === 'ONLINE' ? 'Xóa truyện khỏi hệ thống?' : 'Xóa truyện khỏi máy?'}</h3>
-								<p className="text-xs font-mono text-on-surface-variant/70">Xác nhận thao tác xóa</p>
+
+							{/* Target Details */}
+							<div className="p-3 rounded-2xl bg-white/5 border border-outline-variant/30 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] space-y-1">
+								<p className="text-xs font-bold text-primary line-clamp-1">{book.bookName}</p>
+								<p className="text-[11.5px] text-on-surface-variant leading-relaxed">
+									{deleteConfirmType === 'ONLINE'
+										? 'Tất cả các chương, bản dịch AI và dữ liệu liên quan sẽ bị xóa vĩnh viễn khỏi server và không thể khôi phục.'
+										: 'Dữ liệu chương đã tải xuống trên thiết bị này sẽ bị xóa khỏi máy.'}
+								</p>
+							</div>
+
+							{/* Buttons */}
+							<div className="flex items-center justify-end gap-2 pt-1">
+								<button
+									type="button"
+									disabled={isDeleting}
+									onClick={() => setDeleteConfirmType(null)}
+									className="px-4 py-2 rounded-xl bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] text-on-surface hover:bg-white/15 text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer"
+								>
+									Hủy
+								</button>
+								<button
+									type="button"
+									disabled={isDeleting}
+									onClick={handleConfirmDelete}
+									className="px-4 py-2 rounded-xl bg-gradient-to-b from-rose-500 via-rose-600 to-rose-700 hover:brightness-110 active:scale-95 text-white text-xs font-bold border border-rose-400/60 shadow-[0_4px_16px_rgba(225,29,72,0.5),_inset_0_1px_1px_rgba(255,255,255,0.4)] transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+								>
+									{isDeleting ? (
+										<span>Đang xóa...</span>
+									) : (
+										<>
+											<Trash2 size={14} />
+											<span>{deleteConfirmType === 'ONLINE' ? 'Xóa vĩnh viễn' : 'Xóa khỏi máy'}</span>
+										</>
+									)}
+								</button>
 							</div>
 						</div>
-
-						{/* Target Details */}
-						<div className="p-3 rounded-2xl bg-white/5 border border-outline-variant/30 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] space-y-1">
-							<p className="text-xs font-bold text-primary line-clamp-1">{book.bookName}</p>
-							<p className="text-[11.5px] text-on-surface-variant leading-relaxed">
-								{deleteConfirmType === 'ONLINE'
-									? 'Tất cả các chương, bản dịch AI và dữ liệu liên quan sẽ bị xóa vĩnh viễn khỏi server và không thể khôi phục.'
-									: 'Dữ liệu chương đã tải xuống trên thiết bị này sẽ bị xóa khỏi máy.'}
-							</p>
-						</div>
-
-						{/* Buttons */}
-						<div className="flex items-center justify-end gap-2 pt-1">
-							<button
-								type="button"
-								disabled={isDeleting}
-								onClick={() => setDeleteConfirmType(null)}
-								className="px-4 py-2 rounded-xl bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)] text-on-surface hover:bg-white/15 text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer"
-							>
-								Hủy
-							</button>
-							<button
-								type="button"
-								disabled={isDeleting}
-								onClick={handleConfirmDelete}
-								className="px-4 py-2 rounded-xl bg-gradient-to-b from-rose-500 via-rose-600 to-rose-700 hover:brightness-110 active:scale-95 text-white text-xs font-bold border border-rose-400/60 shadow-[0_4px_16px_rgba(225,29,72,0.5),_inset_0_1px_1px_rgba(255,255,255,0.4)] transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-							>
-								{isDeleting ? (
-									<span>Đang xóa...</span>
-								) : (
-									<>
-										<Trash2 size={14} />
-										<span>{deleteConfirmType === 'ONLINE' ? 'Xóa vĩnh viễn' : 'Xóa khỏi máy'}</span>
-									</>
-								)}
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+					</div>,
+					document.body
+				)}
 		</>
 	);
 });

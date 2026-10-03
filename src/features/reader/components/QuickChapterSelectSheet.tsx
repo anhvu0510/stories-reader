@@ -393,7 +393,7 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 				</div>
 
 				{/* Chapter List with Windowing 2-way Infinite Scroll */}
-				<div ref={scrollContainerRef} onScroll={handleScroll} className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5">
+				<div ref={scrollContainerRef} onScroll={handleScroll} className="p-3 pb-8 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5">
 					{/* Scroll Up Top Loading Indicator */}
 					{loadingTop && (
 						<div className="space-y-2 mb-2">
