@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { BookOpen, Clock, Sparkles, Library, X, RotateCcw, Heart, Search, Tag, ArrowUpDown } from 'lucide-react';
 
@@ -9,6 +9,7 @@ import { PullToRefresh } from '@/components/PullToRefresh';
 import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { triggerHaptic } from '@/hooks/useHaptic';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { BookRepository } from '@/repositories/BookRepository';
 import { useAppStore } from '@/stores/useAppStore';
 import { useLibraryStore, SortByField, SortOrderDirection } from '@/stores/useLibraryStore';
@@ -192,16 +193,47 @@ export function LibraryScreen() {
 	};
 
 	// Tab switch handler: resets page and passes new tab to API
-	const handleTabChange = (newTab: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI') => {
-		if (newTab === tab) return;
-		triggerHaptic('selection');
-		setTab(newTab);
-		setPage(1);
-		setLibraryState(1, newTab, search, selectedTags, sortBy, sortOrder, 0);
-		if (mainScrollRef.current) {
-			mainScrollRef.current.scrollTop = 0;
+	const handleTabChange = useCallback(
+		(newTab: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI') => {
+			if (newTab === tab) return;
+			triggerHaptic('selection');
+			setTab(newTab);
+			setPage(1);
+			setLibraryState(1, newTab, search, selectedTags, sortBy, sortOrder, 0);
+			if (mainScrollRef.current) {
+				mainScrollRef.current.scrollTop = 0;
+			}
+		},
+		[tab, search, selectedTags, sortBy, sortOrder, setLibraryState]
+	);
+
+	// Native Swipe Gestures for Mobile Tab Switching with Smooth Transitions
+	const [tabDirection, setTabDirection] = useState<'left' | 'right' | null>(null);
+	const TABS: Array<'ALL' | 'HISTORY' | 'FAVORITE' | 'AI'> = useMemo(() => ['ALL', 'HISTORY', 'FAVORITE', 'AI'], []);
+
+	const handleSwipeLeft = useCallback(() => {
+		const currentIndex = TABS.indexOf(tab);
+		if (currentIndex < TABS.length - 1) {
+			setTabDirection('left');
+			handleTabChange(TABS[currentIndex + 1]);
 		}
-	};
+	}, [tab, TABS, handleTabChange]);
+
+	const handleSwipeRight = useCallback(() => {
+		const currentIndex = TABS.indexOf(tab);
+		if (currentIndex > 0) {
+			setTabDirection('right');
+			handleTabChange(TABS[currentIndex - 1]);
+		}
+	}, [tab, TABS, handleTabChange]);
+
+	useSwipeGesture({
+		onSwipeLeft: handleSwipeLeft,
+		onSwipeRight: handleSwipeRight,
+		threshold: 50,
+		disabled: isTagFilterOpen || isSortSheetOpen || isOfflineManagerOpen
+	});
+
 
 	// Tag filter apply handler
 	const handleTagFilterApply = (newTags: string[]) => {
@@ -364,8 +396,14 @@ export function LibraryScreen() {
 					</div>
 				</div>
 
-				{/* Book Cards List Content Container */}
-				<div className="px-3.5 pt-3.5 pb-28 space-y-3">
+				{/* Book Cards List Content Container with native mobile tab transition */}
+				<motion.div
+					key={tab}
+					initial={{ opacity: 0, x: tabDirection === 'left' ? 32 : tabDirection === 'right' ? -32 : 0 }}
+					animate={{ opacity: 1, x: 0 }}
+					transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
+					className="px-3.5 pt-3.5 pb-28 space-y-3"
+				>
 					{loading && books.length === 0 ? (
 						<div className="space-y-3 relative">
 							{[1, 2, 3, 4].map((idx) => (
@@ -415,7 +453,7 @@ export function LibraryScreen() {
 							))}
 						</div>
 					)}
-				</div>
+				</motion.div>
 			</main>
 
 			{/* Crystal See-Through Glass Loading Overlay */}

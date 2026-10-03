@@ -2,6 +2,8 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from '
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertCircle, Home, RotateCcw } from 'lucide-react';
 
+import { motion } from 'motion/react';
+
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { TranslationSheet } from '@/components/TranslationSheet';
 import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
@@ -11,9 +13,11 @@ import { useGlobalLoading } from '@/hooks/useGlobalLoading';
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { useReadingProgress } from '@/hooks/useReadingProgress';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { offlineDb } from '@/lib/offlineDb';
 import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
+import { openNextChapter, openPrevChapter } from '@/shared/utils/openChapter';
 import { useAppStore } from '@/stores/useAppStore';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { useToastStore } from '@/stores/useToastStore';
@@ -587,6 +591,31 @@ export function ReaderScreen() {
 		await loadChapter(true);
 	}, [stopReading, loadChapter]);
 
+	// Native Swipe Gestures for Mobile Chapter Navigation with Smooth Page Transitions
+	const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+
+	const handleSwipeNext = useCallback(() => {
+		if (!bookId || !contentData?.navigation?.next?.chapterId) return;
+		setSwipeDirection('left');
+		triggerHaptic('medium');
+		openNextChapter(bookId, chapterId, contentData.navigation.next.chapterId);
+	}, [bookId, chapterId, contentData?.navigation?.next?.chapterId]);
+
+	const handleSwipePrev = useCallback(() => {
+		if (!bookId || !contentData?.navigation?.prev?.chapterId) return;
+		setSwipeDirection('right');
+		triggerHaptic('medium');
+		openPrevChapter(bookId, chapterId, contentData.navigation.prev.chapterId);
+	}, [bookId, chapterId, contentData?.navigation?.prev?.chapterId]);
+
+	useSwipeGesture({
+		onSwipeLeft: handleSwipeNext,
+		onSwipeRight: handleSwipePrev,
+		threshold: 55,
+		disabled: loading || isRefreshingLatest
+	});
+
+
 	const fontClass =
 		font === 'bookerly'
 			? 'font-bookerly'
@@ -723,18 +752,25 @@ export function ReaderScreen() {
 			/>
 
 			{/* Reader Content Article - Frozen Memoized Multi-Chapter Section with Tap-to-Toggle Dock */}
-			<ChapterContentSection
+			<motion.div
 				key={`${chapter.chapterId}-${domResetKey}`}
-				chapters={displayChapters}
-				fontSize={fontSize}
-				lineHeight={lineHeight}
-				isPlaying={isPlaying}
-				isPaused={isPaused}
-				currentParagraphIndex={activeParagraphIndex}
-				onDoubleClick={handleDoubleClick}
-				onTouchStart={handleTouchStart}
-				onTouchEnd={handleTouchEnd}
-			/>
+				initial={{ opacity: 0, x: swipeDirection === 'left' ? 40 : swipeDirection === 'right' ? -40 : 0 }}
+				animate={{ opacity: 1, x: 0 }}
+				transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
+				className="w-full"
+			>
+				<ChapterContentSection
+					chapters={displayChapters}
+					fontSize={fontSize}
+					lineHeight={lineHeight}
+					isPlaying={isPlaying}
+					isPaused={isPaused}
+					currentParagraphIndex={activeParagraphIndex}
+					onDoubleClick={handleDoubleClick}
+					onTouchStart={handleTouchStart}
+					onTouchEnd={handleTouchEnd}
+				/>
+			</motion.div>
 
 			{/* Single Capsule Zen Mode Floating Control Bar */}
 			<div aria-hidden="true">
