@@ -21,7 +21,7 @@ const defaultSettings: ReaderConfig = {
 	bookLimit: 20,
 	chapterLimit: 50,
 	ttsEngine: 'vieneu',
-	vieneuServerUrl: 'https://api-anhvu0510.duckdns.org/vieneu-tts',
+	vieneuServerUrl: '',
 	vieneuModel: '',
 	vieneuTemperature: 0.8,
 	vieneuTopK: 25,

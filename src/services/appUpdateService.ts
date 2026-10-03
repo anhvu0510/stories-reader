@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import { useAppStore } from '@/stores/useAppStore';
 
 export interface UpdateManifest {
 	version: string;
@@ -20,7 +21,7 @@ declare const __APP_VERSION__: string | undefined;
 export const CURRENT_APP_VERSION =
 	typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__ ? __APP_VERSION__ : '1.0.4';
 export const DEFAULT_UPDATE_ENDPOINT = 'https://anhvu0510.github.io/stories-reader/ota/version.json';
-export const FALLBACK_UPDATE_ENDPOINT = 'https://api-anhvu0510.duckdns.org/api/app-update/version';
+export const FALLBACK_UPDATE_ENDPOINT = '';
 
 /**
  * Compare two semantic version strings (e.g. "1.0.1" vs "1.0.0")
@@ -121,13 +122,17 @@ export class AppUpdateService {
 			}
 
 			if (!res || !res.ok) {
-				try {
-					res = await fetch(FALLBACK_UPDATE_ENDPOINT, {
-						headers: { Accept: 'application/json' },
-						cache: 'no-store'
-					});
-				} catch {
-					return null;
+				const activeDomainUrl = useAppStore.getState().activeDomain?.url;
+				const fallback = activeDomainUrl ? `${activeDomainUrl.replace(/\/+$/, '')}/api/app-update/version` : FALLBACK_UPDATE_ENDPOINT;
+				if (fallback) {
+					try {
+						res = await fetch(fallback, {
+							headers: { Accept: 'application/json' },
+							cache: 'no-store'
+						});
+					} catch {
+						return null;
+					}
 				}
 			}
 

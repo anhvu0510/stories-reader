@@ -16,10 +16,11 @@ mkdir -p dist-ota
 CHECKSUM=$(shasum -a 256 dist-ota/bundle.zip | cut -d ' ' -f 1)
 
 # 5. Generate version.json manifest
+GATEWAY_URL="${GATEWAY_URL:-https://api.your-domain.com}"
 cat <<EOF > dist-ota/version.json
 {
   "version": "${VERSION}",
-  "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
+  "bundleUrl": "${GATEWAY_URL}/api/app-update/bundle.zip",
   "checksum": "${CHECKSUM}",
   "releaseNotes": "Stories Reader cập nhật phiên bản ${VERSION}",
   "updatedAt": "${TIMESTAMP}"

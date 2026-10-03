@@ -80,7 +80,7 @@ Chỉ dùng khi có thay đổi ở tầng **Native Android** (thư mục `andro
   ```
 - **Kiểm tra phiên bản OTA trên VPS Gateway**:
   ```bash
-  curl -s https://api-anhvu0510.duckdns.org/api/app-update/version
+  curl -s https://<YOUR_GATEWAY_URL>/api/app-update/version
   ```
 - **Kiểm tra trực tiếp trên app Android**:
   - Mở app -> Bấm icon **Cài đặt** (Settings).

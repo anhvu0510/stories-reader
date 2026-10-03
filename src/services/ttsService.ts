@@ -51,7 +51,7 @@ export interface VieNeuRequestContext {
 	is_final_segment?: boolean;
 }
 
-export const DEFAULT_VIENEU_SERVER_URL = 'https://api-anhvu0510.duckdns.org/vieneu-tts';
+export const DEFAULT_VIENEU_SERVER_URL = '';
 
 export class TTSService {
 	public static async fetchModels(baseUrl: string = DEFAULT_VIENEU_SERVER_URL): Promise<VieNeuModel[]> {
