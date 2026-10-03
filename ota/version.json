@@ -1,7 +1,7 @@
 {
-  "version": "1.0.282",
+  "version": "1.0.283",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "4d91d22f787f9674432c2948061a9b7c7b1337846a99e5086e23fee66f180377",
-  "releaseNotes": "refactor: remove previous section navigation button and associated tests from VerticalBatchChapterNav",
-  "updatedAt": "2026-10-03T19:34:51Z"
+  "checksum": "76bd89a744571666b0b8b7d630de5a5c2d81503e1c12c8c28b52ab7f65d0fd8d",
+  "releaseNotes": "refactor: comment out text label in SelectionSpeakerTooltip and its test",
+  "updatedAt": "2026-10-03T19:38:18Z"
 }
