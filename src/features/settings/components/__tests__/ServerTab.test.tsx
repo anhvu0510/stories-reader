@@ -79,4 +79,14 @@ describe('ServerTab Component (Sync and OTA Update Check UI)', () => {
 			);
 		});
 	});
+
+	it('renders passcode button and opens PasscodeModal when clicked', () => {
+		render(<ServerTab />);
+
+		const passcodeBtn = screen.getByRole('button', { name: /Passcode/i });
+		expect(passcodeBtn).toBeDefined();
+
+		fireEvent.click(passcodeBtn);
+		expect(screen.getByText('Stories Reader')).toBeDefined();
+	});
 });

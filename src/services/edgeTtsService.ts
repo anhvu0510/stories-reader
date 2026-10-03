@@ -73,7 +73,7 @@ async function reportClientError(baseUrl: string | undefined, error: unknown, co
 	}
 }
 
-export const DEFAULT_GATEWAY_URL = 'https://api-anhvu0510.duckdns.org';
+export const DEFAULT_GATEWAY_URL = '';
 
 export function getGatewayBaseUrl(): string {
 	try {
@@ -101,6 +101,55 @@ export const DEFAULT_EDGE_VOICES: EdgeVoice[] = [
 		desc: 'Giọng nam tiếng Việt truyền cảm'
 	}
 ];
+
+export function mapEdgeWordBoundaries(
+	sourceText: string,
+	rawBoundaries: Array<{
+		text: string;
+		charIndex?: number;
+		charLength?: number;
+		startSeconds: number;
+		endSeconds: number;
+	}>
+): EdgeWordBoundary[] {
+	if (!sourceText || !rawBoundaries || rawBoundaries.length === 0) {
+		return [];
+	}
+
+	const foldedSource = sourceText.toLowerCase();
+	let searchFrom = 0;
+	const mapped: EdgeWordBoundary[] = [];
+
+	for (const boundary of rawBoundaries) {
+		const rawWord = boundary.text?.trim() || '';
+		if (!rawWord) continue;
+
+		const cleanWord = rawWord.toLowerCase();
+		let charIndex = foldedSource.indexOf(cleanWord, searchFrom);
+
+		if (charIndex < 0) {
+			const stripped = cleanWord.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+			if (stripped) {
+				charIndex = foldedSource.indexOf(stripped, searchFrom);
+			}
+		}
+
+		if (charIndex >= 0) {
+			const matchedLength = rawWord.length;
+			const matchedText = sourceText.slice(charIndex, charIndex + matchedLength);
+			mapped.push({
+				text: matchedText || rawWord,
+				charIndex,
+				charLength: matchedLength,
+				startSeconds: boundary.startSeconds,
+				endSeconds: boundary.endSeconds
+			});
+			searchFrom = charIndex + matchedLength;
+		}
+	}
+
+	return mapped;
+}
 
 export class EdgeTTSService {
 	public static async fetchVoices(baseUrl?: string): Promise<EdgeVoice[]> {
@@ -198,9 +247,12 @@ export class EdgeTTSService {
 					pitch: '+0Hz'
 				});
 				const blob = base64ToBlob(res.audioBase64, res.mimeType || 'audio/mpeg');
+				const rawBoundaries = res.wordBoundaries || [];
+				const mappedBoundaries = mapEdgeWordBoundaries(text, rawBoundaries);
+
 				return {
 					audio: blob,
-					wordBoundaries: res.wordBoundaries || []
+					wordBoundaries: mappedBoundaries.length > 0 ? mappedBoundaries : rawBoundaries
 				};
 			} catch (err) {
 				const errMsg = err instanceof Error ? err.message : String(err);

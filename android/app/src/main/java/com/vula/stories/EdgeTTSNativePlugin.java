@@ -120,6 +120,9 @@ public class EdgeTTSNativePlugin extends Plugin {
             JSArray wordBoundaries = new JSArray();
             final String requestId = UUID.randomUUID().toString().replace("-", "");
             final boolean[] isResolved = {false};
+            final String cleanSourceText = text.trim();
+            final String foldedSourceText = cleanSourceText.toLowerCase(Locale.ROOT);
+            final int[] searchOffset = {0};
 
             httpClient.newWebSocket(request, new WebSocketListener() {
                 @Override
@@ -203,11 +206,27 @@ public class EdgeTTSNativePlugin extends Plugin {
                                                 JSONObject textData = data.optJSONObject("text");
                                                 String word = textData != null ? textData.optString("Text", "") : "";
                                                 int length = textData != null ? textData.optInt("Length", word.length()) : word.length();
-                                                int textOffset = data.optInt("textOffset", 0);
+
+                                                String cleanWord = word.trim().toLowerCase(Locale.ROOT);
+                                                int charIndex = -1;
+                                                if (!cleanWord.isEmpty()) {
+                                                    charIndex = foldedSourceText.indexOf(cleanWord, searchOffset[0]);
+                                                    if (charIndex < 0) {
+                                                        String stripped = cleanWord.replaceAll("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$", "");
+                                                        if (!stripped.isEmpty()) {
+                                                            charIndex = foldedSourceText.indexOf(stripped, searchOffset[0]);
+                                                        }
+                                                    }
+                                                }
+                                                if (charIndex >= 0) {
+                                                    searchOffset[0] = charIndex + cleanWord.length();
+                                                } else {
+                                                    charIndex = searchOffset[0];
+                                                }
 
                                                 JSObject wb = new JSObject();
                                                 wb.put("text", word);
-                                                wb.put("charIndex", textOffset);
+                                                wb.put("charIndex", charIndex);
                                                 wb.put("charLength", length);
                                                 wb.put("startSeconds", (double) offsetTicks / 10000000.0);
                                                 wb.put("endSeconds", (double) (offsetTicks + durationTicks) / 10000000.0);

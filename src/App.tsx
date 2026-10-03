@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, KeyRound } from 'lucide-react';
 
 import { GlobalApiLoading } from './components/GlobalApiLoading';
 import { GlobalDownloadProgress } from './components/GlobalDownloadProgress';
 import { ToastContainer } from './components/Toast';
 import { AppUpdateOverlay } from './components/AppUpdateOverlay';
+import { PasscodeModal } from './components/PasscodeModal';
+import { type SecretServerConfig } from './services/secretServerService';
 import { useAppUpdate } from './hooks/useAppUpdate';
 import { ChapterListScreen } from './features/chapter-list/ChapterListScreen';
 import { LibraryScreen } from './features/library/LibraryScreen';
@@ -56,9 +58,20 @@ function AppContent() {
 function ApplicationGate({ children }: { children: React.ReactNode }) {
 	const [isInitializing, setIsInitializing] = useState(true);
 	const [showSettings, setShowSettings] = useState(false);
+	const [showPasscodeModal, setShowPasscodeModal] = useState(false);
 	const [domainInput, setDomainInput] = useState('');
 	const [nameInput, setNameInput] = useState('');
 	const [isTesting, setIsTesting] = useState(false);
+
+	const handlePasscodeSuccess = (server: SecretServerConfig) => {
+		useAppStore.getState().addDomain({
+			id: Date.now().toString(),
+			name: server.name,
+			url: server.url
+		});
+		setShowSettings(false);
+		window.location.reload();
+	};
 
 	useEffect(() => {
 		useAppStore.getState().loadAppConfig();
@@ -152,10 +165,14 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 
 	if (showSettings) {
 		return (
-			<div className="min-h-screen bg-surface-container-lowest flex flex-col justify-center p-5 sm:p-6 font-sans relative overflow-hidden">
+			<div className="min-h-screen bg-background text-on-background flex flex-col justify-center p-5 sm:p-6 font-sans relative overflow-hidden select-none">
+				{/* Ambient Background Glow for theme immersion */}
+				<div className="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/20 blur-[130px] pointer-events-none rounded-full" />
+				<div className="absolute -bottom-32 right-1/4 w-80 h-80 bg-primary/10 blur-[120px] pointer-events-none rounded-full" />
+
 				<div className="w-full max-w-[400px] mx-auto flex flex-col gap-8 relative z-10">
 					<div className="flex flex-col items-center text-center gap-4">
-						<div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center mb-2 shadow-sm ring-1 ring-primary/20">
+						<div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/25 to-primary/5 text-primary flex items-center justify-center mb-2 shadow-[0_8px_24px_rgba(0,0,0,0.25),_inset_0_1.5px_1px_rgba(255,255,255,0.4)] border border-primary/30 backdrop-blur-md">
 							<BookOpen size={28} strokeWidth={2.5} className="drop-shadow-sm" />
 						</div>
 						<div>
@@ -164,7 +181,7 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 						</div>
 					</div>
 
-					<div className="bg-surface p-6 rounded-[28px] shadow-sm ring-1 ring-outline-variant/20 flex flex-col gap-6">
+					<div className="bg-surface/50 dark:bg-surface/40 backdrop-blur-2xl p-6 sm:p-7 rounded-[32px] shadow-[0_16px_40px_rgba(0,0,0,0.4),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.3)] border border-white/20 dark:border-white/15 flex flex-col gap-6 relative z-10">
 						<div className="flex flex-col gap-5">
 							<div className="flex flex-col gap-2">
 								<label className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider ml-1">
@@ -175,7 +192,7 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 									value={nameInput}
 									onChange={(e) => setNameInput(e.target.value)}
 									placeholder="Ví dụ: Server Nhà, Ngrok..."
-									className="w-full h-12 px-4 rounded-2xl bg-surface-container-high border border-transparent focus:border-primary/50 text-[14px] font-medium text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none transition-all"
+									className="w-full h-12 px-4 rounded-2xl bg-surface-container-high/40 hover:bg-surface-container-high/60 focus:bg-surface-container-high/80 backdrop-blur-md border border-outline-variant/60 focus:border-primary/80 focus:ring-2 focus:ring-primary/20 text-[14px] font-medium text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none transition-all shadow-[inset_0_1.5px_1px_rgba(0,0,0,0.15)]"
 								/>
 							</div>
 
@@ -188,7 +205,7 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 									value={domainInput}
 									onChange={(e) => setDomainInput(e.target.value)}
 									placeholder="https://..."
-									className="w-full h-12 px-4 rounded-2xl bg-surface-container-high border border-transparent focus:border-primary/50 text-[14px] font-medium text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none transition-all"
+									className="w-full h-12 px-4 rounded-2xl bg-surface-container-high/40 hover:bg-surface-container-high/60 focus:bg-surface-container-high/80 backdrop-blur-md border border-outline-variant/60 focus:border-primary/80 focus:ring-2 focus:ring-primary/20 text-[14px] font-medium text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none transition-all shadow-[inset_0_1.5px_1px_rgba(0,0,0,0.15)]"
 								/>
 							</div>
 						</div>
@@ -196,9 +213,24 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 						<button
 							onClick={handleSave}
 							disabled={isTesting || !domainInput.trim()}
-							className="w-full h-12 rounded-2xl bg-primary text-on-primary font-bold text-[14px] shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+							className="w-full h-12 rounded-2xl bg-primary text-on-primary font-bold text-[14px] shadow-[0_4px_16px_rgba(0,0,0,0.25),_inset_0_1.5px_1px_rgba(255,255,255,0.45)] hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
 						>
 							{isTesting ? 'Đang kiểm tra...' : 'Kết nối & Bắt đầu'}
+						</button>
+
+						<div className="flex items-center gap-3">
+							<div className="flex-1 h-px bg-outline-variant/40" />
+							<span className="text-[12px] text-on-surface-variant font-medium">hoặc</span>
+							<div className="flex-1 h-px bg-outline-variant/40" />
+						</div>
+
+						<button
+							type="button"
+							onClick={() => setShowPasscodeModal(true)}
+							className="w-full h-12 rounded-2xl bg-primary/15 hover:bg-primary/25 border border-primary/40 text-primary font-bold text-[14px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]"
+						>
+							<KeyRound size={16} />
+							Mở khóa nhanh bằng Passcode
 						</button>
 
 						<button
@@ -206,11 +238,17 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 								useAppStore.getState().setOfflineMode(true);
 								setShowSettings(false);
 							}}
-							className="w-full h-10 rounded-2xl bg-surface-container border border-outline-variant/30 text-on-surface-variant font-semibold text-[13px] hover:bg-surface-container-high transition-all"
+							className="w-full h-10 rounded-2xl bg-surface-container-high/30 hover:bg-surface-container-high/60 border border-outline-variant/40 text-on-surface-variant font-semibold text-[13px] backdrop-blur-md transition-all cursor-pointer"
 						>
-							Hoặc vào Chế độ Ngoại tuyến (Offline Mode)
+							Vào Chế độ Ngoại tuyến (Offline Mode)
 						</button>
 					</div>
+
+					<PasscodeModal
+						isOpen={showPasscodeModal}
+						onClose={() => setShowPasscodeModal(false)}
+						onSuccess={handlePasscodeSuccess}
+					/>
 				</div>
 			</div>
 		);

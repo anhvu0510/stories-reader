@@ -115,7 +115,7 @@ describe('EdgeTTSService', () => {
 		});
 	});
 
-	it('uses EdgeTTSNative plugin on Android native platform', async () => {
+	it('uses EdgeTTSNative plugin on Android native platform and maps word boundaries accurately', async () => {
 		const { Capacitor } = await import('@capacitor/core');
 		const { EdgeTTSNative } = await import('@/services/edgeTtsService');
 
@@ -124,21 +124,64 @@ describe('EdgeTTSService', () => {
 			audioBase64: Buffer.from('mock native audio').toString('base64'),
 			mimeType: 'audio/mpeg',
 			wordBoundaries: [
-				{ text: 'Xin', charIndex: 0, charLength: 3, startSeconds: 0.1, endSeconds: 0.3 }
+				{ text: 'Xin', charIndex: 0, charLength: 3, startSeconds: 0.1, endSeconds: 0.3 },
+				{ text: 'chào', charIndex: 0, charLength: 4, startSeconds: 0.33, endSeconds: 0.58 }
 			]
 		});
 
-		const result = await EdgeTTSService.synthesizeSpeechWithBoundaries('Xin chào', 'vi-VN-HoaiMyNeural', 1.0);
+		const result = await EdgeTTSService.synthesizeSpeechWithBoundaries('Xin chào các bạn', 'vi-VN-HoaiMyNeural', 1.0);
 
 		expect(nativeSpy).toHaveBeenCalledWith({
-			text: 'Xin chào',
+			text: 'Xin chào các bạn',
 			voice: 'vi-VN-HoaiMyNeural',
 			rate: '+0%',
 			pitch: '+0Hz'
 		});
 		expect(result.audio).toBeInstanceOf(Blob);
-		expect(result.wordBoundaries).toHaveLength(1);
-		expect(result.wordBoundaries[0].text).toBe('Xin');
+		expect(result.wordBoundaries).toHaveLength(2);
+		expect(result.wordBoundaries[0]).toEqual({
+			text: 'Xin',
+			charIndex: 0,
+			charLength: 3,
+			startSeconds: 0.1,
+			endSeconds: 0.3
+		});
+		expect(result.wordBoundaries[1]).toEqual({
+			text: 'chào',
+			charIndex: 4,
+			charLength: 4,
+			startSeconds: 0.33,
+			endSeconds: 0.58
+		});
+	});
+
+	it('maps word boundaries accurately with quotes, punctuation and repeated words', async () => {
+		const { mapEdgeWordBoundaries } = await import('@/services/edgeTtsService');
+		const sourceText = 'Xin chào các bạn! Bạn nói: "quác quác quác".';
+		const rawBoundaries = [
+			{ text: 'Xin', startSeconds: 0.1, endSeconds: 0.3 },
+			{ text: 'chào', startSeconds: 0.33, endSeconds: 0.58 },
+			{ text: 'các', startSeconds: 0.59, endSeconds: 0.78 },
+			{ text: 'bạn', startSeconds: 0.79, endSeconds: 1.15 },
+			{ text: 'Bạn', startSeconds: 1.35, endSeconds: 1.55 },
+			{ text: 'nói', startSeconds: 1.6, endSeconds: 1.8 },
+			{ text: 'quác', startSeconds: 1.9, endSeconds: 2.1 },
+			{ text: 'quác', startSeconds: 2.15, endSeconds: 2.35 },
+			{ text: 'quác', startSeconds: 2.4, endSeconds: 2.6 }
+		];
+
+		const mapped = mapEdgeWordBoundaries(sourceText, rawBoundaries);
+
+		expect(mapped).toHaveLength(9);
+		expect(mapped[0].charIndex).toBe(0); // 'Xin'
+		expect(mapped[1].charIndex).toBe(4); // 'chào'
+		expect(mapped[2].charIndex).toBe(9); // 'các'
+		expect(mapped[3].charIndex).toBe(13); // 'bạn'
+		expect(mapped[4].charIndex).toBe(18); // 'Bạn'
+		expect(mapped[5].charIndex).toBe(22); // 'nói'
+		expect(mapped[6].charIndex).toBe(28); // first 'quác' inside quotes
+		expect(mapped[7].charIndex).toBe(33); // second 'quác'
+		expect(mapped[8].charIndex).toBe(38); // third 'quác'
 	});
 
 	it('alerts user and logs error to gateway when EdgeTTSNative fails on Android', async () => {

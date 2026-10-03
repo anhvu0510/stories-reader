@@ -500,6 +500,14 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			return;
 		}
 
+		if (
+			charIndexRef.current === nextCharIndex &&
+			charLengthRef.current === nextCharLength &&
+			useTTSStore.getState().currentParagraphIndex === chunk.pIdx
+		) {
+			return;
+		}
+
 		const wordText = chunk.text.substring(nextCharIndex, nextCharIndex + nextCharLength);
 		const match = wordText.match(/[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
 		if (!match || match.index === undefined) {

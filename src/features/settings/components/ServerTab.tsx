@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Server, Plus, RefreshCw, Check, Trash2, Edit3, Loader2, Wifi, WifiOff } from 'lucide-react';
+import { Server, Plus, RefreshCw, Check, Trash2, Edit3, Loader2, Wifi, WifiOff, KeyRound } from 'lucide-react';
 
 import { useAppUpdate } from '@/hooks/useAppUpdate';
 import { useAppStore } from '@/stores/useAppStore';
 import { useToastStore } from '@/stores/useToastStore';
+import { PasscodeModal } from '@/components/PasscodeModal';
+import { type SecretServerConfig } from '@/services/secretServerService';
 
 import type { ApiDomain } from '@/shared/types';
 
@@ -13,10 +15,27 @@ export function ServerTab() {
 	const showToast = useToastStore((state) => state.showToast);
 
 	const [showForm, setShowForm] = useState(false);
+	const [showPasscodeModal, setShowPasscodeModal] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [domainName, setDomainName] = useState('');
 	const [domainUrl, setDomainUrl] = useState('');
 	const [testingId, setTestingId] = useState<string | null>(null);
+
+	const handlePasscodeSuccess = (server: SecretServerConfig) => {
+		const existing = domains.find((d) => d.url === server.url);
+		if (existing) {
+			setActiveDomainId(existing.id);
+		} else {
+			const newId = Date.now().toString();
+			addDomain({
+				id: newId,
+				name: server.name,
+				url: server.url
+			});
+			setActiveDomainId(newId);
+		}
+		window.location.reload();
+	};
 
 	const {
 		appInfo,
@@ -129,6 +148,14 @@ export function ServerTab() {
 						</span>
 					</button>
 					<button
+						onClick={() => setShowPasscodeModal(true)}
+						className="p-1.5 rounded-xl bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all text-xs flex items-center gap-1 font-bold shadow-xs cursor-pointer"
+						title="Mở khóa máy chủ nhanh bằng Passcode"
+					>
+						<KeyRound size={14} />
+						<span className="hidden sm:inline">Passcode</span>
+					</button>
+					<button
 						onClick={() => {
 							setEditingId(null);
 							setDomainName('');
@@ -239,6 +266,12 @@ export function ServerTab() {
 					);
 				})}
 			</div>
+
+			<PasscodeModal
+				isOpen={showPasscodeModal}
+				onClose={() => setShowPasscodeModal(false)}
+				onSuccess={handlePasscodeSuccess}
+			/>
 		</div>
 	);
 }
