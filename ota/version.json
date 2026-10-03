@@ -1,7 +1,7 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.275",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "b66d62a3e3e9a73789e35b77587fb485c448826aaa254b78610cda93ff407758",
-  "releaseNotes": "docs: add Android OTA and APK deployment guide",
-  "updatedAt": "2026-10-03T16:08:17Z"
+  "checksum": "74b8ed41a5d104cb4b81482d687da35cea8143a8b933c6518643e7ac33c8f365",
+  "releaseNotes": "feat: dynamic version injection in vite config and updated server tab update flow",
+  "updatedAt": "2026-10-03T16:25:52Z"
 }
