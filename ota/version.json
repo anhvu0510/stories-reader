@@ -1,7 +1,7 @@
 {
   "version": "1.0.3",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "acd5e37345438b3e037b48211f2929cb37102e30eda063177251737da61f7264",
-  "releaseNotes": "feat(ui): add ota live badge to library header and release v1.0.3",
-  "updatedAt": "2026-10-03T16:01:13Z"
+  "checksum": "b66d62a3e3e9a73789e35b77587fb485c448826aaa254b78610cda93ff407758",
+  "releaseNotes": "docs: add Android OTA and APK deployment guide",
+  "updatedAt": "2026-10-03T16:08:17Z"
 }
