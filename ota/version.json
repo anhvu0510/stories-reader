@@ -1,7 +1,7 @@
 {
-  "version": "1.0.275",
+  "version": "1.0.276",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "74b8ed41a5d104cb4b81482d687da35cea8143a8b933c6518643e7ac33c8f365",
-  "releaseNotes": "feat: dynamic version injection in vite config and updated server tab update flow",
-  "updatedAt": "2026-10-03T16:25:52Z"
+  "checksum": "6d7341fe15a3ed56ed855539981580654c9ad4e26bddc19061378c1b7d86adb3",
+  "releaseNotes": "feat: add native Android EdgeTTS plugin with OkHttp WebSocket support",
+  "updatedAt": "2026-10-03T16:53:51Z"
 }
