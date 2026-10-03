@@ -1,7 +1,7 @@
 {
-  "version": "1.0.285",
+  "version": "1.0.286",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "eee13416334f918198b312db69c5a40b1ed82a4a10f01b703b3f1038c464d89f",
-  "releaseNotes": "feat: add swipe gesture hook and screen navigation support",
-  "updatedAt": "2026-10-03T20:04:20Z"
+  "checksum": "fabd18078a474ce176c6e680fa909f658dbc2aab6a83cddee921d5d28110f444",
+  "releaseNotes": "feat: add automatic text selection jump for TTS mode on mobile touch events",
+  "updatedAt": "2026-10-03T20:12:01Z"
 }
