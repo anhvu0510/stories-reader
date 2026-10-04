@@ -1,7 +1,7 @@
 {
-  "version": "1.0.298",
+  "version": "1.0.299",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "e9260394c79adbb992c06b3210286e1259f66e62d3e77249823911c8ea6d974c",
-  "releaseNotes": "fix: optimize audio prefetching and MediaPlayer lifecycle management in EdgeTTS plugin",
-  "updatedAt": "2026-10-04T08:26:08Z"
+  "checksum": "364f64120b16c9201f191dd087ee3066de47bb8d9642b6988ba977a3c6d173eb",
+  "releaseNotes": "feat: add cache clearing and rolling buffer improvements for Edge TTS native streaming",
+  "updatedAt": "2026-10-04T08:58:28Z"
 }
