@@ -1,7 +1,7 @@
 {
-  "version": "1.0.324",
+  "version": "1.0.325",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "a0c6261a3963bc1a20b8be92f94a4a21e11020a6e95f8cb37f34a78f2ca59b8f",
-  "releaseNotes": "fix: improve biometric authentication reliability and add cancel support to native plugin",
-  "updatedAt": "2026-10-04T18:08:33Z"
+  "checksum": "ab3833afb6ab4c319c62164d15e4395a5ef2003cdfab57858970f716d6bcb4b4",
+  "releaseNotes": "refactor: optimize TTS audio prefetching and cache management with concurrent lookahead and immediate eviction",
+  "updatedAt": "2026-10-04T18:26:48Z"
 }
