@@ -1,7 +1,7 @@
 {
-  "version": "1.0.310",
+  "version": "1.0.311",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "b77898b5aef756bb79fe14ad649b66d330fb04df185e4a40e9eadcec4395fae2",
-  "releaseNotes": "fix: prevent redundant native TTS stop calls and telemetry when idle during page navigation",
-  "updatedAt": "2026-10-04T15:26:29Z"
+  "checksum": "e4db1adc1239f6ed3fa4f130ab0920964a195651f9e959e786156210ed6316e7",
+  "releaseNotes": "feat: improve reading progress persistence and reset scroll position on chapter change",
+  "updatedAt": "2026-10-04T15:37:09Z"
 }
