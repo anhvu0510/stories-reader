@@ -54,6 +54,8 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    // Thư viện hỗ trợ MediaSessionCompat và NotificationCompat.MediaStyle cho thanh điều khiển Lock Screen
+    implementation 'androidx.media:media:1.7.0'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

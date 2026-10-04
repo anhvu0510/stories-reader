@@ -17,6 +17,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import com.vula.stories.player.GaplessStreamPlayer;
+import com.vula.stories.player.StoriesAudioBridge;
 import com.vula.stories.tts.edge.AudioCacheManager;
 import com.vula.stories.logging.BreadcrumbTracker;
 import com.vula.stories.logging.RemoteLogger;
@@ -39,7 +40,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @CapacitorPlugin(name = "NativeTTS")
-public class NativeTTSPlugin extends Plugin {
+public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioControlListener {
     private static final String TAG = "NativeTTSPlugin";
 
     private TextToSpeech tts;
@@ -58,6 +59,10 @@ public class NativeTTSPlugin extends Plugin {
     private final Map<Integer, File> readyAudioFiles = new ConcurrentHashMap<>();
     private final Map<Integer, JSONArray> readyWordBoundaries = new ConcurrentHashMap<>();
     private final Set<Integer> inFlightIndices = Collections.synchronizedSet(new HashSet<>());
+
+    // Thông tin metadata phục vụ thanh điều khiển âm thanh trên Notification & Lock Screen
+    private String currentBookTitle = "Stories Reader";
+    private String currentChapterTitle = "Chương đọc";
 
     private String currentVoice = null;
     private Float currentRate = 1.0f;
@@ -112,6 +117,17 @@ public class NativeTTSPlugin extends Plugin {
                     playDetails.put("fullText", playText);
                 } catch (Exception ignored) {}
                 RemoteLogger.log("NativeTTS_Stream", "info", "[NativeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size() + ": \"" + playText + "\"", null, playDetails);
+
+                // Cập nhật thông tin câu đọc và trạng thái phát lên thanh điều khiển Notification & Lock Screen
+                StoriesAudioBridge.updatePlayback(
+                        getContext(),
+                        currentBookTitle,
+                        currentChapterTitle,
+                        playText,
+                        true,
+                        chunkIndex > 0,
+                        chunkIndex < currentChunks.size() - 1
+                );
             }
 
             @Override
@@ -131,6 +147,19 @@ public class NativeTTSPlugin extends Plugin {
                 state.put("isPaused", isPaused);
                 state.put("isBuffering", isBuffering);
                 notifyListeners("onPlaybackStateChange", state);
+
+                // Đồng bộ trạng thái Play/Pause lên thanh thông báo và màn hình khóa
+                int currentIdx = player != null ? player.getCurrentChunkIndex() : 0;
+                String currentText = (currentIdx >= 0 && currentIdx < currentChunks.size()) ? currentChunks.get(currentIdx) : "";
+                StoriesAudioBridge.updatePlayback(
+                        getContext(),
+                        currentBookTitle,
+                        currentChapterTitle,
+                        currentText,
+                        isPlaying,
+                        currentIdx > 0,
+                        currentIdx < currentChunks.size() - 1
+                );
             }
 
             @Override
@@ -480,6 +509,11 @@ public class NativeTTSPlugin extends Plugin {
             currentVoice = call.getString("voice", null);
             currentRate = call.getFloat("rate", 1.0f);
             currentPitch = call.getFloat("pitch", 1.0f);
+            currentBookTitle = call.getString("bookTitle", "Stories Reader");
+            currentChapterTitle = call.getString("chapterTitle", "Chương đọc");
+
+            // Đăng ký nhận sự kiện điều khiển từ thanh thông báo / màn hình khóa
+            StoriesAudioBridge.registerListener(this);
 
             // Dừng luồng phát cũ trước khi khởi tạo luồng mới
             stopPlaybackInternal(false);
@@ -686,6 +720,11 @@ public class NativeTTSPlugin extends Plugin {
     private void stopPlaybackInternal(boolean resetPosition) {
         isStreamingPlaying = false;
         inFlightIndices.clear();
+
+        // Hủy đăng ký listener và tắt thông báo trên thanh trạng thái / màn hình khóa
+        StoriesAudioBridge.unregisterListener(this);
+        StoriesAudioBridge.stopPlayback(getContext());
+
         if (resetPosition) {
             player.reset();
         } else {
@@ -693,13 +732,12 @@ public class NativeTTSPlugin extends Plugin {
         }
     }
 
-    @PluginMethod
-    public void seekToChunk(PluginCall call) {
-        int chunkIndex = call.getInt("chunkIndex", -1);
-        if (chunkIndex < 0 || chunkIndex >= currentChunks.size()) {
-            call.reject("Invalid chunk index: " + chunkIndex, "INVALID_INDEX");
-            return;
-        }
+    /**
+     * Chuyển đến vị trí câu chỉ định (seek):
+     * Dùng chung cho cả lệnh từ Web và lệnh từ nút Next / Previous trên Notification.
+     */
+    public void seekToChunkInternal(int chunkIndex) {
+        if (chunkIndex < 0 || chunkIndex >= currentChunks.size()) return;
 
         inFlightIndices.clear();
         player.stop();
@@ -710,7 +748,82 @@ public class NativeTTSPlugin extends Plugin {
             prefetchChunk(chunkIndex);
         }
         maintainRollingBuffer();
+    }
+
+    @PluginMethod
+    public void seekToChunk(PluginCall call) {
+        int chunkIndex = call.getInt("chunkIndex", -1);
+        if (chunkIndex < 0 || chunkIndex >= currentChunks.size()) {
+            call.reject("Invalid chunk index: " + chunkIndex, "INVALID_INDEX");
+            return;
+        }
+
+        seekToChunkInternal(chunkIndex);
         call.resolve();
+    }
+
+    // ==========================================
+    // Callbacks điều khiển từ Notification / Lock Screen (StoriesAudioBridge.AudioControlListener)
+    // ==========================================
+
+    @Override
+    public void onPlayRequested() {
+        if (mainHandler != null) {
+            mainHandler.post(() -> {
+                if (isStreamingPlaying && player != null && player.isPaused()) {
+                    player.resume();
+                    maintainRollingBuffer();
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onPauseRequested() {
+        if (mainHandler != null) {
+            mainHandler.post(() -> {
+                if (isStreamingPlaying && player != null && player.isPlayingSafely()) {
+                    player.pause();
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onNextRequested() {
+        if (mainHandler != null) {
+            mainHandler.post(() -> {
+                if (isStreamingPlaying && player != null) {
+                    int next = player.getCurrentChunkIndex() + 1;
+                    if (next < currentChunks.size()) {
+                        seekToChunkInternal(next);
+                    }
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onPreviousRequested() {
+        if (mainHandler != null) {
+            mainHandler.post(() -> {
+                if (isStreamingPlaying && player != null) {
+                    int prev = player.getCurrentChunkIndex() - 1;
+                    if (prev >= 0) {
+                        seekToChunkInternal(prev);
+                    }
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onStopRequested() {
+        if (mainHandler != null) {
+            mainHandler.post(() -> {
+                stopPlaybackInternal(true);
+            });
+        }
     }
 
     @PluginMethod

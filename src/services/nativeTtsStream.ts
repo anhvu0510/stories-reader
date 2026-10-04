@@ -8,6 +8,8 @@ export interface StartNativePlaybackOptions {
 	rate?: number;
 	pitch?: number;
 	gatewayUrl?: string;
+	bookTitle?: string;
+	chapterTitle?: string;
 }
 
 export interface NativeWordBoundaryEvent {

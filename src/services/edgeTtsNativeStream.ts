@@ -8,6 +8,8 @@ export interface StartPlaybackOptions {
 	rate?: number;
 	pitch?: string;
 	gatewayUrl?: string;
+	bookTitle?: string;
+	chapterTitle?: string;
 }
 
 export interface WordBoundaryEvent {

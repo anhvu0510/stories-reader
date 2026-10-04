@@ -14,6 +14,7 @@ import { useAppStore } from '@/stores/useAppStore';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 
 export { splitParagraphIntoSentences } from '@/services/gaplessTtsPlayer';
+export { useNativeReadAloud } from './useNativeReadAloud';
 
 const WORD_HIGHLIGHT_CLASS = 'stories-tts-word-highlight';
 // Keep a grouped source line in one request whenever possible. The API accepts
@@ -1146,13 +1147,22 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.8;
 			const targetVoice = ttsEngine === 'edge' ? (edgeVoiceUri || 'vi-VN-HoaiMyNeural') : voiceUri;
 
+			const bookTitle = chapterContext.bookId ? `Truyện #${chapterContext.bookId}` : 'Stories Reader';
+			const chapterTitle = chapterContext.chapterNumber
+				? `Chương ${chapterContext.chapterNumber}`
+				: chapterContext.chapterId
+					? `Chương ${chapterContext.chapterId}`
+					: 'Chương đang đọc';
+
 			void activeNativeStream.startPlayback({
 				chunks: textChunks,
 				startIndex: targetIdx,
 				voice: targetVoice,
 				rate: currentSpeechRate,
 				pitch: ttsEngine === 'edge' ? ('+0Hz' as any) : 1.0,
-				gatewayUrl: activeDomain?.url || getGatewayBaseUrl()
+				gatewayUrl: activeDomain?.url || getGatewayBaseUrl(),
+				bookTitle,
+				chapterTitle
 			});
 			return;
 		}

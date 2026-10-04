@@ -13,8 +13,12 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.vula.stories.logging.BreadcrumbTracker;
 import com.vula.stories.logging.RemoteLogger;
 import com.vula.stories.player.GaplessStreamPlayer;
+import com.vula.stories.player.StoriesAudioBridge;
 import com.vula.stories.tts.edge.AudioCacheManager;
 import com.vula.stories.tts.edge.EdgeAuth;
+
+import android.os.Handler;
+import android.os.Looper;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -46,12 +50,13 @@ import okhttp3.WebSocketListener;
 import okio.ByteString;
 
 @CapacitorPlugin(name = "EdgeTTSNative")
-public class EdgeTTSNativePlugin extends Plugin {
+public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.AudioControlListener {
     private static final String TAG = "EdgeTTSNativePlugin";
 
     private OkHttpClient httpClient;
     private AudioCacheManager cacheManager;
     private GaplessStreamPlayer player;
+    private Handler mainHandler;
 
     private final List<String> currentChunks = new ArrayList<>();
     private String currentVoice = "vi-VN-HoaiMyNeural";
@@ -59,6 +64,10 @@ public class EdgeTTSNativePlugin extends Plugin {
     private String currentPitch = "+0Hz";
     private String currentGatewayUrl = "";
     private boolean isStreamingPlaying = false;
+
+    // Metadata phục vụ thanh điều khiển âm thanh trên Notification & Lock Screen
+    private String currentBookTitle = "Stories Reader";
+    private String currentChapterTitle = "Chương đọc";
 
     private final ExecutorService prefetchExecutor = Executors.newFixedThreadPool(2);
     private final Map<Integer, File> readyAudioFiles = new ConcurrentHashMap<>();
@@ -69,6 +78,7 @@ public class EdgeTTSNativePlugin extends Plugin {
     @Override
     public void load() {
         super.load();
+        mainHandler = new Handler(Looper.getMainLooper());
         httpClient = new OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
@@ -91,6 +101,17 @@ public class EdgeTTSNativePlugin extends Plugin {
                     playDetails.put("fullText", playText);
                 } catch (Exception ignored) {}
                 RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size() + ": \"" + playText + "\"", null, playDetails);
+
+                // Cập nhật thông tin câu đọc và trạng thái phát lên thanh điều khiển Notification & Lock Screen
+                StoriesAudioBridge.updatePlayback(
+                        getContext(),
+                        currentBookTitle,
+                        currentChapterTitle,
+                        playText,
+                        true,
+                        chunkIndex > 0,
+                        chunkIndex < currentChunks.size() - 1
+                );
             }
 
             @Override
@@ -110,6 +131,19 @@ public class EdgeTTSNativePlugin extends Plugin {
                 state.put("isPaused", isPaused);
                 state.put("isBuffering", isBuffering);
                 notifyListeners("onPlaybackStateChange", state);
+
+                // Đồng bộ trạng thái Play/Pause lên thanh thông báo và màn hình khóa
+                int currentIdx = player != null ? player.getCurrentChunkIndex() : 0;
+                String currentText = (currentIdx >= 0 && currentIdx < currentChunks.size()) ? currentChunks.get(currentIdx) : "";
+                StoriesAudioBridge.updatePlayback(
+                        getContext(),
+                        currentBookTitle,
+                        currentChapterTitle,
+                        currentText,
+                        isPlaying,
+                        currentIdx > 0,
+                        currentIdx < currentChunks.size() - 1
+                );
             }
 
             @Override
@@ -371,6 +405,11 @@ public class EdgeTTSNativePlugin extends Plugin {
         String voice = call.getString("voice", "vi-VN-HoaiMyNeural");
         String pitch = call.getString("pitch", "+0Hz");
         String gatewayUrl = call.getString("gatewayUrl", "");
+        currentBookTitle = call.getString("bookTitle", "Stories Reader");
+        currentChapterTitle = call.getString("chapterTitle", "Chương đọc");
+
+        // Đăng ký nhận sự kiện điều khiển từ thanh thông báo / màn hình khóa
+        StoriesAudioBridge.registerListener(this);
 
         String rate = "+0%";
         if (call.hasOption("rate")) {
@@ -746,13 +785,12 @@ public class EdgeTTSNativePlugin extends Plugin {
         call.resolve();
     }
 
-    @PluginMethod
-    public void seekToChunk(PluginCall call) {
-        int targetIndex = call.getInt("chunkIndex", 0);
-        if (targetIndex < 0 || targetIndex >= currentChunks.size()) {
-            call.reject("Index out of bounds", "INVALID_INDEX");
-            return;
-        }
+    /**
+     * Chuyển đến vị trí câu chỉ định (seek):
+     * Dùng chung cho cả lệnh từ Web và lệnh từ nút Next / Previous trên Notification / Lock Screen.
+     */
+    public void seekToChunkInternal(int targetIndex) {
+        if (targetIndex < 0 || targetIndex >= currentChunks.size()) return;
 
         synchronized (this) {
             player.reset();
@@ -770,6 +808,18 @@ public class EdgeTTSNativePlugin extends Plugin {
         } else {
             prefetchChunk(targetIndex);
         }
+        maintainRollingBuffer();
+    }
+
+    @PluginMethod
+    public void seekToChunk(PluginCall call) {
+        int targetIndex = call.getInt("chunkIndex", 0);
+        if (targetIndex < 0 || targetIndex >= currentChunks.size()) {
+            call.reject("Index out of bounds", "INVALID_INDEX");
+            return;
+        }
+
+        seekToChunkInternal(targetIndex);
         call.resolve();
     }
 
@@ -777,6 +827,10 @@ public class EdgeTTSNativePlugin extends Plugin {
         isStreamingPlaying = false;
         cancelPendingPrefetches(-1);
         player.stop();
+
+        // Hủy đăng ký listener và thu hồi Notification trên thanh thông báo / màn hình khóa
+        StoriesAudioBridge.unregisterListener(this);
+        StoriesAudioBridge.stopPlayback(getContext());
 
         if (emitEvent) {
             JSObject state = new JSObject();
@@ -792,6 +846,70 @@ public class EdgeTTSNativePlugin extends Plugin {
                 stopDetails.put("totalChunks", currentChunks.size());
             } catch (Exception ignored) {}
             RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Dừng đọc chương tại câu " + (currentIdx + 1) + "/" + currentChunks.size(), null, stopDetails);
+        }
+    }
+
+    // ==========================================
+    // Callbacks điều khiển từ Notification / Lock Screen (StoriesAudioBridge.AudioControlListener)
+    // ==========================================
+
+    @Override
+    public void onPlayRequested() {
+        if (mainHandler != null) {
+            mainHandler.post(() -> {
+                if (isStreamingPlaying && player != null && player.isPaused()) {
+                    player.resume();
+                    maintainRollingBuffer();
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onPauseRequested() {
+        if (mainHandler != null) {
+            mainHandler.post(() -> {
+                if (isStreamingPlaying && player != null && player.isPlayingSafely()) {
+                    player.pause();
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onNextRequested() {
+        if (mainHandler != null) {
+            mainHandler.post(() -> {
+                if (isStreamingPlaying && player != null) {
+                    int next = player.getCurrentChunkIndex() + 1;
+                    if (next < currentChunks.size()) {
+                        seekToChunkInternal(next);
+                    }
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onPreviousRequested() {
+        if (mainHandler != null) {
+            mainHandler.post(() -> {
+                if (isStreamingPlaying && player != null) {
+                    int prev = player.getCurrentChunkIndex() - 1;
+                    if (prev >= 0) {
+                        seekToChunkInternal(prev);
+                    }
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onStopRequested() {
+        if (mainHandler != null) {
+            mainHandler.post(() -> {
+                stopPlaybackInternal(true);
+            });
         }
     }
 

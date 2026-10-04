@@ -43,6 +43,8 @@ export interface EdgeTTSNativePluginInterface {
 		rate?: number;
 		pitch?: string;
 		gatewayUrl?: string;
+		bookTitle?: string;
+		chapterTitle?: string;
 	}): Promise<void>;
 	pausePlayback?(): Promise<void>;
 	resumePlayback?(): Promise<void>;

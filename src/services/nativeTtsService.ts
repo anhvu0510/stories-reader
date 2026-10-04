@@ -32,6 +32,8 @@ export interface NativeTTSPluginInterface {
 		initialBufferAhead?: number;
 		maxBufferAhead?: number;
 		gatewayUrl?: string;
+		bookTitle?: string;
+		chapterTitle?: string;
 	}): Promise<void>;
 	pausePlayback?(): Promise<void>;
 	resumePlayback?(): Promise<void>;
