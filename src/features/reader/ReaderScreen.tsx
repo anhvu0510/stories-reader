@@ -604,8 +604,7 @@ export function ReaderScreen() {
 		stopReading();
 		await clearAllCaches();
 		await loadChapter(true);
-		showToast('Đã tải lại chương mới nhất từ máy chủ', 'success');
-	}, [stopReading, loadChapter, showToast]);
+	}, [stopReading, loadChapter]);
 
 	// Native Swipe Gestures for Mobile Chapter Navigation with Smooth Page Transitions
 	const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
@@ -686,6 +685,7 @@ export function ReaderScreen() {
 				<PullToRefresh
 					onRefresh={handlePullRefresh}
 					disabled={loading || isRefreshingLatest}
+					showIndicator={false}
 				/>
 				<AlertCircle size={40} className="text-error mb-3" />
 				<h2 className="text-sm font-bold text-on-surface mb-1">Không thể tải chương</h2>
@@ -722,10 +722,11 @@ export function ReaderScreen() {
 		<div
 			className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden hide-scrollbar no-scrollbar transition-colors duration-200 selection:bg-primary/25 selection:text-primary ${fontClass}`}
 		>
-			{/* Pull-to-refresh floating reload indicator */}
+			{/* Pull-to-refresh clear-cache gesture */}
 			<PullToRefresh
 				onRefresh={handlePullRefresh}
 				disabled={loading || isRefreshingLatest}
+				showIndicator={false}
 			/>
 
 			{/* Subtle Top Ambient Lighting Glow */}

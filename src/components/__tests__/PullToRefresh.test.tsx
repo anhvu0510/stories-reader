@@ -45,4 +45,11 @@ describe('PullToRefresh component', () => {
 		const indicator = screen.getByTestId('pull-to-refresh-indicator');
 		expect(indicator.getAttribute('aria-hidden')).toBe('false');
 	});
+
+	it('suppresses indicator rendering when showIndicator is false', () => {
+		const onRefresh = vi.fn().mockResolvedValue(undefined);
+		render(<PullToRefresh onRefresh={onRefresh} showIndicator={false} />);
+
+		expect(screen.queryByTestId('pull-to-refresh-indicator')).toBeNull();
+	});
 });

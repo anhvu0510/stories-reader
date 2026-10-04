@@ -304,16 +304,16 @@ export function LibraryScreen() {
 		await clearAllCaches();
 		setPage(1);
 		await fetchBooks(1, appliedSearch, tab, selectedTags, sortBy, sortOrder, { forceFresh: true });
-		showToast('Đã làm mới dữ liệu và xóa bộ nhớ đệm', 'success');
-	}, [fetchBooks, appliedSearch, tab, selectedTags, sortBy, sortOrder, showToast]);
+	}, [fetchBooks, appliedSearch, tab, selectedTags, sortBy, sortOrder]);
 
 	return (
 		<div className="h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-200">
-			{/* Pull-to-refresh floating reload indicator */}
+			{/* Pull-to-refresh clear-cache gesture */}
 			<PullToRefresh
 				onRefresh={handlePullRefresh}
 				containerRef={mainScrollRef}
 				disabled={loading}
+				showIndicator={false}
 			/>
 
 			{/* Main Scroll Container covering entire screen so items scroll UNDER sticky glass header */}

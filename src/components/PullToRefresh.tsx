@@ -6,6 +6,7 @@ import { PullToRefreshIndicator } from './PullToRefreshIndicator';
 
 export interface PullToRefreshProps extends UsePullToRefreshOptions {
 	topOffset?: string;
+	showIndicator?: boolean;
 }
 
 export const PullToRefresh = memo(function PullToRefresh({
@@ -17,7 +18,8 @@ export const PullToRefresh = memo(function PullToRefresh({
 	minDisplayTime,
 	containerRef,
 	targetRef,
-	topOffset
+	topOffset,
+	showIndicator = true
 }: PullToRefreshProps) {
 	const {
 		pullDistance,
@@ -34,6 +36,10 @@ export const PullToRefresh = memo(function PullToRefresh({
 		containerRef,
 		targetRef
 	});
+
+	if (!showIndicator) {
+		return null;
+	}
 
 	return (
 		<PullToRefreshIndicator

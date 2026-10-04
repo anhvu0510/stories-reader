@@ -184,15 +184,15 @@ export function ChapterListScreen() {
 	const handlePullRefresh = useCallback(async () => {
 		await clearAllCaches();
 		await fetchChapters(1, search, filterState, sortOrder, false, { forceFresh: true });
-		showToast('Đã làm mới danh sách chương', 'success');
-	}, [fetchChapters, search, filterState, sortOrder, showToast]);
+	}, [fetchChapters, search, filterState, sortOrder]);
 
 	return (
 		<div className="min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-28 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200">
-			{/* Pull-to-refresh floating reload indicator */}
+			{/* Pull-to-refresh clear-cache gesture */}
 			<PullToRefresh
 				onRefresh={handlePullRefresh}
 				disabled={loading}
+				showIndicator={false}
 			/>
 
 			{/* Sticky Header */}
