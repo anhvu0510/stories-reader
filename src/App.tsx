@@ -8,9 +8,11 @@ import { GlobalDownloadProgress } from './components/GlobalDownloadProgress';
 import { ToastContainer } from './components/Toast';
 import { AppUpdateOverlay } from './components/AppUpdateOverlay';
 import { PasscodeModal } from './components/PasscodeModal';
+import { AppLockOverlay } from './components/AppLockOverlay';
 import { type SecretServerConfig } from './services/secretServerService';
 import { useAppUpdate } from './hooks/useAppUpdate';
 import { useRouteRestoration } from './hooks/useRouteRestoration';
+import { useAppLockListener } from './hooks/useAppLockListener';
 import { ChapterListScreen } from './features/chapter-list/ChapterListScreen';
 import { LibraryScreen } from './features/library/LibraryScreen';
 import { ReaderScreen } from './features/reader/ReaderScreen';
@@ -22,6 +24,9 @@ import { useToastStore } from './stores/useToastStore';
 function AppContent() {
 	const location = useLocation();
 	const navigate = useNavigate();
+
+	// Quản lý tự động khóa bảo mật khi app bị sleep hoặc mở lại
+	useAppLockListener();
 
 	// Tự động lưu và khôi phục trang hoạt động gần nhất khi App bị kill hoặc sleep vào lại
 	useRouteRestoration({ location, navigate });
@@ -284,6 +289,7 @@ export default function App() {
 				<ToastContainer />
 				<AppUpdateManager />
 			</ApplicationGate>
+			<AppLockOverlay />
 		</Router>
 	);
 }

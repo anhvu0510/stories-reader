@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(NativeTTSPlugin.class);
         registerPlugin(EdgeTTSNativePlugin.class);
+        registerPlugin(BiometricPlugin.class);
         super.onCreate(savedInstanceState);
 
         // Completely disable native Android WebView scrollbars and overscroll indicators

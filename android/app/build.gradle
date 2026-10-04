@@ -75,6 +75,8 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     // Thư viện hỗ trợ MediaSessionCompat và NotificationCompat.MediaStyle cho thanh điều khiển Lock Screen
     implementation 'androidx.media:media:1.7.0'
+    // Thư viện hỗ trợ BiometricPrompt và xác thực sinh trắc học (vân tay, khuôn mặt) Android
+    implementation 'androidx.biometric:biometric:1.1.0'
     testImplementation "junit:junit:$junitVersion"
     testImplementation 'org.json:json:20240303'
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"

@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Delete, X, BookOpen, CheckCircle2 } from 'lucide-react';
+import { Delete, X, BookOpen, CheckCircle2, Fingerprint } from 'lucide-react';
 import { useHaptic } from '@/hooks/useHaptic';
-import { unlockSecretServer, type SecretServerConfig } from '@/services/secretServerService';
+import { unlockSecretServer, isValidTimePasscode, type SecretServerConfig } from '@/services/secretServerService';
+import { useAppLockStore } from '@/stores/useAppLockStore';
 import { useToastStore } from '@/stores/useToastStore';
 
 interface PasscodeModalProps {
 	isOpen: boolean;
 	onClose: () => void;
-	onSuccess: (server: SecretServerConfig) => void;
+	onSuccess?: (server: SecretServerConfig) => void;
+	mode?: 'secret_server' | 'app_unlock';
+	title?: string;
+	subtitle?: string;
+	onUnlockSuccess?: () => void;
+	onRequestBiometric?: () => void;
 }
 
 const KEYPAD_LETTERS: Record<string, string> = {
@@ -22,7 +28,16 @@ const KEYPAD_LETTERS: Record<string, string> = {
 	'9': 'WXYZ'
 };
 
-export function PasscodeModal({ isOpen, onClose, onSuccess }: PasscodeModalProps) {
+export function PasscodeModal({
+	isOpen,
+	onClose,
+	onSuccess,
+	mode = 'secret_server',
+	title,
+	subtitle,
+	onUnlockSuccess,
+	onRequestBiometric
+}: PasscodeModalProps) {
 	const [digits, setDigits] = useState<string[]>([]);
 	const [isShaking, setIsShaking] = useState(false);
 	const [isSuccess, setIsSuccess] = useState(false);
@@ -98,14 +113,44 @@ export function PasscodeModal({ isOpen, onClose, onSuccess }: PasscodeModalProps
 
 	const submitPasscode = (code: string) => {
 		setIsSubmitting(true);
+
+		if (mode === 'app_unlock') {
+			const isValid = isValidTimePasscode(code);
+			if (isValid) {
+				setIsSuccess(true);
+				triggerHaptic('success');
+				useAppLockStore.getState().unlock();
+				// Đảm bảo bảo mật sinh trắc học luôn được bật
+				useAppLockStore.getState().enableLockAfterPasscode();
+				showToast('Mở khóa ứng dụng thành công!', 'success');
+				setTimeout(() => {
+					onUnlockSuccess?.();
+					onClose();
+				}, 500);
+			} else {
+				triggerHaptic('error');
+				setIsShaking(true);
+				showToast('Mã Passcode không chính xác hoặc đã hết hạn!', 'error');
+				setTimeout(() => {
+					setIsShaking(false);
+					setDigits([]);
+					setIsSubmitting(false);
+				}, 500);
+			}
+			return;
+		}
+
+		// Chế độ mở khóa máy chủ bí mật (mode === 'secret_server')
 		const server = unlockSecretServer(code);
 
 		if (server) {
 			setIsSuccess(true);
 			triggerHaptic('success');
-			showToast(`Mở khóa máy chủ ${server.name} thành công!`, 'success');
+			// Tự động kích hoạt chế độ bảo vệ sinh trắc học trên ứng dụng Android
+			useAppLockStore.getState().enableLockAfterPasscode();
+			showToast(`Mở khóa máy chủ ${server.name} & kích hoạt sinh trắc học thành công!`, 'success');
 			setTimeout(() => {
-				onSuccess(server);
+				onSuccess?.(server);
 				onClose();
 			}, 600);
 		} else {
@@ -176,10 +221,13 @@ export function PasscodeModal({ isOpen, onClose, onSuccess }: PasscodeModalProps
 							</motion.div>
 							<div>
 								<h1 className="text-2xl sm:text-3xl font-black text-on-surface tracking-tight mb-1">
-									Stories Reader
+									{title || (mode === 'app_unlock' ? 'Mở khóa Ứng dụng' : 'Stories Reader')}
 								</h1>
 								<p className="text-[13px] sm:text-[14px] text-on-surface-variant max-w-[280px] mx-auto leading-relaxed">
-									Thiết lập máy chủ trích xuất và đọc truyện của bạn để bắt đầu.
+									{subtitle ||
+										(mode === 'app_unlock'
+											? 'Nhập mã Passcode (HHMMDDMM) để mở khóa Stories Reader.'
+											: 'Thiết lập máy chủ trích xuất và đọc truyện của bạn để bắt đầu.')}
 								</p>
 							</div>
 						</div>
@@ -285,13 +333,29 @@ export function PasscodeModal({ isOpen, onClose, onSuccess }: PasscodeModalProps
 							))}
 
 							{/* Bottom Row */}
-							<button
-								type="button"
-								onPointerDown={onPointerDownClose}
-								className="h-14 sm:h-16 rounded-2xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/40 active:scale-90 text-xs sm:text-sm font-bold flex items-center justify-center transition-all duration-75 ease-out select-none cursor-pointer touch-manipulation transform-gpu will-change-transform"
-							>
-								HỦY
-							</button>
+							{onRequestBiometric ? (
+								<button
+									type="button"
+									onPointerDown={(e) => {
+										if (e.button !== 0 && e.pointerType === 'mouse') return;
+										e.preventDefault();
+										onRequestBiometric();
+									}}
+									className="h-14 sm:h-16 rounded-2xl bg-primary/15 hover:bg-primary/25 border border-primary/30 text-primary active:scale-90 text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1 transition-all duration-75 ease-out select-none cursor-pointer touch-manipulation transform-gpu will-change-transform"
+									title="Quét lại vân tay hoặc khuôn mặt"
+								>
+									<Fingerprint size={20} />
+									<span className="text-[10px] uppercase font-black tracking-wider">VÂN TAY</span>
+								</button>
+							) : (
+								<button
+									type="button"
+									onPointerDown={onPointerDownClose}
+									className="h-14 sm:h-16 rounded-2xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/40 active:scale-90 text-xs sm:text-sm font-bold flex items-center justify-center transition-all duration-75 ease-out select-none cursor-pointer touch-manipulation transform-gpu will-change-transform"
+								>
+									HỦY
+								</button>
+							)}
 
 							<button
 								type="button"
