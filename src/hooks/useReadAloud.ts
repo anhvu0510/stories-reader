@@ -640,7 +640,10 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		});
 
 		const offset = nextCharIndex + match.index;
-		highlighter.highlight(pNode, chunk.startOffset + offset, match[0].length);
+		const geometry = highlighter.highlight(pNode, chunk.startOffset + offset, match[0].length);
+		if (geometry?.line) {
+			scrollFollowerRef.current?.follow(geometry.line);
+		}
 	};
 
 	const activeNativeStream = useMemo(() => {
@@ -707,15 +710,17 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	useEffect(() => {
 		const onInteraction = () => {
 			lastInteractionTime.current = Date.now();
-			scrollFollowerRef.current?.cancel();
+			scrollFollowerRef.current?.notifyUserInteraction();
 		};
 		window.addEventListener('wheel', onInteraction, { passive: true });
 		window.addEventListener('touchmove', onInteraction, { passive: true });
+		window.addEventListener('pointerdown', onInteraction, { passive: true });
 		window.addEventListener('mousedown', onInteraction, { passive: true });
 		window.addEventListener('keydown', onInteraction, { passive: true });
 		return () => {
 			window.removeEventListener('wheel', onInteraction);
 			window.removeEventListener('touchmove', onInteraction);
+			window.removeEventListener('pointerdown', onInteraction);
 			window.removeEventListener('mousedown', onInteraction);
 			window.removeEventListener('keydown', onInteraction);
 		};

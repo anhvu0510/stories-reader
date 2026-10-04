@@ -54,4 +54,47 @@ describe('ReadAloudScrollFollower', () => {
 		expect(scrollTo).toHaveBeenCalledOnce();
 		expect(requestFrame).not.toHaveBeenCalled();
 	});
+
+	it('does NOT scroll when highlight line has scrolled off-screen (above viewport)', () => {
+		const scrollTo = vi.fn();
+		const requestFrame = vi.fn();
+		const follower = new ReadAloudScrollFollower({
+			// Người dùng đã cuộn xuống trang 1500
+			getScrollY: () => 1500,
+			getViewportHeight: () => 800,
+			scrollTo,
+			requestFrame,
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => false
+		});
+
+		// Dòng highlight đang đọc ở vị trí 300 (đã trôi lên trên khỏi đỉnh màn hình)
+		follower.follow(new DOMRect(0, 300, 300, 30));
+
+		// Tuyệt đối không được kích hoạt scroll để người dùng tự do đọc tiếp ở vị trí hiện tại
+		expect(scrollTo).not.toHaveBeenCalled();
+		expect(requestFrame).not.toHaveBeenCalled();
+	});
+
+	it('suspends auto-scroll when user interaction is notified', () => {
+		const scrollTo = vi.fn();
+		const requestFrame = vi.fn();
+		const follower = new ReadAloudScrollFollower({
+			getScrollY: () => 0,
+			getViewportHeight: () => 800,
+			scrollTo,
+			requestFrame,
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => false
+		});
+
+		// Người dùng vuốt màn hình
+		follower.notifyUserInteraction();
+
+		// Thử gọi follow trong lúc người dùng vừa tương tác
+		follower.follow(new DOMRect(0, 750, 300, 30));
+
+		expect(scrollTo).not.toHaveBeenCalled();
+		expect(requestFrame).not.toHaveBeenCalled();
+	});
 });

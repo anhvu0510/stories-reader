@@ -204,16 +204,27 @@ export function useNativeReadAloud(
 			if (chunk) {
 				const paragraphEl = document.querySelector(`[data-paragraph-index="${chunk.pIdx}"]`) as HTMLElement | null;
 				if (paragraphEl) {
-					wordHighlighterRef.current?.highlight(
+					const rects = wordHighlighterRef.current?.highlight(
 						paragraphEl,
 						chunk.startOffset + charIndex,
 						charLength,
 						chunk.startOffset,
 						chunk.length
 					);
+					if (rects?.line) {
+						scrollFollowerRef.current?.follow(rects.line);
+					}
 				}
 			}
 		});
+
+		// Tạm dừng auto-scroll khi người dùng tương tác cuộn / chạm màn hình
+		const onUserScroll = () => {
+			scrollFollowerRef.current?.notifyUserInteraction();
+		};
+		window.addEventListener('wheel', onUserScroll, { passive: true });
+		window.addEventListener('touchmove', onUserScroll, { passive: true });
+		window.addEventListener('pointerdown', onUserScroll, { passive: true });
 
 		// Cập nhật trạng thái Play / Pause / Buffering từ Native:
 		const unsubState = activeNativeStream.onPlaybackStateChange(({ isPlaying: p, isPaused: pa, isBuffering: b }) => {
@@ -241,6 +252,9 @@ export function useNativeReadAloud(
 			unsubWord();
 			unsubState();
 			unsubDone();
+			window.removeEventListener('wheel', onUserScroll);
+			window.removeEventListener('touchmove', onUserScroll);
+			window.removeEventListener('pointerdown', onUserScroll);
 		};
 	}, [activeNativeStream, chunks, saveResumePosition, clearResumePosition]);
 
