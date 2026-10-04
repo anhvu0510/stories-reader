@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useTTSStore } from '@/features/reader/stores/useTTSStore';
 import { BackgroundAudioKeepAlive } from '@/services/backgroundAudioKeepAlive';
 import { DomWordHighlighter } from '@/services/domWordHighlighter';
+import { EdgeTTSNativeStreamService } from '@/services/edgeTtsNativeStream';
 import { EdgeTTSService, type EdgeSpeechWithBoundaries } from '@/services/edgeTtsService';
 import { GaplessTtsPlayer, splitByDatabaseBoundaries, type SentenceChunk, WebAudioPlaybackEngine } from '@/services/gaplessTtsPlayer';
 import { NativeTTSService } from '@/services/nativeTtsService';
@@ -565,6 +566,9 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		if (NativeTTSService.isNative()) {
 			void NativeTTSService.stop();
 		}
+		if (EdgeTTSNativeStreamService.isAvailable()) {
+			void EdgeTTSNativeStreamService.stop();
+		}
 		if (ownsBrowserSpeechQueue && synth) synth.cancel();
 		ownsBrowserSpeechQueueRef.current = false;
 		utteranceRef.current = null;
@@ -596,6 +600,61 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			clearTimeout(idleTimer);
 		};
 	}, [chunks, ttsEngine, isPlaying, isPaused, getResumePosition]);
+
+	// Native Android Edge TTS Streaming Event Listeners
+	useEffect(() => {
+		if (ttsEngine !== 'edge' || !EdgeTTSNativeStreamService.isAvailable()) return;
+
+		const unsubChunk = EdgeTTSNativeStreamService.onChunkStart((idx) => {
+			if (!isPlayingRef.current) return;
+			currentChunkIdxRef.current = idx;
+			setCurrentChunkIndex(idx);
+			setIsLoading(false);
+			saveResumePosition(idx, 0);
+
+			const targetChunk = chunks[idx];
+			if (targetChunk) {
+				const readerContent = document.querySelector('#main-story-content');
+				const pNode = readerContent?.querySelector<HTMLElement>(`article > div[data-paragraph-index="${targetChunk.pIdx}"]`);
+				if (typeof pNode?.scrollIntoView === 'function') {
+					pNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				}
+			}
+		});
+
+		const unsubWord = EdgeTTSNativeStreamService.onWordBoundary(({ chunkIndex, charIndex, charLength }) => {
+			if (!isPlayingRef.current) return;
+			const targetChunk = chunks[chunkIndex];
+			if (!targetChunk) return;
+			charIndexRef.current = charIndex;
+			charLengthRef.current = charLength;
+			useTTSStore.setState({ currentCharIndex: charIndex, currentCharLength: charLength });
+			wordHighlighterRef.current?.highlightWord(targetChunk.pIdx, charIndex, charLength);
+		});
+
+		const unsubState = EdgeTTSNativeStreamService.onPlaybackStateChange(({ isPlaying: p, isPaused: pa, isBuffering: b }) => {
+			if (p) {
+				setIsPlaying(true);
+				isPlayingRef.current = true;
+			}
+			setIsPaused(pa);
+			isPausedRef.current = pa;
+			setIsLoading(b);
+		});
+
+		const unsubDone = EdgeTTSNativeStreamService.onPlaybackComplete(() => {
+			if (!isPlayingRef.current) return;
+			clearResumePosition();
+			stopReading(true);
+		});
+
+		return () => {
+			unsubChunk();
+			unsubWord();
+			unsubState();
+			unsubDone();
+		};
+	}, [ttsEngine, chunks, saveResumePosition, clearResumePosition]);
 
 	useEffect(() => {
 		stopReading();
@@ -1011,8 +1070,14 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 				} else if (synth) {
 					synth.resume();
 				}
-			} else if (ttsEngine === 'edge' && edgeAudioRef.current) {
-				void edgeAudioRef.current.play().catch(() => playChunk(currentChunkIdxRef.current));
+			} else if (ttsEngine === 'edge') {
+				if (EdgeTTSNativeStreamService.isAvailable()) {
+					void EdgeTTSNativeStreamService.resume();
+				} else if (edgeAudioRef.current) {
+					void edgeAudioRef.current.play().catch(() => playChunk(currentChunkIdxRef.current));
+				} else {
+					playChunk(currentChunkIdxRef.current);
+				}
 			} else {
 				playChunk(currentChunkIdxRef.current);
 			}
@@ -1062,6 +1127,21 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 				pNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			}
 		}
+
+		if (ttsEngine === 'edge' && EdgeTTSNativeStreamService.isAvailable()) {
+			setIsPlaying(true);
+			setIsLoading(true);
+			const textChunks = chunks.map((c) => c.text);
+			void EdgeTTSNativeStreamService.startPlayback({
+				chunks: textChunks,
+				startIndex: targetIdx,
+				voice: edgeVoiceUri,
+				rate: speechRateRef.current ?? 1.8,
+				gatewayUrl: activeDomain?.url
+			});
+			return;
+		}
+
 		playChunk(targetIdx, targetOff);
 	};
 
@@ -1087,7 +1167,11 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 				synth.pause();
 			}
 		} else if (ttsEngine === 'edge') {
-			edgeAudioRef.current?.pause();
+			if (EdgeTTSNativeStreamService.isAvailable()) {
+				void EdgeTTSNativeStreamService.pause();
+			} else {
+				edgeAudioRef.current?.pause();
+			}
 		}
 	};
 
@@ -1107,6 +1191,10 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			isPlayingRef.current = true;
 			isPausedRef.current = false;
 			currentChunkIdxRef.current = nextIdx;
+			if (ttsEngine === 'edge' && EdgeTTSNativeStreamService.isAvailable()) {
+				void EdgeTTSNativeStreamService.seekToChunk(nextIdx);
+				return;
+			}
 			playChunk(nextIdx);
 		} else {
 			clearResumePosition();
@@ -1130,6 +1218,10 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			isPlayingRef.current = true;
 			isPausedRef.current = false;
 			currentChunkIdxRef.current = prevIdx;
+			if (ttsEngine === 'edge' && EdgeTTSNativeStreamService.isAvailable()) {
+				void EdgeTTSNativeStreamService.seekToChunk(prevIdx);
+				return;
+			}
 			playChunk(prevIdx);
 		} else {
 			stopReading();
@@ -1157,6 +1249,10 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			isPlayingRef.current = true;
 			isPausedRef.current = false;
 			currentChunkIdxRef.current = targetIndex;
+			if (ttsEngine === 'edge' && EdgeTTSNativeStreamService.isAvailable()) {
+				void EdgeTTSNativeStreamService.seekToChunk(targetIndex);
+				return;
+			}
 			playChunk(targetIndex, chunkOffset);
 		}
 	};

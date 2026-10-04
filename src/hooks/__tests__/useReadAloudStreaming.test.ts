@@ -538,6 +538,40 @@ describe('useReadAloud Edge word boundaries', () => {
 
 		unmount();
 	});
+
+	it('delegates to EdgeTTSNativeStreamService when on Android native platform', async () => {
+		useReaderConfigStore.setState({ ttsEngine: 'edge', edgeVoiceUri: 'vi-VN-HoaiMyNeural' });
+		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
+		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+		const startPlaybackSpy = vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue(undefined);
+		const pauseSpy = vi.spyOn(EdgeTTSNativeStreamService, 'pause').mockResolvedValue(undefined);
+		const stopSpy = vi.spyOn(EdgeTTSNativeStreamService, 'stop').mockResolvedValue(undefined);
+
+		const paragraphs = ['Đoạn một trên native.', 'Đoạn hai trên native.'];
+		const { result, unmount } = renderHook(() =>
+			useReadAloud(paragraphs, { chapterId: 'c-native', bookId: 'b-native', chapterNumber: 1 })
+		);
+
+		await act(async () => {
+			result.current.startReading();
+		});
+
+		expect(startPlaybackSpy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				chunks: expect.arrayContaining(['Đoạn một trên native.', 'Đoạn hai trên native.']),
+				startIndex: 0,
+				voice: 'vi-VN-HoaiMyNeural'
+			})
+		);
+
+		act(() => result.current.pauseReading());
+		expect(pauseSpy).toHaveBeenCalled();
+
+		act(() => result.current.stopReading());
+		expect(stopSpy).toHaveBeenCalled();
+
+		unmount();
+	});
 });
 
 describe('useReadAloud browser speech ownership', () => {

@@ -36,13 +36,34 @@ export interface EdgeTTSNativePluginInterface {
 		mimeType?: string;
 		wordBoundaries: EdgeWordBoundary[];
 	}>;
+	playChapter?(options: {
+		chunks: string[];
+		startIndex?: number;
+		voice?: string;
+		rate?: number;
+		pitch?: string;
+		gatewayUrl?: string;
+	}): Promise<void>;
+	pausePlayback?(): Promise<void>;
+	resumePlayback?(): Promise<void>;
+	stopPlayback?(): Promise<void>;
+	seekToChunk?(options: { chunkIndex: number }): Promise<void>;
+	addListener?(eventName: string, listenerFunc: (data: any) => void): Promise<{ remove: () => Promise<void> }>;
 }
 
 export const EdgeTTSNative = registerPlugin<EdgeTTSNativePluginInterface>('EdgeTTSNative', {
 	web: () => ({
 		synthesize: async () => {
 			throw new Error('EdgeTTSNative is only available on native Android');
-		}
+		},
+		playChapter: async () => {
+			throw new Error('EdgeTTSNative stream is only available on native Android');
+		},
+		pausePlayback: async () => {},
+		resumePlayback: async () => {},
+		stopPlayback: async () => {},
+		seekToChunk: async () => {},
+		addListener: async () => ({ remove: async () => {} })
 	})
 });
 
