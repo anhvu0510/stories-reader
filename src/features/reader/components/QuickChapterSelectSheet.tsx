@@ -316,7 +316,7 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 
 	return (
 		<>
-			<BottomSheet isOpen={true} onClose={onClose} ariaLabel="Danh Sách Chương" maxHeight="h-[78vh] max-h-[85dvh]" showDragHandle={false} disableDrag={true}>
+			<BottomSheet isOpen={true} onClose={onClose} ariaLabel="Danh Sách Chương" maxHeight="h-[78vh] max-h-[85dvh]" showDragHandle={false}>
 				{/* Header & Search (Includes Drag Handle for 100% seamless unified background) */}
 				<div className="pt-2.5 px-4 pb-2 border-b border-white/10 space-y-2 flex-shrink-0 bg-transparent relative z-20">
 					{/* Drag Handle */}

@@ -411,4 +411,30 @@ describe('usePullToRefresh hook', () => {
 		expect(result.current.isPulling).toBe(false);
 		expect(result.current.pullDistance).toBe(0);
 	});
+
+	it('strictly suppresses pull-to-refresh when a bottom sheet is open (data-sheet-open on body or dom)', () => {
+		window.scrollY = 0;
+		document.body.setAttribute('data-sheet-open', 'true');
+
+		const onRefresh = vi.fn();
+		const { result } = renderHook(() => usePullToRefresh({ onRefresh }));
+
+		act(() => {
+			window.dispatchEvent(
+				new TouchEvent('touchstart', {
+					touches: [{ clientX: 100, clientY: 50 } as any]
+				})
+			);
+			window.dispatchEvent(
+				new TouchEvent('touchmove', {
+					touches: [{ clientX: 100, clientY: 150 } as any]
+				})
+			);
+		});
+
+		expect(result.current.pullDistance).toBe(0);
+		expect(result.current.isPulling).toBe(false);
+
+		document.body.removeAttribute('data-sheet-open');
+	});
 });

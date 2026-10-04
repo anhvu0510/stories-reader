@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence, PanInfo } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
+import { triggerHaptic } from '@/hooks/useHaptic';
 import { cn } from '@/lib/utils';
 
 export interface BottomSheetProps {
@@ -36,6 +37,17 @@ export function BottomSheet({
 }: BottomSheetProps) {
 	useBodyScrollLock(isOpen);
 
+	const sheetCardRef = useRef<HTMLDivElement>(null);
+	const touchStartRef = useRef<{
+		startY: number;
+		startX: number;
+		startTime: number;
+		scrollEl: HTMLElement | null;
+		canDrag: boolean;
+	} | null>(null);
+	const currentDragYRef = useRef(0);
+	const isDismissingRef = useRef(false);
+
 	useEffect(() => {
 		if (!isOpen) return;
 
@@ -49,9 +61,103 @@ export function BottomSheet({
 		return () => window.removeEventListener('keydown', handleKeyDown);
 	}, [isOpen, onClose]);
 
-	const handleDragEnd = (_: unknown, info: PanInfo) => {
-		if (info.offset.y > 100 || info.velocity.y > 500) {
-			onClose();
+	// Xử lý cử chỉ vuốt kéo xuống (Swipe-Down-To-Dismiss) mượt mà chuẩn UX native
+	const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+		if (disableDrag || isDismissingRef.current || !e.touches || e.touches.length !== 1) return;
+		const touch = e.touches[0];
+
+		// Tìm phần tử cuộn bên trong (nếu có)
+		let scrollEl: HTMLElement | null = null;
+		let node = e.target as HTMLElement | null;
+		while (node && node !== sheetCardRef.current) {
+			if (node.scrollHeight > node.clientHeight + 2) {
+				const overflowY = window.getComputedStyle(node).overflowY;
+				if (overflowY === 'auto' || overflowY === 'scroll') {
+					scrollEl = node;
+					break;
+				}
+			}
+			node = node.parentElement;
+		}
+
+		touchStartRef.current = {
+			startY: touch.clientY,
+			startX: touch.clientX,
+			startTime: Date.now(),
+			scrollEl,
+			canDrag: false
+		};
+		currentDragYRef.current = 0;
+	};
+
+	const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+		if (!touchStartRef.current || isDismissingRef.current || !e.touches || e.touches.length !== 1) return;
+		const touch = e.touches[0];
+		const deltaY = touch.clientY - touchStartRef.current.startY;
+		const deltaX = touch.clientX - touchStartRef.current.startX;
+
+		// Nếu vuốt ngang chiếm ưu thế trước khi kích hoạt kéo dọc, không can thiệp
+		if (!touchStartRef.current.canDrag && Math.abs(deltaX) > Math.abs(deltaY)) {
+			return;
+		}
+
+		// Chỉ cho phép kéo xuống (deltaY > 0) để đóng sheet
+		if (deltaY > 0) {
+			const scrollTop = touchStartRef.current.scrollEl ? touchStartRef.current.scrollEl.scrollTop : 0;
+			// Chỉ kích hoạt kéo sheet khi danh sách con đang ở vị trí trên cùng (scrollTop <= 0)
+			if (scrollTop <= 0) {
+				touchStartRef.current.canDrag = true;
+				if (e.cancelable) {
+					e.preventDefault();
+				}
+				currentDragYRef.current = deltaY;
+				if (sheetCardRef.current) {
+					sheetCardRef.current.style.transition = 'none';
+					sheetCardRef.current.style.transform = `translate3d(0, ${deltaY}px, 0)`;
+				}
+			}
+		} else {
+			// Người dùng đang cuộn lên
+			if (currentDragYRef.current > 0 && sheetCardRef.current) {
+				currentDragYRef.current = 0;
+				sheetCardRef.current.style.transition = 'none';
+				sheetCardRef.current.style.transform = '';
+			}
+		}
+	};
+
+	const handleTouchEnd = () => {
+		if (!touchStartRef.current) return;
+		const deltaY = currentDragYRef.current;
+		const elapsed = Math.max(1, Date.now() - touchStartRef.current.startTime);
+		const velocity = deltaY / elapsed;
+		const wasDragging = touchStartRef.current.canDrag;
+
+		touchStartRef.current = null;
+		currentDragYRef.current = 0;
+
+		if (!wasDragging || !sheetCardRef.current) return;
+
+		// Ngưỡng xác nhận đóng sheet: Kéo xuống > 70px hoặc flick nhanh (deltaY >= 40px kèm velocity > 0.35 px/ms)
+		if (deltaY > 70 || (deltaY >= 40 && velocity > 0.35)) {
+			isDismissingRef.current = true;
+			triggerHaptic('light');
+			sheetCardRef.current.style.transition = 'transform 200ms cubic-bezier(0.2, 0, 0, 1)';
+			sheetCardRef.current.style.transform = 'translate3d(0, 100%, 0)';
+			setTimeout(() => {
+				isDismissingRef.current = false;
+				onClose();
+			}, 180);
+		} else {
+			// Snap back mượt mà về vị trí ban đầu (0px) và dọn dẹp transform
+			sheetCardRef.current.style.transition = 'transform 240ms cubic-bezier(0.25, 1, 0.5, 1)';
+			sheetCardRef.current.style.transform = 'translate3d(0, 0px, 0)';
+			setTimeout(() => {
+				if (sheetCardRef.current) {
+					sheetCardRef.current.style.transform = '';
+					sheetCardRef.current.style.transition = '';
+				}
+			}, 250);
 		}
 	};
 
@@ -63,7 +169,8 @@ export function BottomSheet({
 					aria-modal="true"
 					aria-label={ariaLabel}
 					data-testid={testId}
-					className={cn('fixed inset-0 flex items-end justify-center overscroll-none overflow-x-hidden box-border', zIndex, className)}
+					data-sheet-open="true"
+					className={cn('fixed inset-0 flex items-end justify-center overscroll-none overflow-x-hidden box-border bottom-sheet', zIndex, className)}
 				>
 					{/* Backdrop Blur Overlay */}
 					<motion.div
@@ -79,16 +186,15 @@ export function BottomSheet({
 
 					{/* Bottom Sheet Card Container */}
 					<motion.div
+						ref={sheetCardRef}
 						data-testid="bottom-sheet-container"
 						initial={{ y: '100%' }}
 						animate={{ y: 0 }}
 						exit={{ y: '100%' }}
 						transition={{ type: 'spring', damping: 32, stiffness: 280, mass: 0.85 }}
-						drag={disableDrag ? false : 'y'}
-						dragConstraints={{ top: 0 }}
-						dragElastic={{ top: 0.05, bottom: 0.5 }}
-						dragSnapToOrigin={true}
-						onDragEnd={handleDragEnd}
+						onTouchStart={handleTouchStart}
+						onTouchMove={handleTouchMove}
+						onTouchEnd={handleTouchEnd}
 						onClick={(e) => e.stopPropagation()}
 						className={cn(
 							'relative z-10 w-full max-w-md mx-auto text-on-surface rounded-t-[32px] border-t sm:border shadow-[0_-12px_40px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden hide-scrollbar no-scrollbar box-border transform-gpu transition-colors duration-200 will-change-transform',

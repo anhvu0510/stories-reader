@@ -470,30 +470,32 @@ describe('useReadAloud Edge word boundaries', () => {
 		unmount();
 	});
 
-	it('idle pre-warming pre-synthesizes initial chunks when reader is idle', async () => {
+	it('does not pre-synthesize initial chunks when reader is idle without read aloud active', async () => {
 		vi.useFakeTimers();
-		const paragraphs = ['Câu một.', 'Câu hai.', 'Câu ba.', 'Câu bốn.'];
-		useReaderConfigStore.setState({ ttsEngine: 'edge' });
-		const edgeSpy = vi.spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries').mockResolvedValue({
-			audio: new Blob(['fake audio'], { type: 'audio/mp3' }),
-			wordBoundaries: []
-		});
+		try {
+			const paragraphs = ['Câu một.', 'Câu hai.', 'Câu ba.', 'Câu bốn.'];
+			useReaderConfigStore.setState({ ttsEngine: 'edge' });
+			const edgeSpy = vi.spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries').mockResolvedValue({
+				audio: new Blob(['fake audio'], { type: 'audio/mp3' }),
+				wordBoundaries: []
+			});
 
-		const { unmount } = renderHook(() =>
-			useReadAloud(paragraphs, { chapterId: 'c4', bookId: 'b1', chapterNumber: 1 })
-		);
+			const { unmount } = renderHook(() =>
+				useReadAloud(paragraphs, { chapterId: 'c4', bookId: 'b1', chapterNumber: 1 })
+			);
 
-		// Fast forward past idle debounce (500ms)
-		act(() => {
-			vi.advanceTimersByTime(600);
-		});
+			// Fast forward past idle debounce (500ms)
+			act(() => {
+				vi.advanceTimersByTime(600);
+			});
 
-		// Initial chunks should be pre-warmed into cache
-		expect(edgeSpy).toHaveBeenCalledWith('Câu một.', expect.any(String), expect.any(Number), undefined, expect.any(AbortSignal));
-		expect(edgeSpy).toHaveBeenCalledWith('Câu hai.', expect.any(String), expect.any(Number), undefined, expect.any(AbortSignal));
+			// Đảm bảo không tự động pre-synthesize khi người dùng chỉ lướt trang mà không bật đọc
+			expect(edgeSpy).not.toHaveBeenCalled();
 
-		vi.useRealTimers();
-		unmount();
+			unmount();
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it('expanded sliding window prefetch buffers upcoming chunks with max 2 concurrent requests', async () => {

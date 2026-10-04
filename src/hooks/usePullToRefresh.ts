@@ -24,12 +24,17 @@ const isModalOrSheetActive = (): boolean => {
 	} catch {}
 
 	if (typeof document === 'undefined') return false;
-	if (document.body.classList.contains('overflow-hidden') || document.body.style.overflow === 'hidden') {
+	if (
+		document.body.classList.contains('overflow-hidden') ||
+		document.body.style.overflow === 'hidden' ||
+		document.body.hasAttribute('data-modal-open') ||
+		document.body.hasAttribute('data-sheet-open')
+	) {
 		return true;
 	}
 
 	return Boolean(
-		document.querySelector('[role="dialog"], [aria-modal="true"], [data-sheet-open="true"], [data-state="open"], .bottom-sheet')
+		document.querySelector('[role="dialog"], [aria-modal="true"], [data-sheet-open="true"], [data-modal-open="true"], [data-state="open"], .bottom-sheet')
 	);
 };
 
@@ -115,7 +120,7 @@ export function usePullToRefresh({
 
 			// Do not trigger if touch originated inside a modal, dialog, bottom sheet, or popover
 			const targetEl = e.target as HTMLElement | null;
-			if (targetEl && targetEl.closest && targetEl.closest('[role="dialog"], [aria-modal="true"], .bottom-sheet, [data-modal], [data-sheet], [data-dialog]')) {
+			if (targetEl && targetEl.closest && targetEl.closest('[role="dialog"], [aria-modal="true"], .bottom-sheet, [data-modal], [data-sheet], [data-dialog], [data-sheet-open]')) {
 				canPullRef.current = false;
 				return;
 			}

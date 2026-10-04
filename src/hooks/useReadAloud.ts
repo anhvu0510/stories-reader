@@ -596,26 +596,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		useTTSStore.setState({ currentCharIndex: -1, currentCharLength: 0, isLoading: false });
 	};
 
-	// Idle pre-warming for initial chunks when TTS engine is Edge (web only, native handles its own pipeline)
-	useEffect(() => {
-		if (ttsEngine !== 'edge' || EdgeTTSNativeStreamService.isAvailable() || isPlaying || isPaused || chunks.length === 0) {
-			return;
-		}
-
-		const idleTimer = setTimeout(() => {
-			if (ttsEngine === 'edge' && !isPlayingRef.current && !EdgeTTSNativeStreamService.isAvailable() && chunks.length > 0) {
-				const saved = getResumePosition();
-				const startIdx = saved && saved.chunkIndex < chunks.length ? saved.chunkIndex : 0;
-				for (let i = startIdx; i < Math.min(chunks.length, startIdx + 3); i++) {
-					prefetchEdgeChunk(i).catch(() => {});
-				}
-			}
-		}, 500);
-
-		return () => {
-			clearTimeout(idleTimer);
-		};
-	}, [chunks, ttsEngine, isPlaying, isPaused, getResumePosition]);
+		// Ngăn chặn hoàn toàn việc tự động pre-warming EdgeTTS khi người dùng chỉ lướt web mà không bật đọc
 
 	const lastInteractionTime = useRef(0);
 

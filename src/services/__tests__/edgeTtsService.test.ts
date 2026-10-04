@@ -113,6 +113,8 @@ describe('EdgeTTSService', () => {
 			include_word_boundaries: true,
 			rate: '+20%'
 		});
+		// Đảm bảo không spam reportClientLog lên server khi tổng hợp thành công trên web
+		expect(fetchMock.mock.calls.some(call => String(call[0]).includes('/api/logs/client-error'))).toBe(false);
 	});
 
 	it('uses EdgeTTSNative plugin on Android native platform and maps word boundaries accurately', async () => {

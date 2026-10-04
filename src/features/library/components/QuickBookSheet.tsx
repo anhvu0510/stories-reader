@@ -285,7 +285,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 
 	return (
 		<>
-			<BottomSheet isOpen={true} onClose={onClose} ariaLabel={book.bookName} maxHeight="h-[82vh] max-h-[90dvh]" showDragHandle={false} disableDrag={true}>
+			<BottomSheet isOpen={true} onClose={onClose} ariaLabel={book.bookName} maxHeight="h-[82vh] max-h-[90dvh]" showDragHandle={false}>
 				{/* Top Header & Compact Mobile Info Area (Includes Drag Handle for 100% seamless unified background) */}
 				<div className="pt-2 px-3.5 pb-1.5 border-b border-white/10 space-y-1.5 flex-shrink-0 bg-transparent relative z-20">
 					{/* Drag Handle */}

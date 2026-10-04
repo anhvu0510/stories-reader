@@ -78,5 +78,58 @@ describe('BottomSheet Component', () => {
 		const dialog = screen.getByRole('dialog');
 		expect(dialog.parentElement).toBe(document.body);
 		expect(container.querySelector('[role="dialog"]')).toBeNull();
+		expect(dialog.getAttribute('data-sheet-open')).toBe('true');
+		expect(dialog.className).toContain('bottom-sheet');
+	});
+
+	it('triggers onClose when swiping down past commit threshold (deltaY > 70px)', async () => {
+		vi.useFakeTimers();
+		render(
+			<BottomSheet isOpen={true} onClose={mockOnClose} ariaLabel="Swipe Sheet">
+				<div>Swipeable Content</div>
+			</BottomSheet>
+		);
+
+		const sheetContainer = screen.getByTestId('bottom-sheet-container');
+
+		fireEvent.touchStart(sheetContainer, {
+			touches: [{ clientX: 200, clientY: 100 }]
+		});
+
+		fireEvent.touchMove(sheetContainer, {
+			touches: [{ clientX: 200, clientY: 220 }]
+		});
+
+		fireEvent.touchEnd(sheetContainer);
+
+		vi.advanceTimersByTime(250);
+		expect(mockOnClose).toHaveBeenCalledTimes(1);
+		vi.useRealTimers();
+	});
+
+	it('does not trigger onClose when swiping down below threshold (deltaY <= 70px)', async () => {
+		vi.useFakeTimers();
+		render(
+			<BottomSheet isOpen={true} onClose={mockOnClose} ariaLabel="Swipe Sheet">
+				<div>Swipeable Content</div>
+			</BottomSheet>
+		);
+
+		const sheetContainer = screen.getByTestId('bottom-sheet-container');
+
+		fireEvent.touchStart(sheetContainer, {
+			touches: [{ clientX: 200, clientY: 100 }]
+		});
+
+		fireEvent.touchMove(sheetContainer, {
+			touches: [{ clientX: 200, clientY: 130 }]
+		});
+
+		vi.advanceTimersByTime(200);
+		fireEvent.touchEnd(sheetContainer);
+
+		vi.advanceTimersByTime(300);
+		expect(mockOnClose).not.toHaveBeenCalled();
+		vi.useRealTimers();
 	});
 });

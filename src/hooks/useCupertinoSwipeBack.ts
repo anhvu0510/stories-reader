@@ -93,11 +93,13 @@ export function useCupertinoSwipeBack({
 				setTimeout(() => {
 					if (containerRef.current) {
 						containerRef.current.style.boxShadow = '';
+						containerRef.current.style.transform = '';
+						containerRef.current.style.transition = '';
 					}
 				}, 280);
 			} else {
-				el.style.transition = 'none';
-				el.style.transform = 'translate3d(0px, 0, 0)';
+				el.style.transition = '';
+				el.style.transform = '';
 				el.style.boxShadow = '';
 			}
 		};

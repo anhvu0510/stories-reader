@@ -448,12 +448,6 @@ export class EdgeTTSService {
 
 		const blob = await response.blob();
 		console.info(`[EdgeTTS:Server] Server gateway hoàn tất tổng hợp sau ${elapsed}ms: size=${blob.size} bytes, boundaries=${wordBoundaries.length}`);
-		void reportClientLog(rootUrl, {
-			level: 'info',
-			source: 'EdgeTTS_Web',
-			message: `[EdgeTTS:Web] Hoàn tất tổng hợp âm thanh kèm word boundaries (${elapsed}ms, ${blob.size} bytes, ${wordBoundaries.length} boundaries): "${text}"`,
-			details: { voice, speed: ratePercentage, elapsedMs: elapsed, audioBytes: blob.size, boundariesCount: wordBoundaries.length, fullText: text }
-		});
 
 		return {
 			audio: blob,

@@ -128,6 +128,9 @@ export function PasscodeModal({ isOpen, onClose, onSuccess }: PasscodeModalProps
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
+					role="dialog"
+					aria-modal="true"
+					data-modal="true"
 					className="fixed inset-0 z-50 bg-[color-mix(in_srgb,var(--bg)_85%,transparent)] backdrop-blur-2xl backdrop-saturate-150 text-on-surface flex flex-col justify-between p-4 sm:p-6 pb-6 select-none overflow-hidden max-h-[100dvh]"
 				>
 					{/* Background Glow */}

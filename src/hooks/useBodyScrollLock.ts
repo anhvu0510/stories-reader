@@ -15,6 +15,7 @@ export function useBodyScrollLock(isLocked = true) {
 			document.body.style.overflow = 'hidden';
 			document.body.style.touchAction = 'none';
 			document.body.setAttribute('data-modal-open', 'true');
+			document.body.setAttribute('data-sheet-open', 'true');
 		}
 
 		return () => {
@@ -23,6 +24,7 @@ export function useBodyScrollLock(isLocked = true) {
 				document.body.style.overflow = '';
 				document.body.style.touchAction = '';
 				document.body.removeAttribute('data-modal-open');
+				document.body.removeAttribute('data-sheet-open');
 			}
 		};
 	}, [isLocked]);
