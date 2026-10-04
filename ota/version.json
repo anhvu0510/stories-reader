@@ -1,7 +1,7 @@
 {
-  "version": "1.0.322",
+  "version": "1.0.323",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "747509439a7882b6b5ee68cdf6cdf0d75d2224512a0e25cce0599c1c75553f2d",
-  "releaseNotes": "feat: improve read-aloud auto-scroll behavior with viewport checks and user interaction handling",
-  "updatedAt": "2026-10-04T17:57:19Z"
+  "checksum": "23e95038187391523cebd9c6d45738df8ddb6ca513cf3f9ca358681b50e6d764",
+  "releaseNotes": "refactor: simplify passcode button text and subtitle descriptions in lock overlay and modal components",
+  "updatedAt": "2026-10-04T17:59:39Z"
 }
