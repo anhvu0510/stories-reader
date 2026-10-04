@@ -1,7 +1,7 @@
 {
-  "version": "1.0.303",
+  "version": "1.0.304",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "4733dbe6b65f54a4e4c800d838cb046e16cabd83bd49dc84805252e8d8f5322c",
-  "releaseNotes": "refactor: improve EdgeTTS streaming playback reliability, log snippet formatting, and add unit tests",
-  "updatedAt": "2026-10-04T10:42:54Z"
+  "checksum": "91a0556cbac836362ccf66e18cded032dd99fa5cce03148aee26095f8ac66b26",
+  "releaseNotes": "feat: add unit tests and tracking utilities for audio bridging, word boundaries, and prefetch retry management",
+  "updatedAt": "2026-10-04T11:10:07Z"
 }
