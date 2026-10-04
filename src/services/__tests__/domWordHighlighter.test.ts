@@ -129,11 +129,50 @@ describe('DomWordHighlighter', () => {
 
 		expect(root.innerHTML).toBe(originalHtml);
 		expect(root.querySelector('.active-word')).toBeNull();
-		expect(highlights.set).toHaveBeenCalledTimes(60);
+		expect(highlights.set).toHaveBeenCalled();
 		expect(paragraphLayoutReads).toBe(1);
 
 		highlighter.clear();
 		expect(highlights.delete).toHaveBeenCalledWith('stories-tts-word');
 		expect(highlights.delete).toHaveBeenCalledWith('stories-tts-line');
+	});
+
+	it('provides zero-flicker transitions by preserving line highlight across words on the same line and avoiding intermediate delete()', () => {
+		const root = document.createElement('div');
+		root.textContent = 'Một hai ba bốn';
+		document.body.appendChild(root);
+
+		const highlights = { set: vi.fn(), delete: vi.fn() };
+		const FakeHighlight = vi.fn(function (this: { ranges: Range[] }, ...ranges: Range[]) {
+			this.ranges = ranges;
+		});
+		Object.defineProperty(globalThis, 'Highlight', { configurable: true, value: FakeHighlight });
+		Object.defineProperty(globalThis, 'CSS', { configurable: true, value: { ...originalCss, highlights } });
+
+		const originalCreateRange = document.createRange.bind(document);
+		vi.spyOn(document, 'createRange').mockImplementation(() => {
+			const range = originalCreateRange();
+			Object.defineProperty(range, 'getClientRects', {
+				value: () => [new DOMRect(20, 40, 260, 30)]
+			});
+			return range;
+		});
+
+		const highlighter = new DomWordHighlighter('active-word');
+		// Highlight word 1
+		highlighter.highlight(root, 0, 3);
+		// Highlight word 2 on same line
+		highlighter.highlight(root, 4, 3);
+
+		// delete() should NOT have been called between consecutive words to prevent strobe flicker
+		expect(highlights.delete).not.toHaveBeenCalled();
+		// Line highlight set once for the line, word highlight set twice
+		const lineCalls = highlights.set.mock.calls.filter((call) => call[0] === 'stories-tts-line');
+		expect(lineCalls.length).toBe(1);
+
+		highlighter.clear();
+		expect(highlights.delete).toHaveBeenCalledWith('stories-tts-word');
+		expect(highlights.delete).toHaveBeenCalledWith('stories-tts-line');
+		root.remove();
 	});
 });

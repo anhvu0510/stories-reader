@@ -403,10 +403,11 @@ public class EdgeTTSNativePlugin extends Plugin {
     private String currentGatewayUrl = "";
     private boolean isStreamingPlaying = false;
     private boolean isStreamingPaused = false;
-    private final ExecutorService prefetchExecutor = Executors.newFixedThreadPool(3);
+    private final ExecutorService prefetchExecutor = Executors.newFixedThreadPool(2);
     private final Map<Integer, File> readyAudioFiles = new ConcurrentHashMap<>();
     private final Map<Integer, JSONArray> readyWordBoundaries = new ConcurrentHashMap<>();
     private final Set<Integer> inFlightIndices = Collections.synchronizedSet(new HashSet<>());
+    private final Map<Integer, WebSocket> activeSockets = new ConcurrentHashMap<>();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private Runnable wordBoundaryTicker = null;
     private int lastWordBoundaryCharIndex = -1;
@@ -503,6 +504,44 @@ public class EdgeTTSNativePlugin extends Plugin {
         }
     }
 
+    private void cancelPendingPrefetches(int keepIndex) {
+        for (Map.Entry<Integer, WebSocket> entry : activeSockets.entrySet()) {
+            int idx = entry.getKey();
+            if (idx != keepIndex) {
+                try {
+                    entry.getValue().cancel();
+                } catch (Exception ignored) {}
+                activeSockets.remove(idx);
+                inFlightIndices.remove(idx);
+            }
+        }
+    }
+
+    private boolean isPlayerPlayingSafely(MediaPlayer mp) {
+        if (mp == null) return false;
+        try {
+            return mp.isPlaying();
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private void safeReleasePlayer(MediaPlayer mp) {
+        if (mp == null) return;
+        try {
+            mp.setOnCompletionListener(null);
+            mp.setOnPreparedListener(null);
+            mp.setOnErrorListener(null);
+            if (mp.isPlaying()) {
+                mp.stop();
+            }
+        } catch (Exception ignored) {}
+        try {
+            mp.reset();
+            mp.release();
+        } catch (Exception ignored) {}
+    }
+
     @PluginMethod
     public void playChapter(PluginCall call) {
         JSArray chunksArray = call.getArray("chunks");
@@ -550,6 +589,7 @@ public class EdgeTTSNativePlugin extends Plugin {
             readyAudioFiles.clear();
             readyWordBoundaries.clear();
             inFlightIndices.clear();
+            activeSockets.clear();
         }
 
         acquireWakeLock();
@@ -562,9 +602,8 @@ public class EdgeTTSNativePlugin extends Plugin {
         startState.put("isBuffering", true);
         notifyListeners("onPlaybackStateChange", startState);
 
+        // Strict Priority: Only fetch currentChunkIndex first! Future chunks are queued only after current is ready.
         prefetchChunk(startIndex);
-        prefetchChunk(startIndex + 1);
-        prefetchChunk(startIndex + 2);
 
         call.resolve();
     }
@@ -604,7 +643,7 @@ public class EdgeTTSNativePlugin extends Plugin {
                 String foldedSourceText = cleanSourceText.toLowerCase(Locale.ROOT);
                 int[] searchOffset = {0};
 
-                httpClient.newWebSocket(request, new WebSocketListener() {
+                WebSocket webSocket = httpClient.newWebSocket(request, new WebSocketListener() {
                     @Override
                     public void onOpen(WebSocket webSocket, Response response) {
                         try {
@@ -630,6 +669,7 @@ public class EdgeTTSNativePlugin extends Plugin {
                         } catch (Exception ex) {
                             webSocket.close(1001, "Error");
                             inFlightIndices.remove(index);
+                            activeSockets.remove(index);
                         }
                     }
 
@@ -720,11 +760,13 @@ public class EdgeTTSNativePlugin extends Plugin {
                                     mainHandler.post(() -> onChunkAudioReady(index));
                                 }
                                 inFlightIndices.remove(index);
+                                activeSockets.remove(index);
                                 webSocket.close(1000, "Done");
                             }
                         } catch (Exception ex) {
                             Log.e(TAG, "[EdgeTTS:Stream] Lỗi lưu cache audio câu " + index, ex);
                             inFlightIndices.remove(index);
+                            activeSockets.remove(index);
                         }
                     }
 
@@ -732,10 +774,14 @@ public class EdgeTTSNativePlugin extends Plugin {
                     public void onFailure(WebSocket webSocket, Throwable t, Response response) {
                         Log.w(TAG, "[EdgeTTS:Stream] Lỗi tải ngầm câu " + index + ": " + (t != null ? t.getMessage() : "Unknown"));
                         inFlightIndices.remove(index);
+                        activeSockets.remove(index);
                     }
                 });
+
+                activeSockets.put(index, webSocket);
             } catch (Exception ex) {
                 inFlightIndices.remove(index);
+                activeSockets.remove(index);
             }
         });
     }
@@ -756,23 +802,31 @@ public class EdgeTTSNativePlugin extends Plugin {
             if (audioFile == null || !audioFile.exists()) return;
 
             if (currentPlayer != null) {
-                try {
-                    currentPlayer.reset();
-                    currentPlayer.release();
-                } catch (Exception ignored) {}
+                MediaPlayer old = currentPlayer;
                 currentPlayer = null;
+                safeReleasePlayer(old);
             }
 
-            currentPlayer = new MediaPlayer();
-            currentPlayer.setDataSource(audioFile.getAbsolutePath());
-            currentPlayer.setOnPreparedListener(mp -> {
+            MediaPlayer player = new MediaPlayer();
+            player.setDataSource(audioFile.getAbsolutePath());
+            player.setOnPreparedListener(mp -> {
                 if (!isStreamingPlaying) {
-                    mp.release();
+                    safeReleasePlayer(mp);
                     return;
                 }
-                mp.start();
+                currentPlayer = mp;
                 currentChunkIndex = index;
                 lastWordBoundaryCharIndex = -1;
+
+                try {
+                    mp.start();
+                } catch (Exception ex) {
+                    Log.e(TAG, "[EdgeTTS:Stream] Lỗi khi start MediaPlayer cho câu " + index, ex);
+                    safeReleasePlayer(mp);
+                    currentPlayer = null;
+                    mainHandler.post(() -> onChunkCompleted(mp));
+                    return;
+                }
 
                 JSObject chunkData = new JSObject();
                 chunkData.put("chunkIndex", index);
@@ -788,21 +842,17 @@ public class EdgeTTSNativePlugin extends Plugin {
                 maintainPrefetchAndNextPlayer();
             });
 
-            currentPlayer.setOnCompletionListener(mp -> {
-                mp.release();
-                mainHandler.post(this::onChunkCompleted);
+            player.setOnCompletionListener(mp -> {
+                mainHandler.post(() -> onChunkCompleted(mp));
             });
 
-            currentPlayer.setOnErrorListener((mp, what, extra) -> {
+            player.setOnErrorListener((mp, what, extra) -> {
                 Log.e(TAG, "[EdgeTTS:Stream] MediaPlayer error: what=" + what + ", extra=" + extra);
-                mp.reset();
-                mp.release();
-                currentPlayer = null;
-                mainHandler.post(this::onChunkCompleted);
+                mainHandler.post(() -> onChunkCompleted(mp));
                 return true;
             });
 
-            currentPlayer.prepareAsync();
+            player.prepareAsync();
         } catch (Exception ex) {
             Log.e(TAG, "[EdgeTTS:Stream] Error starting player for chunk " + index, ex);
         }
@@ -818,7 +868,7 @@ public class EdgeTTSNativePlugin extends Plugin {
             next.setDataSource(nextFile.getAbsolutePath());
             next.setOnPreparedListener(mp -> {
                 if (!isStreamingPlaying || currentPlayer == null) {
-                    mp.release();
+                    safeReleasePlayer(mp);
                     return;
                 }
                 nextPlayer = mp;
@@ -831,16 +881,15 @@ public class EdgeTTSNativePlugin extends Plugin {
                 }
             });
             next.setOnCompletionListener(mp -> {
-                mp.release();
-                mainHandler.post(this::onChunkCompleted);
+                mainHandler.post(() -> onChunkCompleted(mp));
             });
             next.setOnErrorListener((mp, what, extra) -> {
                 Log.e(TAG, "[EdgeTTS:Stream] Next MediaPlayer error: what=" + what + ", extra=" + extra);
-                mp.reset();
-                mp.release();
-                nextPlayer = null;
-                nextChunkIndex = -1;
-                mainHandler.post(this::onChunkCompleted);
+                if (nextPlayer == mp) {
+                    nextPlayer = null;
+                    nextChunkIndex = -1;
+                }
+                safeReleasePlayer(mp);
                 return true;
             });
             next.prepareAsync();
@@ -849,9 +898,17 @@ public class EdgeTTSNativePlugin extends Plugin {
         }
     }
 
-    private void onChunkCompleted() {
-        if (!isStreamingPlaying) return;
+    private void onChunkCompleted(MediaPlayer completedPlayer) {
+        if (!isStreamingPlaying) {
+            safeReleasePlayer(completedPlayer);
+            return;
+        }
         stopWordBoundaryTicker();
+
+        if (currentPlayer == completedPlayer) {
+            currentPlayer = null;
+        }
+        safeReleasePlayer(completedPlayer);
 
         if (nextPlayer != null) {
             currentPlayer = nextPlayer;
@@ -868,6 +925,7 @@ public class EdgeTTSNativePlugin extends Plugin {
             maintainPrefetchAndNextPlayer();
         } else if (currentChunkIndex + 1 < currentChunks.size()) {
             currentChunkIndex++;
+            lastWordBoundaryCharIndex = -1;
             JSObject state = new JSObject();
             state.put("isPlaying", true);
             state.put("isPaused", false);
@@ -877,6 +935,7 @@ public class EdgeTTSNativePlugin extends Plugin {
             if (readyAudioFiles.containsKey(currentChunkIndex)) {
                 startCurrentPlayer(currentChunkIndex);
             } else {
+                cancelPendingPrefetches(currentChunkIndex);
                 prefetchChunk(currentChunkIndex);
             }
         } else {
@@ -891,14 +950,29 @@ public class EdgeTTSNativePlugin extends Plugin {
 
         evictOldChunksFromCache();
 
-        for (int i = currentChunkIndex + 1; i <= currentChunkIndex + 3; i++) {
-            if (i < currentChunks.size()) {
-                prefetchChunk(i);
+        // 1. Strict Priority: if currentChunkIndex is not yet ready, fetch it and do not load ahead
+        if (!readyAudioFiles.containsKey(currentChunkIndex)) {
+            cancelPendingPrefetches(currentChunkIndex);
+            prefetchChunk(currentChunkIndex);
+            return;
+        }
+
+        // 2. Next player gapless lookahead (sliding window = 1)
+        int nextIdx = currentChunkIndex + 1;
+        if (nextIdx < currentChunks.size()) {
+            if (!readyAudioFiles.containsKey(nextIdx)) {
+                prefetchChunk(nextIdx);
+            } else if (nextPlayer == null && currentPlayer != null) {
+                prepareNextPlayer(nextIdx);
             }
         }
 
-        if (nextPlayer == null && readyAudioFiles.containsKey(currentChunkIndex + 1)) {
-            prepareNextPlayer(currentChunkIndex + 1);
+        // 3. Optional secondary buffer: only prefetch next+1 if next is ALREADY downloaded
+        int secondNextIdx = currentChunkIndex + 2;
+        if (readyAudioFiles.containsKey(nextIdx) && secondNextIdx < currentChunks.size()) {
+            if (!readyAudioFiles.containsKey(secondNextIdx)) {
+                prefetchChunk(secondNextIdx);
+            }
         }
     }
 
@@ -907,7 +981,7 @@ public class EdgeTTSNativePlugin extends Plugin {
         wordBoundaryTicker = new Runnable() {
             @Override
             public void run() {
-                if (isStreamingPlaying && currentPlayer != null && currentPlayer.isPlaying()) {
+                if (isStreamingPlaying && isPlayerPlayingSafely(currentPlayer)) {
                     try {
                         int posMs = currentPlayer.getCurrentPosition();
                         double posSec = (double) posMs / 1000.0;
@@ -927,7 +1001,7 @@ public class EdgeTTSNativePlugin extends Plugin {
                             }
                             if (activeWb != null) {
                                 int charIdx = activeWb.optInt("charIndex", -1);
-                                if (charIdx != lastWordBoundaryCharIndex) {
+                                if (charIdx >= 0 && charIdx > lastWordBoundaryCharIndex) {
                                     lastWordBoundaryCharIndex = charIdx;
                                     JSObject ev = new JSObject();
                                     ev.put("chunkIndex", currentChunkIndex);
@@ -939,11 +1013,13 @@ public class EdgeTTSNativePlugin extends Plugin {
                             }
                         }
                     } catch (Exception ignored) {}
-                    mainHandler.postDelayed(this, 30);
+                    if (isStreamingPlaying) {
+                        mainHandler.postDelayed(this, 25);
+                    }
                 }
             }
         };
-        mainHandler.postDelayed(wordBoundaryTicker, 30);
+        mainHandler.postDelayed(wordBoundaryTicker, 25);
     }
 
     private void stopWordBoundaryTicker() {
@@ -955,7 +1031,7 @@ public class EdgeTTSNativePlugin extends Plugin {
 
     @PluginMethod
     public void pausePlayback(PluginCall call) {
-        if (currentPlayer != null && currentPlayer.isPlaying()) {
+        if (isPlayerPlayingSafely(currentPlayer)) {
             try {
                 currentPlayer.pause();
                 isStreamingPaused = true;
@@ -1010,23 +1086,20 @@ public class EdgeTTSNativePlugin extends Plugin {
         synchronized (this) {
             stopWordBoundaryTicker();
             if (currentPlayer != null) {
-                try {
-                    currentPlayer.reset();
-                    currentPlayer.release();
-                } catch (Exception ignored) {}
+                MediaPlayer p = currentPlayer;
                 currentPlayer = null;
+                safeReleasePlayer(p);
             }
             if (nextPlayer != null) {
-                try {
-                    nextPlayer.reset();
-                    nextPlayer.release();
-                } catch (Exception ignored) {}
+                MediaPlayer np = nextPlayer;
                 nextPlayer = null;
                 nextChunkIndex = -1;
+                safeReleasePlayer(np);
             }
             currentChunkIndex = targetIndex;
             lastWordBoundaryCharIndex = -1;
-            inFlightIndices.clear();
+            // Cancel all pending prefetches except targetIndex
+            cancelPendingPrefetches(targetIndex);
         }
 
         JSObject state = new JSObject();
@@ -1040,7 +1113,6 @@ public class EdgeTTSNativePlugin extends Plugin {
         } else {
             prefetchChunk(targetIndex);
         }
-        maintainPrefetchAndNextPlayer();
         call.resolve();
     }
 
@@ -1048,21 +1120,18 @@ public class EdgeTTSNativePlugin extends Plugin {
         isStreamingPlaying = false;
         isStreamingPaused = false;
         stopWordBoundaryTicker();
+        cancelPendingPrefetches(-1);
 
         if (currentPlayer != null) {
-            try {
-                currentPlayer.reset();
-                currentPlayer.release();
-            } catch (Exception ignored) {}
-                currentPlayer = null;
+            MediaPlayer p = currentPlayer;
+            currentPlayer = null;
+            safeReleasePlayer(p);
         }
         if (nextPlayer != null) {
-            try {
-                nextPlayer.reset();
-                nextPlayer.release();
-            } catch (Exception ignored) {}
+            MediaPlayer np = nextPlayer;
             nextPlayer = null;
             nextChunkIndex = -1;
+            safeReleasePlayer(np);
         }
 
         releaseWakeLock();

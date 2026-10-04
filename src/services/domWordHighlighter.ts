@@ -29,7 +29,7 @@ export interface ReadAloudHighlightGeometry {
 
 const CSS_WORD_HIGHLIGHT_NAME = 'stories-tts-word';
 const CSS_LINE_HIGHLIGHT_NAME = 'stories-tts-line';
-const LINE_Y_TOLERANCE = 2;
+const LINE_Y_TOLERANCE = 4;
 const HIGHLIGHT_STYLE_ID = 'stories-tts-highlight-styles';
 
 function ensureHighlightStyleSheet(): void {
@@ -58,6 +58,8 @@ export class DomWordHighlighter {
 	private readonly lineLayoutCache = new WeakMap<HTMLElement, CachedLineLayout>();
 	private observedRoot: HTMLElement | null = null;
 	private readonly resizeObserver?: ResizeObserver;
+	private currentLineRange: Range | null = null;
+	private currentLineRect: DOMRect | null = null;
 
 	constructor(className: string) {
 		this.className = className;
@@ -70,15 +72,16 @@ export class DomWordHighlighter {
 	}
 
 	public highlight(rootElement: HTMLElement, startOffset: number, length: number): ReadAloudHighlightGeometry | null {
-		this.clearWordHighlight();
 		if (length <= 0) {
-			this.removeLineHighlight();
+			this.clear();
 			return null;
 		}
 
+		this.clearFallbackMarks();
+
 		const wordRange = this.createTextRange(rootElement, startOffset, length);
 		if (!wordRange) {
-			this.removeLineHighlight();
+			this.clear();
 			return null;
 		}
 
@@ -108,14 +111,28 @@ export class DomWordHighlighter {
 		const documentWordRect = new DOMRect(viewportWordRect.left + scrollX, viewportWordRect.top + scrollY, viewportWordRect.width, viewportWordRect.height);
 		const { lineRect: documentLineRect, lineRange } = this.findLineLayout(rootElement, documentWordRect, scrollX, scrollY);
 
-		if (registry && HighlightConstructor && lineRange) {
-			const lineHighlight = new HighlightConstructor(lineRange);
-			lineHighlight.priority = 1;
-			registry.set(CSS_LINE_HIGHLIGHT_NAME, lineHighlight);
+		const isSameLine =
+			this.currentLineRange &&
+			lineRange &&
+			this.currentLineRange.startContainer === lineRange.startContainer &&
+			this.currentLineRange.startOffset === lineRange.startOffset &&
+			this.currentLineRange.endOffset === lineRange.endOffset;
+
+		if (!isSameLine) {
+			this.currentLineRange = lineRange;
+			this.currentLineRect = documentLineRect;
+
+			if (registry && HighlightConstructor && lineRange) {
+				const lineHighlight = new HighlightConstructor(lineRange);
+				lineHighlight.priority = 1;
+				registry.set(CSS_LINE_HIGHLIGHT_NAME, lineHighlight);
+				this.removeLineHighlight();
+			} else {
+				this.updateLineHighlight(documentLineRect);
+			}
 		}
 
-		this.updateLineHighlight(documentLineRect);
-		return { line: documentLineRect, word: documentWordRect };
+		return { line: this.currentLineRect ?? documentLineRect, word: documentWordRect };
 	}
 
 	public clear(): void {
@@ -186,10 +203,7 @@ export class DomWordHighlighter {
 		this.marks.push(mark);
 	}
 
-	private clearWordHighlight(): void {
-		const registry = this.getHighlightRegistry();
-		registry?.delete(CSS_WORD_HIGHLIGHT_NAME);
-		registry?.delete(CSS_LINE_HIGHLIGHT_NAME);
+	private clearFallbackMarks(): void {
 		const parents = new Set<Node>();
 		this.marks.forEach((mark) => {
 			const parent = mark.parentNode;
@@ -199,6 +213,15 @@ export class DomWordHighlighter {
 		});
 		parents.forEach((parent) => parent.normalize());
 		this.marks = [];
+	}
+
+	private clearWordHighlight(): void {
+		const registry = this.getHighlightRegistry();
+		registry?.delete(CSS_WORD_HIGHLIGHT_NAME);
+		registry?.delete(CSS_LINE_HIGHLIGHT_NAME);
+		this.clearFallbackMarks();
+		this.currentLineRange = null;
+		this.currentLineRect = null;
 	}
 
 	private getLineLayout(rootElement: HTMLElement, scrollX: number, scrollY: number): CachedLineLayout {
@@ -297,7 +320,15 @@ export class DomWordHighlighter {
 	): { lineRect: DOMRect; lineRange: Range | null } {
 		const cachedLayout = this.getLineLayout(rootElement, scrollX, scrollY);
 		const wordMiddleY = wordRect.top + wordRect.height / 2;
-		const lineItem = cachedLayout.lines.find((line) => wordMiddleY >= line.rect.top - 1 && wordMiddleY <= line.rect.bottom + 1);
+		let lineItem = cachedLayout.lines.find((line) => wordMiddleY >= line.rect.top - LINE_Y_TOLERANCE && wordMiddleY <= line.rect.bottom + LINE_Y_TOLERANCE);
+
+		if (!lineItem && cachedLayout.lines.length > 0) {
+			lineItem = cachedLayout.lines.reduce((closest, line) => {
+				const distLine = Math.abs(wordMiddleY - (line.rect.top + line.rect.height / 2));
+				const distClosest = Math.abs(wordMiddleY - (closest.rect.top + closest.rect.height / 2));
+				return distLine < distClosest ? line : closest;
+			});
+		}
 
 		if (!lineItem) {
 			return { lineRect: wordRect, lineRange: null };
