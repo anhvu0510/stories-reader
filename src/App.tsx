@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { BookOpen, KeyRound } from 'lucide-react';
@@ -19,12 +19,63 @@ import { useModalStore } from './stores/useModalStore';
 import { useReaderConfigStore } from './stores/useReaderConfigStore';
 import { useToastStore } from './stores/useToastStore';
 
+/**
+ * Xác định độ sâu phân cấp của route để tính toán hướng trượt Cupertino:
+ * 0: / (Thư viện)
+ * 1: /book/:bookId (Danh sách chương)
+ * 2: /book/:bookId/chapter/:chapterId (Màn hình đọc truyện)
+ */
+function getRouteDepth(pathname: string): number {
+	if (pathname.includes('/chapter/')) return 2;
+	if (pathname.startsWith('/book/')) return 1;
+	return 0;
+}
+
+/** Biến thể chuyển trang chuẩn iOS Cupertino (Parallax Slide + Shadow) */
+const cupertinoVariants = {
+	initial: (dir: 'forward' | 'back') => ({
+		x: dir === 'forward' ? '100%' : '-25%',
+		opacity: dir === 'forward' ? 1 : 0.85,
+		boxShadow: dir === 'forward' ? '-12px 0 28px rgba(0, 0, 0, 0.18)' : 'none',
+		zIndex: dir === 'forward' ? 2 : 1
+	}),
+	animate: {
+		x: 0,
+		opacity: 1,
+		boxShadow: 'none',
+		transition: {
+			duration: 0.32,
+			ease: [0.32, 0.72, 0, 1] // Chuẩn iOS Cupertino Easing curve
+		}
+	},
+	exit: (dir: 'forward' | 'back') => ({
+		x: dir === 'forward' ? '-25%' : '100%',
+		opacity: dir === 'forward' ? 0.85 : 1,
+		boxShadow: dir === 'back' ? '-12px 0 28px rgba(0, 0, 0, 0.18)' : 'none',
+		zIndex: dir === 'back' ? 2 : 1,
+		transition: {
+			duration: 0.28,
+			ease: [0.32, 0.72, 0, 1]
+		}
+	})
+};
+
 function AppContent() {
 	const location = useLocation();
 	const navigate = useNavigate();
 
 	// Tự động lưu và khôi phục trang hoạt động gần nhất khi App bị kill hoặc sleep vào lại
 	useRouteRestoration({ location, navigate });
+
+	const prevPathRef = useRef(location.pathname);
+	const [direction, setDirection] = useState<'forward' | 'back'>('forward');
+
+	useEffect(() => {
+		const prevDepth = getRouteDepth(prevPathRef.current);
+		const currDepth = getRouteDepth(location.pathname);
+		setDirection(currDepth < prevDepth ? 'back' : 'forward');
+		prevPathRef.current = location.pathname;
+	}, [location.pathname]);
 
 	useEffect(() => {
 		if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
@@ -39,15 +90,16 @@ function AppContent() {
 	}, [location.pathname]);
 
 	return (
-		<div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-on-background flex flex-col box-border hide-scrollbar no-scrollbar">
-			<AnimatePresence mode="wait">
+		<div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-on-background flex flex-col box-border hide-scrollbar no-scrollbar relative">
+			<AnimatePresence mode="popLayout" custom={direction} initial={false}>
 				<motion.div
 					key={location.pathname}
-					initial={{ opacity: 0, y: 8 }}
-					animate={{ opacity: 1, y: 0 }}
-					exit={{ opacity: 0, y: -8 }}
-					transition={{ duration: 0.18, ease: 'easeOut' }}
-					className="flex-1 flex flex-col w-full"
+					custom={direction}
+					variants={cupertinoVariants}
+					initial="initial"
+					animate="animate"
+					exit="exit"
+					className="flex-1 flex flex-col w-full min-h-screen"
 				>
 					<Routes location={location}>
 						<Route path="/" element={<LibraryScreen />} />

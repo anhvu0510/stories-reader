@@ -119,6 +119,14 @@ public class StoriesAudioBridgeTest {
     }
 
     @Test
+    public void testUpdatePlayback_coTienDoChunk_anToanZeroException() {
+        com.vula.stories.player.StoriesAudioService.isServiceRunning = false;
+        // Kiểm tra overload nhận chunkIndex và totalChunks đảm bảo an toàn tuyệt đối
+        StoriesAudioBridge.updatePlayback(null, "Tên Sách Thật", "Chương 1", "Nội dung câu", false, false, true, 3, 10);
+        assertFalse(com.vula.stories.player.StoriesAudioService.isServiceRunning);
+    }
+
+    @Test
     public void testStopPlayback_khiServiceChuaChay_anToanZeroException() {
         com.vula.stories.player.StoriesAudioService.isServiceRunning = false;
         // Khi service chưa chạy, stopPlayback phải bỏ qua ngay lập tức mà không ném ngoại lệ dù context == null

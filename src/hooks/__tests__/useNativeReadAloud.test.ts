@@ -44,6 +44,37 @@ describe('useNativeReadAloud Hook', () => {
 		unmount();
 	});
 
+	it('ưu tiên hiển thị tên sách thật và tên chương thật thay vì mã hash ID', async () => {
+		useReaderConfigStore.setState({ ttsEngine: 'edge', edgeVoiceUri: 'vi-VN-HoaiMyNeural' });
+		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
+		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+		const startPlaybackSpy = vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue(undefined);
+
+		const paragraphs = ['Kiểm tra tên sách thực tế.'];
+		const { result, unmount } = renderHook(() =>
+			useNativeReadAloud(paragraphs, {
+				bookId: 'b123',
+				bookName: 'Vạn Cổ Đệ Nhất Thần',
+				chapterId: 'c456',
+				chapterNumber: 1,
+				chapterTitle: 'Chương 1: Xuất Thế'
+			})
+		);
+
+		await act(async () => {
+			result.current.startReading();
+		});
+
+		expect(startPlaybackSpy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				bookTitle: 'Vạn Cổ Đệ Nhất Thần',
+				chapterTitle: 'Chương 1: Xuất Thế'
+			})
+		);
+
+		unmount();
+	});
+
 	it('điều khiển tạm dừng (pause) và dừng (stop) luồng phát native', async () => {
 		useReaderConfigStore.setState({ ttsEngine: 'edge', edgeVoiceUri: 'vi-VN-HoaiMyNeural' });
 		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');

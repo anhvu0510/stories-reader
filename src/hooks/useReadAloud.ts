@@ -22,8 +22,10 @@ const WORD_HIGHLIGHT_CLASS = 'stories-tts-word-highlight';
 
 export interface ReadAloudChapterContext {
 	bookId?: string;
+	bookName?: string;
 	chapterId?: string;
 	chapterNumber?: number;
+	chapterTitle?: string;
 }
 
 export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChapterContext = {}, paragraphContexts: ReadAloudChapterContext[] = []) {
@@ -1147,12 +1149,13 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.8;
 			const targetVoice = ttsEngine === 'edge' ? (edgeVoiceUri || 'vi-VN-HoaiMyNeural') : voiceUri;
 
-			const bookTitle = chapterContext.bookId ? `Truyện #${chapterContext.bookId}` : 'Stories Reader';
-			const chapterTitle = chapterContext.chapterNumber
-				? `Chương ${chapterContext.chapterNumber}`
-				: chapterContext.chapterId
-					? `Chương ${chapterContext.chapterId}`
-					: 'Chương đang đọc';
+			const bookTitle = chapterContext.bookName || (chapterContext.bookId ? `Truyện #${chapterContext.bookId}` : 'Stories Reader');
+			const chapterTitle = chapterContext.chapterTitle
+				|| (chapterContext.chapterNumber
+					? `Chương ${chapterContext.chapterNumber}`
+					: chapterContext.chapterId
+						? `Chương ${chapterContext.chapterId}`
+						: 'Chương đang đọc');
 
 			void activeNativeStream.startPlayback({
 				chunks: textChunks,

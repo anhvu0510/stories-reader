@@ -9,6 +9,7 @@ import { PullToRefresh } from '@/components/PullToRefresh';
 import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { triggerHaptic } from '@/hooks/useHaptic';
+import { useCupertinoSwipeBack } from '@/hooks/useCupertinoSwipeBack';
 import { downloadManager } from '@/lib/DownloadManager';
 import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
@@ -186,8 +187,17 @@ export function ChapterListScreen() {
 		await fetchChapters(1, search, filterState, sortOrder, false, { forceFresh: true });
 	}, [fetchChapters, search, filterState, sortOrder]);
 
+	const screenRef = useRef<HTMLDivElement>(null);
+	useCupertinoSwipeBack({
+		containerRef: screenRef,
+		onBack: () => {
+			triggerHaptic('light');
+			navigate('/');
+		}
+	});
+
 	return (
-		<div className="min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-28 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200">
+		<div ref={screenRef} className="min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-28 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200">
 			{/* Pull-to-refresh clear-cache gesture */}
 			<PullToRefresh
 				onRefresh={handlePullRefresh}

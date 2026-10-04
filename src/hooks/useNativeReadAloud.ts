@@ -289,12 +289,13 @@ export function useNativeReadAloud(
 		setCurrentChunkIndex(startIdx);
 
 		// Trích xuất metadata sách và chương để hiển thị lên Notification & Lock Screen
-		const bookTitle = chapterContext.bookId ? `Truyện #${chapterContext.bookId}` : 'Stories Reader';
-		const chapterTitle = chapterContext.chapterNumber
-			? `Chương ${chapterContext.chapterNumber}`
-			: chapterContext.chapterId
-				? `Chương ${chapterContext.chapterId}`
-				: 'Chương đang đọc';
+		const bookTitle = chapterContext.bookName || (chapterContext.bookId ? `Truyện #${chapterContext.bookId}` : 'Stories Reader');
+		const chapterTitle = chapterContext.chapterTitle
+			|| (chapterContext.chapterNumber
+				? `Chương ${chapterContext.chapterNumber}`
+				: chapterContext.chapterId
+					? `Chương ${chapterContext.chapterId}`
+					: 'Chương đang đọc');
 
 		const rawChunks = chunks.map((c) => c.text);
 		void activeNativeStream.startPlayback({

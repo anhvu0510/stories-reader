@@ -118,7 +118,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                         playText,
                         true,
                         chunkIndex > 0,
-                        chunkIndex < currentChunks.size() - 1
+                        chunkIndex < currentChunks.size() - 1,
+                        chunkIndex,
+                        currentChunks.size()
                 );
             }
 
@@ -156,7 +158,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                         currentText,
                         isPlaying,
                         currentIdx > 0,
-                        currentIdx < currentChunks.size() - 1
+                        currentIdx < currentChunks.size() - 1,
+                        currentIdx,
+                        currentChunks.size()
                 );
             }
 

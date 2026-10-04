@@ -14,6 +14,7 @@ import { triggerHaptic } from '@/hooks/useHaptic';
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { useReadingProgress } from '@/hooks/useReadingProgress';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { useCupertinoSwipeBack } from '@/hooks/useCupertinoSwipeBack';
 import { offlineDb } from '@/lib/offlineDb';
 import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
@@ -153,11 +154,13 @@ export function ReaderScreen() {
 		return displayChapters.flatMap((chap) =>
 			(chap.content || []).map(() => ({
 				bookId: bookId || chap.bookId,
+				bookName: contentData?.chapter?.bookName || chap.bookName,
 				chapterId: chap.chapterId,
-				chapterNumber: chap.chapterNumber
+				chapterNumber: chap.chapterNumber,
+				chapterTitle: chap.title
 			}))
 		);
-	}, [bookId, displayChapters]);
+	}, [bookId, displayChapters, contentData?.chapter?.bookName]);
 
 	const {
 		isPlaying,
@@ -177,8 +180,10 @@ export function ReaderScreen() {
 		allParagraphs,
 		{
 			bookId: bookId || displayChapters[0]?.bookId,
+			bookName: contentData?.chapter?.bookName || displayChapters[0]?.bookName,
 			chapterId: chapterId || displayChapters[0]?.chapterId,
-			chapterNumber: displayChapters[0]?.chapterNumber
+			chapterNumber: displayChapters[0]?.chapterNumber,
+			chapterTitle: contentData?.chapter?.title || displayChapters[0]?.title
 		},
 		paragraphChapterContexts
 	);
@@ -659,6 +664,20 @@ export function ReaderScreen() {
 	const contentWidth = typeof window !== 'undefined' ? Math.min(window.innerWidth || 390, 448) : 390;
 	const commitThreshold = Math.max(90, Math.round(contentWidth * 0.30));
 
+	const screenRef = useRef<HTMLDivElement>(null);
+	useCupertinoSwipeBack({
+		containerRef: screenRef,
+		onBack: () => {
+			triggerHaptic('light');
+			if (bookId) {
+				navigate(`/book/${bookId}`);
+			} else {
+				navigate('/');
+			}
+		},
+		disabled: loading || isRefreshingLatest
+	});
+
 	useSwipeGesture({
 		onSwipeLeft: handleSwipeNext,
 		onSwipeRight: handleSwipePrev,
@@ -760,6 +779,7 @@ export function ReaderScreen() {
 
 	return (
 		<div
+			ref={screenRef}
 			className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden hide-scrollbar no-scrollbar transition-colors duration-200 selection:bg-primary/25 selection:text-primary ${fontClass}`}
 		>
 			{/* Pull-to-refresh clear-cache gesture */}

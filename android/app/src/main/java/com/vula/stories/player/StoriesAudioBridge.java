@@ -130,6 +130,34 @@ public class StoriesAudioBridge {
             boolean hasPrev,
             boolean hasNext
     ) {
+        updatePlayback(context, bookTitle, chapterTitle, currentText, isPlaying, hasPrev, hasNext, 0, 0);
+    }
+
+    /**
+     * Gửi yêu cầu cập nhật thông tin bài phát, câu đọc và tiến độ lên StoriesAudioService
+     * để hiển thị chính xác trên thanh thông báo và thanh tiến trình (Seekbar) màn hình khóa.
+     *
+     * @param context Ngữ cảnh ứng dụng
+     * @param bookTitle Tên sách / truyện thực tế
+     * @param chapterTitle Tên chương truyện đang đọc
+     * @param currentText Nội dung câu văn hiện tại đang được đọc
+     * @param isPlaying Trạng thái đang phát hay đang tạm dừng
+     * @param hasPrev Còn câu trước đó để tua lại không
+     * @param hasNext Còn câu tiếp theo để chuyển tới không
+     * @param chunkIndex Chỉ số câu văn đang đọc (0-indexed)
+     * @param totalChunks Tổng số câu trong chương
+     */
+    public static void updatePlayback(
+            Context context,
+            String bookTitle,
+            String chapterTitle,
+            String currentText,
+            boolean isPlaying,
+            boolean hasPrev,
+            boolean hasNext,
+            int chunkIndex,
+            int totalChunks
+    ) {
         if (context == null) return;
 
         // Nếu không phát (đang dừng/pause) và Service chưa chạy -> bỏ qua ngay, không khởi động ForegroundService vô ích
@@ -146,6 +174,8 @@ public class StoriesAudioBridge {
             intent.putExtra(StoriesAudioService.EXTRA_IS_PLAYING, isPlaying);
             intent.putExtra(StoriesAudioService.EXTRA_HAS_PREV, hasPrev);
             intent.putExtra(StoriesAudioService.EXTRA_HAS_NEXT, hasNext);
+            intent.putExtra(StoriesAudioService.EXTRA_CHUNK_INDEX, chunkIndex);
+            intent.putExtra(StoriesAudioService.EXTRA_TOTAL_CHUNKS, totalChunks);
 
             if (StoriesAudioService.isServiceRunning) {
                 // Service đã chạy ở Foreground -> cập nhật qua startService an toàn, không bị ràng buộc timeout nghiêm ngặt

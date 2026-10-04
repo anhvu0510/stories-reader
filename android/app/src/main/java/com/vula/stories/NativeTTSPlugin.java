@@ -111,7 +111,9 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
                         playText,
                         true,
                         chunkIndex > 0,
-                        chunkIndex < queueManager.getTotalChunks() - 1
+                        chunkIndex < queueManager.getTotalChunks() - 1,
+                        chunkIndex,
+                        queueManager.getTotalChunks()
                 );
 
                 // Duy trì nạp trước các câu kế tiếp vào hàng đợi native (rolling queue)
@@ -154,7 +156,9 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
                         currentText,
                         isPlaying,
                         currentIdx > 0,
-                        currentIdx < queueManager.getTotalChunks() - 1
+                        currentIdx < queueManager.getTotalChunks() - 1,
+                        currentIdx,
+                        queueManager.getTotalChunks()
                 );
             }
 
@@ -481,7 +485,9 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
                     queueManager.getCurrentText(),
                     false,
                     queueManager.getCurrentChunkIndex() > 0,
-                    queueManager.getCurrentChunkIndex() < queueManager.getTotalChunks() - 1
+                    queueManager.getCurrentChunkIndex() < queueManager.getTotalChunks() - 1,
+                    queueManager.getCurrentChunkIndex(),
+                    queueManager.getTotalChunks()
             );
         }
         call.resolve();
@@ -580,7 +586,9 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
                             queueManager.getCurrentText(),
                             false,
                             queueManager.getCurrentChunkIndex() > 0,
-                            queueManager.getCurrentChunkIndex() < queueManager.getTotalChunks() - 1
+                            queueManager.getCurrentChunkIndex() < queueManager.getTotalChunks() - 1,
+                            queueManager.getCurrentChunkIndex(),
+                            queueManager.getTotalChunks()
                     );
                 }
             });

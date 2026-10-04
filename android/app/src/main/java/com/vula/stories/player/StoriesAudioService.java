@@ -59,6 +59,8 @@ public class StoriesAudioService extends Service {
     public static final String EXTRA_IS_PLAYING = "isPlaying";
     public static final String EXTRA_HAS_PREV = "hasPrev";
     public static final String EXTRA_HAS_NEXT = "hasNext";
+    public static final String EXTRA_CHUNK_INDEX = "extra_chunk_index";
+    public static final String EXTRA_TOTAL_CHUNKS = "extra_total_chunks";
 
     private MediaSessionCompat mediaSession;
     private NotificationManager notificationManager;
@@ -69,6 +71,8 @@ public class StoriesAudioService extends Service {
     private boolean lastIsPlaying = false;
     private boolean lastHasPrev = false;
     private boolean lastHasNext = false;
+    private int lastChunkIndex = 0;
+    private int lastTotalChunks = 0;
 
     @Override
     public void onCreate() {
@@ -255,6 +259,8 @@ public class StoriesAudioService extends Service {
                 lastIsPlaying = intent.getBooleanExtra(EXTRA_IS_PLAYING, true);
                 lastHasPrev = intent.getBooleanExtra(EXTRA_HAS_PREV, false);
                 lastHasNext = intent.getBooleanExtra(EXTRA_HAS_NEXT, true);
+                lastChunkIndex = intent.getIntExtra(EXTRA_CHUNK_INDEX, 0);
+                lastTotalChunks = intent.getIntExtra(EXTRA_TOTAL_CHUNKS, 0);
 
                 renderNotification();
                 break;
@@ -293,29 +299,39 @@ public class StoriesAudioService extends Service {
 
     /**
      * Cập nhật MediaMetadata, PlaybackStateCompat và xuất bản Notification ra thanh thông báo.
+     * Cấu hình thanh Seekbar chạy theo tiến độ câu văn và hiển thị chuẩn tên Sách / Chương.
      */
     private void renderNotification() {
         if (mediaSession != null) {
-            // 1. Cập nhật PlaybackState
+            // 1. Cập nhật PlaybackState với tiến độ câu văn hiện tại
             long actions = PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE |
                     PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_STOP;
             if (lastHasPrev) actions |= PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
             if (lastHasNext) actions |= PlaybackStateCompat.ACTION_SKIP_TO_NEXT;
 
             int state = lastIsPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
+            long position = (lastTotalChunks > 0 && lastChunkIndex >= 0)
+                    ? (long) lastChunkIndex * 1000L
+                    : PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN;
+
             PlaybackStateCompat playbackState = new PlaybackStateCompat.Builder()
                     .setActions(actions)
-                    .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f)
+                    .setState(state, position, 1.0f)
                     .build();
             mediaSession.setPlaybackState(playbackState);
 
-            // 2. Cập nhật MediaMetadata
-            MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
+            // 2. Cập nhật MediaMetadata với Tên Chương, Tên Sách, Câu đang đọc và Tổng thời lượng (đơn vị chunk)
+            MediaMetadataCompat.Builder metadataBuilder = new MediaMetadataCompat.Builder()
                     .putString(MediaMetadataCompat.METADATA_KEY_TITLE, lastChapterTitle)
                     .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, lastBookTitle)
-                    .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, lastCurrentText)
-                    .build();
-            mediaSession.setMetadata(metadata);
+                    .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, lastBookTitle)
+                    .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, lastBookTitle)
+                    .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_DESCRIPTION, lastCurrentText);
+
+            if (lastTotalChunks > 0) {
+                metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, (long) lastTotalChunks * 1000L);
+            }
+            mediaSession.setMetadata(metadataBuilder.build());
         }
 
         // 3. Cập nhật giao diện thông báo

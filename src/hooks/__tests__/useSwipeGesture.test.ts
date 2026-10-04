@@ -1,12 +1,17 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, cleanup } from '@testing-library/react';
 
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 
 describe('useSwipeGesture hook', () => {
 	beforeEach(() => {
 		vi.restoreAllMocks();
+	});
+
+	afterEach(() => {
+		cleanup();
+		vi.clearAllMocks();
 	});
 
 	it('triggers onSwipeLeft when user swipes from right to left horizontally', () => {
@@ -446,6 +451,9 @@ describe('useSwipeGesture hook', () => {
 		const onDragMove = vi.fn();
 		const onDragEnd = vi.fn();
 
+		const now = 2000000;
+		vi.spyOn(Date, 'now').mockReturnValue(now);
+
 		renderHook(() =>
 			useSwipeGesture({
 				onSwipeLeft,
@@ -469,6 +477,12 @@ describe('useSwipeGesture hook', () => {
 					touches: [{ clientX: 150, clientY: 100 } as any]
 				})
 			);
+		});
+
+		// Kéo tay tự nhiên trong 200ms => velocity = 50/200 = 0.25 px/ms (< 0.8)
+		vi.spyOn(Date, 'now').mockReturnValue(now + 200);
+
+		act(() => {
 			// Thả tay ra
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
