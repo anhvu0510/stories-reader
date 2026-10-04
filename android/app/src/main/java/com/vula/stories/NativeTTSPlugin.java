@@ -95,13 +95,8 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
                 notifyListeners("onChunkStart", chunkData);
 
                 String playText = queueManager.getCurrentText();
-                JSONObject playDetails = new JSONObject();
-                try {
-                    playDetails.put("chunkIndex", chunkIndex);
-                    playDetails.put("totalChunks", queueManager.getTotalChunks());
-                    playDetails.put("snippet", RemoteLogger.formatSnippet(playText));
-                } catch (Exception ignored) {}
-                RemoteLogger.log("NativeTTS_Stream", "info", "[NativeTTS:Direct] Đang đọc câu " + (chunkIndex + 1) + "/" + queueManager.getTotalChunks() + ": \"" + RemoteLogger.formatSnippet(playText) + "\"", null, playDetails);
+                // Ghi log Logcat nội bộ thiết bị, không gửi RemoteLogger trên từng câu để tránh nghẽn mạng và spam gateway
+                Log.d(TAG, "[NativeTTS:Direct] Đang đọc câu " + (chunkIndex + 1) + "/" + queueManager.getTotalChunks() + ": \"" + RemoteLogger.formatSnippet(playText) + "\"");
 
                 // Cập nhật thông tin câu đọc và trạng thái phát lên thanh điều khiển Notification & Lock Screen
                 StoriesAudioBridge.updatePlayback(

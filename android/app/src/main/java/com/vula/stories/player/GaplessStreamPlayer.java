@@ -35,10 +35,15 @@ public class GaplessStreamPlayer {
     private PowerManager.WakeLock wakeLock = null;
     private MediaPlayer currentPlayer = null;
     private MediaPlayer nextPlayer = null;
+    private MediaPlayer preparingCurrentPlayer = null;
+    private MediaPlayer preparingNextPlayer = null;
     private int currentChunkIndex = -1;
     private int nextChunkIndex = -1;
     private boolean isPlaying = false;
     private boolean isPaused = false;
+
+    // Quản lý phiên phát (Session ID) để cô lập hoàn toàn các callback bất đồng bộ của luồng chuẩn bị trước đó
+    private long currentSessionId = 0;
 
     private Runnable wordBoundaryTicker = null;
     private int lastWordBoundaryCharIndex = -1;
@@ -100,13 +105,38 @@ public class GaplessStreamPlayer {
         } catch (Exception ignored) {}
     }
 
+    /**
+     * Bắt đầu phát âm thanh cho câu chỉ định.
+     * Tự động tăng mã phiên để vô hiệu hóa mọi callback bất đồng bộ của luồng chuẩn bị cũ.
+     *
+     * @param index     Chỉ số câu cần phát
+     * @param audioFile File âm thanh từ bộ nhớ đệm
+     */
     public synchronized void start(int index, File audioFile) {
         if (audioFile == null || !audioFile.exists()) return;
 
+        // Tăng mã phiên để vô hiệu hóa toàn bộ callback bất đồng bộ của luồng chuẩn bị trước đó
+        final long sessionId = ++currentSessionId;
+
+        // Thu hồi triệt để các trình phát đang chuẩn bị dở dang để tránh xung đột tài nguyên
+        if (preparingCurrentPlayer != null) {
+            safeReleasePlayer(preparingCurrentPlayer);
+            preparingCurrentPlayer = null;
+        }
+        if (preparingNextPlayer != null) {
+            safeReleasePlayer(preparingNextPlayer);
+            preparingNextPlayer = null;
+        }
         if (currentPlayer != null) {
             MediaPlayer old = currentPlayer;
             currentPlayer = null;
             safeReleasePlayer(old);
+        }
+        if (nextPlayer != null) {
+            MediaPlayer oldNext = nextPlayer;
+            nextPlayer = null;
+            nextChunkIndex = -1;
+            safeReleasePlayer(oldNext);
         }
 
         try {
@@ -116,38 +146,48 @@ public class GaplessStreamPlayer {
             isPaused = false;
 
             MediaPlayer player = new MediaPlayer();
+            preparingCurrentPlayer = player;
             player.setDataSource(audioFile.getAbsolutePath());
             player.setOnPreparedListener(mp -> {
-                if (!isPlaying) {
-                    safeReleasePlayer(mp);
-                    return;
-                }
-                currentPlayer = mp;
-                currentChunkIndex = index;
-                lastWordBoundaryCharIndex = -1;
+                synchronized (GaplessStreamPlayer.this) {
+                    if (sessionId != currentSessionId || !isPlaying) {
+                        safeReleasePlayer(mp);
+                        if (preparingCurrentPlayer == mp) {
+                            preparingCurrentPlayer = null;
+                        }
+                        return;
+                    }
 
-                try {
-                    mp.start();
-                } catch (Exception ex) {
-                    Log.e(TAG, "Error starting MediaPlayer for chunk " + index, ex);
-                    safeReleasePlayer(mp);
-                    currentPlayer = null;
-                    mainHandler.post(() -> handleChunkCompletion(mp));
-                    return;
-                }
+                    if (preparingCurrentPlayer == mp) {
+                        preparingCurrentPlayer = null;
+                    }
+                    currentPlayer = mp;
+                    currentChunkIndex = index;
+                    lastWordBoundaryCharIndex = -1;
 
-                if (listener != null) {
-                    listener.onChunkStart(index);
-                    listener.onPlaybackStateChange(true, false, false);
-                }
+                    try {
+                        mp.start();
+                    } catch (Exception ex) {
+                        Log.e(TAG, "Error starting MediaPlayer for chunk " + index, ex);
+                        safeReleasePlayer(mp);
+                        currentPlayer = null;
+                        mainHandler.post(() -> handleChunkCompletion(mp, sessionId));
+                        return;
+                    }
 
-                startWordBoundaryTicker();
+                    if (listener != null) {
+                        listener.onChunkStart(index);
+                        listener.onPlaybackStateChange(true, false, false);
+                    }
+
+                    startWordBoundaryTicker();
+                }
             });
 
-            player.setOnCompletionListener(mp -> mainHandler.post(() -> handleChunkCompletion(mp)));
+            player.setOnCompletionListener(mp -> mainHandler.post(() -> handleChunkCompletion(mp, sessionId)));
             player.setOnErrorListener((mp, what, extra) -> {
                 Log.e(TAG, "MediaPlayer error: what=" + what + ", extra=" + extra);
-                mainHandler.post(() -> handleChunkCompletion(mp));
+                mainHandler.post(() -> handleChunkCompletion(mp, sessionId));
                 return true;
             });
 
@@ -156,36 +196,70 @@ public class GaplessStreamPlayer {
             player.prepareAsync();
         } catch (Exception ex) {
             Log.e(TAG, "Error configuring player for chunk " + index, ex);
+            if (preparingCurrentPlayer != null) {
+                safeReleasePlayer(preparingCurrentPlayer);
+                preparingCurrentPlayer = null;
+            }
         }
     }
 
+    /**
+     * Chuẩn bị trước câu tiếp theo để chuyển tiếp liền mạch 0ms (gapless).
+     *
+     * @param nextIndex Chỉ số câu tiếp theo
+     * @param nextFile  File âm thanh của câu tiếp theo
+     */
     public synchronized void prepareNext(int nextIndex, File nextFile) {
         if (!isPlaying || nextPlayer != null || currentPlayer == null) return;
         if (nextFile == null || !nextFile.exists()) return;
 
+        if (preparingNextPlayer != null) {
+            safeReleasePlayer(preparingNextPlayer);
+            preparingNextPlayer = null;
+        }
+
+        final long sessionId = currentSessionId;
+
         try {
             MediaPlayer next = new MediaPlayer();
+            preparingNextPlayer = next;
             next.setDataSource(nextFile.getAbsolutePath());
             next.setOnPreparedListener(mp -> {
-                if (!isPlaying || currentPlayer == null) {
-                    safeReleasePlayer(mp);
-                    return;
-                }
-                nextPlayer = mp;
-                nextChunkIndex = nextIndex;
-                try {
-                    currentPlayer.setNextMediaPlayer(nextPlayer);
-                    Log.d(TAG, "Gapless connection ready for chunk " + nextIndex);
-                } catch (Exception ex) {
-                    Log.w(TAG, "Failed setNextMediaPlayer: " + ex.getMessage());
+                synchronized (GaplessStreamPlayer.this) {
+                    if (sessionId != currentSessionId || !isPlaying || currentPlayer == null) {
+                        safeReleasePlayer(mp);
+                        if (preparingNextPlayer == mp) {
+                            preparingNextPlayer = null;
+                        }
+                        return;
+                    }
+
+                    if (preparingNextPlayer == mp) {
+                        preparingNextPlayer = null;
+                    }
+                    nextPlayer = mp;
+                    nextChunkIndex = nextIndex;
+                    try {
+                        currentPlayer.setNextMediaPlayer(nextPlayer);
+                        Log.d(TAG, "Gapless connection ready for chunk " + nextIndex);
+                    } catch (Exception ex) {
+                        Log.w(TAG, "Failed setNextMediaPlayer: " + ex.getMessage());
+                    }
                 }
             });
-            next.setOnCompletionListener(mp -> mainHandler.post(() -> handleChunkCompletion(mp)));
+            next.setOnCompletionListener(mp -> mainHandler.post(() -> handleChunkCompletion(mp, sessionId)));
             next.setOnErrorListener((mp, what, extra) -> {
                 Log.e(TAG, "Next MediaPlayer error: what=" + what + ", extra=" + extra);
-                if (nextPlayer == mp) {
-                    nextPlayer = null;
-                    nextChunkIndex = -1;
+                synchronized (GaplessStreamPlayer.this) {
+                    if (sessionId == currentSessionId) {
+                        if (preparingNextPlayer == mp) {
+                            preparingNextPlayer = null;
+                        }
+                        if (nextPlayer == mp) {
+                            nextPlayer = null;
+                            nextChunkIndex = -1;
+                        }
+                    }
                 }
                 safeReleasePlayer(mp);
                 return true;
@@ -193,11 +267,21 @@ public class GaplessStreamPlayer {
             next.prepareAsync();
         } catch (Exception ex) {
             Log.w(TAG, "Error preparing next player: " + ex.getMessage());
+            if (preparingNextPlayer != null) {
+                safeReleasePlayer(preparingNextPlayer);
+                preparingNextPlayer = null;
+            }
         }
     }
 
-    private void handleChunkCompletion(MediaPlayer completedPlayer) {
-        if (!isPlaying) {
+    /**
+     * Xử lý khi một câu hoàn tất phát xong, chuyển sang câu tiếp theo liền mạch nếu có.
+     *
+     * @param completedPlayer MediaPlayer vừa hoàn thành
+     * @param sessionId       Mã phiên tương ứng
+     */
+    private synchronized void handleChunkCompletion(MediaPlayer completedPlayer, long sessionId) {
+        if (sessionId != currentSessionId || !isPlaying) {
             safeReleasePlayer(completedPlayer);
             return;
         }
@@ -223,10 +307,11 @@ public class GaplessStreamPlayer {
             if (listener != null) {
                 listener.onChunkCompleted(completedIdx);
             }
-        } else {
-            if (listener != null) {
-                listener.onChunkCompleted(completedIdx);
-            }
+            return;
+        }
+
+        if (listener != null) {
+            listener.onChunkCompleted(completedIdx);
         }
     }
 
@@ -260,11 +345,26 @@ public class GaplessStreamPlayer {
         }
     }
 
+    /**
+     * Dừng phát ngay lập tức, vô hiệu hóa toàn bộ callback bất đồng bộ và thu hồi tài nguyên MediaPlayer.
+     */
     public synchronized void stop() {
+        // Tăng mã phiên để vô hiệu hóa toàn bộ callback bất đồng bộ đang chờ trong hàng đợi
+        currentSessionId++;
         isPlaying = false;
         isPaused = false;
         stopWordBoundaryTicker();
 
+        if (preparingCurrentPlayer != null) {
+            MediaPlayer p = preparingCurrentPlayer;
+            preparingCurrentPlayer = null;
+            safeReleasePlayer(p);
+        }
+        if (preparingNextPlayer != null) {
+            MediaPlayer p = preparingNextPlayer;
+            preparingNextPlayer = null;
+            safeReleasePlayer(p);
+        }
         if (currentPlayer != null) {
             MediaPlayer p = currentPlayer;
             currentPlayer = null;
@@ -279,11 +379,23 @@ public class GaplessStreamPlayer {
         releaseWakeLock();
     }
 
+    /**
+     * Đặt lại hoàn toàn trạng thái trình phát, xóa sạch bộ nhớ tạm và các tham chiếu dữ liệu.
+     */
     public synchronized void reset() {
         stop();
         currentChunkIndex = -1;
         nextChunkIndex = -1;
         lastWordBoundaryCharIndex = -1;
+        wordBoundariesSource = null;
+        mainHandler.removeCallbacksAndMessages(null);
+    }
+
+    /**
+     * Dọn dẹp toàn bộ bộ nhớ tạm, giải phóng tài nguyên và reset trạng thái chuẩn bị cho flow đọc mới.
+     */
+    public synchronized void clearCache() {
+        reset();
     }
 
     private Map<Integer, JSONArray> wordBoundariesSource = null;

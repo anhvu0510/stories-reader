@@ -6,6 +6,7 @@ const { mockEdgeTTSNative } = vi.hoisted(() => ({
 		resumePlayback: vi.fn(),
 		stopPlayback: vi.fn(),
 		seekToChunk: vi.fn(),
+		clearCache: vi.fn(),
 		addListener: vi.fn()
 	}
 }));
@@ -84,6 +85,9 @@ describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
 
 		await EdgeTTSNativeStreamService.stop();
 		expect(mockEdgeTTSNative.stopPlayback).toHaveBeenCalled();
+
+		await EdgeTTSNativeStreamService.clearCache();
+		expect(mockEdgeTTSNative.clearCache).toHaveBeenCalled();
 	});
 
 	it('registers native event listeners and notifies subscribers', async () => {
