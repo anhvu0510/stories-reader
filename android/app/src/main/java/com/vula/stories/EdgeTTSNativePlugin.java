@@ -155,7 +155,8 @@ public class EdgeTTSNativePlugin extends Plugin {
                         openDetails.put("voice", voice);
                         openDetails.put("rate", rate);
                         openDetails.put("textLen", text.length());
-                        sendServerLog(gatewayUrl, "info", "[EdgeTTS] WebSocket kết nối thành công tới máy chủ Bing Edge (requestId=" + requestId + ")", null, openDetails);
+                        openDetails.put("fullText", text);
+                        sendServerLog(gatewayUrl, "info", "[EdgeTTS] WebSocket kết nối thành công tới máy chủ Bing Edge (requestId=" + requestId + "): \"" + text + "\"", null, openDetails);
 
                         // 1. Send speech.config
                         String configPayload = "{\"context\":{\"synthesis\":{\"audio\":{\"metadataoptions\":{\"sentenceBoundaryEnabled\":\"false\",\"wordBoundaryEnabled\":\"true\"},\"outputFormat\":\"audio-24khz-48kbitrate-mono-mp3\"}}}}";
@@ -279,8 +280,8 @@ public class EdgeTTSNativePlugin extends Plugin {
                                         failDetails.put("voice", voice);
                                         failDetails.put("rate", rate);
                                         failDetails.put("elapsedMs", elapsed);
-                                        failDetails.put("textPreview", text.length() > 60 ? text.substring(0, 60) + "..." : text);
-                                        sendServerLog(gatewayUrl, "warn", "[EdgeTTS] Không nhận được âm thanh từ máy chủ Edge (" + elapsed + "ms)", "NO_AUDIO", failDetails);
+                                        failDetails.put("fullText", text);
+                                        sendServerLog(gatewayUrl, "warn", "[EdgeTTS] Không nhận được âm thanh từ máy chủ Edge (" + elapsed + "ms) - Nội dung: \"" + text + "\"", "NO_AUDIO", failDetails);
                                         call.reject("No audio received from Edge TTS", "NO_AUDIO");
                                     } else {
                                         Log.i(TAG, "[EdgeTTS] Hoàn tất tổng hợp âm thanh từ máy chủ Edge sau " + elapsed + "ms (audioBytes=" + audioBytes.length + ", boundaries=" + wordBoundaries.length() + ")");
@@ -291,8 +292,8 @@ public class EdgeTTSNativePlugin extends Plugin {
                                         successDetails.put("elapsedMs", elapsed);
                                         successDetails.put("audioBytes", audioBytes.length);
                                         successDetails.put("boundariesCount", wordBoundaries.length());
-                                        successDetails.put("textPreview", text.length() > 60 ? text.substring(0, 60) + "..." : text);
-                                        sendServerLog(gatewayUrl, "info", "[EdgeTTS] Hoàn tất tổng hợp âm thanh từ Edge (" + elapsed + "ms, " + audioBytes.length + " bytes)", null, successDetails);
+                                        successDetails.put("fullText", text);
+                                        sendServerLog(gatewayUrl, "info", "[EdgeTTS] Hoàn tất tổng hợp âm thanh từ Edge (" + elapsed + "ms, " + audioBytes.length + " bytes): \"" + text + "\"", null, successDetails);
 
                                         String base64 = Base64.encodeToString(audioBytes, Base64.NO_WRAP);
                                         JSObject ret = new JSObject();
@@ -329,9 +330,9 @@ public class EdgeTTSNativePlugin extends Plugin {
                         errDetails.put("textLength", text.length());
                         errDetails.put("elapsedMs", elapsed);
                         errDetails.put("statusCode", statusCode);
-                        errDetails.put("textPreview", text.length() > 60 ? text.substring(0, 60) + "..." : text);
+                        errDetails.put("fullText", text);
                     } catch (Exception ignored) {}
-                    sendServerLog(gatewayUrl, "error", "[EdgeTTS] Kết nối Edge WebSocket thất bại (" + elapsed + "ms, code: " + statusCode + ")", errorMsg, errDetails);
+                    sendServerLog(gatewayUrl, "error", "[EdgeTTS] Kết nối Edge WebSocket thất bại (" + elapsed + "ms, code: " + statusCode + ") - Nội dung: \"" + text + "\"", errorMsg, errDetails);
 
                     synchronized (isResolved) {
                         if (!isResolved[0]) {
@@ -356,7 +357,7 @@ public class EdgeTTSNativePlugin extends Plugin {
             String cleanUrl = gatewayUrl.replaceAll("/+$", "") + "/api/logs/client-error";
             JSONObject payload = new JSONObject();
             payload.put("platform", "android");
-            payload.put("source", "EdgeTTSNative_Java");
+            payload.put("source", "EdgeTTSNative_Stream");
             payload.put("level", level);
             payload.put("message", message);
             if (error != null) payload.put("error", error);
@@ -611,6 +612,17 @@ public class EdgeTTSNativePlugin extends Plugin {
         startState.put("isBuffering", true);
         notifyListeners("onPlaybackStateChange", startState);
 
+        String firstSentence = (startIndex >= 0 && startIndex < currentChunks.size()) ? currentChunks.get(startIndex) : "";
+        JSONObject startDetails = new JSONObject();
+        try {
+            startDetails.put("startIndex", startIndex);
+            startDetails.put("totalChunks", currentChunks.size());
+            startDetails.put("voice", voice);
+            startDetails.put("rate", rate);
+            startDetails.put("fullText", firstSentence);
+        } catch (Exception ignored) {}
+        sendServerLog(currentGatewayUrl, "info", "[EdgeTTS:Stream] Bắt đầu phát chương từ câu " + (startIndex + 1) + "/" + currentChunks.size() + ": \"" + firstSentence + "\"", null, startDetails);
+
         // Strict Priority: Only fetch currentChunkIndex first! Future chunks are queued only after current is ready.
         prefetchChunk(startIndex);
 
@@ -643,6 +655,7 @@ public class EdgeTTSNativePlugin extends Plugin {
                         .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + CHROMIUM_MAJOR_VERSION + ".0.0.0 Safari/537.36 Edg/" + CHROMIUM_MAJOR_VERSION + ".0.0.0")
                         .addHeader("Origin", "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold")
                         .addHeader("Accept-Language", "en-US,en;q=0.9")
+                        .addHeader("Accept-Encoding", "gzip, deflate, br, zstd")
                         .build();
 
                 ByteArrayOutputStream audioBuffer = new ByteArrayOutputStream();
@@ -651,11 +664,20 @@ public class EdgeTTSNativePlugin extends Plugin {
                 String cleanSourceText = Normalizer.normalize(text, Normalizer.Form.NFC);
                 String foldedSourceText = cleanSourceText.toLowerCase(Locale.ROOT);
                 int[] searchOffset = {0};
+                final long fetchStartTime = System.currentTimeMillis();
 
                 WebSocket webSocket = httpClient.newWebSocket(request, new WebSocketListener() {
                     @Override
                     public void onOpen(WebSocket webSocket, Response response) {
                         try {
+                            JSONObject openDetails = new JSONObject();
+                            openDetails.put("chunkIndex", index);
+                            openDetails.put("totalChunks", currentChunks.size());
+                            openDetails.put("voice", currentVoice);
+                            openDetails.put("rate", currentRate);
+                            openDetails.put("fullText", text);
+                            sendServerLog(currentGatewayUrl, "info", "[EdgeTTS:Stream] Đang kết nối tải audio câu " + (index + 1) + "/" + currentChunks.size() + ": \"" + text + "\"", null, openDetails);
+
                             String configPayload = "{\"context\":{\"synthesis\":{\"audio\":{\"metadataoptions\":{\"sentenceBoundaryEnabled\":\"false\",\"wordBoundaryEnabled\":\"true\"},\"outputFormat\":\"audio-24khz-48kbitrate-mono-mp3\"}}}}";
                             String configMsg = "X-Timestamp: " + getTimestampIso() + "\r\n"
                                     + "Content-Type: application/json; charset=utf-8\r\n"
@@ -764,7 +786,19 @@ public class EdgeTTSNativePlugin extends Plugin {
                                     }
                                     readyAudioFiles.put(index, chunkFile);
                                     readyWordBoundaries.put(index, wordBoundaries);
-                                    Log.d(TAG, "[EdgeTTS:Stream] Nạp xong câu " + index + " (" + audioBytes.length + " bytes, " + wordBoundaries.length() + " words)");
+                                    long elapsed = System.currentTimeMillis() - fetchStartTime;
+                                    Log.d(TAG, "[EdgeTTS:Stream] Nạp xong câu " + index + " (" + audioBytes.length + " bytes, " + wordBoundaries.length() + " words, " + elapsed + "ms)");
+
+                                    JSONObject doneDetails = new JSONObject();
+                                    try {
+                                        doneDetails.put("chunkIndex", index);
+                                        doneDetails.put("totalChunks", currentChunks.size());
+                                        doneDetails.put("bytes", audioBytes.length);
+                                        doneDetails.put("wordsCount", wordBoundaries.length());
+                                        doneDetails.put("elapsedMs", elapsed);
+                                        doneDetails.put("fullText", text);
+                                    } catch (Exception ignored) {}
+                                    sendServerLog(currentGatewayUrl, "info", "[EdgeTTS:Stream] Đã nạp xong audio câu " + (index + 1) + "/" + currentChunks.size() + " (" + audioBytes.length + " bytes, " + wordBoundaries.length() + " từ, " + elapsed + "ms): \"" + text + "\"", null, doneDetails);
 
                                     mainHandler.post(() -> onChunkAudioReady(index));
                                 }
@@ -781,7 +815,15 @@ public class EdgeTTSNativePlugin extends Plugin {
 
                     @Override
                     public void onFailure(WebSocket webSocket, Throwable t, Response response) {
-                        Log.w(TAG, "[EdgeTTS:Stream] Lỗi tải ngầm câu " + index + ": " + (t != null ? t.getMessage() : "Unknown"));
+                        String errMsg = (t != null ? t.getMessage() : "Unknown");
+                        Log.w(TAG, "[EdgeTTS:Stream] Lỗi tải ngầm câu " + index + ": " + errMsg);
+                        JSONObject failDetails = new JSONObject();
+                        try {
+                            failDetails.put("chunkIndex", index);
+                            failDetails.put("totalChunks", currentChunks.size());
+                            failDetails.put("fullText", text);
+                        } catch (Exception ignored) {}
+                        sendServerLog(currentGatewayUrl, "error", "[EdgeTTS:Stream] Lỗi tải audio câu " + (index + 1) + "/" + currentChunks.size() + ": " + errMsg + " - Nội dung: \"" + text + "\"", errMsg, failDetails);
                         inFlightIndices.remove(index);
                         activeSockets.remove(index);
                     }
@@ -852,6 +894,15 @@ public class EdgeTTSNativePlugin extends Plugin {
 
                 startWordBoundaryTicker();
                 maintainRollingBuffer();
+
+                String playText = (index >= 0 && index < currentChunks.size()) ? currentChunks.get(index) : "";
+                JSONObject playDetails = new JSONObject();
+                try {
+                    playDetails.put("chunkIndex", index);
+                    playDetails.put("totalChunks", currentChunks.size());
+                    playDetails.put("fullText", playText);
+                } catch (Exception ignored) {}
+                sendServerLog(currentGatewayUrl, "info", "[EdgeTTS:Stream] Đang đọc câu " + (index + 1) + "/" + currentChunks.size() + ": \"" + playText + "\"", null, playDetails);
             });
 
             player.setOnCompletionListener(mp -> {
@@ -888,6 +939,15 @@ public class EdgeTTSNativePlugin extends Plugin {
                 try {
                     currentPlayer.setNextMediaPlayer(nextPlayer);
                     Log.d(TAG, "[EdgeTTS:Stream] Đã nối gapless câu tiếp theo: " + nextIndex);
+
+                    String nextText = (nextIndex >= 0 && nextIndex < currentChunks.size()) ? currentChunks.get(nextIndex) : "";
+                    JSONObject nextDetails = new JSONObject();
+                    try {
+                        nextDetails.put("chunkIndex", nextIndex);
+                        nextDetails.put("totalChunks", currentChunks.size());
+                        nextDetails.put("fullText", nextText);
+                    } catch (Exception ignored) {}
+                    sendServerLog(currentGatewayUrl, "info", "[EdgeTTS:Stream] Đã chuẩn bị gapless câu tiếp theo " + (nextIndex + 1) + "/" + currentChunks.size() + ": \"" + nextText + "\"", null, nextDetails);
                 } catch (Exception ex) {
                     Log.w(TAG, "Failed setNextMediaPlayer: " + ex.getMessage());
                 }
@@ -952,13 +1012,19 @@ public class EdgeTTSNativePlugin extends Plugin {
             }
         } else {
             Log.i(TAG, "[EdgeTTS:Stream] Hoàn tất đọc hết chương");
+            JSONObject allDoneDetails = new JSONObject();
+            try {
+                allDoneDetails.put("totalChunks", currentChunks.size());
+            } catch (Exception ignored) {}
+            sendServerLog(currentGatewayUrl, "info", "[EdgeTTS:Stream] Hoàn tất đọc hết toàn bộ chương (" + currentChunks.size() + " câu)", null, allDoneDetails);
+
             stopPlaybackInternal(false);
             notifyListeners("onPlaybackComplete", new JSObject());
         }
     }
 
     private void maintainRollingBuffer() {
-        if (!isStreamingPlaying) return;
+        if (!isStreamingPlaying || isStreamingPaused) return;
 
         evictOldChunksFromCache();
 
@@ -1055,6 +1121,15 @@ public class EdgeTTSNativePlugin extends Plugin {
                 state.put("isPaused", true);
                 state.put("isBuffering", false);
                 notifyListeners("onPlaybackStateChange", state);
+
+                String pausedText = (currentChunkIndex >= 0 && currentChunkIndex < currentChunks.size()) ? currentChunks.get(currentChunkIndex) : "";
+                JSONObject pauseDetails = new JSONObject();
+                try {
+                    pauseDetails.put("chunkIndex", currentChunkIndex);
+                    pauseDetails.put("totalChunks", currentChunks.size());
+                    pauseDetails.put("fullText", pausedText);
+                } catch (Exception ignored) {}
+                sendServerLog(currentGatewayUrl, "info", "[EdgeTTS:Stream] Tạm dừng đọc ở câu " + (currentChunkIndex + 1) + "/" + currentChunks.size() + ": \"" + pausedText + "\"", null, pauseDetails);
             } catch (Exception ex) {
                 Log.w(TAG, "Error pausing player: " + ex.getMessage());
             }
@@ -1075,6 +1150,17 @@ public class EdgeTTSNativePlugin extends Plugin {
                 state.put("isPaused", false);
                 state.put("isBuffering", false);
                 notifyListeners("onPlaybackStateChange", state);
+
+                String resumeText = (currentChunkIndex >= 0 && currentChunkIndex < currentChunks.size()) ? currentChunks.get(currentChunkIndex) : "";
+                JSONObject resumeDetails = new JSONObject();
+                try {
+                    resumeDetails.put("chunkIndex", currentChunkIndex);
+                    resumeDetails.put("totalChunks", currentChunks.size());
+                    resumeDetails.put("fullText", resumeText);
+                } catch (Exception ignored) {}
+                sendServerLog(currentGatewayUrl, "info", "[EdgeTTS:Stream] Tiếp tục đọc câu " + (currentChunkIndex + 1) + "/" + currentChunks.size() + ": \"" + resumeText + "\"", null, resumeDetails);
+
+                maintainRollingBuffer();
             } catch (Exception ex) {
                 Log.w(TAG, "Error resuming player: " + ex.getMessage());
             }
@@ -1155,6 +1241,13 @@ public class EdgeTTSNativePlugin extends Plugin {
             state.put("isPaused", false);
             state.put("isBuffering", false);
             notifyListeners("onPlaybackStateChange", state);
+
+            JSONObject stopDetails = new JSONObject();
+            try {
+                stopDetails.put("lastChunkIndex", currentChunkIndex);
+                stopDetails.put("totalChunks", currentChunks.size());
+            } catch (Exception ignored) {}
+            sendServerLog(currentGatewayUrl, "info", "[EdgeTTS:Stream] Dừng đọc chương tại câu " + (currentChunkIndex + 1) + "/" + currentChunks.size(), null, stopDetails);
         }
     }
 

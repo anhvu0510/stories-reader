@@ -318,8 +318,8 @@ export class EdgeTTSService {
 		void reportClientLog(rootUrl, {
 			level: 'info',
 			source: 'EdgeTTS_Web',
-			message: `[EdgeTTS:Web] Hoàn tất tổng hợp âm thanh qua server (${elapsed}ms, ${blob.size} bytes)`,
-			details: { voice, speed: ratePercentage, elapsedMs: elapsed, audioBytes: blob.size, textPreview: text.slice(0, 60) }
+			message: `[EdgeTTS:Web] Hoàn tất tổng hợp âm thanh qua server (${elapsed}ms, ${blob.size} bytes): "${text}"`,
+			details: { voice, speed: ratePercentage, elapsedMs: elapsed, audioBytes: blob.size, fullText: text }
 		});
 		return blob;
 	}
@@ -360,8 +360,8 @@ export class EdgeTTSService {
 				void reportClientLog(rootUrl, {
 					level: 'info',
 					source: 'EdgeTTSNative',
-					message: `[EdgeTTS] Tổng hợp native thành công (${elapsed}ms, ${blob.size} bytes, ${finalBoundaries.length} boundaries)`,
-					details: { voice, speed: ratePercentage, elapsedMs: elapsed, audioBytes: blob.size, boundariesCount: finalBoundaries.length, textPreview: text.slice(0, 60) }
+					message: `[EdgeTTS] Tổng hợp native thành công (${elapsed}ms, ${blob.size} bytes, ${finalBoundaries.length} boundaries): "${text}"`,
+					details: { voice, speed: ratePercentage, elapsedMs: elapsed, audioBytes: blob.size, boundariesCount: finalBoundaries.length, fullText: text }
 				});
 
 				return {
@@ -376,9 +376,9 @@ export class EdgeTTSService {
 				void reportClientLog(rootUrl, {
 					level: 'error',
 					source: 'EdgeTTSNative',
-					message: `[EdgeTTS] Tổng hợp native thất bại (${elapsed}ms): ${errMsg}`,
+					message: `[EdgeTTS] Tổng hợp native thất bại (${elapsed}ms): ${errMsg} - Nội dung: "${text}"`,
 					error: errMsg,
-					details: { voice, speed: ratePercentage, elapsedMs: elapsed, textPreview: text.slice(0, 80) }
+					details: { voice, speed: ratePercentage, elapsedMs: elapsed, fullText: text }
 				});
 				throw err;
 			}
@@ -410,9 +410,9 @@ export class EdgeTTSService {
 			void reportClientLog(rootUrl, {
 				level: 'error',
 				source: 'EdgeTTS_Web',
-				message: `[EdgeTTS:Web] Server gateway trả về lỗi sau ${elapsed}ms: HTTP ${response.status}`,
+				message: `[EdgeTTS:Web] Server gateway trả về lỗi sau ${elapsed}ms: HTTP ${response.status} - Nội dung: "${text}"`,
 				error: errText,
-				details: { voice, speed: ratePercentage, elapsedMs: elapsed }
+				details: { voice, speed: ratePercentage, elapsedMs: elapsed, fullText: text }
 			});
 			throw new Error(`Edge TTS synthesis failed (${response.status}): ${errText}`);
 		}
@@ -449,8 +449,8 @@ export class EdgeTTSService {
 		void reportClientLog(rootUrl, {
 			level: 'info',
 			source: 'EdgeTTS_Web',
-			message: `[EdgeTTS:Web] Hoàn tất tổng hợp âm thanh kèm word boundaries (${elapsed}ms, ${blob.size} bytes, ${wordBoundaries.length} boundaries)`,
-			details: { voice, speed: ratePercentage, elapsedMs: elapsed, audioBytes: blob.size, boundariesCount: wordBoundaries.length, textPreview: text.slice(0, 60) }
+			message: `[EdgeTTS:Web] Hoàn tất tổng hợp âm thanh kèm word boundaries (${elapsed}ms, ${blob.size} bytes, ${wordBoundaries.length} boundaries): "${text}"`,
+			details: { voice, speed: ratePercentage, elapsedMs: elapsed, audioBytes: blob.size, boundariesCount: wordBoundaries.length, fullText: text }
 		});
 
 		return {

@@ -4,7 +4,7 @@ import { useTTSStore } from '@/features/reader/stores/useTTSStore';
 import { BackgroundAudioKeepAlive } from '@/services/backgroundAudioKeepAlive';
 import { DomWordHighlighter } from '@/services/domWordHighlighter';
 import { EdgeTTSNativeStreamService } from '@/services/edgeTtsNativeStream';
-import { EdgeTTSService, type EdgeSpeechWithBoundaries } from '@/services/edgeTtsService';
+import { EdgeTTSService, getGatewayBaseUrl, type EdgeSpeechWithBoundaries } from '@/services/edgeTtsService';
 import { GaplessTtsPlayer, splitByDatabaseBoundaries, type SentenceChunk, WebAudioPlaybackEngine } from '@/services/gaplessTtsPlayer';
 import { NativeTTSService } from '@/services/nativeTtsService';
 import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
@@ -580,14 +580,14 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		useTTSStore.setState({ currentCharIndex: -1, currentCharLength: 0, isLoading: false });
 	};
 
-	// Idle pre-warming for initial chunks when TTS engine is Edge
+	// Idle pre-warming for initial chunks when TTS engine is Edge (web only, native handles its own pipeline)
 	useEffect(() => {
-		if (ttsEngine !== 'edge' || isPlaying || isPaused || chunks.length === 0) {
+		if (ttsEngine !== 'edge' || EdgeTTSNativeStreamService.isAvailable() || isPlaying || isPaused || chunks.length === 0) {
 			return;
 		}
 
 		const idleTimer = setTimeout(() => {
-			if (ttsEngine === 'edge' && !isPlayingRef.current && chunks.length > 0) {
+			if (ttsEngine === 'edge' && !isPlayingRef.current && !EdgeTTSNativeStreamService.isAvailable() && chunks.length > 0) {
 				const saved = getResumePosition();
 				const startIdx = saved && saved.chunkIndex < chunks.length ? saved.chunkIndex : 0;
 				for (let i = startIdx; i < Math.min(chunks.length, startIdx + 3); i++) {
@@ -1134,7 +1134,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 				startIndex: targetIdx,
 				voice: edgeVoiceUri,
 				rate: speechRateRef.current ?? 1.8,
-				gatewayUrl: activeDomain?.url
+				gatewayUrl: activeDomain?.url || getGatewayBaseUrl()
 			});
 			return;
 		}
