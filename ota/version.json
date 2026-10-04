@@ -1,7 +1,7 @@
 {
-  "version": "1.0.297",
+  "version": "1.0.298",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "0a669bc926985b945f57c3bd2fbc99a4dde40f5455bdc7eace2038fbbf32e894",
-  "releaseNotes": "fix: improve unicode normalization and word boundary matching in EdgeTTS plugin",
-  "updatedAt": "2026-10-04T07:58:17Z"
+  "checksum": "e9260394c79adbb992c06b3210286e1259f66e62d3e77249823911c8ea6d974c",
+  "releaseNotes": "fix: optimize audio prefetching and MediaPlayer lifecycle management in EdgeTTS plugin",
+  "updatedAt": "2026-10-04T08:26:08Z"
 }
