@@ -140,6 +140,12 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                 state.put("isBuffering", isBuffering);
                 notifyListeners("onPlaybackStateChange", state);
 
+                // Nếu đang trong tiến trình dừng hẳn luồng đọc (!isStreamingPlaying && !isPlaying),
+                // ngắt ngay cập nhật Notification để tránh xung đột với lệnh dừng Service
+                if (!isStreamingPlaying && !isPlaying) {
+                    return;
+                }
+
                 // Đồng bộ trạng thái Play/Pause lên thanh thông báo và màn hình khóa
                 int currentIdx = player != null ? player.getCurrentChunkIndex() : 0;
                 String currentText = (currentIdx >= 0 && currentIdx < currentChunks.size()) ? currentChunks.get(currentIdx) : "";

@@ -9,6 +9,11 @@ import androidx.core.content.ContextCompat;
 /**
  * Cầu nối giao tiếp hai chiều giữa các Plugin phát âm thanh (EdgeTTS / NativeTTS)
  * và Foreground Service điều khiển âm thanh trên thanh thông báo / màn hình khóa (StoriesAudioService).
+ *
+ * Tối ưu hóa điều hướng an toàn tránh ForegroundServiceDidNotStartInTimeException:
+ * - Không bao giờ gọi startForegroundService khi isPlaying == false nếu Service chưa chạy.
+ * - Khi Service đã chạy ở Foreground, chỉ sử dụng startService thông thường để tránh tạo timeout mới của OS.
+ * - Kiểm tra cờ isServiceRunning trước khi gửi Intent dừng để tránh phát sinh Intent dư thừa.
  */
 public class StoriesAudioBridge {
     private static final String TAG = "StoriesAudioBridge";
@@ -126,6 +131,12 @@ public class StoriesAudioBridge {
             boolean hasNext
     ) {
         if (context == null) return;
+
+        // Nếu không phát (đang dừng/pause) và Service chưa chạy -> bỏ qua ngay, không khởi động ForegroundService vô ích
+        if (!isPlaying && !StoriesAudioService.isServiceRunning) {
+            return;
+        }
+
         try {
             Intent intent = new Intent(context, StoriesAudioService.class);
             intent.setAction(StoriesAudioService.ACTION_UPDATE_PLAYBACK);
@@ -136,8 +147,13 @@ public class StoriesAudioBridge {
             intent.putExtra(StoriesAudioService.EXTRA_HAS_PREV, hasPrev);
             intent.putExtra(StoriesAudioService.EXTRA_HAS_NEXT, hasNext);
 
-            // Bắt đầu Foreground Service an toàn trên mọi phiên bản Android
-            ContextCompat.startForegroundService(context, intent);
+            if (StoriesAudioService.isServiceRunning) {
+                // Service đã chạy ở Foreground -> cập nhật qua startService an toàn, không bị ràng buộc timeout nghiêm ngặt
+                context.startService(intent);
+            } else {
+                // Service chưa chạy và isPlaying == true -> gọi startForegroundService để khởi động an toàn
+                ContextCompat.startForegroundService(context, intent);
+            }
         } catch (Exception ex) {
             Log.e(TAG, "Lỗi khi gửi cập nhật playback tới StoriesAudioService: " + ex.getMessage(), ex);
         }
@@ -150,6 +166,12 @@ public class StoriesAudioBridge {
      */
     public static void stopPlayback(Context context) {
         if (context == null) return;
+
+        // Nếu Service không chạy thì không cần gửi lệnh dừng
+        if (!StoriesAudioService.isServiceRunning) {
+            return;
+        }
+
         try {
             Intent intent = new Intent(context, StoriesAudioService.class);
             intent.setAction(StoriesAudioService.ACTION_STOP_SERVICE);

@@ -1,5 +1,6 @@
 package com.vula.stories.player;
 
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -24,12 +25,23 @@ import com.vula.stories.R;
  * Foreground Service chuyên biệt cho việc phát âm thanh đọc sách nền.
  * Quản lý MediaSessionCompat và hiển thị thanh điều khiển chuẩn NotificationCompat.MediaStyle
  * trên thanh thông báo hệ thống và màn hình khóa (Lock Screen).
+ *
+ * Tối ưu hóa ngăn chặn hoàn toàn ForegroundServiceDidNotStartInTimeException:
+ * - Đưa Service vào trạng thái Foreground tức thì ngay trong onCreate() và onStartCommand().
+ * - Đồng bộ cờ isServiceRunning để phía Caller (StoriesAudioBridge) không bao giờ gửi lệnh startForegroundService dư thừa.
+ * - Luôn gọi promoteToForeground() trước khi gọi stopSelf() trong mọi tình huống dừng service.
  */
 public class StoriesAudioService extends Service {
     private static final String TAG = "StoriesAudioService";
 
     public static final String CHANNEL_ID = "stories_audio_playback_channel";
     public static final int NOTIFICATION_ID = 1001;
+
+    // Cờ trạng thái toàn cục cho biết StoriesAudioService có đang hoạt động hay không
+    public static volatile boolean isServiceRunning = false;
+
+    // Cờ nội bộ cho biết Service đã được hệ điều hành công nhận là Foreground hay chưa
+    private boolean isForegroundActive = false;
 
     // Các Intent Action được sử dụng để điều khiển
     public static final String ACTION_UPDATE_PLAYBACK = "com.vula.stories.ACTION_UPDATE_PLAYBACK";
@@ -61,10 +73,15 @@ public class StoriesAudioService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        isServiceRunning = true;
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         createNotificationChannel();
         initMediaSession();
-        Log.i(TAG, "StoriesAudioService đã được khởi tạo thành công");
+
+        // Đưa ngay Service vào Foreground (0ms latency) để thỏa mãn cam kết với Android OS,
+        // ngăn ngừa tuyệt đối lỗi ForegroundServiceDidNotStartInTimeException khi hệ thống bận.
+        promoteToForeground();
+        Log.i(TAG, "StoriesAudioService đã được khởi tạo và đưa vào Foreground an toàn");
     }
 
     /**
@@ -134,8 +151,91 @@ public class StoriesAudioService extends Service {
         mediaSession.setActive(true);
     }
 
+    /**
+     * Đưa Service lên trạng thái Foreground tức thì để thỏa mãn hợp đồng Context.startForegroundService() của Android.
+     */
+    private synchronized void promoteToForeground() {
+        if (isForegroundActive) return;
+        try {
+            Notification notification = buildNotification();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
+            isForegroundActive = true;
+            isServiceRunning = true;
+            Log.d(TAG, "Đã gọi startForeground thành công cho StoriesAudioService");
+        } catch (Exception ex) {
+            Log.e(TAG, "Lỗi khi gọi startForeground trong promoteToForeground: " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Xây dựng Notification chuẩn MediaStyle hiển thị trên thông báo và màn hình khóa.
+     * Đảm bảo luôn trả về Notification hợp lệ ngay cả khi MediaSession chưa sẵn sàng.
+     */
+    private Notification buildNotification() {
+        // PendingIntent khi người dùng chạm vào nội dung thông báo (mở lại app)
+        Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        if (launchIntent == null) {
+            launchIntent = new Intent(this, MainActivity.class);
+        }
+        launchIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        int intentFlags = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
+        PendingIntent contentPendingIntent = PendingIntent.getActivity(this, 0, launchIntent, intentFlags);
+
+        // PendingIntent cho nút Dừng (Stop)
+        Intent stopIntent = new Intent(this, StoriesAudioService.class).setAction(ACTION_STOP);
+        PendingIntent stopPendingIntent = PendingIntent.getService(this, 4, stopIntent, intentFlags);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle(lastChapterTitle != null && !lastChapterTitle.isEmpty() ? lastChapterTitle : "Stories Reader")
+                .setContentText(lastCurrentText != null && !lastCurrentText.isEmpty() ? lastCurrentText : "Đang phát...")
+                .setSubText(lastBookTitle != null && !lastBookTitle.isEmpty() ? lastBookTitle : "Stories Reader")
+                .setContentIntent(contentPendingIntent)
+                .setDeleteIntent(stopPendingIntent)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setOnlyAlertOnce(true)
+                .setOngoing(lastIsPlaying);
+
+        // Nếu MediaSession khả dụng, cấu hình MediaStyle và các nút điều khiển nhạc
+        if (mediaSession != null) {
+            Intent prevIntent = new Intent(this, StoriesAudioService.class).setAction(ACTION_PREV);
+            PendingIntent prevPendingIntent = PendingIntent.getService(this, 1, prevIntent, intentFlags);
+
+            Intent playPauseIntent = new Intent(this, StoriesAudioService.class).setAction(lastIsPlaying ? ACTION_PAUSE : ACTION_PLAY);
+            PendingIntent playPausePendingIntent = PendingIntent.getService(this, 2, playPauseIntent, intentFlags);
+
+            Intent nextIntent = new Intent(this, StoriesAudioService.class).setAction(ACTION_NEXT);
+            PendingIntent nextPendingIntent = PendingIntent.getService(this, 3, nextIntent, intentFlags);
+
+            androidx.media.app.NotificationCompat.MediaStyle mediaStyle = new androidx.media.app.NotificationCompat.MediaStyle()
+                    .setMediaSession(mediaSession.getSessionToken())
+                    .setShowActionsInCompactView(0, 1, 2)
+                    .setShowCancelButton(true)
+                    .setCancelButtonIntent(stopPendingIntent);
+
+            builder.setStyle(mediaStyle);
+            builder.addAction(android.R.drawable.ic_media_previous, "Lùi", prevPendingIntent);
+
+            int playPauseIcon = lastIsPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play;
+            String playPauseLabel = lastIsPlaying ? "Tạm dừng" : "Tiếp tục";
+            builder.addAction(playPauseIcon, playPauseLabel, playPausePendingIntent);
+
+            builder.addAction(android.R.drawable.ic_media_next, "Tiếp", nextPendingIntent);
+            builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Đóng", stopPendingIntent);
+        }
+
+        return builder.build();
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Luôn đảm bảo Service đã ở trạng thái Foreground trước khi xử lý bất kỳ logic nào
+        promoteToForeground();
+
         if (intent == null || intent.getAction() == null) {
             return START_NOT_STICKY;
         }
@@ -195,108 +295,51 @@ public class StoriesAudioService extends Service {
      * Cập nhật MediaMetadata, PlaybackStateCompat và xuất bản Notification ra thanh thông báo.
      */
     private void renderNotification() {
-        if (mediaSession == null) return;
+        if (mediaSession != null) {
+            // 1. Cập nhật PlaybackState
+            long actions = PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE |
+                    PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_STOP;
+            if (lastHasPrev) actions |= PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
+            if (lastHasNext) actions |= PlaybackStateCompat.ACTION_SKIP_TO_NEXT;
 
-        // 1. Cập nhật PlaybackState
-        long actions = PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE |
-                PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_STOP;
-        if (lastHasPrev) actions |= PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS;
-        if (lastHasNext) actions |= PlaybackStateCompat.ACTION_SKIP_TO_NEXT;
+            int state = lastIsPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
+            PlaybackStateCompat playbackState = new PlaybackStateCompat.Builder()
+                    .setActions(actions)
+                    .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f)
+                    .build();
+            mediaSession.setPlaybackState(playbackState);
 
-        int state = lastIsPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
-        PlaybackStateCompat playbackState = new PlaybackStateCompat.Builder()
-                .setActions(actions)
-                .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f)
-                .build();
-        mediaSession.setPlaybackState(playbackState);
-
-        // 2. Cập nhật MediaMetadata
-        MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
-                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, lastChapterTitle)
-                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, lastBookTitle)
-                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, lastCurrentText)
-                .build();
-        mediaSession.setMetadata(metadata);
-
-        // 3. Khởi tạo PendingIntent khi người dùng chạm vào nội dung thông báo (mở lại app)
-        Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
-        if (launchIntent == null) {
-            launchIntent = new Intent(this, MainActivity.class);
+            // 2. Cập nhật MediaMetadata
+            MediaMetadataCompat metadata = new MediaMetadataCompat.Builder()
+                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, lastChapterTitle)
+                    .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, lastBookTitle)
+                    .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, lastCurrentText)
+                    .build();
+            mediaSession.setMetadata(metadata);
         }
-        launchIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent contentPendingIntent = PendingIntent.getActivity(
-                this,
-                0,
-                launchIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-        );
 
-        // 4. Khởi tạo các PendingIntent cho từng nút điều khiển
-        int intentFlags = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
-
-        Intent prevIntent = new Intent(this, StoriesAudioService.class).setAction(ACTION_PREV);
-        PendingIntent prevPendingIntent = PendingIntent.getService(this, 1, prevIntent, intentFlags);
-
-        Intent playPauseIntent = new Intent(this, StoriesAudioService.class).setAction(lastIsPlaying ? ACTION_PAUSE : ACTION_PLAY);
-        PendingIntent playPausePendingIntent = PendingIntent.getService(this, 2, playPauseIntent, intentFlags);
-
-        Intent nextIntent = new Intent(this, StoriesAudioService.class).setAction(ACTION_NEXT);
-        PendingIntent nextPendingIntent = PendingIntent.getService(this, 3, nextIntent, intentFlags);
-
-        Intent stopIntent = new Intent(this, StoriesAudioService.class).setAction(ACTION_STOP);
-        PendingIntent stopPendingIntent = PendingIntent.getService(this, 4, stopIntent, intentFlags);
-
-        // 5. Cấu hình MediaStyle cho Notification
-        androidx.media.app.NotificationCompat.MediaStyle mediaStyle = new androidx.media.app.NotificationCompat.MediaStyle()
-                .setMediaSession(mediaSession.getSessionToken())
-                .setShowActionsInCompactView(0, 1, 2) // Hiển thị Prev, Play/Pause, Next ở dạng thu gọn
-                .setShowCancelButton(true)
-                .setCancelButtonIntent(stopPendingIntent);
-
-        // 6. Xây dựng thông báo với NotificationCompat.Builder
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle(lastChapterTitle)
-                .setContentText(lastCurrentText != null && !lastCurrentText.isEmpty() ? lastCurrentText : "Đang phát...")
-                .setSubText(lastBookTitle)
-                .setContentIntent(contentPendingIntent)
-                .setDeleteIntent(stopPendingIntent)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // Hiển thị đầy đủ trên Lock Screen
-                .setOnlyAlertOnce(true)
-                .setOngoing(lastIsPlaying)
-                .setStyle(mediaStyle);
-
-        // Thêm nút Lùi (Previous)
-        builder.addAction(android.R.drawable.ic_media_previous, "Lùi", prevPendingIntent);
-
-        // Thêm nút Play / Pause tùy theo trạng thái
-        int playPauseIcon = lastIsPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play;
-        String playPauseLabel = lastIsPlaying ? "Tạm dừng" : "Tiếp tục";
-        builder.addAction(playPauseIcon, playPauseLabel, playPausePendingIntent);
-
-        // Thêm nút Tiếp (Next)
-        builder.addAction(android.R.drawable.ic_media_next, "Tiếp", nextPendingIntent);
-
-        // Thêm nút Dừng (Stop)
-        builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Đóng", stopPendingIntent);
-
-        // 7. Khởi động / duy trì Foreground Service
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIFICATION_ID, builder.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-            } else {
-                startForeground(NOTIFICATION_ID, builder.build());
-            }
-        } catch (Exception ex) {
-            Log.e(TAG, "Lỗi khi gọi startForeground: " + ex.getMessage(), ex);
+        // 3. Cập nhật giao diện thông báo
+        Notification notification = buildNotification();
+        if (!isForegroundActive) {
+            promoteToForeground();
+        } else if (notificationManager != null) {
+            notificationManager.notify(NOTIFICATION_ID, notification);
         }
     }
 
     /**
      * Dừng Foreground Service và đóng thông báo hoàn toàn.
+     * Đảm bảo hợp đồng Foreground với Android OS luôn được hoàn tất trước khi stopSelf().
      */
-    private void stopPlaybackService() {
+    private synchronized void stopPlaybackService() {
         Log.i(TAG, "Đang dừng StoriesAudioService và thu hồi Notification...");
+        isServiceRunning = false;
+
+        // Nếu vì bất kỳ lý do nào Service chưa kịp gọi startForeground, gọi ngay trước khi dừng để không vi phạm hợp đồng OS
+        if (!isForegroundActive) {
+            promoteToForeground();
+        }
+
         if (mediaSession != null) {
             try {
                 mediaSession.setActive(false);
@@ -309,14 +352,26 @@ public class StoriesAudioService extends Service {
                 stopForeground(true);
             }
         } catch (Exception ignored) {}
+
+        if (notificationManager != null) {
+            try {
+                notificationManager.cancel(NOTIFICATION_ID);
+            } catch (Exception ignored) {}
+        }
+
+        isForegroundActive = false;
         stopSelf();
     }
 
     @Override
     public void onDestroy() {
         Log.i(TAG, "StoriesAudioService bị hủy (onDestroy)");
+        isServiceRunning = false;
+        isForegroundActive = false;
         if (mediaSession != null) {
-            mediaSession.release();
+            try {
+                mediaSession.release();
+            } catch (Exception ignored) {}
             mediaSession = null;
         }
         super.onDestroy();

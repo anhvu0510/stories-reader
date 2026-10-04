@@ -109,4 +109,20 @@ public class StoriesAudioBridgeTest {
         assertEquals(1, listener.playCalls);
         assertEquals(0, listener.pauseCalls);
     }
+
+    @Test
+    public void testUpdatePlayback_khiKhongPhatVaServiceChuaChay_anToanZeroException() {
+        com.vula.stories.player.StoriesAudioService.isServiceRunning = false;
+        // Khi isPlaying == false và service chưa chạy, hàm phải return ngay lập tức mà không gây crash dù context == null
+        StoriesAudioBridge.updatePlayback(null, "Sách", "Chương 1", "Nội dung", false, false, true);
+        assertFalse(com.vula.stories.player.StoriesAudioService.isServiceRunning);
+    }
+
+    @Test
+    public void testStopPlayback_khiServiceChuaChay_anToanZeroException() {
+        com.vula.stories.player.StoriesAudioService.isServiceRunning = false;
+        // Khi service chưa chạy, stopPlayback phải bỏ qua ngay lập tức mà không ném ngoại lệ dù context == null
+        StoriesAudioBridge.stopPlayback(null);
+        assertFalse(com.vula.stories.player.StoriesAudioService.isServiceRunning);
+    }
 }

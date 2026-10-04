@@ -139,6 +139,12 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
                 state.put("isBuffering", isBuffering);
                 notifyListeners("onPlaybackStateChange", state);
 
+                // Nếu đang trong tiến trình dừng hẳn luồng đọc (!isStreamingPlaying && !isPlaying),
+                // ngắt ngay cập nhật Notification để tránh xung đột với lệnh dừng Service
+                if (!isStreamingPlaying && !isPlaying) {
+                    return;
+                }
+
                 int currentIdx = queueManager.getCurrentChunkIndex();
                 String currentText = queueManager.getCurrentText();
                 StoriesAudioBridge.updatePlayback(
