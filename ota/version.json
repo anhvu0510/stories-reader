@@ -1,7 +1,7 @@
 {
-  "version": "1.0.323",
+  "version": "1.0.324",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "23e95038187391523cebd9c6d45738df8ddb6ca513cf3f9ca358681b50e6d764",
-  "releaseNotes": "refactor: simplify passcode button text and subtitle descriptions in lock overlay and modal components",
-  "updatedAt": "2026-10-04T17:59:39Z"
+  "checksum": "a0c6261a3963bc1a20b8be92f94a4a21e11020a6e95f8cb37f34a78f2ca59b8f",
+  "releaseNotes": "fix: improve biometric authentication reliability and add cancel support to native plugin",
+  "updatedAt": "2026-10-04T18:08:33Z"
 }
