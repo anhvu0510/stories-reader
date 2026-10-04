@@ -1,7 +1,7 @@
 {
-  "version": "1.0.299",
+  "version": "1.0.300",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "364f64120b16c9201f191dd087ee3066de47bb8d9642b6988ba977a3c6d173eb",
-  "releaseNotes": "feat: add cache clearing and rolling buffer improvements for Edge TTS native streaming",
-  "updatedAt": "2026-10-04T08:58:28Z"
+  "checksum": "119978d0d01d048c9b158811793ff290834074db620821507fcfa786e48bb068",
+  "releaseNotes": "refactor: replace text previews with full text in EdgeTTS client logs and native streaming",
+  "updatedAt": "2026-10-04T09:21:12Z"
 }
