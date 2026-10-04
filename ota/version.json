@@ -1,7 +1,7 @@
 {
-  "version": "1.0.321",
+  "version": "1.0.322",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "0c8a76d56a15d382b44012ef0e26f4543f5b2f50eee3abb38bc60ce7d87b1f47",
-  "releaseNotes": "refactor: remove automatic paragraph scrolling and line following during read-aloud playback",
-  "updatedAt": "2026-10-04T17:43:57Z"
+  "checksum": "747509439a7882b6b5ee68cdf6cdf0d75d2224512a0e25cce0599c1c75553f2d",
+  "releaseNotes": "feat: improve read-aloud auto-scroll behavior with viewport checks and user interaction handling",
+  "updatedAt": "2026-10-04T17:57:19Z"
 }
