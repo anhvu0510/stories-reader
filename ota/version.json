@@ -1,7 +1,7 @@
 {
-  "version": "1.0.305",
+  "version": "1.0.306",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "073892c94cac465247a81932ba7e08147498cac13d0a31cfec98efa8a2fbbdc8",
-  "releaseNotes": "remove NativeWordBoundaryEstimator and its corresponding unit tests",
-  "updatedAt": "2026-10-04T11:38:49Z"
+  "checksum": "b728976c762803a124d3792c27c734a7eb9c8f2fd9da10a7a22d810895943b55",
+  "releaseNotes": "feat: add Android test script and corresponding npm command",
+  "updatedAt": "2026-10-04T11:40:37Z"
 }
