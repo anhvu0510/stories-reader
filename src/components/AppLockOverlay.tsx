@@ -11,14 +11,7 @@ import { useHaptic } from '@/hooks/useHaptic';
  * sinh trắc học (vân tay / khuôn mặt), nếu không đúng hoặc huỷ thì cho phép nhập Passcode (HHMMDDMM).
  */
 export function AppLockOverlay() {
-	const {
-		isLocked,
-		showPasscodeFallback,
-		isAuthenticating,
-		setShowPasscodeFallback,
-		triggerBiometricPrompt,
-		unlock
-	} = useAppLockStore();
+	const { isLocked, showPasscodeFallback, isAuthenticating, setShowPasscodeFallback, triggerBiometricPrompt, unlock } = useAppLockStore();
 	const { trigger: triggerHaptic } = useHaptic();
 
 	// Tự động kích hoạt quét sinh trắc học ngay khi màn hình khóa xuất hiện
@@ -72,15 +65,11 @@ export function AppLockOverlay() {
 								<Fingerprint
 									size={46}
 									strokeWidth={1.8}
-									className={`drop-shadow-md transition-transform group-hover:scale-105 ${
-										isAuthenticating ? 'animate-pulse text-primary' : 'text-primary'
-									}`}
+									className={`drop-shadow-md transition-transform group-hover:scale-105 ${isAuthenticating ? 'animate-pulse text-primary' : 'text-primary'}`}
 								/>
 							</motion.button>
 
-							<h1 className="text-2xl sm:text-3xl font-black text-on-surface tracking-tight mb-2">
-								Stories Reader
-							</h1>
+							<h1 className="text-2xl sm:text-3xl font-black text-on-surface tracking-tight mb-2">Stories Reader</h1>
 							<p className="text-xs sm:text-[14px] text-on-surface-variant leading-relaxed">
 								Ứng dụng đang được khóa bảo vệ. Vui lòng quét sinh trắc học hoặc nhập Passcode để tiếp tục.
 							</p>
@@ -115,7 +104,7 @@ export function AppLockOverlay() {
 								className="w-full h-12 rounded-2xl bg-surface-container-high/60 hover:bg-surface-container-high/80 border border-outline-variant/50 text-on-surface font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 backdrop-blur-md active:scale-[0.98] transition-all cursor-pointer"
 							>
 								<KeyRound size={17} className="text-primary" />
-								<span>Mở khóa bằng Passcode (HHMMDDMM)</span>
+								<span>Passcode</span>
 							</button>
 						</motion.div>
 					</motion.div>
