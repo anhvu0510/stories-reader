@@ -638,14 +638,19 @@ export function ReaderScreen() {
 	}, [bookId, chapterId, contentData?.navigation?.next?.chapterId]);
 
 	const handleSwipePrev = useCallback(() => {
-		if (!bookId || !contentData?.navigation?.prev?.chapterId) return;
+		// Nếu không có chương trước (chương đầu tiên) → navigate back về danh sách sách
+		if (!bookId || !contentData?.navigation?.prev?.chapterId) {
+			triggerHaptic('light');
+			navigate(-1);
+			return;
+		}
 		setSwipeDirection('right');
 		triggerHaptic('medium');
 		if (typeof window !== 'undefined' && window.scrollTo) {
 			window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 		}
 		openPrevChapter(bookId, chapterId, contentData.navigation.prev.chapterId);
-	}, [bookId, chapterId, contentData?.navigation?.prev?.chapterId]);
+	}, [bookId, chapterId, contentData?.navigation?.prev?.chapterId, navigate]);
 
 	const handleDragStart = useCallback(() => {
 		if (readerContentRef.current) {
