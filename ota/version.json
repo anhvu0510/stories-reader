@@ -1,7 +1,7 @@
 {
-  "version": "1.0.320",
+  "version": "1.0.321",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "e7458427f64ade71ba16919bd707c493a2f5a131a996b080f294bf4c30a14807",
-  "releaseNotes": "feat: implement biometric authentication and app lock security feature",
-  "updatedAt": "2026-10-04T17:41:21Z"
+  "checksum": "0c8a76d56a15d382b44012ef0e26f4543f5b2f50eee3abb38bc60ce7d87b1f47",
+  "releaseNotes": "refactor: remove automatic paragraph scrolling and line following during read-aloud playback",
+  "updatedAt": "2026-10-04T17:43:57Z"
 }
