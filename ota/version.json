@@ -1,7 +1,7 @@
 {
-  "version": "1.0.316",
+  "version": "1.0.317",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "96ed5ac036dafa98957e5a1c9d05cee736e47c947bbc9081df45b085fc3267ad",
-  "releaseNotes": "fix: optimize Edge TTS streaming performance and memory management by isolating sessions and reducing remote logging",
-  "updatedAt": "2026-10-04T16:38:21Z"
+  "checksum": "7c0d94c7737c274733df77f2a1c206c7fb7e3704a4b10a44e45613fc06821af9",
+  "releaseNotes": "feat: add rate-limited remote logging for text-to-speech chunk playback in Android plugins",
+  "updatedAt": "2026-10-04T16:46:59Z"
 }
