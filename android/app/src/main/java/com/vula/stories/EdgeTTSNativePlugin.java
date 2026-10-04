@@ -82,11 +82,29 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
     private String currentBookTitle = "Stories Reader";
     private String currentChapterTitle = "Chương đọc";
 
-    private final ExecutorService prefetchExecutor = Executors.newFixedThreadPool(2);
+    // Số lượng tải trước song song tối đa (3 task, tương ứng với số luồng của prefetchExecutor)
+    private static final int MAX_CONCURRENT_PREFETCH = 3;
+
+    private final ExecutorService prefetchExecutor = Executors.newFixedThreadPool(MAX_CONCURRENT_PREFETCH);
     private final Map<Integer, File> readyAudioFiles = new ConcurrentHashMap<>();
     private final Map<Integer, JSONArray> readyWordBoundaries = new ConcurrentHashMap<>();
     private final Set<Integer> inFlightIndices = Collections.synchronizedSet(new HashSet<>());
     private final Map<Integer, WebSocket> activeSockets = new ConcurrentHashMap<>();
+
+    /**
+     * Tìm chỉ số của câu nhỏ nhất hiện đã có sẵn trong bộ đệm cache âm thanh (readyAudioFiles).
+     *
+     * @return Chỉ số câu nhỏ nhất đã cache xong, hoặc -1 nếu chưa có câu nào.
+     */
+    private int getFirstCachedChunkIndex() {
+        int minIndex = Integer.MAX_VALUE;
+        for (Integer idx : readyAudioFiles.keySet()) {
+            if (idx != null && idx < minIndex) {
+                minIndex = idx;
+            }
+        }
+        return minIndex == Integer.MAX_VALUE ? -1 : minIndex;
+    }
 
     /**
      * Tìm chỉ số của câu xa nhất hiện đã có sẵn trong bộ đệm cache âm thanh (readyAudioFiles).
@@ -122,16 +140,32 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                 chunkData.put("chunkIndex", chunkIndex);
                 notifyListeners("onChunkStart", chunkData);
 
+                // Dọn dẹp sạch toàn bộ các câu quá khứ ngay lập tức để câu hiện tại luôn là câu đầu tiên của cache
+                cacheManager.evictOldChunks(chunkIndex, readyAudioFiles, readyWordBoundaries, inFlightIndices);
+
                 String playText = (chunkIndex >= 0 && chunkIndex < currentChunks.size()) ? currentChunks.get(chunkIndex) : "";
                 String snippet = RemoteLogger.formatSnippet(playText);
 
-                // Lấy thông tin câu cache cuối cùng hiện có trong bộ đệm readyAudioFiles
+                // Lấy thông tin câu cache đầu tiên và câu xa nhất trong bộ đệm readyAudioFiles
+                int firstCachedIdx = getFirstCachedChunkIndex();
                 int lastCachedIdx = getLastCachedChunkIndex();
                 String lastCachedSnippet = (lastCachedIdx >= 0 && lastCachedIdx < currentChunks.size())
                         ? RemoteLogger.formatSnippet(currentChunks.get(lastCachedIdx))
                         : "";
+
+                // Đếm số câu gối đầu phía trước (ahead) đang sẵn sàng trong cache
+                int aheadCount = 0;
+                for (Integer idx : readyAudioFiles.keySet()) {
+                    if (idx != null && idx > chunkIndex) {
+                        aheadCount++;
+                    }
+                }
+
+                String cacheRangeStr = (firstCachedIdx >= 0 && lastCachedIdx >= 0)
+                        ? "câu " + (firstCachedIdx + 1) + " -> " + (lastCachedIdx + 1) + "/" + currentChunks.size()
+                        : "Chưa có";
                 String cacheInfoStr = (lastCachedIdx >= 0)
-                        ? " [Cache cuối: câu " + (lastCachedIdx + 1) + "/" + currentChunks.size() + " - \"" + lastCachedSnippet + "\"]"
+                        ? " [Cache: " + cacheRangeStr + " (+" + aheadCount + " câu gối đầu) - \"" + lastCachedSnippet + "\"]"
                         : " [Cache: Chưa có]";
 
                 String fullLogMessage = "[EdgeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size()
@@ -154,10 +188,12 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                             playDetails.put("progress", progressPct + "%");
                         }
                         playDetails.put("snippet", snippet);
+                        playDetails.put("firstCachedIndex", firstCachedIdx);
                         playDetails.put("lastCachedIndex", lastCachedIdx);
                         if (lastCachedIdx >= 0) {
                             playDetails.put("lastCachedSnippet", lastCachedSnippet);
                         }
+                        playDetails.put("aheadCachedCount", aheadCount);
                         playDetails.put("cachedChunksCount", readyAudioFiles.size());
                     } catch (Exception ignored) {}
                     RemoteLogger.log("EdgeTTSNative_Stream", "info", fullLogMessage, null, playDetails);
@@ -544,8 +580,10 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         // Reset thời điểm log câu để câu đầu tiên luôn được gửi ngay lập tức
         lastChunkLogTime = 0;
 
-        // Strict Priority: Fetch startIndex first!
-        prefetchChunk(startIndex, sessionId);
+        // Khởi động tải trước ưu tiên: Tải ngay câu bắt đầu và các câu kế tiếp song song (tối đa MAX_CONCURRENT_PREFETCH)
+        for (int i = 0; i < MAX_CONCURRENT_PREFETCH && startIndex + i < currentChunks.size(); i++) {
+            prefetchChunk(startIndex + i, sessionId);
+        }
 
         call.resolve();
     }
@@ -717,11 +755,19 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
 
                                     // Xóa bộ đếm retry khi nạp thành công
                                     retryManager.recordSuccess(index);
+
+                                    // Dọn dẹp cờ inFlight trước khi gọi onChunkAudioReady để maintainRollingBuffer thấy slot trống
+                                    inFlightIndices.remove(index);
+                                    activeSockets.remove(index);
+                                    webSocket.close(1000, "Done");
+
                                     getBridge().getActivity().runOnUiThread(() -> onChunkAudioReady(index, sessionId));
+                                } else {
+                                    inFlightIndices.remove(index);
+                                    activeSockets.remove(index);
+                                    webSocket.close(1000, "NoAudio");
+                                    handlePrefetchFailure(index, text, "Không nhận được âm thanh từ máy chủ Edge TTS", sessionId);
                                 }
-                                inFlightIndices.remove(index);
-                                activeSockets.remove(index);
-                                webSocket.close(1000, "Done");
                             }
                         } catch (Exception ex) {
                             Log.e(TAG, "[EdgeTTS:Stream] Lỗi lưu cache audio câu " + index, ex);
@@ -729,6 +775,18 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                             activeSockets.remove(index);
                             handlePrefetchFailure(index, text, ex.getMessage(), sessionId);
                         }
+                    }
+
+                    @Override
+                    public void onClosing(WebSocket webSocket, int code, String reason) {
+                        inFlightIndices.remove(index);
+                        activeSockets.remove(index);
+                    }
+
+                    @Override
+                    public void onClosed(WebSocket webSocket, int code, String reason) {
+                        inFlightIndices.remove(index);
+                        activeSockets.remove(index);
                     }
 
                     @Override
@@ -873,15 +931,15 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         }
 
         // 3. Continuous Rolling Buffer:
-        // Ensure all chunks from currentIdx + 1 up to currentIdx + BUFFER_LOOKAHEAD are cached.
-        // Fetch sequentially (only 1 in-flight prefetch at a time) to avoid socket contention.
-        if (inFlightIndices.isEmpty()) {
-            int maxLookahead = Math.min(currentChunks.size() - 1, currentIdx + AudioCacheManager.BUFFER_LOOKAHEAD);
-            for (int i = currentIdx + 1; i <= maxLookahead; i++) {
-                if (!readyAudioFiles.containsKey(i)) {
-                    prefetchChunk(i);
-                    break;
-                }
+        // Đảm bảo các câu từ currentIdx + 1 đến currentIdx + BUFFER_LOOKAHEAD đều được nạp sẵn.
+        // Cho phép tối đa MAX_CONCURRENT_PREFETCH (2 task) cùng tải song song để lấp đầy bộ đệm gối đầu mà không nghẽn mạng.
+        int maxLookahead = Math.min(currentChunks.size() - 1, currentIdx + AudioCacheManager.BUFFER_LOOKAHEAD);
+        for (int i = currentIdx + 1; i <= maxLookahead; i++) {
+            if (inFlightIndices.size() >= MAX_CONCURRENT_PREFETCH) {
+                break;
+            }
+            if (!readyAudioFiles.containsKey(i) && !inFlightIndices.contains(i)) {
+                prefetchChunk(i);
             }
         }
     }

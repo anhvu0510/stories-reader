@@ -17,8 +17,8 @@ import java.util.Set;
  */
 public class AudioCacheManager {
     private static final String TAG = "AudioCacheManager";
-    public static final int BUFFER_LOOKAHEAD = 6;
-    public static final int MAX_PAST_CHUNKS_RETAINED = 3;
+    public static final int BUFFER_LOOKAHEAD = 10;
+    public static final int MAX_PAST_CHUNKS_RETAINED = 0;
     public static final int MAX_TOTAL_CACHE_FILES = 25;
 
     private final Context context;
@@ -71,19 +71,17 @@ public class AudioCacheManager {
             Set<Integer> inFlightIndices
     ) {
         try {
-            // Tier 1: Sliding Window - Delete chunks that are far behind current reading position
+            // Tier 1: Sliding Window - Xóa sạch các câu quá khứ để câu hiện tại luôn là câu đầu tiên trong cache
             int thresholdIndex = currentChunkIndex - MAX_PAST_CHUNKS_RETAINED;
-            if (thresholdIndex > 0) {
-                for (Map.Entry<Integer, File> entry : readyAudioFiles.entrySet()) {
-                    int idx = entry.getKey();
-                    if (idx < thresholdIndex) {
-                        File file = readyAudioFiles.remove(idx);
-                        if (file != null && file.exists()) {
-                            file.delete();
-                        }
-                        if (readyWordBoundaries != null) readyWordBoundaries.remove(idx);
-                        if (inFlightIndices != null) inFlightIndices.remove(idx);
+            for (Map.Entry<Integer, File> entry : readyAudioFiles.entrySet()) {
+                int idx = entry.getKey();
+                if (idx < thresholdIndex) {
+                    File file = readyAudioFiles.remove(idx);
+                    if (file != null && file.exists()) {
+                        file.delete();
                     }
+                    if (readyWordBoundaries != null) readyWordBoundaries.remove(idx);
+                    if (inFlightIndices != null) inFlightIndices.remove(idx);
                 }
             }
 
