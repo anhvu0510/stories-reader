@@ -1,7 +1,7 @@
 {
-  "version": "1.0.306",
+  "version": "1.0.307",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "b728976c762803a124d3792c27c734a7eb9c8f2fd9da10a7a22d810895943b55",
-  "releaseNotes": "feat: add Android test script and corresponding npm command",
-  "updatedAt": "2026-10-04T11:40:37Z"
+  "checksum": "11ccf2929797541b35fe11426a4cf3b356d243d3f684ce1aaa20c4ef0b8ce8f7",
+  "releaseNotes": "feat: dynamic android versionName generation using github run number in workflow and gradle, test build [apk]",
+  "updatedAt": "2026-10-04T11:47:10Z"
 }
