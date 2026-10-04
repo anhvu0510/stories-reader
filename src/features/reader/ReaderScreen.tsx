@@ -61,7 +61,13 @@ const ChapterContentSection = memo(function ChapterContentSection({
 	const paragraphOffsets = chapters.map((_, chapterIndex) => chapters.slice(0, chapterIndex).reduce((total, chapter) => total + chapter.content.length, 0));
 
 	return (
-		<main id="main-story-content" onDoubleClick={onDoubleClick} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} className="pt-[calc(max(env(safe-area-inset-top),0.75rem)+4.25rem)] sm:pt-24 pb-24 select-text relative z-10">
+		<main
+			id="main-story-content"
+			onDoubleClick={onDoubleClick}
+			onTouchStart={onTouchStart}
+			onTouchEnd={onTouchEnd}
+			className="pt-[calc(max(env(safe-area-inset-top),0.75rem)+4.25rem)] sm:pt-24 pb-24 select-text relative z-10"
+		>
 			{chapters.map((chap, chapIdx) => (
 				<section
 					key={chap.chapterId || chapIdx}
@@ -527,9 +533,7 @@ export function ReaderScreen() {
 		if (typeof document === 'undefined') return;
 
 		// 1. Locate Edge / Browser Read Aloud highlight element
-		const highlightEl = document.querySelector(
-			'.msreadout-line-highlight, .msreadout-word-highlight, .msreadout-highlight, msreadoutspan, [class*="msreadout"], [data-readout-highlight]'
-		);
+		const highlightEl = document.querySelector('.msreadout-line-highlight, .msreadout-word-highlight, .msreadout-highlight, msreadoutspan, [class*="msreadout"], [data-readout-highlight]');
 		if (highlightEl && typeof highlightEl.scrollIntoView === 'function') {
 			highlightEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			return;
@@ -550,26 +554,25 @@ export function ReaderScreen() {
 		stopReading();
 		try {
 			// 1. Prioritize user's lastReadChapter from server API (same as history tab)
-			const lastRead = await Promise.resolve(
-				BookRepository.getLastReadChapter(bookId, { forceFresh: true })
-			).catch(err => {
+			const lastRead = await Promise.resolve(BookRepository.getLastReadChapter(bookId, { forceFresh: true })).catch((err) => {
 				console.warn('[ReaderScreen] Không thể lấy lastRead từ server, thử fallback sang latest:', err);
 				return null;
 			});
 
 			const latest = !lastRead
-				? await Promise.resolve(ChapterRepository.getLatestChapter(bookId, { forceFresh: true })).catch(err => {
+				? await Promise.resolve(ChapterRepository.getLatestChapter(bookId, { forceFresh: true })).catch((err) => {
 						console.warn('[ReaderScreen] Không thể lấy latest từ server, thử fallback sang offlineDb:', err);
 						return null;
-				  })
+					})
 				: null;
 
-			const offlineBook = !lastRead && !latest
-				? await Promise.resolve(offlineDb.getBook(bookId)).catch(err => {
-						console.warn('[ReaderScreen] Không thể lấy book từ offlineDb:', err);
-						return null;
-				  })
-				: null;
+			const offlineBook =
+				!lastRead && !latest
+					? await Promise.resolve(offlineDb.getBook(bookId)).catch((err) => {
+							console.warn('[ReaderScreen] Không thể lấy book từ offlineDb:', err);
+							return null;
+						})
+					: null;
 
 			const targetChapter =
 				lastRead ||
@@ -638,17 +641,18 @@ export function ReaderScreen() {
 	}, [bookId, chapterId, contentData?.navigation?.next?.chapterId]);
 
 	const handleSwipePrev = useCallback(() => {
-		// Nếu không có chương trước (chương đầu tiên) → navigate back về danh sách sách
 		if (!bookId || !contentData?.navigation?.prev?.chapterId) {
 			triggerHaptic('light');
-			navigate(-1);
+			navigate('/');
 			return;
 		}
+
 		setSwipeDirection('right');
 		triggerHaptic('medium');
 		if (typeof window !== 'undefined' && window.scrollTo) {
 			window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 		}
+
 		openPrevChapter(bookId, chapterId, contentData.navigation.prev.chapterId);
 	}, [bookId, chapterId, contentData?.navigation?.prev?.chapterId, navigate]);
 
@@ -658,16 +662,19 @@ export function ReaderScreen() {
 		}
 	}, []);
 
-	const handleDragMove = useCallback((offset: number) => {
-		if (!readerContentRef.current) return;
-		const hasPrev = Boolean(contentData?.navigation?.prev?.chapterId);
-		const hasNext = Boolean(contentData?.navigation?.next?.chapterId);
-		let effectiveOffset = offset;
-		if ((!hasPrev && offset > 0) || (!hasNext && offset < 0)) {
-			effectiveOffset = offset * 0.25; // rubber band damping at boundaries
-		}
-		readerContentRef.current.style.transform = `translate3d(${effectiveOffset}px, 0, 0)`;
-	}, [contentData?.navigation?.prev?.chapterId, contentData?.navigation?.next?.chapterId]);
+	const handleDragMove = useCallback(
+		(offset: number) => {
+			if (!readerContentRef.current) return;
+			const hasPrev = Boolean(contentData?.navigation?.prev?.chapterId);
+			const hasNext = Boolean(contentData?.navigation?.next?.chapterId);
+			let effectiveOffset = offset;
+			if ((!hasPrev && offset > 0) || (!hasNext && offset < 0)) {
+				effectiveOffset = offset * 0.25; // rubber band damping at boundaries
+			}
+			readerContentRef.current.style.transform = `translate3d(${effectiveOffset}px, 0, 0)`;
+		},
+		[contentData?.navigation?.prev?.chapterId, contentData?.navigation?.next?.chapterId]
+	);
 
 	const handleDragEnd = useCallback((settled?: 'left' | 'right' | 'cancel') => {
 		if (!readerContentRef.current) return;
@@ -685,7 +692,7 @@ export function ReaderScreen() {
 	}, []);
 
 	const contentWidth = typeof window !== 'undefined' ? Math.min(window.innerWidth || 390, 448) : 390;
-	const commitThreshold = Math.max(90, Math.round(contentWidth * 0.30));
+	const commitThreshold = Math.max(90, Math.round(contentWidth * 0.3));
 	useSwipeGesture({
 		onSwipeLeft: handleSwipeNext,
 		onSwipeRight: handleSwipePrev,
@@ -696,7 +703,6 @@ export function ReaderScreen() {
 		minVelocity: 0.45,
 		disabled: loading || isRefreshingLatest
 	});
-
 
 	const fontClass =
 		font === 'bookerly'
@@ -749,11 +755,7 @@ export function ReaderScreen() {
 	if (error || !contentData) {
 		return (
 			<div className="min-h-dvh w-full max-w-md mx-auto bg-background flex flex-col items-center justify-center p-6 text-center">
-				<PullToRefresh
-					onRefresh={handlePullRefresh}
-					disabled={loading || isRefreshingLatest}
-					showIndicator={false}
-				/>
+				<PullToRefresh onRefresh={handlePullRefresh} disabled={loading || isRefreshingLatest} showIndicator={false} />
 				<AlertCircle size={40} className="text-error mb-3" />
 				<h2 className="text-sm font-bold text-on-surface mb-1">Không thể tải chương</h2>
 				<p className="text-xs text-on-surface-variant max-w-xs mb-5">{error || 'Chương không tồn tại'}</p>
@@ -790,11 +792,7 @@ export function ReaderScreen() {
 			className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden hide-scrollbar no-scrollbar transition-colors duration-200 selection:bg-primary/25 selection:text-primary ${fontClass}`}
 		>
 			{/* Pull-to-refresh clear-cache gesture */}
-			<PullToRefresh
-				onRefresh={handlePullRefresh}
-				disabled={loading || isRefreshingLatest}
-				showIndicator={false}
-			/>
+			<PullToRefresh onRefresh={handlePullRefresh} disabled={loading || isRefreshingLatest} showIndicator={false} />
 
 			{/* Subtle Top Ambient Lighting Glow */}
 			<div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-96 bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent blur-3xl" />
@@ -907,10 +905,7 @@ export function ReaderScreen() {
 			</div>
 
 			{/* Floating Selection Speaker Tooltip for Speaking from Selected Word/Sentence */}
-			<SelectionSpeakerTooltip
-				isTTSActive={isTTSActive}
-				onSpeak={handleSelectionSpeak}
-			/>
+			<SelectionSpeakerTooltip isTTSActive={isTTSActive} onSpeak={handleSelectionSpeak} />
 
 			{/* Visual Touch Double-Tap Ripple Feedback */}
 			{ripple && (
