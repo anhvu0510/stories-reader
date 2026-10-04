@@ -1,7 +1,7 @@
 {
-  "version": "1.0.296",
+  "version": "1.0.297",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "42e9807522c4c00068421bfe72b4a083ec2a91363e537252863de73a9f5ac547",
-  "releaseNotes": "feat: improve word boundary highlighting and timing accuracy for Edge TTS streaming",
-  "updatedAt": "2026-10-04T07:40:30Z"
+  "checksum": "0a669bc926985b945f57c3bd2fbc99a4dde40f5455bdc7eace2038fbbf32e894",
+  "releaseNotes": "fix: improve unicode normalization and word boundary matching in EdgeTTS plugin",
+  "updatedAt": "2026-10-04T07:58:17Z"
 }
