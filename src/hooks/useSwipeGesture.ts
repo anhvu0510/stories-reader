@@ -179,12 +179,12 @@ export function useSwipeGesture({
 			// Horizontal swipe must be dominant and meet distance or velocity requirements
 			if ((hasSufficientDistance || hasSufficientVelocity) && absX > absY * 1.3) {
 				if (deltaX < 0 && callbacksRef.current.onSwipeLeft) {
-					callbacksRef.current.onSwipeLeft();
 					if (state.isDragging) callbacksRef.current.onDragEnd?.('left');
+					callbacksRef.current.onSwipeLeft();
 					return;
 				} else if (deltaX > 0 && callbacksRef.current.onSwipeRight) {
-					callbacksRef.current.onSwipeRight();
 					if (state.isDragging) callbacksRef.current.onDragEnd?.('right');
+					callbacksRef.current.onSwipeRight();
 					return;
 				}
 			}

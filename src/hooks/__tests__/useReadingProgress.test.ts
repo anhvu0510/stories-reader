@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
-import { useReadingProgress } from '@/hooks/useReadingProgress';
+import { useReadingProgress, resetReadingProgressModuleState } from '@/hooks/useReadingProgress';
 
 describe('useReadingProgress Hook', () => {
 	const bookId = 'book_123';
@@ -10,6 +10,7 @@ describe('useReadingProgress Hook', () => {
 
 	beforeEach(() => {
 		localStorage.clear();
+		resetReadingProgressModuleState();
 		vi.restoreAllMocks();
 		window.scrollTo = vi.fn();
 	});
@@ -247,5 +248,75 @@ describe('useReadingProgress Hook', () => {
 
 		unmount();
 		document.body.removeChild(sectionEl);
+	});
+
+	it('QC-11 [Batch Mode Relative Scroll]: Lưu toạ độ tương đối so với section của active chapter thay vì toạ độ toàn trang', () => {
+		const sectionEl = document.createElement('section');
+		sectionEl.id = 'chapter-section-chap_2';
+		sectionEl.setAttribute('data-chapter-id', 'chap_2');
+		// Giả lập section chap_2 bắt đầu tại offset 3000px
+		Object.defineProperty(sectionEl, 'offsetTop', { value: 3000, configurable: true });
+		const paraEl = document.createElement('div');
+		paraEl.setAttribute('data-paragraph-index', '3');
+		sectionEl.appendChild(paraEl);
+		document.body.appendChild(sectionEl);
+
+		document.elementFromPoint = vi.fn().mockReturnValue(paraEl);
+
+		// Giả lập window.scrollY đang ở 3200px (tức là 200px sau khi vào chap_2)
+		Object.defineProperty(window, 'scrollY', { value: 3200, writable: true, configurable: true });
+
+		const { unmount } = renderHook(() => useReadingProgress(bookId, 'chap_1', true));
+
+		act(() => {
+			Object.defineProperty(document, 'visibilityState', {
+				value: 'hidden',
+				writable: true,
+				configurable: true
+			});
+			document.dispatchEvent(new Event('visibilitychange'));
+		});
+
+		const activeSaved = localStorage.getItem(`reading_progress_${bookId}_chap_2`);
+		expect(activeSaved).not.toBeNull();
+		const activeData = JSON.parse(activeSaved!);
+		// Toạ độ lưu cho chap_2 phải là toạ độ tương đối (3200 - 3000 = 200), KHÔNG PHẢI 3200 toàn trang
+		expect(activeData.scrollY).toBe(200);
+
+		unmount();
+		document.body.removeChild(sectionEl);
+	});
+
+	it('QC-12 [Explicit Next Chapter Zero Scroll]: Khi chuyển sang chapter mới, vị trí đọc luôn bắt đầu từ đỉnh trang 0', async () => {
+		// Giả lập chap_2 từng có progress ở cuối chương (scrollY = 5000 do lỗi cũ hoặc đọc dở)
+		localStorage.setItem(
+			`reading_progress_${bookId}_chap_2`,
+			JSON.stringify({
+				chapterId: 'chap_2',
+				scrollY: 5000,
+				isCompleted: false,
+				updatedAt: Date.now()
+			})
+		);
+
+		// Giả lập đang ở chap_1 với scrollY = 3500
+		Object.defineProperty(window, 'scrollY', { value: 3500, writable: true, configurable: true });
+		(window.scrollTo as any).mockClear();
+
+		const { rerender } = renderHook(({ cId }) => useReadingProgress(bookId, cId, true), {
+			initialProps: { cId: 'chap_1' }
+		});
+
+		// Người dùng chuyển sang chap_2
+		act(() => {
+			rerender({ cId: 'chap_2' });
+		});
+
+		// Ngay khi chuyển chương, phải lập tức cuộn về top 0
+		expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
+
+		// Đợi thêm một khoảng thời gian sau khi content ready, không được tự ý cuộn xuống 5000
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		expect(window.scrollTo).toHaveBeenLastCalledWith({ top: 0, left: 0, behavior: 'instant' });
 	});
 });

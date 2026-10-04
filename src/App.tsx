@@ -93,7 +93,7 @@ function AppContent() {
 		<div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-on-background flex flex-col box-border hide-scrollbar no-scrollbar relative">
 			<AnimatePresence mode="popLayout" custom={direction} initial={false}>
 				<motion.div
-					key={location.pathname}
+					key={location.pathname.startsWith('/book/') && location.pathname.includes('/chapter/') ? 'reader-screen' : location.pathname}
 					custom={direction}
 					variants={cupertinoVariants}
 					initial="initial"

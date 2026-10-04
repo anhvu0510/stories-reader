@@ -80,6 +80,8 @@ describe('ReaderScreen - Swipe Gesture Chapter Navigation', () => {
 		await waitFor(() => {
 			expect(screen.getByText('Nội dung chương 1')).toBeDefined();
 		});
+		// Chờ MIN_LOADING_TIME (200ms) kết thúc để hook swipe không bị disabled bởi loading
+		await new Promise((resolve) => setTimeout(resolve, 250));
 
 		// Simulate swipe left (touch from 250px to 100px)
 		act(() => {
@@ -142,5 +144,59 @@ describe('ReaderScreen - Swipe Gesture Chapter Navigation', () => {
 		});
 
 		expect(openPrevSpy).toHaveBeenCalledWith('b1', 'chap-2', 'chap-1');
+	});
+
+	it('swiping below commit threshold cancels gesture and snaps back without navigating', async () => {
+		const openNextSpy = vi.spyOn(openChapterUtils, 'openNextChapter').mockImplementation(() => {});
+		const openPrevSpy = vi.spyOn(openChapterUtils, 'openPrevChapter').mockImplementation(() => {});
+
+		vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
+			chapter: {
+				chapterId: 'chap-1',
+				chapterNumber: 1,
+				title: 'Chương 1',
+				bookName: 'Test Book',
+				content: ['<p>Nội dung chương 1</p>']
+			},
+			navigation: {
+				prev: null,
+				next: { chapterId: 'chap-2', chapterNumber: 2, title: 'Chương 2' }
+			}
+		} as any);
+
+		render(
+			<MemoryRouter initialEntries={['/book/b1/chapter/chap-1']}>
+				<Routes>
+					<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+				</Routes>
+			</MemoryRouter>
+		);
+
+		await waitFor(() => {
+			expect(screen.getByText('Nội dung chương 1')).toBeDefined();
+		});
+
+		// Giả lập vuốt nhẹ chỉ 25px (từ 200px sang 175px, thấp hơn ngưỡng 90px và vận tốc thấp)
+		act(() => {
+			window.dispatchEvent(
+				new TouchEvent('touchstart', {
+					touches: [{ clientX: 200, clientY: 200 } as any]
+				})
+			);
+			window.dispatchEvent(
+				new TouchEvent('touchmove', {
+					touches: [{ clientX: 175, clientY: 200 } as any]
+				})
+			);
+			window.dispatchEvent(
+				new TouchEvent('touchend', {
+					changedTouches: [{ clientX: 175, clientY: 200 } as any]
+				})
+			);
+		});
+
+		// Không được kích hoạt chuyển chương
+		expect(openNextSpy).not.toHaveBeenCalled();
+		expect(openPrevSpy).not.toHaveBeenCalled();
 	});
 });

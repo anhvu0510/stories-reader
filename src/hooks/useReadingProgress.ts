@@ -67,6 +67,10 @@ const cleanupOldProgress = () => {
 // Module-level tracking across component unmount/remount in router
 let lastActiveChapterKey = '';
 
+export const resetReadingProgressModuleState = () => {
+	lastActiveChapterKey = '';
+};
+
 /**
  * Custom hook to cleanly persist and auto-restore reading scroll position
  * per book and chapter, preventing unwanted reloads and lost scroll states.
@@ -106,8 +110,10 @@ export function useReadingProgress(bookId: string | undefined, chapterId: string
 				}
 			}
 
-			// Reset scroll to top immediately
-			isRestoredRef.current = false;
+			// Khi chuyển sang chapter mới trong phiên đọc:
+			// Xóa sạch tiến độ cũ của chapter đích để tránh nhảy xuống cuối trang, bắt đầu từ đỉnh 0px
+			clearReadingProgress(bookId, chapterId);
+			isRestoredRef.current = true;
 			if (typeof window !== 'undefined' && window.scrollTo) {
 				window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 			}
@@ -167,11 +173,27 @@ export function useReadingProgress(bookId: string | undefined, chapterId: string
 
 				localStorage.setItem(key, JSON.stringify(state));
 
-				// In multi-chapter batch mode: also save under activeChapterId for direct resume
+				// In multi-chapter batch mode: calculate relative scrollY against the active chapter's section
+				// to prevent giant global scroll offsets from dumping the user at the bottom when reading standalone
 				if (activeChapterId && activeChapterId !== chapterId) {
 					const activeKey = getStorageKey(bookId, activeChapterId);
 					if (activeKey) {
-						localStorage.setItem(activeKey, JSON.stringify(state));
+						let relativeY = 0;
+						if (typeof document !== 'undefined') {
+							const sectionEl = document.getElementById(`chapter-section-${activeChapterId}`);
+							if (sectionEl) {
+								relativeY = Math.max(0, currentY - sectionEl.offsetTop);
+							}
+						}
+						const activeState: ReadingState = {
+							chapterId: activeChapterId,
+							scrollY: relativeY,
+							activeChapterId,
+							paragraphIndex,
+							isCompleted: false,
+							updatedAt: Date.now()
+						};
+						localStorage.setItem(activeKey, JSON.stringify(activeState));
 					}
 				}
 

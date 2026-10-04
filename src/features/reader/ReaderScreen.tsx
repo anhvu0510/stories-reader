@@ -617,10 +617,24 @@ export function ReaderScreen() {
 	const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
 	const readerContentRef = useRef<HTMLDivElement | null>(null);
 
+	// Tự động thu hồi transform và đưa vị trí đọc về đỉnh trang (top: 0) ngay khi sang chương mới
+	useEffect(() => {
+		if (readerContentRef.current) {
+			readerContentRef.current.style.transition = 'none';
+			readerContentRef.current.style.transform = 'translate3d(0px, 0, 0)';
+		}
+		if (typeof window !== 'undefined' && window.scrollTo) {
+			window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+		}
+	}, [chapterId]);
+
 	const handleSwipeNext = useCallback(() => {
 		if (!bookId || !contentData?.navigation?.next?.chapterId) return;
 		setSwipeDirection('left');
 		triggerHaptic('medium');
+		if (typeof window !== 'undefined' && window.scrollTo) {
+			window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+		}
 		openNextChapter(bookId, chapterId, contentData.navigation.next.chapterId);
 	}, [bookId, chapterId, contentData?.navigation?.next?.chapterId]);
 
@@ -628,6 +642,9 @@ export function ReaderScreen() {
 		if (!bookId || !contentData?.navigation?.prev?.chapterId) return;
 		setSwipeDirection('right');
 		triggerHaptic('medium');
+		if (typeof window !== 'undefined' && window.scrollTo) {
+			window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+		}
 		openPrevChapter(bookId, chapterId, contentData.navigation.prev.chapterId);
 	}, [bookId, chapterId, contentData?.navigation?.prev?.chapterId]);
 
@@ -650,13 +667,15 @@ export function ReaderScreen() {
 
 	const handleDragEnd = useCallback((settled?: 'left' | 'right' | 'cancel') => {
 		if (!readerContentRef.current) return;
-		readerContentRef.current.style.transition = 'transform 240ms cubic-bezier(0.2, 0, 0, 1)';
 		if (settled === 'left') {
+			readerContentRef.current.style.transition = 'transform 200ms cubic-bezier(0.2, 0, 0, 1)';
 			readerContentRef.current.style.transform = 'translate3d(-100%, 0, 0)';
 		} else if (settled === 'right') {
+			readerContentRef.current.style.transition = 'transform 200ms cubic-bezier(0.2, 0, 0, 1)';
 			readerContentRef.current.style.transform = 'translate3d(100%, 0, 0)';
 		} else {
 			// Thả tay khi chưa đủ ngưỡng cam kết: Snap Back mượt mà về vị trí ban đầu (0px)
+			readerContentRef.current.style.transition = 'transform 240ms cubic-bezier(0.25, 1, 0.5, 1)';
 			readerContentRef.current.style.transform = 'translate3d(0px, 0, 0)';
 		}
 	}, []);
