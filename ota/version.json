@@ -1,7 +1,7 @@
 {
-  "version": "1.0.315",
+  "version": "1.0.316",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "1942d9a88932c29f29396c43ec62477ba505e8009bed774eb07ad79997ccae08",
-  "releaseNotes": "refactor: update navigation and formatting in ReaderScreen component",
-  "updatedAt": "2026-10-04T16:17:40Z"
+  "checksum": "96ed5ac036dafa98957e5a1c9d05cee736e47c947bbc9081df45b085fc3267ad",
+  "releaseNotes": "fix: optimize Edge TTS streaming performance and memory management by isolating sessions and reducing remote logging",
+  "updatedAt": "2026-10-04T16:38:21Z"
 }
