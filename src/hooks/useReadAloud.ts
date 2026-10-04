@@ -640,10 +640,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		});
 
 		const offset = nextCharIndex + match.index;
-		const geometry = highlighter.highlight(pNode, chunk.startOffset + offset, match[0].length);
-		if (geometry && Date.now() - lastInteractionTime.current > 3000) {
-			scrollFollowerRef.current?.follow(geometry.line);
-		}
+		highlighter.highlight(pNode, chunk.startOffset + offset, match[0].length);
 	};
 
 	const activeNativeStream = useMemo(() => {
@@ -666,15 +663,6 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			setCurrentChunkIndex(idx);
 			setIsLoading(false);
 			saveResumePosition(idx, 0);
-
-			const targetChunk = chunks[idx];
-			if (targetChunk) {
-				const readerContent = document.querySelector('#main-story-content');
-				const pNode = readerContent?.querySelector<HTMLElement>(`article > div[data-paragraph-index="${targetChunk.pIdx}"]`);
-				if (typeof pNode?.scrollIntoView === 'function') {
-					pNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
-				}
-			}
 		});
 
 		const unsubWord = activeNativeStream.onWordBoundary(({ chunkIndex, charIndex, charLength }) => {

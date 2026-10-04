@@ -192,16 +192,8 @@ export function useNativeReadAloud(
 			setIsPaused(false);
 			isPlayingRef.current = true;
 			isPausedRef.current = false;
+			// Lưu lại vị trí câu đang phát để khôi phục khi mở lại
 			saveResumePosition(idx, 0);
-
-			// Tự động cuộn theo câu văn đang đọc
-			const chunk = chunks[idx];
-			if (chunk) {
-				const paragraphEl = document.querySelector(`[data-paragraph-index="${chunk.pIdx}"]`) as HTMLElement | null;
-				if (typeof paragraphEl?.scrollIntoView === 'function') {
-					paragraphEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-				}
-			}
 		});
 
 		// Khi có sự kiện vị trí từ chính xác (Word Boundary) từ bộ đếm 25ms dưới native:
@@ -212,16 +204,13 @@ export function useNativeReadAloud(
 			if (chunk) {
 				const paragraphEl = document.querySelector(`[data-paragraph-index="${chunk.pIdx}"]`) as HTMLElement | null;
 				if (paragraphEl) {
-					const rects = wordHighlighterRef.current?.highlight(
+					wordHighlighterRef.current?.highlight(
 						paragraphEl,
 						chunk.startOffset + charIndex,
 						charLength,
 						chunk.startOffset,
 						chunk.length
 					);
-					if (rects?.line) {
-						scrollFollowerRef.current?.follow(rects.line);
-					}
 				}
 			}
 		});
