@@ -1,7 +1,7 @@
 {
-  "version": "1.0.291",
+  "version": "1.0.292",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "013d56bf9d773ac1ad3cf4ec181b2a05507e6e0236a69a4a6e43d181139df742",
-  "releaseNotes": "feat: add comprehensive logging and caching utilities for EdgeTTS and repository operations",
-  "updatedAt": "2026-10-03T21:04:45Z"
+  "checksum": "244058645d7c7a34a2d766907c33e6a340910a0a99559e534a6db0b975b3479f",
+  "releaseNotes": "feat: add server logging to EdgeTTS native plugin and update default speech rate to 1.8",
+  "updatedAt": "2026-10-04T06:35:30Z"
 }
