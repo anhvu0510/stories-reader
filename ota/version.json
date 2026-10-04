@@ -1,7 +1,7 @@
 {
-  "version": "1.0.292",
+  "version": "1.0.293",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "244058645d7c7a34a2d766907c33e6a340910a0a99559e534a6db0b975b3479f",
-  "releaseNotes": "feat: add server logging to EdgeTTS native plugin and update default speech rate to 1.8",
-  "updatedAt": "2026-10-04T06:35:30Z"
+  "checksum": "9ce6629fd26f6b62524f31734efc094af3a355cd3c3b3c91580abe6cd64c5313",
+  "releaseNotes": "refactor: hide pull-to-refresh visual indicators and remove refresh toast notifications across screens",
+  "updatedAt": "2026-10-04T07:01:53Z"
 }
