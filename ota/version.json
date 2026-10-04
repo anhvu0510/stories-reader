@@ -1,7 +1,7 @@
 {
-  "version": "1.0.313",
+  "version": "1.0.314",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "c9e3e16ac472f5d9cd887a69faf7e7bbf7b01a575df19664170261c214df0d73",
-  "releaseNotes": "fix: improve swipe gesture and bottom sheet drag thresholds to prevent false-positive triggers",
-  "updatedAt": "2026-10-04T16:08:37Z"
+  "checksum": "0aea3bb543182af4a1a9b9dd74819f8694721c303ae902369cffc372a5f06222",
+  "releaseNotes": "feat: navigate back to book list when swiping past the first chapter",
+  "updatedAt": "2026-10-04T16:12:48Z"
 }
