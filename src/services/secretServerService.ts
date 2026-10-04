@@ -1,6 +1,6 @@
 /**
  * Service managing obfuscated / encrypted server configurations
- * and time-based passcode verification (HHmmDDYY).
+ * and time-based passcode verification (HHMMDDMM).
  */
 
 const CIPHER_PAYLOAD = 'KFYBEwQAUWhHNzQ2UhwXAhEJEWlJW0dCXhRpVgcGHRUAaEpOBRUbfgQNGhMBe1BIAh5WQzAfCxwaSxwgAkMZ';
@@ -12,12 +12,12 @@ export interface SecretServerConfig {
 }
 
 /**
- * Checks if the given passcode matches HHmmDDYY for current time (+/- toleranceMinutes)
+ * Checks if the given passcode matches HHMMDDMM for current time (+/- toleranceMinutes)
  * Format:
  * - HH: 24-hour format (00-23)
- * - mm: Minutes (00-59)
+ * - MM: Minutes (00-59)
  * - DD: Day of month (01-31)
- * - YY: Two-digit year (e.g. 26 for 2026)
+ * - MM: Month of year (01-12)
  */
 export function isValidTimePasscode(passcode: string, now = new Date(), toleranceMinutes = 3): boolean {
 	if (!passcode || typeof passcode !== 'string') return false;
@@ -29,8 +29,8 @@ export function isValidTimePasscode(passcode: string, now = new Date(), toleranc
 		const hh = String(targetDate.getHours()).padStart(2, '0');
 		const mm = String(targetDate.getMinutes()).padStart(2, '0');
 		const dd = String(targetDate.getDate()).padStart(2, '0');
-		const yy = String(targetDate.getFullYear()).slice(-2);
-		const expected = `${hh}${mm}${dd}${yy}`;
+		const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+		const expected = `${hh}${mm}${dd}${month}`;
 
 		if (cleanCode === expected) {
 			return true;
