@@ -64,6 +64,8 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
     private String currentPitch = "+0Hz";
     private String currentGatewayUrl = "";
     private boolean isStreamingPlaying = false;
+    // Chỉ số câu mục tiêu đang hoặc chuẩn bị phát (tránh deadlock khi player.getCurrentChunkIndex() khởi tạo là -1)
+    private int currentPlayIndex = 0;
 
     // Metadata phục vụ thanh điều khiển âm thanh trên Notification & Lock Screen
     private String currentBookTitle = "Stories Reader";
@@ -89,6 +91,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         player = new GaplessStreamPlayer(getContext(), new GaplessStreamPlayer.PlayerListener() {
             @Override
             public void onChunkStart(int chunkIndex) {
+                currentPlayIndex = chunkIndex;
                 JSObject chunkData = new JSObject();
                 chunkData.put("chunkIndex", chunkIndex);
                 notifyListeners("onChunkStart", chunkData);
@@ -98,9 +101,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                 try {
                     playDetails.put("chunkIndex", chunkIndex);
                     playDetails.put("totalChunks", currentChunks.size());
-                    playDetails.put("fullText", playText);
+                    playDetails.put("snippet", RemoteLogger.formatSnippet(playText));
                 } catch (Exception ignored) {}
-                RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size() + ": \"" + playText + "\"", null, playDetails);
+                RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(playText) + "\"", null, playDetails);
 
                 // Cập nhật thông tin câu đọc và trạng thái phát lên thanh điều khiển Notification & Lock Screen
                 StoriesAudioBridge.updatePlayback(
@@ -223,8 +226,8 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                         openDetails.put("voice", voice);
                         openDetails.put("rate", rate);
                         openDetails.put("textLen", text.length());
-                        openDetails.put("fullText", text);
-                        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS] WebSocket kết nối thành công tới máy chủ Bing Edge (requestId=" + requestId + "): \"" + text + "\"", null, openDetails);
+                        openDetails.put("snippet", RemoteLogger.formatSnippet(text));
+                        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS] WebSocket kết nối thành công tới máy chủ Bing Edge (requestId=" + requestId + "): \"" + RemoteLogger.formatSnippet(text) + "\"", null, openDetails);
 
                         webSocket.send(EdgeAuth.buildSpeechConfigMessage());
                         webSocket.send(EdgeAuth.buildSsmlMessage(requestId, voice, rate, pitch, text));
@@ -408,9 +411,6 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         currentBookTitle = call.getString("bookTitle", "Stories Reader");
         currentChapterTitle = call.getString("chapterTitle", "Chương đọc");
 
-        // Đăng ký nhận sự kiện điều khiển từ thanh thông báo / màn hình khóa
-        StoriesAudioBridge.registerListener(this);
-
         String rate = "+0%";
         if (call.hasOption("rate")) {
             try {
@@ -423,7 +423,11 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         }
 
         synchronized (this) {
+            // Dừng luồng phát cũ trước
             stopPlaybackInternal(false);
+            // Đăng ký nhận sự kiện điều khiển từ thanh thông báo / màn hình khóa SAU KHI dừng luồng cũ
+            StoriesAudioBridge.registerListener(this);
+
             currentChunks.clear();
             for (int i = 0; i < chunksArray.length(); i++) {
                 try {
@@ -435,6 +439,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
             if (startIndex < 0 || startIndex >= currentChunks.size()) {
                 startIndex = 0;
             }
+            currentPlayIndex = startIndex;
             currentVoice = voice;
             currentRate = rate;
             currentPitch = pitch;
@@ -465,9 +470,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
             startDetails.put("totalChunks", currentChunks.size());
             startDetails.put("voice", voice);
             startDetails.put("rate", rate);
-            startDetails.put("fullText", firstSentence);
+            startDetails.put("snippet", RemoteLogger.formatSnippet(firstSentence));
         } catch (Exception ignored) {}
-        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Bắt đầu phát chương từ câu " + (startIndex + 1) + "/" + currentChunks.size() + ": \"" + firstSentence + "\"", null, startDetails);
+        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Bắt đầu phát chương từ câu " + (startIndex + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(firstSentence) + "\"", null, startDetails);
 
         // Strict Priority: Fetch startIndex first!
         prefetchChunk(startIndex);
@@ -508,8 +513,8 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                             openDetails.put("totalChunks", currentChunks.size());
                             openDetails.put("voice", currentVoice);
                             openDetails.put("rate", currentRate);
-                            openDetails.put("fullText", text);
-                            RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Đang kết nối tải audio câu " + (index + 1) + "/" + currentChunks.size() + ": \"" + text + "\"", null, openDetails);
+                            openDetails.put("snippet", RemoteLogger.formatSnippet(text));
+                            RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Đang kết nối tải audio câu " + (index + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(text) + "\"", null, openDetails);
 
                             webSocket.send(EdgeAuth.buildSpeechConfigMessage());
                             webSocket.send(EdgeAuth.buildSsmlMessage(requestId, currentVoice, currentRate, currentPitch, cleanSourceText));
@@ -611,9 +616,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                                         doneDetails.put("bytes", audioBytes.length);
                                         doneDetails.put("wordsCount", wordBoundaries.length());
                                         doneDetails.put("elapsedMs", elapsed);
-                                        doneDetails.put("fullText", text);
+                                        doneDetails.put("snippet", RemoteLogger.formatSnippet(text));
                                     } catch (Exception ignored) {}
-                                    RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Đã nạp xong audio câu " + (index + 1) + "/" + currentChunks.size() + " (" + audioBytes.length + " bytes, " + wordBoundaries.length() + " từ, " + elapsed + "ms): \"" + text + "\"", null, doneDetails);
+                                    RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Đã nạp xong audio câu " + (index + 1) + "/" + currentChunks.size() + " (" + audioBytes.length + " bytes, " + wordBoundaries.length() + " từ, " + elapsed + "ms): \"" + RemoteLogger.formatSnippet(text) + "\"", null, doneDetails);
 
                                     getBridge().getActivity().runOnUiThread(() -> onChunkAudioReady(index));
                                 }
@@ -635,9 +640,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                         try {
                             failDetails.put("chunkIndex", index);
                             failDetails.put("totalChunks", currentChunks.size());
-                            failDetails.put("fullText", text);
+                            failDetails.put("snippet", RemoteLogger.formatSnippet(text));
                         } catch (Exception ignored) {}
-                        RemoteLogger.log("EdgeTTSNative_Stream", "error", "[EdgeTTS:Stream] Lỗi tải audio câu " + (index + 1) + "/" + currentChunks.size() + ": " + errMsg + " - Nội dung: \"" + text + "\"", errMsg, failDetails);
+                        RemoteLogger.log("EdgeTTSNative_Stream", "error", "[EdgeTTS:Stream] Lỗi tải audio câu " + (index + 1) + "/" + currentChunks.size() + ": " + errMsg + " - Nội dung: \"" + RemoteLogger.formatSnippet(text) + "\"", errMsg, failDetails);
                         inFlightIndices.remove(index);
                         activeSockets.remove(index);
                     }
@@ -654,19 +659,19 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
     private void onChunkAudioReady(int index) {
         if (!isStreamingPlaying) return;
 
-        int currentIdx = player.getCurrentChunkIndex();
-        if (index == currentIdx && !player.hasCurrentPlayer()) {
+        // Nếu là câu hiện tại cần đọc và player chưa phát: Khởi động phát ngay (tránh bế tắc logic khi player.currentChunkIndex = -1)
+        if (index == currentPlayIndex && !player.hasCurrentPlayer()) {
             player.start(index, readyAudioFiles.get(index));
-        } else if (index == currentIdx + 1 && player.hasCurrentPlayer() && !player.hasNextPlayer()) {
+        } else if (index == currentPlayIndex + 1 && player.hasCurrentPlayer() && !player.hasNextPlayer()) {
             player.prepareNext(index, readyAudioFiles.get(index));
             String nextText = (index >= 0 && index < currentChunks.size()) ? currentChunks.get(index) : "";
             JSONObject nextDetails = new JSONObject();
             try {
                 nextDetails.put("chunkIndex", index);
                 nextDetails.put("totalChunks", currentChunks.size());
-                nextDetails.put("fullText", nextText);
+                nextDetails.put("snippet", RemoteLogger.formatSnippet(nextText));
             } catch (Exception ignored) {}
-            RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Đã chuẩn bị gapless câu tiếp theo " + (index + 1) + "/" + currentChunks.size() + ": \"" + nextText + "\"", null, nextDetails);
+            RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Đã chuẩn bị gapless câu tiếp theo " + (index + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(nextText) + "\"", null, nextDetails);
         }
 
         maintainRollingBuffer();
@@ -676,7 +681,14 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         if (!isStreamingPlaying) return;
 
         int nextIdx = completedIndex + 1;
+        currentPlayIndex = nextIdx;
         if (nextIdx < currentChunks.size()) {
+            // Nếu GaplessStreamPlayer đã tự động chuyển sang nextPlayer (0ms gapless transition)
+            if (player.hasCurrentPlayer() && player.getCurrentChunkIndex() == nextIdx) {
+                maintainRollingBuffer();
+                return;
+            }
+
             JSObject state = new JSObject();
             state.put("isPlaying", true);
             state.put("isPaused", false);
@@ -705,13 +717,13 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
     private void maintainRollingBuffer() {
         if (!isStreamingPlaying || player.isPaused()) return;
 
-        int currentIdx = player.getCurrentChunkIndex();
+        int currentIdx = (player != null && player.hasCurrentPlayer()) ? player.getCurrentChunkIndex() : currentPlayIndex;
         cacheManager.evictOldChunks(currentIdx, readyAudioFiles, readyWordBoundaries, inFlightIndices);
 
-        // 1. Strict Priority: if currentChunkIndex is not yet ready, fetch it first
-        if (!readyAudioFiles.containsKey(currentIdx) && currentIdx >= 0) {
-            cancelPendingPrefetches(currentIdx);
-            prefetchChunk(currentIdx);
+        // 1. Strict Priority: if currentPlayIndex is not yet ready, fetch it first
+        if (!readyAudioFiles.containsKey(currentPlayIndex) && currentPlayIndex >= 0 && currentPlayIndex < currentChunks.size()) {
+            cancelPendingPrefetches(currentPlayIndex);
+            prefetchChunk(currentPlayIndex);
             return;
         }
 
@@ -757,9 +769,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         try {
             pauseDetails.put("chunkIndex", currentIdx);
             pauseDetails.put("totalChunks", currentChunks.size());
-            pauseDetails.put("fullText", pausedText);
+            pauseDetails.put("snippet", RemoteLogger.formatSnippet(pausedText));
         } catch (Exception ignored) {}
-        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Tạm dừng đọc ở câu " + (currentIdx + 1) + "/" + currentChunks.size() + ": \"" + pausedText + "\"", null, pauseDetails);
+        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Tạm dừng đọc ở câu " + (currentIdx + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(pausedText) + "\"", null, pauseDetails);
         call.resolve();
     }
 
@@ -772,9 +784,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         try {
             resumeDetails.put("chunkIndex", currentIdx);
             resumeDetails.put("totalChunks", currentChunks.size());
-            resumeDetails.put("fullText", resumeText);
+            resumeDetails.put("snippet", RemoteLogger.formatSnippet(resumeText));
         } catch (Exception ignored) {}
-        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Tiếp tục đọc câu " + (currentIdx + 1) + "/" + currentChunks.size() + ": \"" + resumeText + "\"", null, resumeDetails);
+        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Tiếp tục đọc câu " + (currentIdx + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(resumeText) + "\"", null, resumeDetails);
         maintainRollingBuffer();
         call.resolve();
     }
@@ -793,6 +805,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         if (targetIndex < 0 || targetIndex >= currentChunks.size()) return;
 
         synchronized (this) {
+            currentPlayIndex = targetIndex;
             player.reset();
             cancelPendingPrefetches(targetIndex);
         }
@@ -881,7 +894,8 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         if (mainHandler != null) {
             mainHandler.post(() -> {
                 if (isStreamingPlaying && player != null) {
-                    int next = player.getCurrentChunkIndex() + 1;
+                    int currentIdx = player.hasCurrentPlayer() ? player.getCurrentChunkIndex() : currentPlayIndex;
+                    int next = currentIdx + 1;
                     if (next < currentChunks.size()) {
                         seekToChunkInternal(next);
                     }
@@ -895,7 +909,8 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         if (mainHandler != null) {
             mainHandler.post(() -> {
                 if (isStreamingPlaying && player != null) {
-                    int prev = player.getCurrentChunkIndex() - 1;
+                    int currentIdx = player.hasCurrentPlayer() ? player.getCurrentChunkIndex() : currentPlayIndex;
+                    int prev = currentIdx - 1;
                     if (prev >= 0) {
                         seekToChunkInternal(prev);
                     }

@@ -110,6 +110,11 @@ public class GaplessStreamPlayer {
         }
 
         try {
+            // Thiết lập trạng thái và chỉ số chunk ngay từ đầu để tránh bế tắc logic (deadlock) khi truy vấn bất đồng bộ
+            currentChunkIndex = index;
+            isPlaying = true;
+            isPaused = false;
+
             MediaPlayer player = new MediaPlayer();
             player.setDataSource(audioFile.getAbsolutePath());
             player.setOnPreparedListener(mp -> {

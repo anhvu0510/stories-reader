@@ -69,6 +69,20 @@ public class RemoteLogger {
         return cachedGatewayUrl;
     }
 
+    /**
+     * Rút gọn nội dung văn bản phục vụ logging:
+     * Thay vì in nguyên cả câu dài, chỉ lấy phần đầu và phần đuôi (ví dụ: "Đoạn đầu ... đoạn cuối")
+     * để vừa đủ nhận diện ngữ cảnh mà không làm nặng payload hoặc lộ dữ liệu người dùng.
+     */
+    public static String formatSnippet(String text) {
+        if (text == null) return "";
+        String trimmed = text.trim();
+        if (trimmed.length() <= 35) {
+            return trimmed;
+        }
+        return trimmed.substring(0, 16) + "..." + trimmed.substring(trimmed.length() - 12);
+    }
+
     public static void log(String source, String level, String message, String error, JSONObject details) {
         // Record breadcrumb automatically
         BreadcrumbTracker.add(source, message != null ? message : (error != null ? error : ""));
@@ -77,6 +91,13 @@ public class RemoteLogger {
         if (rootUrl == null || rootUrl.isEmpty()) return;
 
         try {
+            // Tự động rút gọn nếu details có chứa fullText để đảm bảo an toàn băng thông
+            if (details != null && details.has("fullText")) {
+                String raw = details.optString("fullText", "");
+                details.remove("fullText");
+                details.put("snippet", formatSnippet(raw));
+            }
+
             String endpoint = rootUrl + "/api/logs/client-error";
             JSONObject payload = new JSONObject();
             payload.put("platform", "android");
@@ -125,6 +146,13 @@ public class RemoteLogger {
         if (rootUrl == null || rootUrl.isEmpty()) return false;
 
         try {
+            // Tự động rút gọn nếu details có chứa fullText
+            if (details != null && details.has("fullText")) {
+                String raw = details.optString("fullText", "");
+                details.remove("fullText");
+                details.put("snippet", formatSnippet(raw));
+            }
+
             String endpoint = rootUrl + "/api/logs/client-error";
             JSONObject payload = new JSONObject();
             payload.put("platform", "android");

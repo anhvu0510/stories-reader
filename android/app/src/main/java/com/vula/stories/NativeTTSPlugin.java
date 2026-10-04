@@ -68,6 +68,8 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
     private Float currentRate = 1.0f;
     private Float currentPitch = 1.0f;
     private volatile boolean isStreamingPlaying = false;
+    // Chỉ số câu mục tiêu đang hoặc chuẩn bị phát (tránh deadlock khi player.getCurrentChunkIndex() khởi tạo là -1)
+    private int currentPlayIndex = 0;
 
     private synchronized void acquireWakeLock() {
         try {
@@ -105,6 +107,7 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
         player = new GaplessStreamPlayer(getContext(), new GaplessStreamPlayer.PlayerListener() {
             @Override
             public void onChunkStart(int chunkIndex) {
+                currentPlayIndex = chunkIndex;
                 JSObject chunkData = new JSObject();
                 chunkData.put("chunkIndex", chunkIndex);
                 notifyListeners("onChunkStart", chunkData);
@@ -114,9 +117,9 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
                 try {
                     playDetails.put("chunkIndex", chunkIndex);
                     playDetails.put("totalChunks", currentChunks.size());
-                    playDetails.put("fullText", playText);
+                    playDetails.put("snippet", RemoteLogger.formatSnippet(playText));
                 } catch (Exception ignored) {}
-                RemoteLogger.log("NativeTTS_Stream", "info", "[NativeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size() + ": \"" + playText + "\"", null, playDetails);
+                RemoteLogger.log("NativeTTS_Stream", "info", "[NativeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(playText) + "\"", null, playDetails);
 
                 // Cập nhật thông tin câu đọc và trạng thái phát lên thanh điều khiển Notification & Lock Screen
                 StoriesAudioBridge.updatePlayback(
@@ -512,11 +515,11 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
             currentBookTitle = call.getString("bookTitle", "Stories Reader");
             currentChapterTitle = call.getString("chapterTitle", "Chương đọc");
 
-            // Đăng ký nhận sự kiện điều khiển từ thanh thông báo / màn hình khóa
-            StoriesAudioBridge.registerListener(this);
-
             // Dừng luồng phát cũ trước khi khởi tạo luồng mới
             stopPlaybackInternal(false);
+
+            // Đăng ký nhận sự kiện điều khiển từ thanh thông báo / màn hình khóa SAU KHI dừng luồng cũ
+            StoriesAudioBridge.registerListener(this);
 
             currentChunks.clear();
             for (int i = 0; i < chunksArray.length(); i++) {
@@ -534,6 +537,7 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
 
             // Tổng hợp và phát câu khởi đầu
             int validStart = Math.max(0, Math.min(startIndex, currentChunks.size() - 1));
+            currentPlayIndex = validStart;
             prefetchChunk(validStart);
 
             // Nạp trước cuốn chiếu (pre-warm) các câu tiếp theo vào bộ nhớ đệm
@@ -624,19 +628,19 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
     private void onChunkAudioReady(int index) {
         if (!isStreamingPlaying) return;
 
-        int currentIdx = player.getCurrentChunkIndex();
-        if (index == currentIdx && !player.hasCurrentPlayer()) {
+        // Nếu là câu hiện tại cần đọc và player chưa phát: Khởi động phát ngay (tránh bế tắc logic khi player.currentChunkIndex = -1)
+        if (index == currentPlayIndex && !player.hasCurrentPlayer()) {
             player.start(index, readyAudioFiles.get(index));
-        } else if (index == currentIdx + 1 && player.hasCurrentPlayer() && !player.hasNextPlayer()) {
+        } else if (index == currentPlayIndex + 1 && player.hasCurrentPlayer() && !player.hasNextPlayer()) {
             player.prepareNext(index, readyAudioFiles.get(index));
             String nextText = (index >= 0 && index < currentChunks.size()) ? currentChunks.get(index) : "";
             JSONObject nextDetails = new JSONObject();
             try {
                 nextDetails.put("chunkIndex", index);
                 nextDetails.put("totalChunks", currentChunks.size());
-                nextDetails.put("fullText", nextText);
+                nextDetails.put("snippet", RemoteLogger.formatSnippet(nextText));
             } catch (Exception ignored) {}
-            RemoteLogger.log("NativeTTS_Stream", "info", "[NativeTTS:Stream] Đã chuẩn bị gapless câu tiếp theo " + (index + 1) + "/" + currentChunks.size() + ": \"" + nextText + "\"", null, nextDetails);
+            RemoteLogger.log("NativeTTS_Stream", "info", "[NativeTTS:Stream] Đã chuẩn bị gapless câu tiếp theo " + (index + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(nextText) + "\"", null, nextDetails);
         }
 
         maintainRollingBuffer();
@@ -646,7 +650,14 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
         if (!isStreamingPlaying) return;
 
         int nextIdx = completedIndex + 1;
+        currentPlayIndex = nextIdx;
         if (nextIdx < currentChunks.size()) {
+            // Nếu GaplessStreamPlayer đã tự động chuyển sang nextPlayer (0ms gapless transition)
+            if (player.hasCurrentPlayer() && player.getCurrentChunkIndex() == nextIdx) {
+                maintainRollingBuffer();
+                return;
+            }
+
             JSObject state = new JSObject();
             state.put("isPlaying", true);
             state.put("isPaused", false);
@@ -674,19 +685,22 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
     private void maintainRollingBuffer() {
         if (!isStreamingPlaying || player.isPaused()) return;
 
-        int currentIdx = player.getCurrentChunkIndex();
+        int currentIdx = (player != null && player.hasCurrentPlayer()) ? player.getCurrentChunkIndex() : currentPlayIndex;
         cacheManager.evictOldChunks(currentIdx, readyAudioFiles, readyWordBoundaries, inFlightIndices);
 
-        if (!readyAudioFiles.containsKey(currentIdx) && currentIdx >= 0) {
-            prefetchChunk(currentIdx);
+        // 1. Ưu tiên tuyệt đối: Nếu câu hiện tại chưa có audio thì nạp ngay
+        if (!readyAudioFiles.containsKey(currentPlayIndex) && currentPlayIndex >= 0 && currentPlayIndex < currentChunks.size()) {
+            prefetchChunk(currentPlayIndex);
             return;
         }
 
+        // 2. Chuẩn bị nextPlayer gapless transition nếu câu tiếp theo đã sẵn sàng trong cache
         int nextIdx = currentIdx + 1;
         if (nextIdx < currentChunks.size() && readyAudioFiles.containsKey(nextIdx) && !player.hasNextPlayer() && player.hasCurrentPlayer()) {
             player.prepareNext(nextIdx, readyAudioFiles.get(nextIdx));
         }
 
+        // 3. Nạp trước liên tục các câu kế tiếp (Rolling Buffer)
         if (inFlightIndices.isEmpty()) {
             int maxLookahead = Math.min(currentChunks.size() - 1, currentIdx + AudioCacheManager.BUFFER_LOOKAHEAD);
             for (int i = currentIdx + 1; i <= maxLookahead; i++) {
@@ -739,6 +753,7 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
     public void seekToChunkInternal(int chunkIndex) {
         if (chunkIndex < 0 || chunkIndex >= currentChunks.size()) return;
 
+        currentPlayIndex = chunkIndex;
         inFlightIndices.clear();
         player.stop();
 
@@ -794,7 +809,8 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
         if (mainHandler != null) {
             mainHandler.post(() -> {
                 if (isStreamingPlaying && player != null) {
-                    int next = player.getCurrentChunkIndex() + 1;
+                    int currentIdx = player.hasCurrentPlayer() ? player.getCurrentChunkIndex() : currentPlayIndex;
+                    int next = currentIdx + 1;
                     if (next < currentChunks.size()) {
                         seekToChunkInternal(next);
                     }
@@ -808,7 +824,8 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
         if (mainHandler != null) {
             mainHandler.post(() -> {
                 if (isStreamingPlaying && player != null) {
-                    int prev = player.getCurrentChunkIndex() - 1;
+                    int currentIdx = player.hasCurrentPlayer() ? player.getCurrentChunkIndex() : currentPlayIndex;
+                    int prev = currentIdx - 1;
                     if (prev >= 0) {
                         seekToChunkInternal(prev);
                     }
