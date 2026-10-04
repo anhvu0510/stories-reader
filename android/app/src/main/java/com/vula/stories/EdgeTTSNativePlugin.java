@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.text.Normalizer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -141,7 +142,7 @@ public class EdgeTTSNativePlugin extends Plugin {
             JSArray wordBoundaries = new JSArray();
             final String requestId = UUID.randomUUID().toString().replace("-", "");
             final boolean[] isResolved = {false};
-            final String cleanSourceText = text;
+            final String cleanSourceText = Normalizer.normalize(text, Normalizer.Form.NFC);
             final String foldedSourceText = cleanSourceText.toLowerCase(Locale.ROOT);
             final int[] searchOffset = {0};
 
@@ -232,35 +233,34 @@ public class EdgeTTSNativePlugin extends Plugin {
                                                 long offsetTicks = data.optLong("Offset", 0);
                                                 long durationTicks = data.optLong("Duration", 0);
                                                 JSONObject textData = data.optJSONObject("text");
-                                                String word = textData != null ? textData.optString("Text", "") : "";
-                                                int length = textData != null ? textData.optInt("Length", word.length()) : word.length();
+                                                String rawWord = textData != null ? textData.optString("Text", "") : "";
+                                                if (!rawWord.trim().isEmpty()) {
+                                                    String normWord = Normalizer.normalize(rawWord.trim(), Normalizer.Form.NFC);
+                                                    String cleanWord = normWord.toLowerCase(Locale.ROOT);
+                                                    String stripped = cleanWord.replaceAll("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$", "");
 
-                                                String cleanWord = word.trim().toLowerCase(Locale.ROOT);
-                                                int charIndex = -1;
-                                                if (!cleanWord.isEmpty()) {
-                                                    charIndex = foldedSourceText.indexOf(cleanWord, searchOffset[0]);
-                                                    if (charIndex < 0) {
-                                                        String stripped = cleanWord.replaceAll("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$", "");
-                                                        if (!stripped.isEmpty()) {
+                                                    if (!stripped.isEmpty()) {
+                                                        int charIndex = foldedSourceText.indexOf(cleanWord, searchOffset[0]);
+                                                        int matchedLen = cleanWord.length();
+                                                        if (charIndex < 0) {
                                                             charIndex = foldedSourceText.indexOf(stripped, searchOffset[0]);
+                                                            matchedLen = stripped.length();
+                                                        }
+
+                                                        if (charIndex >= 0) {
+                                                            searchOffset[0] = charIndex + matchedLen;
+                                                            JSObject wb = new JSObject();
+                                                            wb.put("text", rawWord);
+                                                            wb.put("charIndex", charIndex);
+                                                            wb.put("charLength", matchedLen);
+                                                            wb.put("startSeconds", (double) offsetTicks / 10000000.0);
+                                                            wb.put("endSeconds", (double) (offsetTicks + durationTicks) / 10000000.0);
+
+                                                            synchronized (wordBoundaries) {
+                                                                wordBoundaries.put(wb);
+                                                            }
                                                         }
                                                     }
-                                                }
-                                                if (charIndex >= 0) {
-                                                    searchOffset[0] = charIndex + cleanWord.length();
-                                                } else {
-                                                    charIndex = searchOffset[0];
-                                                }
-
-                                                JSObject wb = new JSObject();
-                                                wb.put("text", word);
-                                                wb.put("charIndex", charIndex);
-                                                wb.put("charLength", length);
-                                                wb.put("startSeconds", (double) offsetTicks / 10000000.0);
-                                                wb.put("endSeconds", (double) (offsetTicks + durationTicks) / 10000000.0);
-
-                                                synchronized (wordBoundaries) {
-                                                    wordBoundaries.put(wb);
                                                 }
                                             }
                                         }
@@ -600,7 +600,7 @@ public class EdgeTTSNativePlugin extends Plugin {
                 ByteArrayOutputStream audioBuffer = new ByteArrayOutputStream();
                 JSONArray wordBoundaries = new JSONArray();
                 String requestId = UUID.randomUUID().toString().replace("-", "");
-                String cleanSourceText = text;
+                String cleanSourceText = Normalizer.normalize(text, Normalizer.Form.NFC);
                 String foldedSourceText = cleanSourceText.toLowerCase(Locale.ROOT);
                 int[] searchOffset = {0};
 
@@ -672,35 +672,34 @@ public class EdgeTTSNativePlugin extends Plugin {
                                                     long offsetTicks = data.optLong("Offset", 0);
                                                     long durationTicks = data.optLong("Duration", 0);
                                                     JSONObject textData = data.optJSONObject("text");
-                                                    String word = textData != null ? textData.optString("Text", "") : "";
-                                                    int length = textData != null ? textData.optInt("Length", word.length()) : word.length();
+                                                    String rawWord = textData != null ? textData.optString("Text", "") : "";
+                                                    if (!rawWord.trim().isEmpty()) {
+                                                        String normWord = Normalizer.normalize(rawWord.trim(), Normalizer.Form.NFC);
+                                                        String cleanWord = normWord.toLowerCase(Locale.ROOT);
+                                                        String stripped = cleanWord.replaceAll("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$", "");
 
-                                                    String cleanWord = word.trim().toLowerCase(Locale.ROOT);
-                                                    int charIndex = -1;
-                                                    if (!cleanWord.isEmpty()) {
-                                                        charIndex = foldedSourceText.indexOf(cleanWord, searchOffset[0]);
-                                                        if (charIndex < 0) {
-                                                            String stripped = cleanWord.replaceAll("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$", "");
-                                                            if (!stripped.isEmpty()) {
+                                                        if (!stripped.isEmpty()) {
+                                                            int charIndex = foldedSourceText.indexOf(cleanWord, searchOffset[0]);
+                                                            int matchedLen = cleanWord.length();
+                                                            if (charIndex < 0) {
                                                                 charIndex = foldedSourceText.indexOf(stripped, searchOffset[0]);
+                                                                matchedLen = stripped.length();
+                                                            }
+
+                                                            if (charIndex >= 0) {
+                                                                searchOffset[0] = charIndex + matchedLen;
+                                                                JSONObject wb = new JSONObject();
+                                                                wb.put("text", rawWord);
+                                                                wb.put("charIndex", charIndex);
+                                                                wb.put("charLength", matchedLen);
+                                                                wb.put("startSeconds", (double) offsetTicks / 10000000.0);
+                                                                wb.put("endSeconds", (double) (offsetTicks + durationTicks) / 10000000.0);
+
+                                                                synchronized (wordBoundaries) {
+                                                                    wordBoundaries.put(wb);
+                                                                }
                                                             }
                                                         }
-                                                    }
-                                                    if (charIndex >= 0) {
-                                                        searchOffset[0] = charIndex + cleanWord.length();
-                                                    } else {
-                                                        charIndex = searchOffset[0];
-                                                    }
-
-                                                    JSONObject wb = new JSONObject();
-                                                    wb.put("text", word);
-                                                    wb.put("charIndex", charIndex);
-                                                    wb.put("charLength", length);
-                                                    wb.put("startSeconds", (double) offsetTicks / 10000000.0);
-                                                    wb.put("endSeconds", (double) (offsetTicks + durationTicks) / 10000000.0);
-
-                                                    synchronized (wordBoundaries) {
-                                                        wordBoundaries.put(wb);
                                                     }
                                                 }
                                             }
@@ -831,11 +830,17 @@ public class EdgeTTSNativePlugin extends Plugin {
                     Log.w(TAG, "Failed setNextMediaPlayer: " + ex.getMessage());
                 }
             });
+            next.setOnCompletionListener(mp -> {
+                mp.release();
+                mainHandler.post(this::onChunkCompleted);
+            });
             next.setOnErrorListener((mp, what, extra) -> {
+                Log.e(TAG, "[EdgeTTS:Stream] Next MediaPlayer error: what=" + what + ", extra=" + extra);
                 mp.reset();
                 mp.release();
                 nextPlayer = null;
                 nextChunkIndex = -1;
+                mainHandler.post(this::onChunkCompleted);
                 return true;
             });
             next.prepareAsync();

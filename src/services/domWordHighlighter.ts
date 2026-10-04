@@ -30,6 +30,26 @@ export interface ReadAloudHighlightGeometry {
 const CSS_WORD_HIGHLIGHT_NAME = 'stories-tts-word';
 const CSS_LINE_HIGHLIGHT_NAME = 'stories-tts-line';
 const LINE_Y_TOLERANCE = 2;
+const HIGHLIGHT_STYLE_ID = 'stories-tts-highlight-styles';
+
+function ensureHighlightStyleSheet(): void {
+	if (typeof document === 'undefined') return;
+	if (document.getElementById(HIGHLIGHT_STYLE_ID)) return;
+
+	const style = document.createElement('style');
+	style.id = HIGHLIGHT_STYLE_ID;
+	style.textContent = `
+::highlight(stories-tts-line) {
+	background-color: rgba(147, 197, 253, 0.28);
+	color: inherit;
+}
+::highlight(stories-tts-word) {
+	background-color: #fde047;
+	color: #000000;
+}
+`;
+	document.head.appendChild(style);
+}
 
 export class DomWordHighlighter {
 	private readonly className: string;
@@ -41,6 +61,7 @@ export class DomWordHighlighter {
 
 	constructor(className: string) {
 		this.className = className;
+		ensureHighlightStyleSheet();
 		if (typeof ResizeObserver !== 'undefined') {
 			this.resizeObserver = new ResizeObserver((entries) => {
 				entries.forEach((entry) => this.lineLayoutCache.delete(entry.target as HTMLElement));

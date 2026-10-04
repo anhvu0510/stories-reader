@@ -250,11 +250,11 @@
 	position: absolute;
 	top: 0;
 	left: 0;
-	z-index: 4;
+	z-index: 1;
 	display: block;
 	pointer-events: none;
-	background: #9ec4ea;
-	box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.4);
+	background: rgba(147, 197, 253, 0.28);
+	box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.35);
 	border-radius: 0.25em;
 	transform-origin: top left;
 	transition: none;
@@ -276,26 +276,26 @@
 
 /* 1. App Line & Word Highlight for Modern Chromium (CSS Custom Highlight API) */
 ::highlight(stories-tts-line) {
-	background-color: #9ec4ea;
-	color: #000000;
+	background-color: rgba(147, 197, 253, 0.28);
+	color: inherit;
 }
 
 ::highlight(stories-tts-word) {
-	background-color: #ffff00;
+	background-color: #fde047;
 	color: #000000;
 }
 
 /* 2. App Word Highlight fallback (DOM wrapper span) */
 .stories-tts-word-highlight {
 	position: relative;
-	z-index: 5;
+	z-index: 2;
 	display: inline;
 	padding-inline: 0.15em;
 	margin-inline: -0.05em;
 	border-radius: 0.2em;
-	background-color: #ffff00 !important;
+	background-color: #fde047 !important;
 	color: #000000 !important;
-	box-shadow: 0 0 8px rgba(255, 255, 0, 0.5);
+	box-shadow: 0 0 6px rgba(253, 224, 71, 0.6);
 	box-decoration-break: clone;
 	-webkit-box-decoration-break: clone;
 	font-weight: 700;

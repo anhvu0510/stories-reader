@@ -660,6 +660,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			setIsLoading(false);
 			saveResumePosition(idx, 0);
 
+			wordHighlighterRef.current?.clear();
+
 			const targetChunk = chunks[idx];
 			if (targetChunk) {
 				const readerContent = document.querySelector('#main-story-content');
@@ -1126,6 +1128,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		if (ttsEngine === 'edge' && EdgeTTSNativeStreamService.isAvailable()) {
 			setIsPlaying(true);
 			setIsLoading(true);
+			isPlayingRef.current = true;
+			isPausedRef.current = false;
 			const textChunks = chunks.map((c) => c.text);
 			void EdgeTTSNativeStreamService.startPlayback({
 				chunks: textChunks,
