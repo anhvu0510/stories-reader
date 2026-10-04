@@ -615,6 +615,53 @@ describe('useReadAloud Edge word boundaries', () => {
 		document.body.removeChild(container);
 		unmount();
 	});
+
+	it('does not clear highlighter on onChunkStart to prevent blank-frame flickering', async () => {
+		useReaderConfigStore.setState({ ttsEngine: 'edge', edgeVoiceUri: 'vi-VN-HoaiMyNeural' });
+		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
+		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+		vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue(undefined);
+
+		const clearSpy = vi.spyOn(DomWordHighlighter.prototype, 'clear');
+
+		const paragraphs = ['Đoạn một.', 'Đoạn hai.'];
+		const { result, unmount } = renderHook(() =>
+			useReadAloud(paragraphs, { chapterId: 'c-native-seamless', bookId: 'b-native-seamless', chapterNumber: 1 })
+		);
+
+		await act(async () => {
+			result.current.startReading();
+		});
+
+		clearSpy.mockClear();
+
+		// Emits onChunkStart for next chunk
+		act(() => {
+			EdgeTTSNativeStreamService['chunkStartListeners'].forEach((cb) => cb(1));
+		});
+
+		expect(clearSpy).not.toHaveBeenCalled();
+
+		unmount();
+	});
+
+	it('exposes clearResumePosition and removes saved position from localStorage', async () => {
+		const chapterId = 'test-clear-resume-chap';
+		localStorage.setItem(`stories_tts_pos_${chapterId}`, JSON.stringify({ chunkIndex: 3, charOffset: 10 }));
+
+		const paragraphs = ['Câu 0.', 'Câu 1.', 'Câu 2.', 'Câu 3.'];
+		const { result, unmount } = renderHook(() =>
+			useReadAloud(paragraphs, { chapterId, bookId: 'b1', chapterNumber: 1 })
+		);
+
+		act(() => {
+			result.current.clearResumePosition();
+		});
+
+		expect(localStorage.getItem(`stories_tts_pos_${chapterId}`)).toBeNull();
+
+		unmount();
+	});
 });
 
 describe('useReadAloud browser speech ownership', () => {

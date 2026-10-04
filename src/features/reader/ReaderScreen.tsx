@@ -171,7 +171,8 @@ export function ReaderScreen() {
 		stopReading,
 		nextSection,
 		prevSection,
-		jumpToContent
+		jumpToContent,
+		clearResumePosition
 	} = useReadAloud(
 		allParagraphs,
 		{
@@ -601,10 +602,11 @@ export function ReaderScreen() {
 	const handleOpenTranslation = useCallback(() => setShowTranslateSheet(true), []);
 
 	const handlePullRefresh = useCallback(async () => {
+		clearResumePosition();
 		stopReading();
 		await clearAllCaches();
 		await loadChapter(true);
-	}, [stopReading, loadChapter]);
+	}, [clearResumePosition, stopReading, loadChapter]);
 
 	// Native Swipe Gestures for Mobile Chapter Navigation with Smooth Page Transitions
 	const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);

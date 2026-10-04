@@ -660,8 +660,6 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			setIsLoading(false);
 			saveResumePosition(idx, 0);
 
-			wordHighlighterRef.current?.clear();
-
 			const targetChunk = chunks[idx];
 			if (targetChunk) {
 				const readerContent = document.querySelector('#main-story-content');
@@ -1268,6 +1266,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		stopReading,
 		nextSection,
 		prevSection,
-		jumpToContent
+		jumpToContent,
+		clearResumePosition
 	};
 }

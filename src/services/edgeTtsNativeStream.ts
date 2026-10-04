@@ -124,6 +124,17 @@ class EdgeTTSNativeStreamServiceClass {
 		}
 	}
 
+	public async clearCache(): Promise<void> {
+		if (!this.isAvailable()) return;
+		if (typeof (EdgeTTSNative as any).clearCache === 'function') {
+			try {
+				await (EdgeTTSNative as any).clearCache();
+			} catch (e) {
+				console.warn('[EdgeTTSNativeStream] Failed to clear native cache:', e);
+			}
+		}
+	}
+
 	public onChunkStart(cb: ChunkStartListener): () => void {
 		this.chunkStartListeners.add(cb);
 		return () => {

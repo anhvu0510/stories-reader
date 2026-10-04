@@ -438,8 +438,9 @@ public class EdgeTTSNativePlugin extends Plugin {
         }
     }
 
-    private static final int MAX_PAST_CHUNKS_RETAINED = 6;
-    private static final int MAX_TOTAL_CACHE_FILES = 20;
+    private static final int BUFFER_LOOKAHEAD = 6;
+    private static final int MAX_PAST_CHUNKS_RETAINED = 3;
+    private static final int MAX_TOTAL_CACHE_FILES = 25;
 
     private File getCacheDirInternal() {
         File dir = new File(getContext().getCacheDir(), "edge_tts_cache");
@@ -462,6 +463,14 @@ public class EdgeTTSNativePlugin extends Plugin {
                 }
             }
         } catch (Exception ignored) {}
+    }
+
+    @PluginMethod
+    public void clearCache(PluginCall call) {
+        cleanCacheDir(true);
+        readyAudioFiles.clear();
+        readyWordBoundaries.clear();
+        call.resolve();
     }
 
     private void evictOldChunksFromCache() {
@@ -794,6 +803,9 @@ public class EdgeTTSNativePlugin extends Plugin {
         } else if (index == currentChunkIndex + 1 && currentPlayer != null && nextPlayer == null) {
             prepareNextPlayer(index);
         }
+
+        // Trigger rolling buffer pipeline to immediately fetch the next chunk in line
+        maintainRollingBuffer();
     }
 
     private void startCurrentPlayer(int index) {
@@ -839,7 +851,7 @@ public class EdgeTTSNativePlugin extends Plugin {
                 notifyListeners("onPlaybackStateChange", state);
 
                 startWordBoundaryTicker();
-                maintainPrefetchAndNextPlayer();
+                maintainRollingBuffer();
             });
 
             player.setOnCompletionListener(mp -> {
@@ -922,7 +934,7 @@ public class EdgeTTSNativePlugin extends Plugin {
             notifyListeners("onChunkStart", chunkData);
 
             startWordBoundaryTicker();
-            maintainPrefetchAndNextPlayer();
+            maintainRollingBuffer();
         } else if (currentChunkIndex + 1 < currentChunks.size()) {
             currentChunkIndex++;
             lastWordBoundaryCharIndex = -1;
@@ -945,7 +957,7 @@ public class EdgeTTSNativePlugin extends Plugin {
         }
     }
 
-    private void maintainPrefetchAndNextPlayer() {
+    private void maintainRollingBuffer() {
         if (!isStreamingPlaying) return;
 
         evictOldChunksFromCache();
@@ -957,21 +969,22 @@ public class EdgeTTSNativePlugin extends Plugin {
             return;
         }
 
-        // 2. Next player gapless lookahead (sliding window = 1)
+        // 2. Prepare nextPlayer gapless transition if nextIdx is in cache and nextPlayer is not set
         int nextIdx = currentChunkIndex + 1;
-        if (nextIdx < currentChunks.size()) {
-            if (!readyAudioFiles.containsKey(nextIdx)) {
-                prefetchChunk(nextIdx);
-            } else if (nextPlayer == null && currentPlayer != null) {
-                prepareNextPlayer(nextIdx);
-            }
+        if (nextIdx < currentChunks.size() && readyAudioFiles.containsKey(nextIdx) && nextPlayer == null && currentPlayer != null) {
+            prepareNextPlayer(nextIdx);
         }
 
-        // 3. Optional secondary buffer: only prefetch next+1 if next is ALREADY downloaded
-        int secondNextIdx = currentChunkIndex + 2;
-        if (readyAudioFiles.containsKey(nextIdx) && secondNextIdx < currentChunks.size()) {
-            if (!readyAudioFiles.containsKey(secondNextIdx)) {
-                prefetchChunk(secondNextIdx);
+        // 3. Continuous Rolling Buffer:
+        // Ensure all chunks from currentChunkIndex + 1 up to currentChunkIndex + BUFFER_LOOKAHEAD are cached.
+        // Fetch sequentially (only 1 in-flight prefetch at a time) to avoid socket contention.
+        if (inFlightIndices.isEmpty()) {
+            int maxLookahead = Math.min(currentChunks.size() - 1, currentChunkIndex + BUFFER_LOOKAHEAD);
+            for (int i = currentChunkIndex + 1; i <= maxLookahead; i++) {
+                if (!readyAudioFiles.containsKey(i)) {
+                    prefetchChunk(i);
+                    break;
+                }
             }
         }
     }
