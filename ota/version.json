@@ -1,7 +1,7 @@
 {
-  "version": "1.0.309",
+  "version": "1.0.310",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "28d198ab7f1244df6b35b6381837c89f1ca6efc9ec3deb523aa01b94a0f17ee8",
-  "releaseNotes": "feat: add useCupertinoSwipeBack hook and update native TTS playback state handling",
-  "updatedAt": "2026-10-04T15:21:09Z"
+  "checksum": "b77898b5aef756bb79fe14ad649b66d330fb04df185e4a40e9eadcec4395fae2",
+  "releaseNotes": "fix: prevent redundant native TTS stop calls and telemetry when idle during page navigation",
+  "updatedAt": "2026-10-04T15:26:29Z"
 }
