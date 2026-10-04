@@ -1,7 +1,7 @@
 {
-  "version": "1.0.300",
+  "version": "1.0.301",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "119978d0d01d048c9b158811793ff290834074db620821507fcfa786e48bb068",
-  "releaseNotes": "refactor: replace text previews with full text in EdgeTTS client logs and native streaming",
-  "updatedAt": "2026-10-04T09:21:12Z"
+  "checksum": "468a19eed928d04b5533971083f91f95c803000912f4d5ef909305f79f7d5abe",
+  "releaseNotes": "feat: add native TTS streaming service and Android plugin support for audio playback",
+  "updatedAt": "2026-10-04T09:44:53Z"
 }
