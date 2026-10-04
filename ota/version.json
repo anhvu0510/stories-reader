@@ -1,7 +1,7 @@
 {
-  "version": "1.0.304",
+  "version": "1.0.305",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "91a0556cbac836362ccf66e18cded032dd99fa5cce03148aee26095f8ac66b26",
-  "releaseNotes": "feat: add unit tests and tracking utilities for audio bridging, word boundaries, and prefetch retry management",
-  "updatedAt": "2026-10-04T11:10:07Z"
+  "checksum": "073892c94cac465247a81932ba7e08147498cac13d0a31cfec98efa8a2fbbdc8",
+  "releaseNotes": "remove NativeWordBoundaryEstimator and its corresponding unit tests",
+  "updatedAt": "2026-10-04T11:38:49Z"
 }
