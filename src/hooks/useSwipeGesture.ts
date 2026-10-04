@@ -109,10 +109,12 @@ export function useSwipeGesture({
 				return;
 			}
 
-			// Determine direction lock once touch has moved beyond touch slop (8px)
+			// Determine direction lock once touch has moved beyond touch slop (10px)
+			// Yêu cầu vertical chiếm ưu thế rõ ràng (absY > absX * 1.2) mới lock vertical
+			// Tránh false-positive horizontal lock khi scroll dọc hơi lệch ngang
 			if (state.lockDirection === 'none') {
-				if (absX >= 8 || absY >= 8) {
-					if (absY > absX) {
+				if (absX >= 10 || absY >= 10) {
+					if (absY > absX * 1.2) {
 						state.lockDirection = 'vertical';
 						return;
 					}

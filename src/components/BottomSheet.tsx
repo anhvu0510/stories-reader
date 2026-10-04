@@ -44,6 +44,8 @@ export function BottomSheet({
 		startTime: number;
 		scrollEl: HTMLElement | null;
 		canDrag: boolean;
+		// Trạng thái direction lock: 'none' = chưa xác định, 'vertical' = drag sheet, 'horizontal' = vuốt ngang (bỏ qua)
+		lockDirection: 'none' | 'vertical' | 'horizontal';
 	} | null>(null);
 	const currentDragYRef = useRef(0);
 	const isDismissingRef = useRef(false);
@@ -85,7 +87,8 @@ export function BottomSheet({
 			startX: touch.clientX,
 			startTime: Date.now(),
 			scrollEl,
-			canDrag: false
+			canDrag: false,
+			lockDirection: 'none'
 		};
 		currentDragYRef.current = 0;
 	};
@@ -95,17 +98,28 @@ export function BottomSheet({
 		const touch = e.touches[0];
 		const deltaY = touch.clientY - touchStartRef.current.startY;
 		const deltaX = touch.clientX - touchStartRef.current.startX;
+		const absX = Math.abs(deltaX);
+		const absY = Math.abs(deltaY);
 
-		// Nếu vuốt ngang chiếm ưu thế trước khi kích hoạt kéo dọc, không can thiệp
-		if (!touchStartRef.current.canDrag && Math.abs(deltaX) > Math.abs(deltaY)) {
+		// Giai đoạn 1: Xác định direction lock sau khi ngón tay di chuyển đủ xa (slop 12px)
+		// Giúp phân biệt rõ ràng scroll ngang (chuyển tab) vs kéo xuống đóng sheet
+		if (touchStartRef.current.lockDirection === 'none') {
+			if (absX >= 12 || absY >= 12) {
+				// Khi ngang chiếm ưu thế rõ ràng (ratio > 1.5) → lock horizontal, bỏ qua
+				touchStartRef.current.lockDirection = absX > absY * 1.5 ? 'horizontal' : 'vertical';
+			}
 			return;
 		}
+
+		// Nếu đã lock horizontal (vuốt ngang) → bỏ qua hoàn toàn, không kéo sheet
+		if (touchStartRef.current.lockDirection === 'horizontal') return;
 
 		// Chỉ cho phép kéo xuống (deltaY > 0) để đóng sheet
 		if (deltaY > 0) {
 			const scrollTop = touchStartRef.current.scrollEl ? touchStartRef.current.scrollEl.scrollTop : 0;
 			// Chỉ kích hoạt kéo sheet khi danh sách con đang ở vị trí trên cùng (scrollTop <= 0)
-			if (scrollTop <= 0) {
+			// Yêu cầu thêm minimum slop 16px để tránh false trigger khi scroll nhanh items
+			if (scrollTop <= 0 && absY >= 16) {
 				touchStartRef.current.canDrag = true;
 				if (e.cancelable) {
 					e.preventDefault();
@@ -117,7 +131,7 @@ export function BottomSheet({
 				}
 			}
 		} else {
-			// Người dùng đang cuộn lên
+			// Người dùng đang cuộn lên — huỷ drag nếu đang kéo
 			if (currentDragYRef.current > 0 && sheetCardRef.current) {
 				currentDragYRef.current = 0;
 				sheetCardRef.current.style.transition = 'none';
@@ -138,8 +152,9 @@ export function BottomSheet({
 
 		if (!wasDragging || !sheetCardRef.current) return;
 
-		// Ngưỡng xác nhận đóng sheet: Kéo xuống > 70px hoặc flick nhanh (deltaY >= 40px kèm velocity > 0.35 px/ms)
-		if (deltaY > 70 || (deltaY >= 40 && velocity > 0.35)) {
+		// Ngưỡng xác nhận đóng sheet: kéo xuống > 90px hoặc flick nhanh (deltaY >= 70px kèm velocity > 0.5 px/ms)
+		// Tăng ngưỡng so với trước (70px/0.35) để tránh dismiss không chủ ý khi scroll items từ đỉnh
+		if (deltaY > 90 || (deltaY >= 70 && velocity > 0.5)) {
 			isDismissingRef.current = true;
 			triggerHaptic('light');
 			sheetCardRef.current.style.transition = 'transform 200ms cubic-bezier(0.2, 0, 0, 1)';

@@ -295,8 +295,10 @@ export function LibraryScreen() {
 		onDragStart: handleDragStart,
 		onDragMove: handleDragMove,
 		onDragEnd: handleDragEnd,
-		threshold: 45,
-		minVelocity: 0.35,
+		// Tăng threshold từ 45 → 70px và velocity 0.35 → 0.45 để giảm false-positive swipe tab
+		// khi người dùng cuộn danh sách theo chiều dọc với một chút lệch ngang
+		threshold: 70,
+		minVelocity: 0.45,
 		disabled: isTagFilterOpen || isSortSheetOpen || isOfflineManagerOpen
 	});
 
