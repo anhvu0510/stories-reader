@@ -1,7 +1,7 @@
 {
-  "version": "1.0.294",
+  "version": "1.0.295",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "f9876642d61879ae937f5d8f9800bda053286854caee78280a6ff7c86e387e38",
-  "releaseNotes": "feat: add native EdgeTTS streaming service and associated unit tests",
-  "updatedAt": "2026-10-04T07:15:41Z"
+  "checksum": "515a2787baf13ecb34c66774915b6dfc5881e8d819e2558ac8e028428e812c89",
+  "releaseNotes": "feat: enhance swipe gesture hook with velocity support, real-time drag tracking, and hold-and-drag handling",
+  "updatedAt": "2026-10-04T07:31:37Z"
 }
