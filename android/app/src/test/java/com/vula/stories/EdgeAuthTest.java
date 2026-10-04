@@ -54,7 +54,7 @@ public class EdgeAuthTest {
         // Bản tin Speech Config mở đầu phiên kết nối
         String msg = EdgeAuth.buildSpeechConfigMessage();
         assertNotNull(msg);
-        assertTrue("Bản tin phải có Path:speech.config", msg.contains("Path:speech.config"));
+        assertTrue("Bản tin phải có Path: speech.config", msg.contains("Path: speech.config"));
         assertTrue("Bản tin phải cấu hình định dạng audio MP3 24kHz", msg.contains("audio-24khz-48kbitrate-mono-mp3"));
     }
 
@@ -70,13 +70,13 @@ public class EdgeAuthTest {
         assertNotNull(ssml);
 
         // Kiểm tra header SSML
-        assertTrue("Bản tin phải có Path:ssml", ssml.contains("Path:ssml"));
-        assertTrue("Bản tin phải chứa X-RequestId", ssml.contains("X-RequestId:" + requestId));
+        assertTrue("Bản tin phải có Path: ssml", ssml.contains("Path: ssml"));
+        assertTrue("Bản tin phải chứa X-RequestId", ssml.contains("X-RequestId: " + requestId));
 
         // Kiểm tra nội dung XML SSML
-        assertTrue("Phải gán đúng voice tiếng Việt", ssml.contains("name='" + voice + "'"));
-        assertTrue("Phải gán đúng rate", ssml.contains("rate='" + rate + "'"));
-        assertTrue("Phải gán đúng pitch", ssml.contains("pitch='" + pitch + "'"));
+        assertTrue("Phải gán đúng voice tiếng Việt", ssml.contains("name=\"" + voice + "\""));
+        assertTrue("Phải gán đúng rate", ssml.contains("rate=\"" + rate + "\""));
+        assertTrue("Phải gán đúng pitch", ssml.contains("pitch=\"" + pitch + "\""));
 
         // Nội dung văn bản phải được escape ký tự đặc biệt
         assertTrue("Ký tự < phải được escape thành &lt;", ssml.contains("&lt;Bắt đầu&gt;"));

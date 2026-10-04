@@ -43,7 +43,7 @@ public class RemoteLoggerTest {
         assertTrue("Snippet phải chứa dấu ... phân cách", snippet.contains("..."));
         assertTrue("Độ dài sau khi rút gọn phải ngắn hơn văn bản gốc", snippet.length() < longText.length());
         assertTrue("Phải giữ lại 16 ký tự đầu", snippet.startsWith("Tiêu Viêm thở d"));
-        assertTrue("Phải giữ lại 12 ký tự cuối", snippet.endsWith("nhắm mắt lại."));
+        assertTrue("Phải giữ lại 12 ký tự cuối", snippet.endsWith("hắm mắt lại."));
     }
 
     @Test

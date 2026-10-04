@@ -30,7 +30,7 @@ public class AudioCacheManager {
     }
 
     public AudioCacheManager(Context context, String cacheSubDir, String fileExtension) {
-        this.context = context.getApplicationContext();
+        this.context = context != null ? context.getApplicationContext() : null;
         this.cacheSubDir = cacheSubDir != null ? cacheSubDir : "edge_tts_cache";
         this.fileExtension = fileExtension != null ? fileExtension : ".mp3";
     }

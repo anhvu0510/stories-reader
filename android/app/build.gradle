@@ -60,6 +60,7 @@ dependencies {
     // Thư viện hỗ trợ MediaSessionCompat và NotificationCompat.MediaStyle cho thanh điều khiển Lock Screen
     implementation 'androidx.media:media:1.7.0'
     testImplementation "junit:junit:$junitVersion"
+    testImplementation 'org.json:json:20240303'
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
