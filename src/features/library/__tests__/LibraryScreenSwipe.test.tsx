@@ -91,7 +91,7 @@ describe('LibraryScreen - Swipe Gesture Tab Switching', () => {
 		});
 	});
 
-	it('does not trigger tab swipe if touch duration exceeds maxDuration (long press / slow scroll)', async () => {
+	it('triggers tab swipe even when user holds before dragging (native hold-and-drag gesture)', async () => {
 		render(
 			<MemoryRouter>
 				<LibraryScreen />
@@ -113,7 +113,7 @@ describe('LibraryScreen - Swipe Gesture Tab Switching', () => {
 			);
 		});
 
-		// 1000ms later (simulating long press or slow drag)
+		// 1000ms later (user holds then drags and releases at deltaX = -140px)
 		vi.spyOn(Date, 'now').mockReturnValue(now + 1000);
 
 		act(() => {
@@ -124,7 +124,7 @@ describe('LibraryScreen - Swipe Gesture Tab Switching', () => {
 			);
 		});
 
-		// Should NOT change tab
-		expect(useLibraryStore.getState().savedTab).toBe('ALL');
+		// Successfully advances to HISTORY tab
+		expect(useLibraryStore.getState().savedTab).toBe('HISTORY');
 	});
 });

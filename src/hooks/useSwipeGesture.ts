@@ -3,41 +3,75 @@ import { useEffect, useRef } from 'react';
 export interface SwipeGestureOptions {
 	onSwipeLeft?: () => void;
 	onSwipeRight?: () => void;
+	onDragStart?: () => void;
+	onDragMove?: (offset: number) => void;
+	onDragEnd?: (settled: 'left' | 'right' | 'cancel') => void;
 	threshold?: number;
+	minVelocity?: number;
 	maxDuration?: number;
 	edgeIgnoreWidth?: number;
 	disabled?: boolean;
 }
 
+interface TouchState {
+	startX: number;
+	startY: number;
+	startTime: number;
+	isDragging: boolean;
+	lockDirection: 'none' | 'horizontal' | 'vertical';
+}
+
 export function useSwipeGesture({
 	onSwipeLeft,
 	onSwipeRight,
+	onDragStart,
+	onDragMove,
+	onDragEnd,
 	threshold = 60,
-	maxDuration = 800,
+	minVelocity = 0.35,
+	maxDuration,
 	edgeIgnoreWidth = 28,
 	disabled = false
 }: SwipeGestureOptions) {
-	const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+	const touchStateRef = useRef<TouchState | null>(null);
+	const callbacksRef = useRef({
+		onSwipeLeft,
+		onSwipeRight,
+		onDragStart,
+		onDragMove,
+		onDragEnd
+	});
+
+	// Keep callbacks current without reattaching listeners
+	useEffect(() => {
+		callbacksRef.current = {
+			onSwipeLeft,
+			onSwipeRight,
+			onDragStart,
+			onDragMove,
+			onDragEnd
+		};
+	});
 
 	useEffect(() => {
 		if (typeof window === 'undefined' || disabled) return;
 
 		const handleTouchStart = (e: TouchEvent) => {
 			if (!e.touches || e.touches.length !== 1) {
-				touchStartRef.current = null;
+				touchStateRef.current = null;
 				return;
 			}
 
 			// Do not trigger swipe gestures if touching inside an open dialog, modal, or bottom sheet
 			const target = e.target as Element | null;
 			if (target && typeof target.closest === 'function' && target.closest('[role="dialog"], [aria-modal="true"], .fixed.inset-0')) {
-				touchStartRef.current = null;
+				touchStateRef.current = null;
 				return;
 			}
 
 			// Do not trigger swipe gestures if body scroll is locked by any open modal
 			if (typeof document !== 'undefined' && document.body.style.overflow === 'hidden') {
-				touchStartRef.current = null;
+				touchStateRef.current = null;
 				return;
 			}
 
@@ -47,60 +81,134 @@ export function useSwipeGesture({
 				touch.clientX < edgeIgnoreWidth ||
 				touch.clientX > window.innerWidth - edgeIgnoreWidth
 			) {
-				touchStartRef.current = null;
+				touchStateRef.current = null;
 				return;
 			}
 
-			touchStartRef.current = {
-				x: touch.clientX,
-				y: touch.clientY,
-				time: Date.now()
+			touchStateRef.current = {
+				startX: touch.clientX,
+				startY: touch.clientY,
+				startTime: Date.now(),
+				isDragging: false,
+				lockDirection: 'none'
 			};
 		};
 
+		const handleTouchMove = (e: TouchEvent) => {
+			const state = touchStateRef.current;
+			if (!state || !e.touches || e.touches.length === 0) return;
+
+			const touch = e.touches[0];
+			const deltaX = touch.clientX - state.startX;
+			const deltaY = touch.clientY - state.startY;
+			const absX = Math.abs(deltaX);
+			const absY = Math.abs(deltaY);
+
+			// If locked to vertical scrolling, ignore horizontal drag
+			if (state.lockDirection === 'vertical') {
+				return;
+			}
+
+			// Determine direction lock once touch has moved beyond touch slop (8px)
+			if (state.lockDirection === 'none') {
+				if (absX >= 8 || absY >= 8) {
+					if (absY > absX) {
+						state.lockDirection = 'vertical';
+						return;
+					}
+					state.lockDirection = 'horizontal';
+				} else {
+					return;
+				}
+			}
+
+			// Real-time horizontal drag tracking
+			if (state.lockDirection === 'horizontal') {
+				if (!state.isDragging) {
+					state.isDragging = true;
+					callbacksRef.current.onDragStart?.();
+				}
+				callbacksRef.current.onDragMove?.(deltaX);
+			}
+		};
+
 		const handleTouchEnd = (e: TouchEvent) => {
-			if (!touchStartRef.current) return;
+			const state = touchStateRef.current;
+			if (!state) return;
+			touchStateRef.current = null;
+
+			// If touch was locked vertically, do not handle swipe
+			if (state.lockDirection === 'vertical') {
+				return;
+			}
+
 			if (!e.changedTouches || e.changedTouches.length === 0) {
-				touchStartRef.current = null;
+				if (state.isDragging) callbacksRef.current.onDragEnd?.('cancel');
 				return;
 			}
 
 			const touch = e.changedTouches[0];
-			const deltaX = touch.clientX - touchStartRef.current.x;
-			const deltaY = touch.clientY - touchStartRef.current.y;
+			const deltaX = touch.clientX - state.startX;
+			const deltaY = touch.clientY - state.startY;
 			const absX = Math.abs(deltaX);
 			const absY = Math.abs(deltaY);
-			const duration = Date.now() - touchStartRef.current.time;
+			const duration = Date.now() - state.startTime;
 
-			touchStartRef.current = null;
-
-			// Ignore touches that lasted longer than maxDuration (e.g. held touches, slow scrolls, long presses)
-			if (duration > maxDuration) {
+			// Ignore touches that lasted longer than maxDuration (only when explicitly configured)
+			if (maxDuration !== undefined && duration > maxDuration) {
+				if (state.isDragging) callbacksRef.current.onDragEnd?.('cancel');
 				return;
 			}
 
 			// Do not trigger swipe if user has active text selection
 			const selection = window.getSelection();
 			if (selection && !selection.isCollapsed && selection.toString().trim()) {
+				if (state.isDragging) callbacksRef.current.onDragEnd?.('cancel');
 				return;
 			}
 
-			// Horizontal swipe must be dominant and exceed threshold
-			if (absX >= threshold && absX > absY * 1.3) {
-				if (deltaX < 0 && onSwipeLeft) {
-					onSwipeLeft();
-				} else if (deltaX > 0 && onSwipeRight) {
-					onSwipeRight();
+			const velocity = duration > 0 ? absX / duration : 0;
+			const hasSufficientDistance = absX >= threshold;
+			const hasSufficientVelocity = minVelocity !== undefined && velocity >= minVelocity && absX >= 20;
+
+			// Horizontal swipe must be dominant and meet distance or velocity requirements
+			if ((hasSufficientDistance || hasSufficientVelocity) && absX > absY * 1.3) {
+				if (deltaX < 0 && callbacksRef.current.onSwipeLeft) {
+					callbacksRef.current.onSwipeLeft();
+					if (state.isDragging) callbacksRef.current.onDragEnd?.('left');
+					return;
+				} else if (deltaX > 0 && callbacksRef.current.onSwipeRight) {
+					callbacksRef.current.onSwipeRight();
+					if (state.isDragging) callbacksRef.current.onDragEnd?.('right');
+					return;
+				}
+			}
+
+			if (state.isDragging) {
+				callbacksRef.current.onDragEnd?.('cancel');
+			}
+		};
+
+		const handleTouchCancel = () => {
+			const state = touchStateRef.current;
+			if (state) {
+				touchStateRef.current = null;
+				if (state.isDragging) {
+					callbacksRef.current.onDragEnd?.('cancel');
 				}
 			}
 		};
 
 		window.addEventListener('touchstart', handleTouchStart, { passive: true });
+		window.addEventListener('touchmove', handleTouchMove, { passive: true });
 		window.addEventListener('touchend', handleTouchEnd, { passive: true });
+		window.addEventListener('touchcancel', handleTouchCancel, { passive: true });
 
 		return () => {
 			window.removeEventListener('touchstart', handleTouchStart);
+			window.removeEventListener('touchmove', handleTouchMove);
 			window.removeEventListener('touchend', handleTouchEnd);
+			window.removeEventListener('touchcancel', handleTouchCancel);
 		};
-	}, [onSwipeLeft, onSwipeRight, threshold, maxDuration, edgeIgnoreWidth, disabled]);
+	}, [threshold, minVelocity, maxDuration, edgeIgnoreWidth, disabled]);
 }

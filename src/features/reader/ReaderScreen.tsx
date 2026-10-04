@@ -608,6 +608,7 @@ export function ReaderScreen() {
 
 	// Native Swipe Gestures for Mobile Chapter Navigation with Smooth Page Transitions
 	const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+	const readerContentRef = useRef<HTMLDivElement | null>(null);
 
 	const handleSwipeNext = useCallback(() => {
 		if (!bookId || !contentData?.navigation?.next?.chapterId) return;
@@ -623,10 +624,37 @@ export function ReaderScreen() {
 		openPrevChapter(bookId, chapterId, contentData.navigation.prev.chapterId);
 	}, [bookId, chapterId, contentData?.navigation?.prev?.chapterId]);
 
+	const handleDragStart = useCallback(() => {
+		if (readerContentRef.current) {
+			readerContentRef.current.style.transition = 'none';
+		}
+	}, []);
+
+	const handleDragMove = useCallback((offset: number) => {
+		if (!readerContentRef.current) return;
+		const hasPrev = Boolean(contentData?.navigation?.prev?.chapterId);
+		const hasNext = Boolean(contentData?.navigation?.next?.chapterId);
+		let effectiveOffset = offset;
+		if ((!hasPrev && offset > 0) || (!hasNext && offset < 0)) {
+			effectiveOffset = offset * 0.25; // rubber band damping at boundaries
+		}
+		readerContentRef.current.style.transform = `translate3d(${effectiveOffset}px, 0, 0)`;
+	}, [contentData?.navigation?.prev?.chapterId, contentData?.navigation?.next?.chapterId]);
+
+	const handleDragEnd = useCallback(() => {
+		if (!readerContentRef.current) return;
+		readerContentRef.current.style.transition = 'transform 240ms cubic-bezier(0.2, 0, 0, 1)';
+		readerContentRef.current.style.transform = 'translate3d(0px, 0, 0)';
+	}, []);
+
 	useSwipeGesture({
 		onSwipeLeft: handleSwipeNext,
 		onSwipeRight: handleSwipePrev,
+		onDragStart: handleDragStart,
+		onDragMove: handleDragMove,
+		onDragEnd: handleDragEnd,
 		threshold: 55,
+		minVelocity: 0.35,
 		disabled: loading || isRefreshingLatest
 	});
 
@@ -769,25 +797,27 @@ export function ReaderScreen() {
 			/>
 
 			{/* Reader Content Article - Frozen Memoized Multi-Chapter Section with Tap-to-Toggle Dock */}
-			<motion.div
-				key={`${chapter.chapterId}-${domResetKey}`}
-				initial={{ opacity: 0, x: swipeDirection === 'left' ? 40 : swipeDirection === 'right' ? -40 : 0 }}
-				animate={{ opacity: 1, x: 0 }}
-				transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
-				className="w-full"
-			>
-				<ChapterContentSection
-					chapters={displayChapters}
-					fontSize={fontSize}
-					lineHeight={lineHeight}
-					isPlaying={isPlaying}
-					isPaused={isPaused}
-					currentParagraphIndex={activeParagraphIndex}
-					onDoubleClick={handleDoubleClick}
-					onTouchStart={handleTouchStart}
-					onTouchEnd={handleTouchEnd}
-				/>
-			</motion.div>
+			<div ref={readerContentRef} className="w-full will-change-transform">
+				<motion.div
+					key={`${chapter.chapterId}-${domResetKey}`}
+					initial={{ opacity: 0, x: swipeDirection === 'left' ? 40 : swipeDirection === 'right' ? -40 : 0 }}
+					animate={{ opacity: 1, x: 0 }}
+					transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
+					className="w-full"
+				>
+					<ChapterContentSection
+						chapters={displayChapters}
+						fontSize={fontSize}
+						lineHeight={lineHeight}
+						isPlaying={isPlaying}
+						isPaused={isPaused}
+						currentParagraphIndex={activeParagraphIndex}
+						onDoubleClick={handleDoubleClick}
+						onTouchStart={handleTouchStart}
+						onTouchEnd={handleTouchEnd}
+					/>
+				</motion.div>
+			</div>
 
 			{/* Single Capsule Zen Mode Floating Control Bar */}
 			<div aria-hidden="true">

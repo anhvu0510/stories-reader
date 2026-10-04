@@ -250,6 +250,8 @@ export function LibraryScreen() {
 	);
 
 	// Native Swipe Gestures for Mobile Tab Switching with Smooth Transitions
+	const contentContainerRef = useRef<HTMLDivElement | null>(null);
+
 	const handleSwipeLeft = useCallback(() => {
 		const currentIndex = TABS.indexOf(tab);
 		if (currentIndex < TABS.length - 1) {
@@ -264,10 +266,37 @@ export function LibraryScreen() {
 		}
 	}, [tab, handleTabChange]);
 
+	const handleDragStart = useCallback(() => {
+		if (contentContainerRef.current) {
+			contentContainerRef.current.style.transition = 'none';
+		}
+	}, []);
+
+	const handleDragMove = useCallback((offset: number) => {
+		if (!contentContainerRef.current) return;
+		const currentIndex = TABS.indexOf(tab);
+		// Apply rubber-band damping at boundaries
+		let effectiveOffset = offset;
+		if ((currentIndex === 0 && offset > 0) || (currentIndex === TABS.length - 1 && offset < 0)) {
+			effectiveOffset = offset * 0.25;
+		}
+		contentContainerRef.current.style.transform = `translate3d(${effectiveOffset}px, 0, 0)`;
+	}, [tab]);
+
+	const handleDragEnd = useCallback(() => {
+		if (!contentContainerRef.current) return;
+		contentContainerRef.current.style.transition = 'transform 240ms cubic-bezier(0.2, 0, 0, 1)';
+		contentContainerRef.current.style.transform = 'translate3d(0px, 0, 0)';
+	}, []);
+
 	useSwipeGesture({
 		onSwipeLeft: handleSwipeLeft,
 		onSwipeRight: handleSwipeRight,
+		onDragStart: handleDragStart,
+		onDragMove: handleDragMove,
+		onDragEnd: handleDragEnd,
 		threshold: 45,
+		minVelocity: 0.35,
 		disabled: isTagFilterOpen || isSortSheetOpen || isOfflineManagerOpen
 	});
 
@@ -438,7 +467,7 @@ export function LibraryScreen() {
 				</div>
 
 				{/* Book Cards List Content Container */}
-				<div className="px-3.5 pt-3.5 pb-28 space-y-3">
+				<div ref={contentContainerRef} className="px-3.5 pt-3.5 pb-28 space-y-3 will-change-transform">
 					{loading && books.length === 0 ? (
 						<div className="space-y-3 relative">
 							{[1, 2, 3, 4].map((idx) => (
