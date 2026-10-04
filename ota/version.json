@@ -1,7 +1,7 @@
 {
-  "version": "1.0.319",
+  "version": "1.0.320",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "618b2228e26af64f542a2df190382ef3725a62a3fac0dd6149c700e474f326ba",
-  "releaseNotes": "fix: update time-based passcode format from HHmmDDYY to HHMMDDMM",
-  "updatedAt": "2026-10-04T17:30:53Z"
+  "checksum": "e7458427f64ade71ba16919bd707c493a2f5a131a996b080f294bf4c30a14807",
+  "releaseNotes": "feat: implement biometric authentication and app lock security feature",
+  "updatedAt": "2026-10-04T17:41:21Z"
 }
