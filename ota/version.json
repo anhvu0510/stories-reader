@@ -1,7 +1,7 @@
 {
-  "version": "1.0.302",
+  "version": "1.0.303",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "9e1482f2056c48f462e8d47345f9639aa3d84e01c301bfa7563f8e2f84c33490",
-  "releaseNotes": "feat(native-audio): implement native Android audio player and useNativeReadAloud hook for seamless background playback",
-  "updatedAt": "2026-10-04T10:12:25Z"
+  "checksum": "4733dbe6b65f54a4e4c800d838cb046e16cabd83bd49dc84805252e8d8f5322c",
+  "releaseNotes": "refactor: improve EdgeTTS streaming playback reliability, log snippet formatting, and add unit tests",
+  "updatedAt": "2026-10-04T10:42:54Z"
 }
