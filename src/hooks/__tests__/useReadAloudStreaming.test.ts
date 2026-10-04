@@ -572,6 +572,49 @@ describe('useReadAloud Edge word boundaries', () => {
 
 		unmount();
 	});
+
+	it('highlights word and line when EdgeTTSNativeStreamService emits onWordBoundary', async () => {
+		useReaderConfigStore.setState({ ttsEngine: 'edge', edgeVoiceUri: 'vi-VN-HoaiMyNeural' });
+		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
+		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+		vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue(undefined);
+
+		const highlightSpy = vi.spyOn(DomWordHighlighter.prototype, 'highlight').mockReturnValue({
+			word: { left: 10, top: 20, width: 30, height: 15, right: 40, bottom: 35 },
+			line: { left: 0, top: 20, width: 200, height: 15, right: 200, bottom: 35 }
+		} as any);
+
+		const container = document.createElement('div');
+		container.id = 'main-story-content';
+		const article = document.createElement('article');
+		const pDiv = document.createElement('div');
+		pDiv.setAttribute('data-paragraph-index', '0');
+		pDiv.textContent = 'Đoạn một trên native.';
+		article.appendChild(pDiv);
+		container.appendChild(article);
+		document.body.appendChild(container);
+
+		const paragraphs = ['Đoạn một trên native.'];
+		const { result, unmount } = renderHook(() =>
+			useReadAloud(paragraphs, { chapterId: 'c-native', bookId: 'b-native', chapterNumber: 1 })
+		);
+
+		await act(async () => {
+			result.current.startReading();
+		});
+
+		// Trigger word boundary event for word 'một' at index 5
+		act(() => {
+			EdgeTTSNativeStreamService['wordBoundaryListeners'].forEach((cb) =>
+				cb({ chunkIndex: 0, charIndex: 5, charLength: 3, text: 'một' })
+			);
+		});
+
+		expect(highlightSpy).toHaveBeenCalled();
+
+		document.body.removeChild(container);
+		unmount();
+	});
 });
 
 describe('useReadAloud browser speech ownership', () => {

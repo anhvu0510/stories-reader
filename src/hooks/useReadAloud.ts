@@ -601,6 +601,54 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		};
 	}, [chunks, ttsEngine, isPlaying, isPaused, getResumePosition]);
 
+	const lastInteractionTime = useRef(0);
+
+	const updateWordHighlight = (chunkIndex: number, nextCharIndex: number, nextCharLength: number) => {
+		const highlighter = wordHighlighterRef.current;
+		if (!highlighter || !chunks[chunkIndex]) return;
+
+		const readerContent = document.querySelector('#main-story-content');
+		if (!readerContent) {
+			highlighter.clear();
+			return;
+		}
+
+		const chunk = chunks[chunkIndex];
+		const pNode = readerContent.querySelector<HTMLElement>(`article > div[data-paragraph-index="${chunk.pIdx}"]`);
+		if (!pNode || nextCharIndex < 0 || nextCharLength <= 0) {
+			highlighter.clear();
+			return;
+		}
+
+		if (
+			charIndexRef.current === nextCharIndex &&
+			charLengthRef.current === nextCharLength &&
+			useTTSStore.getState().currentParagraphIndex === chunk.pIdx
+		) {
+			return;
+		}
+
+		const wordText = chunk.text.substring(nextCharIndex, nextCharIndex + nextCharLength);
+		const match = wordText.match(/[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
+		if (!match || match.index === undefined) {
+			return;
+		}
+
+		charIndexRef.current = nextCharIndex;
+		charLengthRef.current = nextCharLength;
+		useTTSStore.setState({
+			currentParagraphIndex: chunk.pIdx,
+			currentCharIndex: nextCharIndex,
+			currentCharLength: nextCharLength
+		});
+
+		const offset = nextCharIndex + match.index;
+		const geometry = highlighter.highlight(pNode, chunk.startOffset + offset, match[0].length);
+		if (geometry && Date.now() - lastInteractionTime.current > 3000) {
+			scrollFollowerRef.current?.follow(geometry.line);
+		}
+	};
+
 	// Native Android Edge TTS Streaming Event Listeners
 	useEffect(() => {
 		if (ttsEngine !== 'edge' || !EdgeTTSNativeStreamService.isAvailable()) return;
@@ -624,12 +672,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 		const unsubWord = EdgeTTSNativeStreamService.onWordBoundary(({ chunkIndex, charIndex, charLength }) => {
 			if (!isPlayingRef.current) return;
-			const targetChunk = chunks[chunkIndex];
-			if (!targetChunk) return;
-			charIndexRef.current = charIndex;
-			charLengthRef.current = charLength;
-			useTTSStore.setState({ currentCharIndex: charIndex, currentCharLength: charLength });
-			wordHighlighterRef.current?.highlightWord(targetChunk.pIdx, charIndex, charLength);
+			updateWordHighlight(chunkIndex, charIndex, charLength);
 		});
 
 		const unsubState = EdgeTTSNativeStreamService.onPlaybackStateChange(({ isPlaying: p, isPaused: pa, isBuffering: b }) => {
@@ -665,8 +708,6 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			stopReading();
 		}
 	}, [vieneuModel, voiceUri, ttsEngine, vieneuOptions]);
-
-	const lastInteractionTime = useRef(0);
 
 	useEffect(() => {
 		const onInteraction = () => {
@@ -744,52 +785,6 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			});
 		};
 	}, [chunks.length, isLoading, isPaused, isPlaying]);
-
-	const updateWordHighlight = (chunkIndex: number, nextCharIndex: number, nextCharLength: number) => {
-		const highlighter = wordHighlighterRef.current;
-		if (!highlighter || !chunks[chunkIndex]) return;
-
-		const readerContent = document.querySelector('#main-story-content');
-		if (!readerContent) {
-			highlighter.clear();
-			return;
-		}
-
-		const chunk = chunks[chunkIndex];
-		const pNode = readerContent.querySelector<HTMLElement>(`article > div[data-paragraph-index="${chunk.pIdx}"]`);
-		if (!pNode || nextCharIndex < 0 || nextCharLength <= 0) {
-			highlighter.clear();
-			return;
-		}
-
-		if (
-			charIndexRef.current === nextCharIndex &&
-			charLengthRef.current === nextCharLength &&
-			useTTSStore.getState().currentParagraphIndex === chunk.pIdx
-		) {
-			return;
-		}
-
-		const wordText = chunk.text.substring(nextCharIndex, nextCharIndex + nextCharLength);
-		const match = wordText.match(/[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
-		if (!match || match.index === undefined) {
-			return;
-		}
-
-		charIndexRef.current = nextCharIndex;
-		charLengthRef.current = nextCharLength;
-		useTTSStore.setState({
-			currentParagraphIndex: chunk.pIdx,
-			currentCharIndex: nextCharIndex,
-			currentCharLength: nextCharLength
-		});
-
-		const offset = nextCharIndex + match.index;
-		const geometry = highlighter.highlight(pNode, chunk.startOffset + offset, match[0].length);
-		if (geometry && Date.now() - lastInteractionTime.current > 3000) {
-			scrollFollowerRef.current?.follow(geometry.line);
-		}
-	};
 
 	useEffect(() => {
 		return () => {

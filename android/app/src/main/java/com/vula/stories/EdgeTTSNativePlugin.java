@@ -141,7 +141,7 @@ public class EdgeTTSNativePlugin extends Plugin {
             JSArray wordBoundaries = new JSArray();
             final String requestId = UUID.randomUUID().toString().replace("-", "");
             final boolean[] isResolved = {false};
-            final String cleanSourceText = text.trim();
+            final String cleanSourceText = text;
             final String foldedSourceText = cleanSourceText.toLowerCase(Locale.ROOT);
             final int[] searchOffset = {0};
 
@@ -600,7 +600,7 @@ public class EdgeTTSNativePlugin extends Plugin {
                 ByteArrayOutputStream audioBuffer = new ByteArrayOutputStream();
                 JSONArray wordBoundaries = new JSONArray();
                 String requestId = UUID.randomUUID().toString().replace("-", "");
-                String cleanSourceText = text.trim();
+                String cleanSourceText = text;
                 String foldedSourceText = cleanSourceText.toLowerCase(Locale.ROOT);
                 int[] searchOffset = {0};
 
@@ -907,34 +907,38 @@ public class EdgeTTSNativePlugin extends Plugin {
                         int posMs = currentPlayer.getCurrentPosition();
                         double posSec = (double) posMs / 1000.0;
                         JSONArray boundaries = readyWordBoundaries.get(currentChunkIndex);
-                        if (boundaries != null) {
+                        if (boundaries != null && boundaries.length() > 0) {
+                            JSONObject activeWb = null;
                             for (int i = 0; i < boundaries.length(); i++) {
                                 JSONObject wb = boundaries.optJSONObject(i);
                                 if (wb != null) {
                                     double startSec = wb.optDouble("startSeconds", 0);
-                                    double endSec = wb.optDouble("endSeconds", 0);
-                                    if (posSec >= startSec && posSec <= endSec) {
-                                        int charIdx = wb.optInt("charIndex", -1);
-                                        if (charIdx != lastWordBoundaryCharIndex) {
-                                            lastWordBoundaryCharIndex = charIdx;
-                                            JSObject ev = new JSObject();
-                                            ev.put("chunkIndex", currentChunkIndex);
-                                            ev.put("charIndex", charIdx);
-                                            ev.put("charLength", wb.optInt("charLength", 1));
-                                            ev.put("text", wb.optString("text", ""));
-                                            notifyListeners("onWordBoundary", ev);
-                                        }
+                                    if (posSec >= startSec) {
+                                        activeWb = wb;
+                                    } else {
                                         break;
                                     }
                                 }
                             }
+                            if (activeWb != null) {
+                                int charIdx = activeWb.optInt("charIndex", -1);
+                                if (charIdx != lastWordBoundaryCharIndex) {
+                                    lastWordBoundaryCharIndex = charIdx;
+                                    JSObject ev = new JSObject();
+                                    ev.put("chunkIndex", currentChunkIndex);
+                                    ev.put("charIndex", charIdx);
+                                    ev.put("charLength", activeWb.optInt("charLength", 1));
+                                    ev.put("text", activeWb.optString("text", ""));
+                                    notifyListeners("onWordBoundary", ev);
+                                }
+                            }
                         }
                     } catch (Exception ignored) {}
-                    mainHandler.postDelayed(this, 40);
+                    mainHandler.postDelayed(this, 30);
                 }
             }
         };
-        mainHandler.postDelayed(wordBoundaryTicker, 40);
+        mainHandler.postDelayed(wordBoundaryTicker, 30);
     }
 
     private void stopWordBoundaryTicker() {
