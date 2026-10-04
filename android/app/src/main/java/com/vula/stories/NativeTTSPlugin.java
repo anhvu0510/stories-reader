@@ -17,7 +17,9 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import com.vula.stories.player.GaplessStreamPlayer;
+import com.vula.stories.player.PrefetchRetryManager;
 import com.vula.stories.player.StoriesAudioBridge;
+import com.vula.stories.tts.NativeWordBoundaryEstimator;
 import com.vula.stories.tts.edge.AudioCacheManager;
 import com.vula.stories.logging.BreadcrumbTracker;
 import com.vula.stories.logging.RemoteLogger;
@@ -59,6 +61,8 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
     private final Map<Integer, File> readyAudioFiles = new ConcurrentHashMap<>();
     private final Map<Integer, JSONArray> readyWordBoundaries = new ConcurrentHashMap<>();
     private final Set<Integer> inFlightIndices = Collections.synchronizedSet(new HashSet<>());
+    // Dữ liệu frame vị trí từ thu thập từ onRangeStart của Android TTS Engine (nếu được hỗ trợ)
+    private final Map<Integer, List<int[]>> chunkRangeStarts = new ConcurrentHashMap<>();
 
     // Thông tin metadata phục vụ thanh điều khiển âm thanh trên Notification & Lock Screen
     private String currentBookTitle = "Stories Reader";
@@ -70,6 +74,9 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
     private volatile boolean isStreamingPlaying = false;
     // Chỉ số câu mục tiêu đang hoặc chuẩn bị phát (tránh deadlock khi player.getCurrentChunkIndex() khởi tạo là -1)
     private int currentPlayIndex = 0;
+
+    // Quản lý cơ chế thử lại cuốn chiếu (Linear Backoff Retry) khi gặp sự cố
+    private final PrefetchRetryManager retryManager = new PrefetchRetryManager();
 
     private synchronized void acquireWakeLock() {
         try {
@@ -275,7 +282,13 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
             @Override
             public void onRangeStart(String utteranceId, int start, int end, int frame) {
                 if (utteranceId != null && utteranceId.startsWith("stream_chunk_")) {
-                    return; // Streaming word boundary handled via GaplessStreamPlayer
+                    try {
+                        int index = Integer.parseInt(utteranceId.substring("stream_chunk_".length()));
+                        if (frame >= 0) {
+                            chunkRangeStarts.computeIfAbsent(index, k -> Collections.synchronizedList(new ArrayList<>())).add(new int[]{start, end, frame});
+                        }
+                    } catch (Exception ignored) {}
+                    return; // Streaming word boundary được đồng bộ qua GaplessStreamPlayer
                 }
                 JSObject data = new JSObject();
                 data.put("utteranceId", utteranceId);
@@ -307,9 +320,12 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
                     readyDetails.put("totalChunks", currentChunks.size());
                     readyDetails.put("bytes", chunkFile.length());
                     readyDetails.put("wordsCount", wb.length());
-                    readyDetails.put("fullText", text);
+                    readyDetails.put("snippet", RemoteLogger.formatSnippet(text));
                 } catch (Exception ignored) {}
-                RemoteLogger.log("NativeTTS_Stream", "info", "[NativeTTS:Stream] Đã nạp xong audio câu " + (index + 1) + "/" + currentChunks.size() + " (" + chunkFile.length() + " bytes): \"" + text + "\"", null, readyDetails);
+                RemoteLogger.log("NativeTTS_Stream", "info", "[NativeTTS:Stream] Đã nạp xong audio câu " + (index + 1) + "/" + currentChunks.size() + " (" + chunkFile.length() + " bytes): \"" + RemoteLogger.formatSnippet(text) + "\"", null, readyDetails);
+
+                // Xóa bộ đếm retry khi nạp thành công
+                retryManager.recordSuccess(index);
 
                 // Chuyển sang main thread để kích hoạt phát hoặc nạp gối đầu gapless
                 mainHandler.post(() -> onChunkAudioReady(index));
@@ -326,74 +342,83 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
         try {
             int index = Integer.parseInt(utteranceId.substring("stream_chunk_".length()));
             inFlightIndices.remove(index);
+            chunkRangeStarts.remove(index);
             String text = (index >= 0 && index < currentChunks.size()) ? currentChunks.get(index) : "";
-            JSONObject errDetails = new JSONObject();
-            try {
-                errDetails.put("chunkIndex", index);
-                errDetails.put("totalChunks", currentChunks.size());
-                errDetails.put("fullText", text);
-            } catch (Exception ignored) {}
-            RemoteLogger.log("NativeTTS_Stream", "error", "[NativeTTS:Stream] Lỗi tổng hợp audio câu " + (index + 1) + "/" + currentChunks.size() + ": \"" + text + "\"", "SYNTH_ERROR", errDetails);
+            handlePrefetchFailure(index, text, "SYNTH_PROGRESS_ERROR");
         } catch (Exception ignored) {}
     }
 
     /**
      * Tính toán vị trí từng từ và thời lượng (startSeconds, endSeconds) cho câu văn.
-     * Sử dụng thời lượng thực tế của file .wav để chia tỷ lệ chính xác, giúp bộ đếm 25ms của GaplessStreamPlayer
-     * cập nhật vị trí highlight mượt mà từng từ theo tiến trình âm thanh.
+     * 1. Ưu tiên sử dụng frame thực tế từ Android TTS Engine (onRangeStart) nếu có hỗ trợ.
+     * 2. Fallback sang Deep Module NativeWordBoundaryEstimator tính toán theo mô hình âm học tiếng Việt
+     *    (bù trừ khoảng lặng đầu/cuối, phân bổ thời gian cho dấu câu ngắt nghỉ và trọng số âm tiết).
      */
     private JSONArray computeWordBoundaries(int chunkIndex, String text, File wavFile) {
+        if (text == null || text.trim().isEmpty()) return new JSONArray();
+
+        List<int[]> rangeStarts = chunkRangeStarts.remove(chunkIndex);
+        if (rangeStarts != null && !rangeStarts.isEmpty()) {
+            JSONArray boundaries = tryBuildBoundariesFromRangeStarts(text, wavFile, rangeStarts);
+            if (boundaries != null && boundaries.length() > 0) {
+                return boundaries;
+            }
+        }
+
+        return NativeWordBoundaryEstimator.estimateBoundaries(chunkIndex, text, wavFile);
+    }
+
+    /**
+     * Thử xây dựng danh sách word boundaries dựa trên frame audio thực tế do Android TTS engine cung cấp.
+     */
+    private JSONArray tryBuildBoundariesFromRangeStarts(String text, File wavFile, List<int[]> rangeStarts) {
+        if (rangeStarts == null || rangeStarts.isEmpty() || text == null) return null;
+
+        long durationMs = NativeWordBoundaryEstimator.getWavDurationMs(wavFile);
+        if (durationMs <= 0) return null;
+
+        // Ước tính sample rate từ thời lượng và frame lớn nhất
+        int maxFrame = 0;
+        for (int[] r : rangeStarts) {
+            if (r[2] > maxFrame) maxFrame = r[2];
+        }
+        if (maxFrame <= 0) return null;
+
+        double totalSec = (double) durationMs / 1000.0;
+        double estimatedSampleRate = (double) maxFrame / Math.max(0.1, totalSec - 0.2);
+        if (estimatedSampleRate < 8000 || estimatedSampleRate > 96000) {
+            return null;
+        }
+
         JSONArray boundaries = new JSONArray();
-        if (text == null || text.trim().isEmpty()) return boundaries;
+        for (int i = 0; i < rangeStarts.size(); i++) {
+            int[] r = rangeStarts.get(i);
+            int start = r[0];
+            int end = r[1];
+            int frame = r[2];
 
-        long durationMs = 0;
-        try (MediaMetadataRetriever mmr = new MediaMetadataRetriever()) {
-            mmr.setDataSource(wavFile.getAbsolutePath());
-            String durStr = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-            if (durStr != null) {
-                durationMs = Long.parseLong(durStr);
-            }
-        } catch (Exception ignored) {}
+            if (start >= 0 && end <= text.length() && start < end) {
+                String rawWord = text.substring(start, end).trim();
+                if (!rawWord.isEmpty()) {
+                    double startSec = (double) frame / estimatedSampleRate;
+                    double endSec = (i + 1 < rangeStarts.size())
+                            ? (double) rangeStarts.get(i + 1)[2] / estimatedSampleRate
+                            : Math.min(totalSec, startSec + 0.3);
 
-        if (durationMs <= 0) {
-            durationMs = Math.max(500, (long) ((text.length() / 15.0) * 1000.0));
-        }
-
-        Pattern wordPattern = Pattern.compile("\\S+");
-        Matcher matcher = wordPattern.matcher(text);
-        List<int[]> words = new ArrayList<>();
-        int totalWordChars = 0;
-        while (matcher.find()) {
-            int start = matcher.start();
-            int end = matcher.end();
-            int len = end - start;
-            words.add(new int[]{start, len});
-            totalWordChars += len;
-        }
-
-        if (!words.isEmpty() && durationMs > 0) {
-            double totalSec = (double) durationMs / 1000.0;
-            double currentSec = 0.0;
-            for (int[] w : words) {
-                int charIdx = w[0];
-                int charLen = w[1];
-                double wordWeight = (double) charLen / Math.max(1, totalWordChars);
-                double wordDur = totalSec * wordWeight;
-
-                try {
-                    JSONObject wb = new JSONObject();
-                    wb.put("text", text.substring(charIdx, charIdx + charLen));
-                    wb.put("charIndex", charIdx);
-                    wb.put("charLength", charLen);
-                    wb.put("startSeconds", currentSec);
-                    wb.put("endSeconds", currentSec + wordDur);
-                    boundaries.put(wb);
-                } catch (Exception ignored) {}
-
-                currentSec += wordDur;
+                    try {
+                        JSONObject wb = new JSONObject();
+                        wb.put("text", rawWord);
+                        wb.put("charIndex", start);
+                        wb.put("charLength", end - start);
+                        wb.put("startSeconds", startSec);
+                        wb.put("endSeconds", Math.max(startSec + 0.1, endSec));
+                        boundaries.put(wb);
+                    } catch (Exception ignored) {}
+                }
             }
         }
-        return boundaries;
+
+        return boundaries.length() > 0 ? boundaries : null;
     }
 
     private void runWhenReady(Runnable runnable, PluginCall call) {
@@ -534,6 +559,7 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
 
             isStreamingPlaying = true;
             player.acquireWakeLock();
+            retryManager.reset();
 
             // Tổng hợp và phát câu khởi đầu
             int validStart = Math.max(0, Math.min(startIndex, currentChunks.size() - 1));
@@ -612,12 +638,63 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
                 if (result != TextToSpeech.SUCCESS) {
                     Log.e(TAG, "synthesizeToFile returned error code " + result + " for chunk " + index);
                     inFlightIndices.remove(index);
+                    handlePrefetchFailure(index, text, "ErrorCode: " + result);
                 }
             } catch (Exception ex) {
                 Log.e(TAG, "Error submitting synthesizeToFile for chunk " + index, ex);
                 inFlightIndices.remove(index);
+                handlePrefetchFailure(index, text, ex.getMessage());
             }
         });
+    }
+
+    /**
+     * Tự động thử lại khi tổng hợp audio câu gặp sự cố (Linear Backoff Retry):
+     */
+    private void handlePrefetchFailure(int index, String text, String errMsg) {
+        if (!isStreamingPlaying) return;
+
+        JSONObject failDetails = new JSONObject();
+        try {
+            failDetails.put("chunkIndex", index);
+            failDetails.put("totalChunks", currentChunks.size());
+            failDetails.put("snippet", RemoteLogger.formatSnippet(text));
+            failDetails.put("error", errMsg);
+        } catch (Exception ignored) {}
+
+        if (retryManager.canRetry(index)) {
+            int attempt = retryManager.recordFailure(index);
+            long delayMs = retryManager.getDelayMs(index);
+
+            RemoteLogger.log("NativeTTS_Stream", "warn",
+                    "[NativeTTS:Stream] Lỗi tổng hợp audio câu " + (index + 1) + "/" + currentChunks.size()
+                            + " (" + errMsg + "), thử lại lần " + attempt + "/" + PrefetchRetryManager.DEFAULT_MAX_RETRIES + " sau " + delayMs + "ms...",
+                    errMsg, failDetails);
+
+            mainHandler.postDelayed(() -> {
+                if (isStreamingPlaying && !readyAudioFiles.containsKey(index)) {
+                    prefetchChunk(index);
+                }
+            }, delayMs);
+        } else {
+            RemoteLogger.log("NativeTTS_Stream", "error",
+                    "[NativeTTS:Stream] Thất bại tổng hợp audio câu " + (index + 1) + "/" + currentChunks.size()
+                            + " sau " + PrefetchRetryManager.DEFAULT_MAX_RETRIES + " lần thử: " + errMsg + " - Nội dung: \"" + RemoteLogger.formatSnippet(text) + "\"",
+                    errMsg, failDetails);
+
+            if (index == currentPlayIndex && !player.hasCurrentPlayer()) {
+                RemoteLogger.log("NativeTTS_Stream", "warn",
+                        "[NativeTTS:Stream] Tự động bỏ qua câu lỗi " + (index + 1) + " để tiếp tục câu " + (index + 2) + "/" + currentChunks.size(),
+                        null, failDetails);
+                int next = index + 1;
+                if (next < currentChunks.size()) {
+                    seekToChunkInternal(next);
+                } else {
+                    stopPlaybackInternal(false);
+                    notifyListeners("onPlaybackComplete", new JSObject());
+                }
+            }
+        }
     }
 
     /**
@@ -734,6 +811,8 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
     private void stopPlaybackInternal(boolean resetPosition) {
         isStreamingPlaying = false;
         inFlightIndices.clear();
+        chunkRangeStarts.clear();
+        retryManager.reset();
 
         // Hủy đăng ký listener và tắt thông báo trên thanh trạng thái / màn hình khóa
         StoriesAudioBridge.unregisterListener(this);
@@ -756,6 +835,7 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
         currentPlayIndex = chunkIndex;
         inFlightIndices.clear();
         player.stop();
+        retryManager.reset();
 
         if (readyAudioFiles.containsKey(chunkIndex)) {
             player.start(chunkIndex, readyAudioFiles.get(chunkIndex));
