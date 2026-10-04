@@ -98,6 +98,7 @@ public class EdgeTTSNativePlugin extends Plugin {
         String voice = call.getString("voice", "vi-VN-HoaiMyNeural");
         String rate = call.getString("rate", "+0%");
         String pitch = call.getString("pitch", "+0Hz");
+        String gatewayUrl = call.getString("gatewayUrl", "");
 
         try {
             final long startTime = System.currentTimeMillis();
@@ -132,6 +133,12 @@ public class EdgeTTSNativePlugin extends Plugin {
                 public void onOpen(WebSocket webSocket, Response response) {
                     try {
                         Log.i(TAG, "[EdgeTTS] Đã kết nối thành công tới máy chủ Edge (HTTP " + response.code() + "). Đang gửi cấu hình và SSML (requestId=" + requestId + ")...");
+                        JSONObject openDetails = new JSONObject();
+                        openDetails.put("voice", voice);
+                        openDetails.put("rate", rate);
+                        openDetails.put("textLen", text.length());
+                        sendServerLog(gatewayUrl, "info", "[EdgeTTS] WebSocket kết nối thành công tới máy chủ Bing Edge (requestId=" + requestId + ")", null, openDetails);
+
                         // 1. Send speech.config
                         String configPayload = "{\"context\":{\"synthesis\":{\"audio\":{\"metadataoptions\":{\"sentenceBoundaryEnabled\":\"false\",\"wordBoundaryEnabled\":\"true\"},\"outputFormat\":\"audio-24khz-48kbitrate-mono-mp3\"}}}}";
                         String configMsg = "X-Timestamp: " + getTimestampIso() + "\r\n"
@@ -251,9 +258,25 @@ public class EdgeTTSNativePlugin extends Plugin {
                                     long elapsed = System.currentTimeMillis() - startTime;
                                     if (audioBytes.length == 0) {
                                         Log.w(TAG, "[EdgeTTS] Không nhận được âm thanh từ máy chủ Edge sau " + elapsed + "ms");
+                                        JSONObject failDetails = new JSONObject();
+                                        failDetails.put("voice", voice);
+                                        failDetails.put("rate", rate);
+                                        failDetails.put("elapsedMs", elapsed);
+                                        failDetails.put("textPreview", text.length() > 60 ? text.substring(0, 60) + "..." : text);
+                                        sendServerLog(gatewayUrl, "warn", "[EdgeTTS] Không nhận được âm thanh từ máy chủ Edge (" + elapsed + "ms)", "NO_AUDIO", failDetails);
                                         call.reject("No audio received from Edge TTS", "NO_AUDIO");
                                     } else {
                                         Log.i(TAG, "[EdgeTTS] Hoàn tất tổng hợp âm thanh từ máy chủ Edge sau " + elapsed + "ms (audioBytes=" + audioBytes.length + ", boundaries=" + wordBoundaries.length() + ")");
+                                        JSONObject successDetails = new JSONObject();
+                                        successDetails.put("voice", voice);
+                                        successDetails.put("rate", rate);
+                                        successDetails.put("textLength", text.length());
+                                        successDetails.put("elapsedMs", elapsed);
+                                        successDetails.put("audioBytes", audioBytes.length);
+                                        successDetails.put("boundariesCount", wordBoundaries.length());
+                                        successDetails.put("textPreview", text.length() > 60 ? text.substring(0, 60) + "..." : text);
+                                        sendServerLog(gatewayUrl, "info", "[EdgeTTS] Hoàn tất tổng hợp âm thanh từ Edge (" + elapsed + "ms, " + audioBytes.length + " bytes)", null, successDetails);
+
                                         String base64 = Base64.encodeToString(audioBytes, Base64.NO_WRAP);
                                         JSObject ret = new JSObject();
                                         ret.put("audioBase64", base64);
@@ -282,6 +305,17 @@ public class EdgeTTSNativePlugin extends Plugin {
                     int statusCode = response != null ? response.code() : 0;
                     Log.e(TAG, "[EdgeTTS] Kết nối/xử lý với máy chủ Edge THẤT BẠI sau " + elapsed + "ms. Code: " + statusCode + ", Err: " + errorMsg, t);
 
+                    JSONObject errDetails = new JSONObject();
+                    try {
+                        errDetails.put("voice", voice);
+                        errDetails.put("rate", rate);
+                        errDetails.put("textLength", text.length());
+                        errDetails.put("elapsedMs", elapsed);
+                        errDetails.put("statusCode", statusCode);
+                        errDetails.put("textPreview", text.length() > 60 ? text.substring(0, 60) + "..." : text);
+                    } catch (Exception ignored) {}
+                    sendServerLog(gatewayUrl, "error", "[EdgeTTS] Kết nối Edge WebSocket thất bại (" + elapsed + "ms, code: " + statusCode + ")", errorMsg, errDetails);
+
                     synchronized (isResolved) {
                         if (!isResolved[0]) {
                             isResolved[0] = true;
@@ -296,6 +330,43 @@ public class EdgeTTSNativePlugin extends Plugin {
         } catch (Exception e) {
             Log.e(TAG, "Error initiating Edge TTS synthesis", e);
             call.reject("Exception during synthesis: " + e.getMessage(), "INIT_ERROR");
+        }
+    }
+
+    private void sendServerLog(String gatewayUrl, String level, String message, String error, JSONObject details) {
+        if (gatewayUrl == null || gatewayUrl.trim().isEmpty()) return;
+        try {
+            String cleanUrl = gatewayUrl.replaceAll("/+$", "") + "/api/logs/client-error";
+            JSONObject payload = new JSONObject();
+            payload.put("platform", "android");
+            payload.put("source", "EdgeTTSNative_Java");
+            payload.put("level", level);
+            payload.put("message", message);
+            if (error != null) payload.put("error", error);
+            if (details != null) payload.put("details", details);
+
+            okhttp3.RequestBody body = okhttp3.RequestBody.create(
+                    okhttp3.MediaType.parse("application/json; charset=utf-8"),
+                    payload.toString()
+            );
+            Request logReq = new Request.Builder()
+                    .url(cleanUrl)
+                    .post(body)
+                    .build();
+
+            httpClient.newCall(logReq).enqueue(new okhttp3.Callback() {
+                @Override
+                public void onFailure(okhttp3.Call call, java.io.IOException e) {
+                    Log.w(TAG, "Failed to send log to server: " + e.getMessage());
+                }
+
+                @Override
+                public void onResponse(okhttp3.Call call, Response response) {
+                    response.close();
+                }
+            });
+        } catch (Exception e) {
+            Log.w(TAG, "Error building server log payload", e);
         }
     }
 }

@@ -314,7 +314,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			edgeRequestAbortRef.current = new AbortController();
 		}
 
-		const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.0;
+		const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.8;
 		const promise = EdgeTTSService.synthesizeSpeechWithBoundaries(
 			chunk.text,
 			edgeVoiceUri,
@@ -763,7 +763,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 				return;
 			}
 
-			const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.0;
+			const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.8;
 			NativeTTSService.speak({
 				text: textToSpeak,
 				voice: voiceUri,
@@ -833,7 +833,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		}
 
 		const utterance = new SpeechSynthesisUtterance(textToSpeak);
-		utterance.rate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.0;
+		utterance.rate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.8;
 
 		const voices = synth.getVoices();
 		const selectedVoice = voices.find((v) => v.voiceURI === voiceUri || v.name === voiceUri);

@@ -131,12 +131,14 @@ describe('EdgeTTSService', () => {
 
 		const result = await EdgeTTSService.synthesizeSpeechWithBoundaries('Xin chào các bạn', 'vi-VN-HoaiMyNeural', 1.0);
 
-		expect(nativeSpy).toHaveBeenCalledWith({
-			text: 'Xin chào các bạn',
-			voice: 'vi-VN-HoaiMyNeural',
-			rate: '+0%',
-			pitch: '+0Hz'
-		});
+		expect(nativeSpy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				text: 'Xin chào các bạn',
+				voice: 'vi-VN-HoaiMyNeural',
+				rate: '+0%',
+				pitch: '+0Hz'
+			})
+		);
 		expect(result.audio).toBeInstanceOf(Blob);
 		expect(result.wordBoundaries).toHaveLength(2);
 		expect(result.wordBoundaries[0]).toEqual({
@@ -206,6 +208,51 @@ describe('EdgeTTSService', () => {
 			expect.objectContaining({
 				method: 'POST',
 				body: expect.stringContaining('"platform":"android"')
+			})
+		);
+	});
+
+	it('filters out non-Vietnamese voices and only returns Vietnamese voices', async () => {
+		const mixedVoices = [
+			{ id: 'vi-VN-HoaiMyNeural', name: 'Hoài Mỹ', language: 'vi-VN', gender: 'female' },
+			{ id: 'vi-VN-NamMinhNeural', name: 'Nam Minh', language: 'vi-VN', gender: 'male' },
+			{ id: 'en-US-AvaNeural', name: 'Ava', language: 'en-US', gender: 'female' },
+			{ id: 'zh-CN-XiaoxiaoNeural', name: 'Xiaoxiao', language: 'zh-CN', gender: 'female' }
+		];
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({ voices: mixedVoices })
+			})
+		);
+
+		const voices = await EdgeTTSService.fetchVoices('https://api.test');
+		expect(voices).toHaveLength(2);
+		expect(voices.every((v) => v.language === 'vi-VN' || v.id.startsWith('vi-VN'))).toBe(true);
+	});
+
+	it('pushes info log to server gateway when EdgeTTSNative succeeds on Android', async () => {
+		const { Capacitor } = await import('@capacitor/core');
+		const { EdgeTTSNative } = await import('@/services/edgeTtsService');
+
+		vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+		vi.spyOn(EdgeTTSNative, 'synthesize').mockResolvedValue({
+			audioBase64: Buffer.from('mock audio').toString('base64'),
+			mimeType: 'audio/mpeg',
+			wordBoundaries: []
+		});
+
+		const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+		vi.stubGlobal('fetch', fetchMock);
+
+		await EdgeTTSService.synthesizeSpeechWithBoundaries('Xin chào', 'vi-VN-HoaiMyNeural', 1.8, 'https://api.test');
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			'https://api.test/api/logs/client-error',
+			expect.objectContaining({
+				method: 'POST',
+				body: expect.stringContaining('"level":"info"')
 			})
 		);
 	});

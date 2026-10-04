@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Volume2, Sliders, Cpu, Loader2, Minus, Plus, Sparkles, Globe, Server, RotateCcw, Radio } from 'lucide-react';
 
-import { EdgeTTSService, EdgeVoice } from '@/services/edgeTtsService';
+import { EdgeTTSService, EdgeVoice, DEFAULT_EDGE_VOICES } from '@/services/edgeTtsService';
 import { NativeTTSService, NativeVoice, NativeTTSEngine } from '@/services/nativeTtsService';
 import { TTSService, VieNeuVoice, VieNeuModel, DEFAULT_VIENEU_SERVER_URL } from '@/services/ttsService';
 import { useAppStore } from '@/stores/useAppStore';
@@ -108,12 +108,16 @@ export function VoiceSettingsTab() {
 			EdgeTTSService.fetchVoices(activeDomain?.url)
 				.then((voices) => {
 					if (isMounted) {
-						setEdgeVoices(voices);
+						const viVoices = voices.filter((v) => v.language === 'vi-VN' || v.id.startsWith('vi-VN'));
+						setEdgeVoices(viVoices.length > 0 ? viVoices : DEFAULT_EDGE_VOICES);
 						setIsLoadingVoices(false);
 					}
 				})
 				.catch(() => {
-					if (isMounted) setIsLoadingVoices(false);
+					if (isMounted) {
+						setEdgeVoices(DEFAULT_EDGE_VOICES);
+						setIsLoadingVoices(false);
+					}
 				});
 		}
 

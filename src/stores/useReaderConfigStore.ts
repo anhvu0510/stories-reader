@@ -17,7 +17,7 @@ const defaultSettings: ReaderConfig = {
 	batchChapterSize: 1,
 	isEnabledReplace: true,
 	voiceUri: '',
-	speechRate: 1.0,
+	speechRate: 1.8,
 	bookLimit: 20,
 	chapterLimit: 50,
 	ttsEngine: 'vieneu',
