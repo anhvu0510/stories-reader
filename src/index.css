@@ -274,18 +274,7 @@
 	}
 }
 
-/* 1. App Line & Word Highlight for Modern Chromium (CSS Custom Highlight API) */
-::highlight(stories-tts-line) {
-	background-color: rgba(147, 197, 253, 0.28);
-	color: inherit;
-}
-
-::highlight(stories-tts-word) {
-	background-color: #fde047;
-	color: #000000;
-}
-
-/* 2. App Word Highlight fallback (DOM wrapper span) */
+/* 1. App Word Highlight fallback (DOM wrapper span) */
 .stories-tts-word-highlight {
 	position: relative;
 	z-index: 2;

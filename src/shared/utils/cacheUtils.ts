@@ -1,4 +1,5 @@
 import { EdgeTTSNativeStreamService } from '@/services/edgeTtsNativeStream';
+import { NativeTTSStreamService } from '@/services/nativeTtsStream';
 
 /**
  * Cache management utilities for force-refreshing data and clearing stored caches.
@@ -28,12 +29,19 @@ export async function clearAllCaches(): Promise<void> {
 		console.warn('[CacheUtils] Error clearing TTS resume cache:', err);
 	}
 
-	// 3. Clear Native Android Edge TTS audio cache
+	// 3. Clear Native Android Edge TTS and Native Device TTS audio caches
 	try {
 		if (EdgeTTSNativeStreamService.isAvailable()) {
 			await EdgeTTSNativeStreamService.clearCache();
 		}
 	} catch (err) {
 		console.warn('[CacheUtils] Error clearing EdgeTTS native cache:', err);
+	}
+	try {
+		if (NativeTTSStreamService.isAvailable()) {
+			await NativeTTSStreamService.clearCache();
+		}
+	} catch (err) {
+		console.warn('[CacheUtils] Error clearing NativeTTS device cache:', err);
 	}
 }

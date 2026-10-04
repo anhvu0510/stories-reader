@@ -23,13 +23,32 @@ export interface NativeTTSPluginInterface {
 	getVoices(): Promise<{ voices: NativeVoice[] }>;
 	speak(options: { text: string; voice?: string; rate?: number; pitch?: number; utteranceId?: string }): Promise<{ utteranceId: string }>;
 	stop(): Promise<void>;
+	playChapter?(options: {
+		chunks: string[];
+		startIndex?: number;
+		voice?: string;
+		rate?: number;
+		pitch?: number;
+		initialBufferAhead?: number;
+		maxBufferAhead?: number;
+		gatewayUrl?: string;
+	}): Promise<void>;
+	pausePlayback?(): Promise<void>;
+	resumePlayback?(): Promise<void>;
+	stopPlayback?(): Promise<void>;
+	seekToChunk?(options: { chunkIndex: number }): Promise<void>;
+	clearCache?(): Promise<void>;
 	addListener(eventName: 'onStart', listenerFunc: (info: { utteranceId: string }) => void): Promise<PluginListenerHandle>;
 	addListener(eventName: 'onDone', listenerFunc: (info: { utteranceId: string }) => void): Promise<PluginListenerHandle>;
-	addListener(eventName: 'onError', listenerFunc: (info: { utteranceId: string; error?: string }) => void): Promise<PluginListenerHandle>;
+	addListener(eventName: 'onError', listenerFunc: (info: { utteranceId?: string; error?: string; message?: string; chunkIndex?: number }) => void): Promise<PluginListenerHandle>;
 	addListener(eventName: 'onRangeStart', listenerFunc: (info: { utteranceId: string; start: number; end: number }) => void): Promise<PluginListenerHandle>;
+	addListener(eventName: 'onChunkStart', listenerFunc: (data: { chunkIndex: number }) => void): Promise<PluginListenerHandle>;
+	addListener(eventName: 'onWordBoundary', listenerFunc: (data: any) => void): Promise<PluginListenerHandle>;
+	addListener(eventName: 'onPlaybackStateChange', listenerFunc: (data: any) => void): Promise<PluginListenerHandle>;
+	addListener(eventName: 'onPlaybackComplete', listenerFunc: () => void): Promise<PluginListenerHandle>;
 }
 
-const NativeTTS = registerPlugin<NativeTTSPluginInterface>('NativeTTS');
+export const NativeTTS = registerPlugin<NativeTTSPluginInterface>('NativeTTS');
 
 class NativeTTSServiceClass {
 	private activeListeners: PluginListenerHandle[] = [];

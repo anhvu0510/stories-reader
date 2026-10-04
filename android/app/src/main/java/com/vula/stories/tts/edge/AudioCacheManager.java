@@ -22,13 +22,21 @@ public class AudioCacheManager {
     public static final int MAX_TOTAL_CACHE_FILES = 25;
 
     private final Context context;
+    private final String cacheSubDir;
+    private final String fileExtension;
 
     public AudioCacheManager(Context context) {
+        this(context, "edge_tts_cache", ".mp3");
+    }
+
+    public AudioCacheManager(Context context, String cacheSubDir, String fileExtension) {
         this.context = context.getApplicationContext();
+        this.cacheSubDir = cacheSubDir != null ? cacheSubDir : "edge_tts_cache";
+        this.fileExtension = fileExtension != null ? fileExtension : ".mp3";
     }
 
     public File getCacheDir() {
-        File dir = new File(context.getCacheDir(), "edge_tts_cache");
+        File dir = new File(context.getCacheDir(), cacheSubDir);
         if (!dir.exists()) {
             dir.mkdirs();
         }
@@ -36,7 +44,7 @@ public class AudioCacheManager {
     }
 
     public File getChunkFile(int index) {
-        return new File(getCacheDir(), "chunk_" + index + ".mp3");
+        return new File(getCacheDir(), "chunk_" + index + fileExtension);
     }
 
     public void cleanCacheDir(boolean purgeAll) {

@@ -645,6 +645,51 @@ describe('useReadAloud Edge word boundaries', () => {
 		unmount();
 	});
 
+	it('delegates to NativeTTSStreamService when ttsEngine === browser on Android native platform and prevents highlight flicker', async () => {
+		useReaderConfigStore.setState({ ttsEngine: 'browser', voiceUri: 'vi-vn-x-gda-network' });
+		const { NativeTTSStreamService } = await import('@/services/nativeTtsStream');
+		vi.spyOn(NativeTTSStreamService, 'isAvailable').mockReturnValue(true);
+		const startPlaybackSpy = vi.spyOn(NativeTTSStreamService, 'startPlayback').mockResolvedValue(undefined);
+		const pauseSpy = vi.spyOn(NativeTTSStreamService, 'pause').mockResolvedValue(undefined);
+		const stopSpy = vi.spyOn(NativeTTSStreamService, 'stop').mockResolvedValue(undefined);
+
+		const clearSpy = vi.spyOn(DomWordHighlighter.prototype, 'clear');
+
+		const paragraphs = ['Đoạn một trên native device.', 'Đoạn hai trên native device.'];
+		const { result, unmount } = renderHook(() =>
+			useReadAloud(paragraphs, { chapterId: 'c-dev-native', bookId: 'b-dev-native', chapterNumber: 1 })
+		);
+
+		await act(async () => {
+			result.current.startReading();
+		});
+
+		expect(startPlaybackSpy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				chunks: expect.arrayContaining(['Đoạn một trên native device.', 'Đoạn hai trên native device.']),
+				startIndex: 0,
+				voice: 'vi-vn-x-gda-network'
+			})
+		);
+
+		clearSpy.mockClear();
+
+		// Emits onChunkStart for next chunk: highlight should NOT be cleared!
+		act(() => {
+			NativeTTSStreamService['chunkStartListeners'].forEach((cb) => cb(1));
+		});
+
+		expect(clearSpy).not.toHaveBeenCalled();
+
+		act(() => result.current.pauseReading());
+		expect(pauseSpy).toHaveBeenCalled();
+
+		act(() => result.current.stopReading());
+		expect(stopSpy).toHaveBeenCalled();
+
+		unmount();
+	});
+
 	it('exposes clearResumePosition and removes saved position from localStorage', async () => {
 		const chapterId = 'test-clear-resume-chap';
 		localStorage.setItem(`stories_tts_pos_${chapterId}`, JSON.stringify({ chunkIndex: 3, charOffset: 10 }));

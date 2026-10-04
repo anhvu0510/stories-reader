@@ -4,6 +4,7 @@ import { useTTSStore } from '@/features/reader/stores/useTTSStore';
 import { BackgroundAudioKeepAlive } from '@/services/backgroundAudioKeepAlive';
 import { DomWordHighlighter } from '@/services/domWordHighlighter';
 import { EdgeTTSNativeStreamService } from '@/services/edgeTtsNativeStream';
+import { NativeTTSStreamService } from '@/services/nativeTtsStream';
 import { EdgeTTSService, getGatewayBaseUrl, type EdgeSpeechWithBoundaries } from '@/services/edgeTtsService';
 import { GaplessTtsPlayer, splitByDatabaseBoundaries, type SentenceChunk, WebAudioPlaybackEngine } from '@/services/gaplessTtsPlayer';
 import { NativeTTSService } from '@/services/nativeTtsService';
@@ -566,6 +567,9 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		if (NativeTTSService.isNative()) {
 			void NativeTTSService.stop();
 		}
+		if (NativeTTSStreamService.isAvailable()) {
+			void NativeTTSStreamService.stop();
+		}
 		if (EdgeTTSNativeStreamService.isAvailable()) {
 			void EdgeTTSNativeStreamService.stop();
 		}
@@ -649,11 +653,21 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		}
 	};
 
-	// Native Android Edge TTS Streaming Event Listeners
-	useEffect(() => {
-		if (ttsEngine !== 'edge' || !EdgeTTSNativeStreamService.isAvailable()) return;
+	const activeNativeStream = useMemo(() => {
+		if (ttsEngine === 'edge' && EdgeTTSNativeStreamService.isAvailable()) {
+			return EdgeTTSNativeStreamService;
+		}
+		if (ttsEngine === 'browser' && NativeTTSStreamService.isAvailable()) {
+			return NativeTTSStreamService;
+		}
+		return null;
+	}, [ttsEngine]);
 
-		const unsubChunk = EdgeTTSNativeStreamService.onChunkStart((idx) => {
+	// Native Android Streaming Event Listeners (both Edge and Device TTS)
+	useEffect(() => {
+		if (!activeNativeStream) return;
+
+		const unsubChunk = activeNativeStream.onChunkStart((idx) => {
 			if (!isPlayingRef.current) return;
 			currentChunkIdxRef.current = idx;
 			setCurrentChunkIndex(idx);
@@ -670,12 +684,12 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			}
 		});
 
-		const unsubWord = EdgeTTSNativeStreamService.onWordBoundary(({ chunkIndex, charIndex, charLength }) => {
+		const unsubWord = activeNativeStream.onWordBoundary(({ chunkIndex, charIndex, charLength }) => {
 			if (!isPlayingRef.current) return;
 			updateWordHighlight(chunkIndex, charIndex, charLength);
 		});
 
-		const unsubState = EdgeTTSNativeStreamService.onPlaybackStateChange(({ isPlaying: p, isPaused: pa, isBuffering: b }) => {
+		const unsubState = activeNativeStream.onPlaybackStateChange(({ isPlaying: p, isPaused: pa, isBuffering: b }) => {
 			if (p) {
 				setIsPlaying(true);
 				isPlayingRef.current = true;
@@ -685,7 +699,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			setIsLoading(b);
 		});
 
-		const unsubDone = EdgeTTSNativeStreamService.onPlaybackComplete(() => {
+		const unsubDone = activeNativeStream.onPlaybackComplete(() => {
 			if (!isPlayingRef.current) return;
 			clearResumePosition();
 			stopReading(true);
@@ -697,7 +711,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			unsubState();
 			unsubDone();
 		};
-	}, [ttsEngine, chunks, saveResumePosition, clearResumePosition]);
+	}, [activeNativeStream, chunks, saveResumePosition, clearResumePosition]);
 
 	useEffect(() => {
 		stopReading();
@@ -1057,7 +1071,9 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			isPausedRef.current = false;
 			backgroundAudioRef.current?.start();
 
-			if (ttsEngine === 'vieneu' && gaplessPlayerRef.current) {
+			if (activeNativeStream) {
+				void activeNativeStream.resume();
+			} else if (ttsEngine === 'vieneu' && gaplessPlayerRef.current) {
 				void gaplessPlayerRef.current.resume().catch(() => playChunk(currentChunkIdxRef.current));
 			} else if (ttsEngine === 'browser') {
 				if (NativeTTSService.isNative()) {
@@ -1066,9 +1082,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 					synth.resume();
 				}
 			} else if (ttsEngine === 'edge') {
-				if (EdgeTTSNativeStreamService.isAvailable()) {
-					void EdgeTTSNativeStreamService.resume();
-				} else if (edgeAudioRef.current) {
+				if (edgeAudioRef.current) {
 					void edgeAudioRef.current.play().catch(() => playChunk(currentChunkIdxRef.current));
 				} else {
 					playChunk(currentChunkIdxRef.current);
@@ -1123,17 +1137,21 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			}
 		}
 
-		if (ttsEngine === 'edge' && EdgeTTSNativeStreamService.isAvailable()) {
+		if (activeNativeStream) {
 			setIsPlaying(true);
 			setIsLoading(true);
 			isPlayingRef.current = true;
 			isPausedRef.current = false;
 			const textChunks = chunks.map((c) => c.text);
-			void EdgeTTSNativeStreamService.startPlayback({
+			const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.8;
+			const targetVoice = ttsEngine === 'edge' ? (edgeVoiceUri || 'vi-VN-HoaiMyNeural') : voiceUri;
+
+			void activeNativeStream.startPlayback({
 				chunks: textChunks,
 				startIndex: targetIdx,
-				voice: edgeVoiceUri,
-				rate: speechRateRef.current ?? 1.8,
+				voice: targetVoice,
+				rate: currentSpeechRate,
+				pitch: ttsEngine === 'edge' ? ('+0Hz' as any) : 1.0,
 				gatewayUrl: activeDomain?.url || getGatewayBaseUrl()
 			});
 			return;
@@ -1157,18 +1175,16 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		if (gaplessPlayerRef.current) {
 			void gaplessPlayerRef.current.pause();
 		}
-		if (ttsEngine === 'browser') {
+		if (activeNativeStream) {
+			void activeNativeStream.pause();
+		} else if (ttsEngine === 'browser') {
 			if (NativeTTSService.isNative()) {
 				void NativeTTSService.stop();
 			} else if (ownsBrowserSpeechQueueRef.current && synth) {
 				synth.pause();
 			}
 		} else if (ttsEngine === 'edge') {
-			if (EdgeTTSNativeStreamService.isAvailable()) {
-				void EdgeTTSNativeStreamService.pause();
-			} else {
-				edgeAudioRef.current?.pause();
-			}
+			edgeAudioRef.current?.pause();
 		}
 	};
 
@@ -1188,8 +1204,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			isPlayingRef.current = true;
 			isPausedRef.current = false;
 			currentChunkIdxRef.current = nextIdx;
-			if (ttsEngine === 'edge' && EdgeTTSNativeStreamService.isAvailable()) {
-				void EdgeTTSNativeStreamService.seekToChunk(nextIdx);
+			if (activeNativeStream) {
+				void activeNativeStream.seekToChunk(nextIdx);
 				return;
 			}
 			playChunk(nextIdx);
@@ -1215,8 +1231,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			isPlayingRef.current = true;
 			isPausedRef.current = false;
 			currentChunkIdxRef.current = prevIdx;
-			if (ttsEngine === 'edge' && EdgeTTSNativeStreamService.isAvailable()) {
-				void EdgeTTSNativeStreamService.seekToChunk(prevIdx);
+			if (activeNativeStream) {
+				void activeNativeStream.seekToChunk(prevIdx);
 				return;
 			}
 			playChunk(prevIdx);
@@ -1246,8 +1262,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			isPlayingRef.current = true;
 			isPausedRef.current = false;
 			currentChunkIdxRef.current = targetIndex;
-			if (ttsEngine === 'edge' && EdgeTTSNativeStreamService.isAvailable()) {
-				void EdgeTTSNativeStreamService.seekToChunk(targetIndex);
+			if (activeNativeStream) {
+				void activeNativeStream.seekToChunk(targetIndex);
 				return;
 			}
 			playChunk(targetIndex, chunkOffset);
