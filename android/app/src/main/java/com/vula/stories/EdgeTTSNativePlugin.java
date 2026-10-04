@@ -905,30 +905,43 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
     }
 
     private synchronized void stopPlaybackInternal(boolean emitEvent) {
+        boolean wasActive = isStreamingPlaying
+                || (player != null && (player.isPlayingSafely() || player.isPaused()))
+                || (!currentChunks.isEmpty() && player != null && player.getCurrentChunkIndex() >= 0);
+
+        int currentIdx = (player != null) ? player.getCurrentChunkIndex() : -1;
+        int total = currentChunks.size();
+
         isStreamingPlaying = false;
         cancelPendingPrefetches(-1);
-        player.stop();
+        if (player != null) {
+            player.reset();
+        }
         retryManager.reset();
 
         // Hủy đăng ký listener và thu hồi Notification trên thanh thông báo / màn hình khóa
         StoriesAudioBridge.unregisterListener(this);
         StoriesAudioBridge.stopPlayback(getContext());
 
-        if (emitEvent) {
+        if (emitEvent && wasActive) {
             JSObject state = new JSObject();
             state.put("isPlaying", false);
             state.put("isPaused", false);
             state.put("isBuffering", false);
             notifyListeners("onPlaybackStateChange", state);
 
-            int currentIdx = player.getCurrentChunkIndex();
-            JSONObject stopDetails = new JSONObject();
-            try {
-                stopDetails.put("lastChunkIndex", currentIdx);
-                stopDetails.put("totalChunks", currentChunks.size());
-            } catch (Exception ignored) {}
-            RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Dừng đọc chương tại câu " + (currentIdx + 1) + "/" + currentChunks.size(), null, stopDetails);
+            // Chỉ ghi log remote telemetry khi thực sự có phiên đọc đang hoạt động và câu đọc hợp lệ
+            if (total > 0 && currentIdx >= 0) {
+                JSONObject stopDetails = new JSONObject();
+                try {
+                    stopDetails.put("lastChunkIndex", currentIdx);
+                    stopDetails.put("totalChunks", total);
+                } catch (Exception ignored) {}
+                RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Dừng đọc chương tại câu " + (currentIdx + 1) + "/" + total, null, stopDetails);
+            }
         }
+
+        currentChunks.clear();
     }
 
     // ==========================================

@@ -321,7 +321,10 @@ export function useNativeReadAloud(
 
 	const stopReading = useCallback(
 		(clearPosition = false) => {
-			if (activeNativeStream) {
+			// Kiểm tra xem trước đó TTS có đang chạy, tạm dừng hoặc đang tải không
+			const wasActive = isPlayingRef.current || isPausedRef.current || isLoading;
+
+			if (wasActive && activeNativeStream) {
 				void activeNativeStream.stop();
 			}
 			setIsPlaying(false);
@@ -334,11 +337,11 @@ export function useNativeReadAloud(
 			if (clearPosition) {
 				clearResumePosition();
 				setCurrentChunkIndex(-1);
-			} else {
+			} else if (wasActive) {
 				saveResumePosition(currentChunkIdxRef.current, 0);
 			}
 		},
-		[activeNativeStream, clearResumePosition, saveResumePosition]
+		[activeNativeStream, clearResumePosition, saveResumePosition, isLoading]
 	);
 
 	const nextSection = useCallback(() => {

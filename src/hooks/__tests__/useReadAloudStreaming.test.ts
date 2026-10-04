@@ -843,6 +843,38 @@ describe('useReadAloud browser speech ownership', () => {
 
 		unmount();
 	});
+
+	it('không gọi NativeTTSService.stop hay EdgeTTSNativeStreamService.stop khi người dùng chỉ lướt trang (idle)', async () => {
+		const paragraphs = ['Đoạn văn đọc lướt bằng mắt.'];
+		useReaderConfigStore.setState({ ttsEngine: 'edge' });
+		const nativeStopSpy = vi.spyOn(NativeTTSService, 'stop').mockImplementation(async () => {});
+		vi.spyOn(NativeTTSService, 'isNative').mockReturnValue(true);
+
+		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
+		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+		const edgeStopSpy = vi.spyOn(EdgeTTSNativeStreamService, 'stop').mockResolvedValue(undefined);
+
+		const { result, rerender, unmount } = renderHook(
+			({ p }) => useReadAloud(p, { chapterId: 'c-idle', bookId: 'b-idle', chapterNumber: 1 }),
+			{ initialProps: { p: paragraphs } }
+		);
+
+		// Người dùng lướt sang chương tiếp theo -> paragraphs thay đổi -> trigger useEffect gọi stopReading()
+		rerender({ p: ['Đoạn văn chương tiếp theo mà người dùng lướt tới.'] });
+
+		// Gọi stopReading trực tiếp khi chưa từng phát âm thanh
+		act(() => {
+			result.current.stopReading();
+		});
+
+		// Cả 2 service Native đều không được gọi để tránh lag IPC và spam logs
+		expect(nativeStopSpy).not.toHaveBeenCalled();
+		expect(edgeStopSpy).not.toHaveBeenCalled();
+
+		unmount();
+		expect(nativeStopSpy).not.toHaveBeenCalled();
+		expect(edgeStopSpy).not.toHaveBeenCalled();
+	});
 });
 
 

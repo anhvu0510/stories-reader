@@ -548,8 +548,11 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	};
 
 	const stopReading = (clearSaved = false) => {
+		// Kiểm tra xem luồng đọc trước đó có đang thực sự chạy hoặc tạm dừng không
+		const wasActive = isPlayingRef.current || isPausedRef.current || isLoading;
 		const ownsBrowserSpeechQueue = ownsBrowserSpeechQueueRef.current;
-		if (!clearSaved && (isPlayingRef.current || isPausedRef.current) && currentChunkIdxRef.current < chunks.length - 1) {
+
+		if (!clearSaved && wasActive && currentChunkIdxRef.current < chunks.length - 1) {
 			saveResumePosition(currentChunkIdxRef.current, charIndexRef.current > 0 ? charIndexRef.current : 0);
 		} else if (clearSaved) {
 			clearResumePosition();
@@ -567,15 +570,21 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		backgroundAudioRef.current?.stop();
 		wordHighlighterRef.current?.clear();
 		scrollFollowerRef.current?.cancel();
-		if (NativeTTSService.isNative()) {
-			void NativeTTSService.stop();
+
+		// Chỉ kích hoạt lệnh stop xuống các dịch vụ Native khi TTS thực sự đang phát hoặc dở dang,
+		// ngăn chặn hoàn toàn việc spam IPC và gửi RemoteLogger vô nghĩa khi người dùng chỉ lướt trang
+		if (wasActive) {
+			if (NativeTTSService.isNative()) {
+				void NativeTTSService.stop();
+			}
+			if (NativeTTSStreamService.isAvailable()) {
+				void NativeTTSStreamService.stop();
+			}
+			if (EdgeTTSNativeStreamService.isAvailable()) {
+				void EdgeTTSNativeStreamService.stop();
+			}
 		}
-		if (NativeTTSStreamService.isAvailable()) {
-			void NativeTTSStreamService.stop();
-		}
-		if (EdgeTTSNativeStreamService.isAvailable()) {
-			void EdgeTTSNativeStreamService.stop();
-		}
+
 		if (ownsBrowserSpeechQueue && synth) synth.cancel();
 		ownsBrowserSpeechQueueRef.current = false;
 		utteranceRef.current = null;

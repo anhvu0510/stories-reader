@@ -220,4 +220,27 @@ describe('useNativeReadAloud Hook', () => {
 
 		unmount();
 	});
+
+	it('không gọi stop xuống Native stream khi người dùng chỉ lướt trang mà không phát âm thanh (idle)', async () => {
+		useReaderConfigStore.setState({ ttsEngine: 'edge', edgeVoiceUri: 'vi-VN-HoaiMyNeural' });
+		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
+		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+		const stopSpy = vi.spyOn(EdgeTTSNativeStreamService, 'stop').mockResolvedValue(undefined);
+
+		const paragraphs = ['Chương mới người dùng chỉ lướt qua xem.'];
+		const { result, unmount } = renderHook(() =>
+			useNativeReadAloud(paragraphs, { bookId: 'b5', chapterId: 'c5', chapterNumber: 5 })
+		);
+
+		// Gọi stop khi chưa từng startReading (mô phỏng unmount hoặc chuyển trang)
+		act(() => {
+			result.current.stopReading();
+		});
+
+		// Không được gọi stop xuống Native stream
+		expect(stopSpy).not.toHaveBeenCalled();
+
+		unmount();
+		expect(stopSpy).not.toHaveBeenCalled();
+	});
 });
