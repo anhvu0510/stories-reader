@@ -29,6 +29,7 @@ import { QuickChapterSelectSheet } from './components/QuickChapterSelectSheet';
 import { QuickTypographySheet } from './components/QuickTypographySheet';
 import { ReaderHeader } from './components/ReaderHeader';
 import { ReaderQuickControl } from './components/ReaderQuickControl';
+import { ReaderChapterSkeleton } from './components/ReaderChapterSkeleton';
 import { SelectionSpeakerTooltip } from './components/SelectionSpeakerTooltip';
 import { VerticalBatchChapterNav } from './components/VerticalBatchChapterNav';
 
@@ -617,6 +618,8 @@ export function ReaderScreen() {
 
 	// Native Swipe Gestures for Mobile Chapter Navigation with Smooth Page Transitions
 	const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+	const [isDragging, setIsDragging] = useState(false);
+	const [dragOffset, setDragOffset] = useState(0);
 	const readerContentRef = useRef<HTMLDivElement | null>(null);
 
 	// Tự động thu hồi transform và đưa vị trí đọc về đỉnh trang (top: 0) ngay khi sang chương mới
@@ -660,6 +663,7 @@ export function ReaderScreen() {
 		if (readerContentRef.current) {
 			readerContentRef.current.style.transition = 'none';
 		}
+		setIsDragging(true);
 	}, []);
 
 	const handleDragMove = useCallback(
@@ -671,12 +675,15 @@ export function ReaderScreen() {
 			if ((!hasPrev && offset > 0) || (!hasNext && offset < 0)) {
 				effectiveOffset = offset * 0.25; // rubber band damping at boundaries
 			}
+			setDragOffset(effectiveOffset);
 			readerContentRef.current.style.transform = `translate3d(${effectiveOffset}px, 0, 0)`;
 		},
 		[contentData?.navigation?.prev?.chapterId, contentData?.navigation?.next?.chapterId]
 	);
 
 	const handleDragEnd = useCallback((settled?: 'left' | 'right' | 'cancel') => {
+		setIsDragging(false);
+		setDragOffset(0);
 		if (!readerContentRef.current) return;
 		if (settled === 'left') {
 			readerContentRef.current.style.transition = 'transform 200ms cubic-bezier(0.2, 0, 0, 1)';
@@ -690,6 +697,22 @@ export function ReaderScreen() {
 			readerContentRef.current.style.transform = 'translate3d(0px, 0, 0)';
 		}
 	}, []);
+
+	// Xác định gợi ý tiêu đề chương kế tiếp/trước đó khi vuốt hoặc đang tải chương mới
+	const pendingTitleHint = useMemo(() => {
+		if (swipeDirection === 'left' || dragOffset < 0) {
+			const next = contentData?.navigation?.next;
+			return next?.title || (next?.chapterNumber ? `Chương ${next.chapterNumber}` : undefined);
+		}
+		if (swipeDirection === 'right' || dragOffset > 0) {
+			const prev = contentData?.navigation?.prev;
+			return prev?.title || (prev?.chapterNumber ? `Chương ${prev.chapterNumber}` : undefined);
+		}
+		return undefined;
+	}, [swipeDirection, dragOffset, contentData?.navigation]);
+
+	const isChapterChanging = Boolean(contentData && chapterId && contentData.chapter.chapterId !== chapterId);
+	const isChapterLoading = loading || isChapterChanging;
 
 	const contentWidth = typeof window !== 'undefined' ? Math.min(window.innerWidth || 390, 448) : 390;
 	const commitThreshold = Math.max(90, Math.round(contentWidth * 0.3));
@@ -722,32 +745,17 @@ export function ReaderScreen() {
 	if (loading && !contentData) {
 		return (
 			<div className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden ${fontClass}`}>
+				{/* Top Ambient Lighting Glow */}
+				<div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-96 bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent blur-3xl" />
+
 				{/* Header Skeleton */}
-				<div className="px-4 py-3.5 border-b border-outline-variant/20 flex items-center justify-between opacity-60">
-					<div className="h-4 w-36 bg-on-surface-variant/20 rounded-md animate-pulse" />
-					<div className="h-6 w-6 bg-on-surface-variant/20 rounded-full animate-pulse" />
+				<div className="px-4 py-3.5 border-b border-outline-variant/20 flex items-center justify-between opacity-70">
+					<div className="h-4 w-36 skeleton-shimmer rounded-md" />
+					<div className="h-6 w-6 skeleton-shimmer rounded-full" />
 				</div>
 
-				{/* Paragraph Content Skeleton Lines */}
-				<div className="p-4 space-y-4 opacity-50">
-					<div className="h-5 w-52 bg-primary/30 rounded-md animate-pulse mb-6" />
-					<div className="space-y-2.5">
-						<div className="h-3.5 w-full bg-on-surface-variant/20 rounded animate-pulse" />
-						<div className="h-3.5 w-[94%] bg-on-surface-variant/20 rounded animate-pulse" />
-						<div className="h-3.5 w-[98%] bg-on-surface-variant/20 rounded animate-pulse" />
-						<div className="h-3.5 w-[88%] bg-on-surface-variant/20 rounded animate-pulse" />
-					</div>
-					<div className="space-y-2.5 pt-3">
-						<div className="h-3.5 w-[96%] bg-on-surface-variant/20 rounded animate-pulse" />
-						<div className="h-3.5 w-[92%] bg-on-surface-variant/20 rounded animate-pulse" />
-						<div className="h-3.5 w-[95%] bg-on-surface-variant/20 rounded animate-pulse" />
-						<div className="h-3.5 w-[85%] bg-on-surface-variant/20 rounded animate-pulse" />
-					</div>
-					<div className="space-y-2.5 pt-3">
-						<div className="h-3.5 w-[98%] bg-on-surface-variant/20 rounded animate-pulse" />
-						<div className="h-3.5 w-[90%] bg-on-surface-variant/20 rounded animate-pulse" />
-					</div>
-				</div>
+				{/* Multi-layer Chapter Skeleton Body */}
+				<ReaderChapterSkeleton />
 			</div>
 		);
 	}
@@ -834,26 +842,52 @@ export function ReaderScreen() {
 			/>
 
 			{/* Reader Content Article - Frozen Memoized Multi-Chapter Section with Tap-to-Toggle Dock */}
-			<div ref={readerContentRef} className="w-full will-change-transform">
-				<motion.div
-					key={`${chapter.chapterId}-${domResetKey}`}
-					initial={{ opacity: 0, x: swipeDirection === 'left' ? 40 : swipeDirection === 'right' ? -40 : 0 }}
-					animate={{ opacity: 1, x: 0 }}
-					transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
-					className="w-full"
-				>
-					<ChapterContentSection
-						chapters={displayChapters}
-						fontSize={fontSize}
-						lineHeight={lineHeight}
-						isPlaying={isPlaying}
-						isPaused={isPaused}
-						currentParagraphIndex={activeParagraphIndex}
-						onDoubleClick={handleDoubleClick}
-						onTouchStart={handleTouchStart}
-						onTouchEnd={handleTouchEnd}
-					/>
-				</motion.div>
+			<div className="relative w-full overflow-hidden">
+				{/* Lớp Skeleton nền (Underlay) hé lộ khi người dùng đang kéo vuốt (Interactive Peek) */}
+				{isDragging && (
+					<div
+						aria-hidden="true"
+						className="absolute inset-0 pointer-events-none select-none z-0 overflow-hidden opacity-90 transition-opacity duration-150"
+					>
+						<ReaderChapterSkeleton titleHint={pendingTitleHint} />
+					</div>
+				)}
+
+				{/* Khung nội dung chính với chuyển động trượt mượt mà */}
+				<div ref={readerContentRef} className="w-full will-change-transform relative z-10 bg-background">
+					{isChapterLoading ? (
+						<motion.div
+							key={`loading-skeleton-${chapterId}`}
+							initial={{ opacity: 0, x: swipeDirection === 'left' ? 40 : swipeDirection === 'right' ? -40 : 0 }}
+							animate={{ opacity: 1, x: 0 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
+							className="w-full bg-background"
+						>
+							<ReaderChapterSkeleton titleHint={pendingTitleHint} />
+						</motion.div>
+					) : (
+						<motion.div
+							key={`${chapter.chapterId}-${domResetKey}`}
+							initial={{ opacity: 0, x: swipeDirection === 'left' ? 40 : swipeDirection === 'right' ? -40 : 0 }}
+							animate={{ opacity: 1, x: 0 }}
+							transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
+							className="w-full"
+						>
+							<ChapterContentSection
+								chapters={displayChapters}
+								fontSize={fontSize}
+								lineHeight={lineHeight}
+								isPlaying={isPlaying}
+								isPaused={isPaused}
+								currentParagraphIndex={activeParagraphIndex}
+								onDoubleClick={handleDoubleClick}
+								onTouchStart={handleTouchStart}
+								onTouchEnd={handleTouchEnd}
+							/>
+						</motion.div>
+					)}
+				</div>
 			</div>
 
 			{/* Single Capsule Zen Mode Floating Control Bar */}

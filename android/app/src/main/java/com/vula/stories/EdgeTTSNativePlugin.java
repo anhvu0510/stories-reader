@@ -88,6 +88,21 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
     private final Set<Integer> inFlightIndices = Collections.synchronizedSet(new HashSet<>());
     private final Map<Integer, WebSocket> activeSockets = new ConcurrentHashMap<>();
 
+    /**
+     * Tìm chỉ số của câu xa nhất hiện đã có sẵn trong bộ đệm cache âm thanh (readyAudioFiles).
+     *
+     * @return Chỉ số câu lớn nhất đã cache xong, hoặc -1 nếu chưa có câu nào.
+     */
+    private int getLastCachedChunkIndex() {
+        int maxIndex = -1;
+        for (Integer idx : readyAudioFiles.keySet()) {
+            if (idx != null && idx > maxIndex) {
+                maxIndex = idx;
+            }
+        }
+        return maxIndex;
+    }
+
     @Override
     public void load() {
         super.load();
@@ -110,8 +125,20 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                 String playText = (chunkIndex >= 0 && chunkIndex < currentChunks.size()) ? currentChunks.get(chunkIndex) : "";
                 String snippet = RemoteLogger.formatSnippet(playText);
 
+                // Lấy thông tin câu cache cuối cùng hiện có trong bộ đệm readyAudioFiles
+                int lastCachedIdx = getLastCachedChunkIndex();
+                String lastCachedSnippet = (lastCachedIdx >= 0 && lastCachedIdx < currentChunks.size())
+                        ? RemoteLogger.formatSnippet(currentChunks.get(lastCachedIdx))
+                        : "";
+                String cacheInfoStr = (lastCachedIdx >= 0)
+                        ? " [Cache cuối: câu " + (lastCachedIdx + 1) + "/" + currentChunks.size() + " - \"" + lastCachedSnippet + "\"]"
+                        : " [Cache: Chưa có]";
+
+                String fullLogMessage = "[EdgeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size()
+                        + ": \"" + snippet + "\"" + cacheInfoStr;
+
                 // 1. Luôn ghi log nội bộ Logcat thiết bị đầy đủ 100% các câu
-                Log.d(TAG, "[EdgeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size() + ": \"" + snippet + "\"");
+                Log.d(TAG, fullLogMessage);
 
                 // 2. Gửi RemoteLogger ở cấp độ câu phục vụ tracking, có cơ chế chống spam (tối thiểu 1.5s giữa các lần gửi, câu đầu/cuối luôn gửi)
                 long now = System.currentTimeMillis();
@@ -127,10 +154,13 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                             playDetails.put("progress", progressPct + "%");
                         }
                         playDetails.put("snippet", snippet);
+                        playDetails.put("lastCachedIndex", lastCachedIdx);
+                        if (lastCachedIdx >= 0) {
+                            playDetails.put("lastCachedSnippet", lastCachedSnippet);
+                        }
+                        playDetails.put("cachedChunksCount", readyAudioFiles.size());
                     } catch (Exception ignored) {}
-                    RemoteLogger.log("EdgeTTSNative_Stream", "info",
-                            "[EdgeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size() + ": \"" + snippet + "\"",
-                            null, playDetails);
+                    RemoteLogger.log("EdgeTTSNative_Stream", "info", fullLogMessage, null, playDetails);
                 }
 
                 // Cập nhật thông tin câu đọc và trạng thái phát lên thanh điều khiển Notification & Lock Screen
