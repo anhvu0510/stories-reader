@@ -1,7 +1,7 @@
 {
-  "version": "1.0.308",
+  "version": "1.0.309",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "1b7585c21e446087a39a598b6a3503354cec522a9f0013074c7cf036693d41e7",
-  "releaseNotes": "feat: add route restoration hook and improve swipe gesture and pull-to-refresh handling",
-  "updatedAt": "2026-10-04T14:57:13Z"
+  "checksum": "28d198ab7f1244df6b35b6381837c89f1ca6efc9ec3deb523aa01b94a0f17ee8",
+  "releaseNotes": "feat: add useCupertinoSwipeBack hook and update native TTS playback state handling",
+  "updatedAt": "2026-10-04T15:21:09Z"
 }
