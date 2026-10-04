@@ -1,7 +1,7 @@
 {
-  "version": "1.0.317",
+  "version": "1.0.318",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "7c0d94c7737c274733df77f2a1c206c7fb7e3704a4b10a44e45613fc06821af9",
-  "releaseNotes": "feat: add rate-limited remote logging for text-to-speech chunk playback in Android plugins",
-  "updatedAt": "2026-10-04T16:46:59Z"
+  "checksum": "e23cce297fb063f101633d6182a11ab3689da9fd1f794d389cb181f56c7bd330",
+  "releaseNotes": "feat: add ReaderChapterSkeleton component and enhance TTS logging with cache tracking",
+  "updatedAt": "2026-10-04T17:25:40Z"
 }
