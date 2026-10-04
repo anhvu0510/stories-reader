@@ -1,7 +1,7 @@
 {
-  "version": "1.0.293",
+  "version": "1.0.294",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "9ce6629fd26f6b62524f31734efc094af3a355cd3c3b3c91580abe6cd64c5313",
-  "releaseNotes": "refactor: hide pull-to-refresh visual indicators and remove refresh toast notifications across screens",
-  "updatedAt": "2026-10-04T07:01:53Z"
+  "checksum": "f9876642d61879ae937f5d8f9800bda053286854caee78280a6ff7c86e387e38",
+  "releaseNotes": "feat: add native EdgeTTS streaming service and associated unit tests",
+  "updatedAt": "2026-10-04T07:15:41Z"
 }
