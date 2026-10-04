@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 def computedVersionCode = ((int) (System.currentTimeMillis() / 1000))
+def computedVersionName = System.getenv("APP_VERSION") ?: "1.0.4"
 
 android {
     namespace "com.vula.stories"
@@ -19,7 +20,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Tự động tăng versionCode theo timestamp để Android luôn nhận diện là bản cập nhật mới, cho phép cài đè
         versionCode computedVersionCode
-        versionName "1.0.4"
+        versionName computedVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

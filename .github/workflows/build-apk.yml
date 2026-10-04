@@ -90,11 +90,15 @@ jobs:
       - name: Build APK with Gradle
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace
-          VERSION=$(node -p "require('../package.json').version || '1.0.0'")
+          BASE_VERSION=$(node -p "require('../package.json').version || '1.0.0'")
+          MAJOR=$(echo "$BASE_VERSION" | cut -d. -f1)
+          MINOR=$(echo "$BASE_VERSION" | cut -d. -f2)
+          # Tự động tăng version theo GITHUB_RUN_NUMBER đồng bộ với deploy.yml
+          BUILD_VERSION="${MAJOR}.${MINOR}.${GITHUB_RUN_NUMBER}"
+          echo "APP_VERSION=${BUILD_VERSION}" >> $GITHUB_ENV
+          APP_VERSION="${BUILD_VERSION}" ./gradlew assembleDebug --no-daemon --stacktrace
           mkdir -p release-output
-          cp app/build/outputs/apk/debug/*.apk release-output/StoriesReader-v${VERSION}.apk
-          echo "APP_VERSION=${VERSION}" >> $GITHUB_ENV
+          cp app/build/outputs/apk/debug/*.apk release-output/StoriesReader-v${BUILD_VERSION}.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
