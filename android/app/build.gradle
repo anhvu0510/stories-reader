@@ -1,14 +1,25 @@
 apply plugin: 'com.android.application'
+def computedVersionCode = ((int) (System.currentTimeMillis() / 1000))
 
 android {
     namespace "com.vula.stories"
     compileSdk rootProject.ext.compileSdkVersion
+    signingConfigs {
+        shared {
+            storeFile file('stories-debug.keystore')
+            storePassword 'android'
+            keyAlias 'stories'
+            keyPassword 'android'
+        }
+    }
+
     defaultConfig {
         applicationId "com.vula.stories"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        // Tự động tăng versionCode theo timestamp để Android luôn nhận diện là bản cập nhật mới, cho phép cài đè
+        versionCode computedVersionCode
+        versionName "1.0.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -17,7 +28,11 @@ android {
         }
     }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.shared
+        }
         release {
+            signingConfig signingConfigs.shared
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

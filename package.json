@@ -14,7 +14,7 @@
 		"deploy": "gh-pages -d dist",
 		"cap:sync": "npm run build && npx cap sync android",
 		"cap:open": "npx cap open android",
-		"cap:build": "npm run build && npx cap sync android && cd android && ./gradlew assembleDebug",
+		"cap:build": "bash scripts/build-apk.sh",
 		"cap:telegram": "bash scripts/send-telegram.sh",
 		"cap:build:telegram": "npm run cap:build && bash scripts/send-telegram.sh",
 		"ota:pack": "bash scripts/pack-ota.sh",
