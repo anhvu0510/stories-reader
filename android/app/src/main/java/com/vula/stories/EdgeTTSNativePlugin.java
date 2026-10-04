@@ -71,6 +71,10 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
     // Quản lý phiên phát streaming để hủy và cô lập triệt để các tiến trình prefetch nền khi user nhấn stop
     private long streamingSessionId = 0;
 
+    // Khoảng thời gian tối thiểu giữa 2 lần gửi remote log câu (1.5s) để chống spam khi seek nhanh hoặc chuỗi câu siêu ngắn
+    private static final long MIN_CHUNK_LOG_INTERVAL_MS = 1500;
+    private long lastChunkLogTime = 0;
+
     // Quản lý cơ chế thử lại cuốn chiếu (Linear Backoff Retry) khi gặp sự cố mạng (Connection reset, timeout)
     private final PrefetchRetryManager retryManager = new PrefetchRetryManager();
 
@@ -104,8 +108,30 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                 notifyListeners("onChunkStart", chunkData);
 
                 String playText = (chunkIndex >= 0 && chunkIndex < currentChunks.size()) ? currentChunks.get(chunkIndex) : "";
-                // Ghi log cục bộ Logcat, không gửi RemoteLogger trên từng câu để tránh nghẽn mạng và spam gateway
-                Log.d(TAG, "[EdgeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(playText) + "\"");
+                String snippet = RemoteLogger.formatSnippet(playText);
+
+                // 1. Luôn ghi log nội bộ Logcat thiết bị đầy đủ 100% các câu
+                Log.d(TAG, "[EdgeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size() + ": \"" + snippet + "\"");
+
+                // 2. Gửi RemoteLogger ở cấp độ câu phục vụ tracking, có cơ chế chống spam (tối thiểu 1.5s giữa các lần gửi, câu đầu/cuối luôn gửi)
+                long now = System.currentTimeMillis();
+                boolean isBoundaryChunk = (chunkIndex == 0 || chunkIndex == currentChunks.size() - 1);
+                if (isBoundaryChunk || (now - lastChunkLogTime >= MIN_CHUNK_LOG_INTERVAL_MS)) {
+                    lastChunkLogTime = now;
+                    JSONObject playDetails = new JSONObject();
+                    try {
+                        playDetails.put("chunkIndex", chunkIndex);
+                        playDetails.put("totalChunks", currentChunks.size());
+                        if (currentChunks.size() > 0) {
+                            int progressPct = (int) Math.round(((double) (chunkIndex + 1) / currentChunks.size()) * 100);
+                            playDetails.put("progress", progressPct + "%");
+                        }
+                        playDetails.put("snippet", snippet);
+                    } catch (Exception ignored) {}
+                    RemoteLogger.log("EdgeTTSNative_Stream", "info",
+                            "[EdgeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size() + ": \"" + snippet + "\"",
+                            null, playDetails);
+                }
 
                 // Cập nhật thông tin câu đọc và trạng thái phát lên thanh điều khiển Notification & Lock Screen
                 StoriesAudioBridge.updatePlayback(
@@ -484,6 +510,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
             startDetails.put("snippet", RemoteLogger.formatSnippet(firstSentence));
         } catch (Exception ignored) {}
         RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Bắt đầu phát chương từ câu " + (startIndex + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(firstSentence) + "\"", null, startDetails);
+
+        // Reset thời điểm log câu để câu đầu tiên luôn được gửi ngay lập tức
+        lastChunkLogTime = 0;
 
         // Strict Priority: Fetch startIndex first!
         prefetchChunk(startIndex, sessionId);
@@ -939,6 +968,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         streamingSessionId++;
         isStreamingPlaying = false;
         currentPlayIndex = 0;
+        lastChunkLogTime = 0;
 
         cancelPendingPrefetches(-1);
         activeSockets.clear();

@@ -53,6 +53,10 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
     // Chỉ số câu mục tiêu đang hoặc chuẩn bị phát
     private int currentPlayIndex = 0;
 
+    // Khoảng thời gian tối thiểu giữa 2 lần gửi remote log câu (1.5s) để chống spam khi seek nhanh hoặc chuỗi câu siêu ngắn
+    private static final long MIN_CHUNK_LOG_INTERVAL_MS = 1500;
+    private long lastChunkLogTime = 0;
+
     private synchronized void acquireWakeLock() {
         try {
             if (wakeLock == null && getContext() != null) {
@@ -95,8 +99,31 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
                 notifyListeners("onChunkStart", chunkData);
 
                 String playText = queueManager.getCurrentText();
-                // Ghi log Logcat nội bộ thiết bị, không gửi RemoteLogger trên từng câu để tránh nghẽn mạng và spam gateway
-                Log.d(TAG, "[NativeTTS:Direct] Đang đọc câu " + (chunkIndex + 1) + "/" + queueManager.getTotalChunks() + ": \"" + RemoteLogger.formatSnippet(playText) + "\"");
+                String snippet = RemoteLogger.formatSnippet(playText);
+                int total = queueManager.getTotalChunks();
+
+                // 1. Luôn ghi log nội bộ Logcat thiết bị đầy đủ 100% các câu
+                Log.d(TAG, "[NativeTTS:Direct] Đang đọc câu " + (chunkIndex + 1) + "/" + total + ": \"" + snippet + "\"");
+
+                // 2. Gửi RemoteLogger ở cấp độ câu phục vụ tracking, có cơ chế chống spam (tối thiểu 1.5s giữa các lần gửi, câu đầu/cuối luôn gửi)
+                long now = System.currentTimeMillis();
+                boolean isBoundaryChunk = (chunkIndex == 0 || (total > 0 && chunkIndex == total - 1));
+                if (isBoundaryChunk || (now - lastChunkLogTime >= MIN_CHUNK_LOG_INTERVAL_MS)) {
+                    lastChunkLogTime = now;
+                    JSONObject playDetails = new JSONObject();
+                    try {
+                        playDetails.put("chunkIndex", chunkIndex);
+                        playDetails.put("totalChunks", total);
+                        if (total > 0) {
+                            int progressPct = (int) Math.round(((double) (chunkIndex + 1) / total) * 100);
+                            playDetails.put("progress", progressPct + "%");
+                        }
+                        playDetails.put("snippet", snippet);
+                    } catch (Exception ignored) {}
+                    RemoteLogger.log("NativeTTS_Stream", "info",
+                            "[NativeTTS:Direct] Đang đọc câu " + (chunkIndex + 1) + "/" + total + ": \"" + snippet + "\"",
+                            null, playDetails);
+                }
 
                 // Cập nhật thông tin câu đọc và trạng thái phát lên thanh điều khiển Notification & Lock Screen
                 StoriesAudioBridge.updatePlayback(
@@ -428,6 +455,7 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
             acquireWakeLock();
 
             isStreamingPlaying = true;
+            lastChunkLogTime = 0;
             queueManager.setChunks(chunkList, startIndex);
             queueManager.startSpeaking(tts, startIndex, buildSpeechParams());
 
@@ -506,6 +534,7 @@ public class NativeTTSPlugin extends Plugin implements StoriesAudioBridge.AudioC
 
     private void stopPlaybackInternal(boolean resetPosition) {
         isStreamingPlaying = false;
+        lastChunkLogTime = 0;
         if (tts != null) {
             tts.stop();
         }
