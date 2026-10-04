@@ -1,7 +1,7 @@
 {
-  "version": "1.0.307",
+  "version": "1.0.308",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "11ccf2929797541b35fe11426a4cf3b356d243d3f684ce1aaa20c4ef0b8ce8f7",
-  "releaseNotes": "feat: dynamic android versionName generation using github run number in workflow and gradle, test build [apk]",
-  "updatedAt": "2026-10-04T11:47:10Z"
+  "checksum": "1b7585c21e446087a39a598b6a3503354cec522a9f0013074c7cf036693d41e7",
+  "releaseNotes": "feat: add route restoration hook and improve swipe gesture and pull-to-refresh handling",
+  "updatedAt": "2026-10-04T14:57:13Z"
 }
