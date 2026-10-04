@@ -439,5 +439,50 @@ describe('useSwipeGesture hook', () => {
 		expect(onSwipeLeft).not.toHaveBeenCalled();
 		expect(onDragEnd).not.toHaveBeenCalled();
 	});
+
+	it('calls onDragEnd with cancel and does not trigger onSwipeLeft when user releases before threshold (snap back)', () => {
+		const onSwipeLeft = vi.fn();
+		const onDragStart = vi.fn();
+		const onDragMove = vi.fn();
+		const onDragEnd = vi.fn();
+
+		renderHook(() =>
+			useSwipeGesture({
+				onSwipeLeft,
+				onDragStart,
+				onDragMove,
+				onDragEnd,
+				threshold: 120, // Ngưỡng cam kết lớn
+				minVelocity: 0.8
+			})
+		);
+
+		act(() => {
+			window.dispatchEvent(
+				new TouchEvent('touchstart', {
+					touches: [{ clientX: 200, clientY: 100 } as any]
+				})
+			);
+			// Kéo sang trái 50px (chưa đủ 120px)
+			window.dispatchEvent(
+				new TouchEvent('touchmove', {
+					touches: [{ clientX: 150, clientY: 100 } as any]
+				})
+			);
+			// Thả tay ra
+			window.dispatchEvent(
+				new TouchEvent('touchend', {
+					changedTouches: [{ clientX: 150, clientY: 100 } as any]
+				})
+			);
+		});
+
+		expect(onDragStart).toHaveBeenCalledTimes(1);
+		expect(onDragMove).toHaveBeenCalledWith(-50);
+		// Không trigger chuyển trang
+		expect(onSwipeLeft).not.toHaveBeenCalled();
+		// Phải trả về cờ cancel để UI snap back về 0px
+		expect(onDragEnd).toHaveBeenCalledWith('cancel');
+	});
 });
 

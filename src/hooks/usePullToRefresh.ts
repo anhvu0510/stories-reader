@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, type RefObject } from 'react';
 import { Capacitor } from '@capacitor/core';
 
+import { useModalStore } from '@/stores/useModalStore';
 import { triggerHaptic } from './useHaptic';
 
 export const isAndroidApp = (): boolean => {
@@ -10,6 +11,26 @@ export const isAndroidApp = (): boolean => {
 	} catch {
 		return false;
 	}
+};
+
+/**
+ * Kiểm tra xem có bất kỳ Modal, Dialog hay Bottom Sheet nào đang mở hay không.
+ * Nếu có, mọi cử chỉ vuốt xuống phải được ưu tiên hoàn toàn cho tác vụ đóng modal (Swipe-down-to-dismiss).
+ */
+const isModalOrSheetActive = (): boolean => {
+	try {
+		const { isSettingsOpen, isOfflineManagerOpen } = useModalStore.getState();
+		if (isSettingsOpen || isOfflineManagerOpen) return true;
+	} catch {}
+
+	if (typeof document === 'undefined') return false;
+	if (document.body.classList.contains('overflow-hidden') || document.body.style.overflow === 'hidden') {
+		return true;
+	}
+
+	return Boolean(
+		document.querySelector('[role="dialog"], [aria-modal="true"], [data-sheet-open="true"], [data-state="open"], .bottom-sheet')
+	);
 };
 
 export interface UsePullToRefreshOptions {
@@ -86,11 +107,8 @@ export function usePullToRefresh({
 			if (!isSupported || isRefreshingRef.current) return;
 			if (!e.touches || e.touches.length !== 1) return;
 
-			// Do not trigger pull-to-refresh if a modal, sheet, or dialog is open, or body scroll is locked
-			if (
-				document.body.classList.contains('overflow-hidden') ||
-				document.querySelector('[role="dialog"], [aria-modal="true"], [data-sheet-open="true"]')
-			) {
+			// Ưu tiên tuyệt đối cho modal/sheet: Không kích hoạt pull-to-refresh nếu có bất kỳ modal/sheet nào đang mở
+			if (isModalOrSheetActive()) {
 				canPullRef.current = false;
 				return;
 			}
@@ -113,7 +131,7 @@ export function usePullToRefresh({
 			}
 
 			const scrollTop = getScrollTop();
-			if (scrollTop > 1) {
+			if (scrollTop > 0) {
 				canPullRef.current = false;
 				return;
 			}
@@ -137,11 +155,8 @@ export function usePullToRefresh({
 			if (!canPullRef.current || isRefreshingRef.current || !isSupported) return;
 			if (!e.touches || e.touches.length === 0) return;
 
-			// If a modal or dialog appeared mid-gesture, immediately abort
-			if (
-				document.body.classList.contains('overflow-hidden') ||
-				document.querySelector('[role="dialog"], [aria-modal="true"]')
-			) {
+			// Nếu có modal hoặc dialog xuất hiện giữa chừng, lập tức dừng và reset
+			if (isModalOrSheetActive()) {
 				canPullRef.current = false;
 				if (isPullingRef.current) {
 					reset();
@@ -155,7 +170,8 @@ export function usePullToRefresh({
 			const deltaX = Math.abs(currentX - touchStartXRef.current);
 
 			if (!isPullingRef.current) {
-				if (deltaX > Math.abs(deltaY) && deltaX > 8) {
+				// Nếu vuốt ngang hoặc không phải hướng vuốt xuống dọc dứt khoát -> hủy pull
+				if (deltaX >= deltaY && deltaX > 8) {
 					canPullRef.current = false;
 					return;
 				}
@@ -163,7 +179,8 @@ export function usePullToRefresh({
 					canPullRef.current = false;
 					return;
 				}
-				if (deltaY > 6) {
+				// Touch slop chuẩn mobile (14px) và yêu cầu hướng kéo chủ đạo là chiều dọc
+				if (deltaY >= 14 && deltaY > deltaX * 1.3) {
 					isPullingRef.current = true;
 					setIsPulling(true);
 				}

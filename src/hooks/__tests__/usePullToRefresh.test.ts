@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
 import { Capacitor } from '@capacitor/core';
+import { useModalStore } from '@/stores/useModalStore';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 
 describe('usePullToRefresh hook', () => {
@@ -360,5 +361,54 @@ describe('usePullToRefresh hook', () => {
 		expect(result.current.pullDistance).toBe(0);
 		expect(result.current.isPulling).toBe(false);
 		dialog.remove();
+	});
+
+	it('does not trigger pull-to-refresh when useModalStore has an open settings or offline modal', () => {
+		useModalStore.getState().openSettings();
+
+		const onRefresh = vi.fn();
+		const { result } = renderHook(() => usePullToRefresh({ onRefresh }));
+
+		act(() => {
+			window.dispatchEvent(
+				new TouchEvent('touchstart', {
+					touches: [{ clientX: 100, clientY: 50 } as any]
+				})
+			);
+			window.dispatchEvent(
+				new TouchEvent('touchmove', {
+					touches: [{ clientX: 100, clientY: 150 } as any]
+				})
+			);
+		});
+
+		expect(result.current.pullDistance).toBe(0);
+		expect(result.current.isPulling).toBe(false);
+
+		useModalStore.getState().closeSettings();
+	});
+
+	it('requires vertical movement to exceed 14px touch slop before engaging pull', () => {
+		window.scrollY = 0;
+		const onRefresh = vi.fn();
+		const { result } = renderHook(() => usePullToRefresh({ onRefresh }));
+
+		act(() => {
+			window.dispatchEvent(
+				new TouchEvent('touchstart', {
+					touches: [{ clientX: 100, clientY: 50 } as any]
+				})
+			);
+			// Kéo nhẹ 8px (< 14px touch slop)
+			window.dispatchEvent(
+				new TouchEvent('touchmove', {
+					touches: [{ clientX: 100, clientY: 58 } as any]
+				})
+			);
+		});
+
+		// Chưa đạt touch slop nên chưa kích hoạt pulling
+		expect(result.current.isPulling).toBe(false);
+		expect(result.current.pullDistance).toBe(0);
 	});
 });

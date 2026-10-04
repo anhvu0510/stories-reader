@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { BookOpen, KeyRound } from 'lucide-react';
 
@@ -10,6 +10,7 @@ import { AppUpdateOverlay } from './components/AppUpdateOverlay';
 import { PasscodeModal } from './components/PasscodeModal';
 import { type SecretServerConfig } from './services/secretServerService';
 import { useAppUpdate } from './hooks/useAppUpdate';
+import { useRouteRestoration } from './hooks/useRouteRestoration';
 import { ChapterListScreen } from './features/chapter-list/ChapterListScreen';
 import { LibraryScreen } from './features/library/LibraryScreen';
 import { ReaderScreen } from './features/reader/ReaderScreen';
@@ -20,6 +21,10 @@ import { useToastStore } from './stores/useToastStore';
 
 function AppContent() {
 	const location = useLocation();
+	const navigate = useNavigate();
+
+	// Tự động lưu và khôi phục trang hoạt động gần nhất khi App bị kill hoặc sleep vào lại
+	useRouteRestoration({ location, navigate });
 
 	useEffect(() => {
 		if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {

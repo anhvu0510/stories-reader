@@ -27,7 +27,7 @@ export function useSwipeGesture({
 	onDragStart,
 	onDragMove,
 	onDragEnd,
-	threshold = 60,
+	threshold,
 	minVelocity = 0.35,
 	maxDuration,
 	edgeIgnoreWidth = 28,
@@ -168,8 +168,13 @@ export function useSwipeGesture({
 			}
 
 			const velocity = duration > 0 ? absX / duration : 0;
-			const hasSufficientDistance = absX >= threshold;
-			const hasSufficientVelocity = minVelocity !== undefined && velocity >= minVelocity && absX >= 20;
+			// Ngưỡng commit chuẩn mobile: ưu tiên 35% chiều rộng màn hình (tối thiểu 120px) nếu caller không chỉ định cố định
+			const effectiveThreshold = threshold !== undefined
+				? threshold
+				: (typeof window !== 'undefined' ? Math.max(120, Math.round(window.innerWidth * 0.35)) : 120);
+			const minFlingDistance = Math.min(effectiveThreshold * 0.5, 30);
+			const hasSufficientDistance = absX >= effectiveThreshold;
+			const hasSufficientVelocity = minVelocity !== undefined && velocity >= minVelocity && absX >= minFlingDistance;
 
 			// Horizontal swipe must be dominant and meet distance or velocity requirements
 			if ((hasSufficientDistance || hasSufficientVelocity) && absX > absY * 1.3) {

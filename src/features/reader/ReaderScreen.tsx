@@ -643,11 +643,21 @@ export function ReaderScreen() {
 		readerContentRef.current.style.transform = `translate3d(${effectiveOffset}px, 0, 0)`;
 	}, [contentData?.navigation?.prev?.chapterId, contentData?.navigation?.next?.chapterId]);
 
-	const handleDragEnd = useCallback(() => {
+	const handleDragEnd = useCallback((settled?: 'left' | 'right' | 'cancel') => {
 		if (!readerContentRef.current) return;
 		readerContentRef.current.style.transition = 'transform 240ms cubic-bezier(0.2, 0, 0, 1)';
-		readerContentRef.current.style.transform = 'translate3d(0px, 0, 0)';
+		if (settled === 'left') {
+			readerContentRef.current.style.transform = 'translate3d(-100%, 0, 0)';
+		} else if (settled === 'right') {
+			readerContentRef.current.style.transform = 'translate3d(100%, 0, 0)';
+		} else {
+			// Thả tay khi chưa đủ ngưỡng cam kết: Snap Back mượt mà về vị trí ban đầu (0px)
+			readerContentRef.current.style.transform = 'translate3d(0px, 0, 0)';
+		}
 	}, []);
+
+	const contentWidth = typeof window !== 'undefined' ? Math.min(window.innerWidth || 390, 448) : 390;
+	const commitThreshold = Math.max(90, Math.round(contentWidth * 0.30));
 
 	useSwipeGesture({
 		onSwipeLeft: handleSwipeNext,
@@ -655,8 +665,8 @@ export function ReaderScreen() {
 		onDragStart: handleDragStart,
 		onDragMove: handleDragMove,
 		onDragEnd: handleDragEnd,
-		threshold: 55,
-		minVelocity: 0.35,
+		threshold: commitThreshold,
+		minVelocity: 0.45,
 		disabled: loading || isRefreshingLatest
 	});
 
