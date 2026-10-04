@@ -1,7 +1,7 @@
 {
-  "version": "1.0.318",
+  "version": "1.0.319",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "e23cce297fb063f101633d6182a11ab3689da9fd1f794d389cb181f56c7bd330",
-  "releaseNotes": "feat: add ReaderChapterSkeleton component and enhance TTS logging with cache tracking",
-  "updatedAt": "2026-10-04T17:25:40Z"
+  "checksum": "618b2228e26af64f542a2df190382ef3725a62a3fac0dd6149c700e474f326ba",
+  "releaseNotes": "fix: update time-based passcode format from HHmmDDYY to HHMMDDMM",
+  "updatedAt": "2026-10-04T17:30:53Z"
 }
