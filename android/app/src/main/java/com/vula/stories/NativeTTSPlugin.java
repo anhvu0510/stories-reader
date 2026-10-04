@@ -254,6 +254,10 @@ public class NativeTTSPlugin extends Plugin {
         });
     }
 
+    /**
+     * Xử lý khi Android TextToSpeech tổng hợp xong 1 câu thành file .wav trên đĩa.
+     * Tính toán word boundaries theo thời lượng thực tế của file âm thanh để phục vụ highlight mượt mà.
+     */
     private void handleStreamUtteranceDone(String utteranceId) {
         try {
             int index = Integer.parseInt(utteranceId.substring("stream_chunk_".length()));
@@ -275,6 +279,7 @@ public class NativeTTSPlugin extends Plugin {
                 } catch (Exception ignored) {}
                 RemoteLogger.log("NativeTTS_Stream", "info", "[NativeTTS:Stream] Đã nạp xong audio câu " + (index + 1) + "/" + currentChunks.size() + " (" + chunkFile.length() + " bytes): \"" + text + "\"", null, readyDetails);
 
+                // Chuyển sang main thread để kích hoạt phát hoặc nạp gối đầu gapless
                 mainHandler.post(() -> onChunkAudioReady(index));
             }
         } catch (Exception ex) {
@@ -282,6 +287,9 @@ public class NativeTTSPlugin extends Plugin {
         }
     }
 
+    /**
+     * Xử lý khi tổng hợp câu bị lỗi. Giải phóng index khỏi danh sách đang xử lý (in-flight).
+     */
     private void handleStreamUtteranceError(String utteranceId) {
         try {
             int index = Integer.parseInt(utteranceId.substring("stream_chunk_".length()));
@@ -297,6 +305,11 @@ public class NativeTTSPlugin extends Plugin {
         } catch (Exception ignored) {}
     }
 
+    /**
+     * Tính toán vị trí từng từ và thời lượng (startSeconds, endSeconds) cho câu văn.
+     * Sử dụng thời lượng thực tế của file .wav để chia tỷ lệ chính xác, giúp bộ đếm 25ms của GaplessStreamPlayer
+     * cập nhật vị trí highlight mượt mà từng từ theo tiến trình âm thanh.
+     */
     private JSONArray computeWordBoundaries(int chunkIndex, String text, File wavFile) {
         JSONArray boundaries = new JSONArray();
         if (text == null || text.trim().isEmpty()) return boundaries;
@@ -444,8 +457,16 @@ public class NativeTTSPlugin extends Plugin {
 
     // ==========================================
     // Ahead-of-time Gapless Chapter Streaming Methods
+    // Các phương thức phát chương cuốn chiếu gối đầu gapless 0ms
     // ==========================================
 
+    /**
+     * Bắt đầu phát toàn bộ một chương truyện:
+     * 1. Nạp danh sách các câu (chunks).
+     * 2. Áp dụng cấu hình giọng đọc, tốc độ (rate), cao độ (pitch).
+     * 3. Giữ WakeLock ngăn hệ điều hành ngắt khi tắt màn hình.
+     * 4. Bắt đầu tổng hợp câu đầu tiên và nạp trước sẵn (lookahead) tối đa 6 câu tiếp theo.
+     */
     @PluginMethod
     public void playChapter(PluginCall call) {
         runWhenReady(() -> {
@@ -460,6 +481,7 @@ public class NativeTTSPlugin extends Plugin {
             currentRate = call.getFloat("rate", 1.0f);
             currentPitch = call.getFloat("pitch", 1.0f);
 
+            // Dừng luồng phát cũ trước khi khởi tạo luồng mới
             stopPlaybackInternal(false);
 
             currentChunks.clear();
@@ -476,10 +498,11 @@ public class NativeTTSPlugin extends Plugin {
             isStreamingPlaying = true;
             player.acquireWakeLock();
 
+            // Tổng hợp và phát câu khởi đầu
             int validStart = Math.max(0, Math.min(startIndex, currentChunks.size() - 1));
             prefetchChunk(validStart);
 
-            // Pre-warm up to BUFFER_LOOKAHEAD chunks ahead
+            // Nạp trước cuốn chiếu (pre-warm) các câu tiếp theo vào bộ nhớ đệm
             int maxLookahead = Math.min(currentChunks.size() - 1, validStart + AudioCacheManager.BUFFER_LOOKAHEAD);
             for (int i = validStart + 1; i <= maxLookahead; i++) {
                 prefetchChunk(i);
@@ -489,6 +512,9 @@ public class NativeTTSPlugin extends Plugin {
         }, call);
     }
 
+    /**
+     * Áp dụng cấu hình tốc độ đọc, cao độ và tìm kiếm Voice tương thích trong hệ thống.
+     */
     private void applyVoiceSettings() {
         if (tts == null) return;
         try {
@@ -515,6 +541,11 @@ public class NativeTTSPlugin extends Plugin {
         }
     }
 
+    /**
+     * Nạp trước (prefetch) câu văn:
+     * - Nếu file .wav đã tồn tại trên đĩa: nạp ngay từ cache và phát.
+     * - Nếu chưa có: gửi yêu cầu tts.synthesizeToFile tổng hợp bất đồng bộ ra file .wav.
+     */
     private void prefetchChunk(int index) {
         if (index < 0 || index >= currentChunks.size()) return;
         if (readyAudioFiles.containsKey(index) || inFlightIndices.contains(index)) return;
@@ -551,6 +582,11 @@ public class NativeTTSPlugin extends Plugin {
         });
     }
 
+    /**
+     * Khi file audio của 1 câu đã sẵn sàng trên đĩa:
+     * - Nếu là câu hiện tại cần đọc: Bắt đầu phát ngay bằng player.start().
+     * - Nếu là câu kế tiếp: Kết nối gối đầu gapless 0ms bằng player.prepareNext().
+     */
     private void onChunkAudioReady(int index) {
         if (!isStreamingPlaying) return;
 
