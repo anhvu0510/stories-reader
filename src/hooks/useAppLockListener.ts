@@ -13,24 +13,39 @@ export function useAppLockListener() {
 	const triggerBiometricPrompt = useAppLockStore((state) => state.triggerBiometricPrompt);
 
 	useEffect(() => {
+		let resumeTimer: NodeJS.Timeout | null = null;
+
 		const handleVisibilityChange = () => {
 			if (document.visibilityState === 'hidden') {
-				// Khi ứng dụng bị sleep, tắt màn hình hoặc đưa xuống background
+				if (resumeTimer) {
+					clearTimeout(resumeTimer);
+					resumeTimer = null;
+				}
+				// Khi ứng dụng bị sleep, tắt màn hình hoặc đưa xuống background: lập tức khóa
 				if (useAppLockStore.getState().isLockEnabled) {
 					lock();
 				}
 			} else if (document.visibilityState === 'visible') {
 				// Khi người dùng mở lại ứng dụng từ background
 				if (useAppLockStore.getState().isLocked) {
-					// Chờ 300ms để WebView và Activity ổn định rồi kích hoạt prompt
-					setTimeout(() => {
-						triggerBiometricPrompt();
-					}, 300);
+					// Đảm bảo xóa trạng thái treo từ phiên trước
+					useAppLockStore.setState({ isAuthenticating: false });
+
+					// Chờ 400ms để Android Activity onResume hoàn tất trước khi mở hộp thoại
+					resumeTimer = setTimeout(() => {
+						if (document.visibilityState === 'visible' && useAppLockStore.getState().isLocked) {
+							triggerBiometricPrompt();
+						}
+					}, 400);
 				}
 			}
 		};
 
 		const handlePageHide = () => {
+			if (resumeTimer) {
+				clearTimeout(resumeTimer);
+				resumeTimer = null;
+			}
 			if (useAppLockStore.getState().isLockEnabled) {
 				lock();
 			}
@@ -40,6 +55,9 @@ export function useAppLockListener() {
 		window.addEventListener('pagehide', handlePageHide);
 
 		return () => {
+			if (resumeTimer) {
+				clearTimeout(resumeTimer);
+			}
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
 			window.removeEventListener('pagehide', handlePageHide);
 		};

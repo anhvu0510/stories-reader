@@ -21,6 +21,8 @@ import java.util.concurrent.Executor;
 @CapacitorPlugin(name = "BiometricAuth")
 public class BiometricPlugin extends Plugin {
 
+    private BiometricPrompt currentBiometricPrompt = null;
+
     /**
      * Kiểm tra tính khả dụng của phần cứng và trạng thái đăng ký sinh trắc học trên thiết bị.
      */
@@ -104,14 +106,32 @@ public class BiometricPlugin extends Plugin {
 
         activity.runOnUiThread(() -> {
             try {
+                if (activity.isFinishing() || activity.isDestroyed()) {
+                    JSObject err = new JSObject();
+                    err.put("success", false);
+                    err.put("errorMessage", "Activity không ở trạng thái sẵn sàng");
+                    call.resolve(err);
+                    return;
+                }
+
+                // Hủy prompt cũ đang tồn tại nếu có trước khi mở prompt mới
+                if (currentBiometricPrompt != null) {
+                    try {
+                        currentBiometricPrompt.cancelAuthentication();
+                    } catch (Exception ignored) {}
+                    currentBiometricPrompt = null;
+                }
+
                 Executor executor = ContextCompat.getMainExecutor(activity);
-                BiometricPrompt biometricPrompt = new BiometricPrompt(
+                currentBiometricPrompt = new BiometricPrompt(
                         activity,
                         executor,
                         new BiometricPrompt.AuthenticationCallback() {
                             @Override
                             public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
                                 super.onAuthenticationError(errorCode, errString);
+                                currentBiometricPrompt = null;
+
                                 JSObject res = new JSObject();
                                 res.put("success", false);
                                 res.put("errorCode", errorCode);
@@ -131,6 +151,8 @@ public class BiometricPlugin extends Plugin {
                             @Override
                             public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult authResult) {
                                 super.onAuthenticationSucceeded(authResult);
+                                currentBiometricPrompt = null;
+
                                 JSObject res = new JSObject();
                                 res.put("success", true);
                                 call.resolve(res);
@@ -153,13 +175,30 @@ public class BiometricPlugin extends Plugin {
                         )
                         .build();
 
-                biometricPrompt.authenticate(promptInfo);
+                currentBiometricPrompt.authenticate(promptInfo);
             } catch (Exception e) {
+                currentBiometricPrompt = null;
                 JSObject err = new JSObject();
                 err.put("success", false);
                 err.put("errorMessage", e.getMessage());
                 call.resolve(err);
             }
         });
+    }
+
+    /**
+     * Hủy hộp thoại quét sinh trắc học nếu đang hiển thị
+     */
+    @PluginMethod
+    public void cancel(PluginCall call) {
+        if (currentBiometricPrompt != null) {
+            try {
+                currentBiometricPrompt.cancelAuthentication();
+            } catch (Exception ignored) {}
+            currentBiometricPrompt = null;
+        }
+        JSObject res = new JSObject();
+        res.put("success", true);
+        call.resolve(res);
     }
 }

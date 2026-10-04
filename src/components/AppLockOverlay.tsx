@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Fingerprint, KeyRound, ShieldAlert } from 'lucide-react';
+import { Fingerprint, KeyRound } from 'lucide-react';
 import { useAppLockStore } from '@/stores/useAppLockStore';
 import { PasscodeModal } from '@/components/PasscodeModal';
 import { useHaptic } from '@/hooks/useHaptic';
@@ -8,23 +8,32 @@ import { useHaptic } from '@/hooks/useHaptic';
 /**
  * Component màn hình khóa bảo mật toàn ứng dụng.
  * Tự động kích hoạt khi ứng dụng bị sleep hoặc mở lại, yêu cầu xác thực
- * sinh trắc học (vân tay / khuôn mặt), nếu không đúng hoặc huỷ thì cho phép nhập Passcode (HHMMDDMM).
+ * sinh trắc học (vân tay / khuôn mặt), nếu không đúng hoặc huỷ thì cho phép nhập Passcode.
  */
 export function AppLockOverlay() {
 	const { isLocked, showPasscodeFallback, isAuthenticating, setShowPasscodeFallback, triggerBiometricPrompt, unlock } = useAppLockStore();
 	const { trigger: triggerHaptic } = useHaptic();
 
-	// Tự động kích hoạt quét sinh trắc học ngay khi màn hình khóa xuất hiện
+	// Tự động kích hoạt quét sinh trắc học khi màn hình khóa xuất hiện (chỉ khi app đang hiển thị trên màn hình)
 	useEffect(() => {
-		if (isLocked && !showPasscodeFallback) {
+		if (isLocked && !showPasscodeFallback && typeof document !== 'undefined' && document.visibilityState === 'visible') {
 			const timer = setTimeout(() => {
-				triggerBiometricPrompt();
+				if (document.visibilityState === 'visible') {
+					triggerBiometricPrompt();
+				}
 			}, 350);
 			return () => clearTimeout(timer);
 		}
 	}, [isLocked, showPasscodeFallback, triggerBiometricPrompt]);
 
 	if (!isLocked) return null;
+
+	const handleManualTrigger = () => {
+		triggerHaptic('light');
+		// Reset cờ nếu đang bị kẹt để kích hoạt lại hộp thoại
+		useAppLockStore.setState({ isAuthenticating: false });
+		triggerBiometricPrompt();
+	};
 
 	return (
 		<>
@@ -53,11 +62,7 @@ export function AppLockOverlay() {
 						>
 							<motion.button
 								whileTap={{ scale: 0.92 }}
-								onClick={() => {
-									triggerHaptic('medium');
-									triggerBiometricPrompt();
-								}}
-								disabled={isAuthenticating}
+								onClick={handleManualTrigger}
 								className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/30 to-primary/10 text-primary flex items-center justify-center mb-6 shadow-[0_12px_32px_rgba(0,0,0,0.35),_inset_0_1.5px_1px_rgba(255,255,255,0.4)] border border-primary/40 backdrop-blur-xl cursor-pointer group active:scale-95 transition-all"
 								aria-label="Nhấn để quét sinh trắc học"
 							>
@@ -84,12 +89,8 @@ export function AppLockOverlay() {
 						>
 							<button
 								type="button"
-								onClick={() => {
-									triggerHaptic('light');
-									triggerBiometricPrompt();
-								}}
-								disabled={isAuthenticating}
-								className="w-full h-13 rounded-2xl bg-primary text-on-primary font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(0,0,0,0.25),_inset_0_1.5px_1px_rgba(255,255,255,0.4)] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+								onClick={handleManualTrigger}
+								className="w-full h-13 rounded-2xl bg-primary text-on-primary font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(0,0,0,0.25),_inset_0_1.5px_1px_rgba(255,255,255,0.4)] active:scale-[0.98] transition-all cursor-pointer"
 							>
 								<Fingerprint size={20} />
 								<span>{isAuthenticating ? 'Đang mở hộp thoại...' : 'Quét Sinh trắc học'}</span>
@@ -116,7 +117,7 @@ export function AppLockOverlay() {
 				isOpen={isLocked && showPasscodeFallback}
 				mode="app_unlock"
 				title="Mở khóa Ứng dụng"
-				subtitle="Nhập mã Passcode (HHMMDDMM) để mở khóa Stories Reader."
+				subtitle="Nhập mã Passcode"
 				onClose={() => setShowPasscodeFallback(false)}
 				onUnlockSuccess={() => unlock()}
 				onRequestBiometric={() => {

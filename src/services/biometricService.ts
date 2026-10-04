@@ -29,6 +29,7 @@ interface BiometricAuthPlugin {
 		subtitle?: string;
 		negativeButtonText?: string;
 	}): Promise<BiometricAuthResponse>;
+	cancel?(): Promise<{ success: boolean }>;
 }
 
 // Đăng ký Native Plugin Capacitor
@@ -122,6 +123,20 @@ class BiometricService {
 				fallbackToPasscode: true,
 				errorMessage: error?.message || 'Xác thực sinh trắc học thất bại'
 			};
+		}
+	}
+
+	/**
+	 * Hủy bỏ prompt quét sinh trắc học nếu đang chạy
+	 */
+	public async cancel(): Promise<void> {
+		if (!Capacitor.isNativePlatform()) return;
+		try {
+			if (typeof NativeBiometricAuth.cancel === 'function') {
+				await NativeBiometricAuth.cancel();
+			}
+		} catch (error) {
+			console.warn('[BiometricService] Lỗi khi hủy sinh trắc học:', error);
 		}
 	}
 }

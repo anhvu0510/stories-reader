@@ -8,6 +8,10 @@ import { biometricService } from '@/services/biometricService';
 describe('AppLockOverlay Component', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		Object.defineProperty(document, 'visibilityState', {
+			value: 'visible',
+			configurable: true
+		});
 		useAppLockStore.setState({
 			isLockEnabled: false,
 			isLocked: false,
@@ -36,7 +40,7 @@ describe('AppLockOverlay Component', () => {
 
 		expect(screen.getByText('Stories Reader')).toBeDefined();
 		expect(screen.getByText(/Ứng dụng đang được khóa bảo vệ/i)).toBeDefined();
-		expect(screen.getByRole('button', { name: /Mở khóa bằng Passcode/i })).toBeDefined();
+		expect(screen.getByRole('button', { name: /Passcode/i })).toBeDefined();
 	});
 
 	it('switches to passcode fallback modal when clicking Passcode button', async () => {
@@ -48,14 +52,14 @@ describe('AppLockOverlay Component', () => {
 
 		render(<AppLockOverlay />);
 
-		const passcodeBtn = screen.getByRole('button', { name: /Mở khóa bằng Passcode/i });
+		const passcodeBtn = screen.getByRole('button', { name: /Passcode/i });
 		fireEvent.click(passcodeBtn);
 
 		expect(useAppLockStore.getState().showPasscodeFallback).toBe(true);
 
 		await waitFor(() => {
 			expect(screen.getByText('Mở khóa Ứng dụng')).toBeDefined();
-			expect(screen.getByText(/Nhập mã Passcode \(HHMMDDMM\)/i)).toBeDefined();
+			expect(screen.getByText(/Nhập mã Passcode/i)).toBeDefined();
 		});
 	});
 

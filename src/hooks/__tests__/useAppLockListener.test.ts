@@ -55,7 +55,7 @@ describe('useAppLockListener Hook', () => {
 		});
 		document.dispatchEvent(new Event('visibilitychange'));
 
-		vi.advanceTimersByTime(350);
+		vi.advanceTimersByTime(500);
 
 		expect(promptSpy).toHaveBeenCalled();
 		vi.useRealTimers();

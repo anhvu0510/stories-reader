@@ -52,24 +52,43 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 		lock: () => {
 			if (!get().isLockEnabled) return;
 			setSessionUnlocked(false);
-			set({ isLocked: true, showPasscodeFallback: false });
+			void biometricService.cancel();
+			set({
+				isLocked: true,
+				showPasscodeFallback: false,
+				isAuthenticating: false
+			});
 		},
 
 		unlock: () => {
 			setSessionUnlocked(true);
-			set({ isLocked: false, showPasscodeFallback: false, isAuthenticating: false });
+			set({
+				isLocked: false,
+				showPasscodeFallback: false,
+				isAuthenticating: false
+			});
 		},
 
 		enableLockAfterPasscode: () => {
 			biometricService.setBiometricLockEnabled(true);
 			setSessionUnlocked(true);
-			set({ isLockEnabled: true, isLocked: false, showPasscodeFallback: false });
+			set({
+				isLockEnabled: true,
+				isLocked: false,
+				showPasscodeFallback: false,
+				isAuthenticating: false
+			});
 		},
 
 		disableLock: () => {
 			biometricService.setBiometricLockEnabled(false);
 			setSessionUnlocked(false);
-			set({ isLockEnabled: false, isLocked: false, showPasscodeFallback: false });
+			set({
+				isLockEnabled: false,
+				isLocked: false,
+				showPasscodeFallback: false,
+				isAuthenticating: false
+			});
 		},
 
 		setShowPasscodeFallback: (show: boolean) => {
@@ -77,30 +96,45 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 		},
 
 		triggerBiometricPrompt: async () => {
-			const { isLocked, isAuthenticating } = get();
-			if (!isLocked || isAuthenticating) return false;
+			// TUYỆT ĐỐI không gọi khi app đang ở background / ẩn màn hình
+			if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+				return false;
+			}
+
+			const { isLocked } = get();
+			if (!isLocked) return false;
 
 			set({ isAuthenticating: true });
+
+			// Timeout an toàn tự reset cờ nếu không có phản hồi từ native trong 8s
+			const safetyTimer = setTimeout(() => {
+				if (get().isAuthenticating) {
+					set({ isAuthenticating: false });
+				}
+			}, 8000);
 
 			try {
 				const result = await biometricService.authenticate({
 					title: 'Xác thực bảo mật',
 					subtitle: 'Quét sinh trắc học để tiếp tục sử dụng Stories Reader',
-					negativeButtonText: 'Nhập Passcode'
+					negativeButtonText: 'Passcode'
 				});
+
+				clearTimeout(safetyTimer);
+				set({ isAuthenticating: false });
 
 				if (result.success) {
 					get().unlock();
 					return true;
 				}
 
-				// Nếu sinh trắc học không đúng, người dùng chọn 'Nhập Passcode', hoặc bị hủy
-				set({
-					isAuthenticating: false,
-					showPasscodeFallback: true
-				});
+				// Nếu người dùng chọn 'Nhập Passcode' hoặc bị hủy / lỗi
+				if (result.fallbackToPasscode) {
+					set({ showPasscodeFallback: true });
+				}
 				return false;
 			} catch (error) {
+				clearTimeout(safetyTimer);
 				console.error('[AppLockStore] Lỗi khi kích hoạt sinh trắc học:', error);
 				set({
 					isAuthenticating: false,
