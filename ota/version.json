@@ -1,7 +1,7 @@
 {
-  "version": "1.0.301",
+  "version": "1.0.302",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "468a19eed928d04b5533971083f91f95c803000912f4d5ef909305f79f7d5abe",
-  "releaseNotes": "feat: add native TTS streaming service and Android plugin support for audio playback",
-  "updatedAt": "2026-10-04T09:44:53Z"
+  "checksum": "9e1482f2056c48f462e8d47345f9639aa3d84e01c301bfa7563f8e2f84c33490",
+  "releaseNotes": "feat(native-audio): implement native Android audio player and useNativeReadAloud hook for seamless background playback",
+  "updatedAt": "2026-10-04T10:12:25Z"
 }
