@@ -1,7 +1,7 @@
 {
-  "version": "1.0.311",
+  "version": "1.0.312",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "e4db1adc1239f6ed3fa4f130ab0920964a195651f9e959e786156210ed6316e7",
-  "releaseNotes": "feat: improve reading progress persistence and reset scroll position on chapter change",
-  "updatedAt": "2026-10-04T15:37:09Z"
+  "checksum": "73d41c1ec13a837dfe1a8cd7b8ddca8323d540acc932c2f86acbf6ba8f446296",
+  "releaseNotes": "refactor: improve bottom sheet swipe gesture handling, scroll locking, and TTS pre-warming logic",
+  "updatedAt": "2026-10-04T15:54:02Z"
 }
