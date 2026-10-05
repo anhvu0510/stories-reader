@@ -1,7 +1,7 @@
 {
-  "version": "1.0.330",
+  "version": "1.0.331",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "35c694cab0b9d34087c6053f4da2358f3659565460ecfe920b84725a165f6c82",
-  "releaseNotes": "refactor: [apk] rebuild  && clean up unused imports, variables, and type casts across codebase",
-  "updatedAt": "2026-10-05T07:31:55Z"
+  "checksum": "6e0d52ba2b0cfd6213a69b1a206a7087d7259ea0af0800255706d0f4d062336b",
+  "releaseNotes": "fix: handle relative base asset URLs and improve background audio playback for Android and web",
+  "updatedAt": "2026-10-05T07:51:55Z"
 }
