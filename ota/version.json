@@ -1,7 +1,7 @@
 {
-  "version": "1.0.335",
+  "version": "1.0.336",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "d97bf0ca70f78762f2b364aaa1231ae4ddef53879c8539a0e9be4f3947ee6921",
-  "releaseNotes": "feat: add in-memory buffer mode for Edge TTS playback using ByteArrayMediaDataSource",
-  "updatedAt": "2026-10-05T09:06:32Z"
+  "checksum": "23f2f808e4b351e8b759efd069fc89c7efd7c5263dcfa87c8c21e1377182c83e",
+  "releaseNotes": "feat: add media3 edge buffer mode and voice settings configuration",
+  "updatedAt": "2026-10-05T09:31:25Z"
 }
