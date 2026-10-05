@@ -1,7 +1,7 @@
 {
-  "version": "1.0.329",
+  "version": "1.0.330",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "b2618ba7d9eedc77519196558ffbb2b233984c0c59adb5ad0328221c794cacfe",
-  "releaseNotes": "refactor: improve audio node cleanup safety and streamline audio context management in useEdgeReadAloudBgm hook",
-  "updatedAt": "2026-10-05T05:04:14Z"
+  "checksum": "35c694cab0b9d34087c6053f4da2358f3659565460ecfe920b84725a165f6c82",
+  "releaseNotes": "refactor: [apk] rebuild  && clean up unused imports, variables, and type casts across codebase",
+  "updatedAt": "2026-10-05T07:31:55Z"
 }
