@@ -1,7 +1,7 @@
 {
-  "version": "1.0.336",
+  "version": "1.0.337",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "23f2f808e4b351e8b759efd069fc89c7efd7c5263dcfa87c8c21e1377182c83e",
-  "releaseNotes": "feat: add media3 edge buffer mode and voice settings configuration",
-  "updatedAt": "2026-10-05T09:31:25Z"
+  "checksum": "ddb17c182ff405ea7d3a16b3b5dcef209a31cfb7b1b46dac804bf12e7d171a79",
+  "releaseNotes": "feat: add Media3-based native read-aloud playback engine and streaming support",
+  "updatedAt": "2026-10-05T10:20:51Z"
 }
