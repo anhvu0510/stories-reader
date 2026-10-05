@@ -1,7 +1,7 @@
 {
-  "version": "1.0.334",
+  "version": "1.0.335",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "a875d8f26d25b9bf22065baa2d6fdbf942f6009e2d34c5c1fa7351077a7dd852",
-  "releaseNotes": "refactor: simplify position tracking and update word boundary ticker interval to 20ms in GaplessStreamPlayer",
-  "updatedAt": "2026-10-05T08:36:10Z"
+  "checksum": "d97bf0ca70f78762f2b364aaa1231ae4ddef53879c8539a0e9be4f3947ee6921",
+  "releaseNotes": "feat: add in-memory buffer mode for Edge TTS playback using ByteArrayMediaDataSource",
+  "updatedAt": "2026-10-05T09:06:32Z"
 }
