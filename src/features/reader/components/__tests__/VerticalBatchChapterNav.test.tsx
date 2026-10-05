@@ -161,4 +161,24 @@ describe('VerticalBatchChapterNav Component', () => {
 
 		expect(screen.queryByLabelText('Bật đọc thành tiếng')).toBeNull();
 	});
+
+	it('QC-12 [Active Vertical Menu]: Always shows BGM toggle button when isTTSActive is true (speaker button pressed to open vertical menu)', () => {
+		const mockOnToggleBgm = vi.fn();
+		render(
+			<VerticalBatchChapterNav
+				chapters={mockChapters}
+				activeChapterId="c1"
+				isVisible={true}
+				isTTSActive={true}
+				isBgmActive={false}
+				onToggleBgm={mockOnToggleBgm}
+			/>
+		);
+
+		const bgmBtn = screen.getByTitle('Bật nhạc nền thư giãn');
+		expect(bgmBtn).toBeDefined();
+
+		fireEvent.click(bgmBtn);
+		expect(mockOnToggleBgm).toHaveBeenCalledTimes(1);
+	});
 });

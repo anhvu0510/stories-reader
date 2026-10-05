@@ -215,7 +215,7 @@ export function ReaderScreen() {
 	const bgmStopDelayMs = useReaderConfigStore((state) => state.bgmStopDelayMs ?? 1500);
 	const isBgmPreviewing = useReaderConfigStore((state) => state.isBgmPreviewing ?? false);
 
-	// Background music automatically plays when Edge Read Aloud is active or toggled manually
+	// Background music automatically plays when Edge Read Aloud is active, app TTS is playing, or toggled manually
 	const { isPlaying: isBgmPlaying, toggleBgm } = useEdgeReadAloudBgm({
 		audioUrl: bgmAudioUrl,
 		volume: bgmVolume,
@@ -223,7 +223,8 @@ export function ReaderScreen() {
 		fadeOutMs: bgmFadeOutMs,
 		stopDelayMs: bgmStopDelayMs,
 		enabled: bgmEnabled,
-		isBgmPreviewing
+		isBgmPreviewing,
+		isTTSActive: isTTSActive && isPlaying
 	});
 
 	const handleToggleBgm = useCallback(() => {

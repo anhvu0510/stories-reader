@@ -1,36 +1,53 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Music, Volume2, VolumeX, Play, Pause, Sliders, RotateCcw, Sparkles, Radio, Clock, ExternalLink, Waves, CloudRain, Piano, Info } from 'lucide-react';
+import {
+	Music,
+	Volume2,
+	VolumeX,
+	Play,
+	Pause,
+	Sliders,
+	RotateCcw,
+	Sparkles,
+	Radio,
+	Clock,
+	ExternalLink,
+	Waves,
+	CloudRain,
+	Piano,
+	Info,
+	Check,
+	Loader2,
+	ChevronDown,
+	ChevronUp
+} from 'lucide-react';
 
 import { computeSubtleBgmVolume } from '@/hooks/useEdgeReadAloudBgm';
+import { triggerHaptic } from '@/hooks/useHaptic';
 import { getAssetUrl } from '@/shared/utils/assetUrl';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 
 const PRESET_MUSIC_LIST = [
 	{
 		id: 'synth',
-		name: 'Tổng hợp Synth Ambient',
-		description: 'Hợp âm C-Major mượt mà sinh ra từ Web Audio Synthesizer',
+		name: 'Synth Ambient',
 		icon: Sparkles,
 		url: '/audio/ambient-bgm.mp3'
 	},
 	{
 		id: 'lofi',
-		name: 'Lofi Piano Thư Giãn',
-		description: 'Tiếng piano nhẹ nhàng du dương tạo cảm giác thư thái',
+		name: 'Lofi Piano',
 		icon: Piano,
 		url: '/audio/lofi-piano.mp3'
 	},
 	{
 		id: 'ocean',
-		name: 'Tiếng Sóng Biển Vỗ',
-		description: 'Âm thanh sóng biển rì rào giúp tập trung đọc sách',
+		name: 'Sóng Biển',
 		icon: Waves,
 		url: '/audio/ocean-waves.mp3'
 	},
 	{
 		id: 'rain',
-		name: 'Tiếng Mưa Rào Rơi',
-		description: 'Tiếng mưa rơi tĩnh lặng phù hợp đọc truyện ban đêm',
+		name: 'Mưa Rơi',
 		icon: CloudRain,
 		url: '/audio/gentle-rain.mp3'
 	}
@@ -53,7 +70,9 @@ export function BgmSettingsTab() {
 
 	const [customUrl, setCustomUrl] = useState(bgmAudioUrl);
 	const [isPreviewing, setIsPreviewing] = useState(false);
+	const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 	const [showAdvanced, setShowAdvanced] = useState(false);
+
 	const previewAudioCtxRef = useRef<AudioContext | null>(null);
 	const previewSourceRef = useRef<AudioBufferSourceNode | null>(null);
 	const previewGainRef = useRef<GainNode | null>(null);
@@ -64,7 +83,7 @@ export function BgmSettingsTab() {
 		};
 	}, []);
 
-	// Real-time volume update for active preview audio
+	// Cập nhật âm lượng realtime khi đang phát preview
 	useEffect(() => {
 		if (previewGainRef.current && previewAudioCtxRef.current) {
 			const ctx = previewAudioCtxRef.current;
@@ -102,49 +121,61 @@ export function BgmSettingsTab() {
 			previewAudioCtxRef.current = null;
 		}
 		setIsPreviewing(false);
+		setIsLoadingPreview(false);
 		setIsBgmPreviewing?.(false);
 	};
 
-	const togglePreview = async () => {
-		if (isPreviewing) {
-			stopPreview();
-			return;
-		}
+	const startPreview = async (urlToPlay?: string) => {
+		stopPreview();
 
 		try {
-			setIsPreviewing(true);
+			setIsLoadingPreview(true);
 			setIsBgmPreviewing?.(true);
-			const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
 
-			if (!AudioContextClass) return;
+			const AudioContextClass =
+				window.AudioContext ||
+				(window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+
+			if (!AudioContextClass) {
+				setIsLoadingPreview(false);
+				return;
+			}
 
 			const ctx = new AudioContextClass();
 			previewAudioCtxRef.current = ctx;
 
-			const resolvedUrl = getAssetUrl(bgmAudioUrl);
+			const targetUrl = urlToPlay || bgmAudioUrl;
+			const resolvedUrl = getAssetUrl(targetUrl);
 
 			let buffer: AudioBuffer;
 			try {
 				const res = await fetch(resolvedUrl);
+				if (res.ok === false) throw new Error(`HTTP error ${res.status}`);
+				const contentType = res.headers?.get ? res.headers.get('content-type') || '' : '';
+				if (contentType.includes('text/html')) {
+					throw new Error('Received HTML instead of audio');
+				}
 				const arrayBuffer = await res.arrayBuffer();
 				buffer = await ctx.decodeAudioData(arrayBuffer);
 			} catch {
-				// Fallback to synth ambient if fetch fails
+				// Fallback sang synth ambient nếu nạp file thất bại
 				const sampleRate = ctx.sampleRate || 44100;
 				const duration = 4.0;
 				const numSamples = Math.floor(sampleRate * duration);
 				buffer = ctx.createBuffer(2, numSamples, sampleRate);
-				const left = buffer.getChannelData(0);
-				const right = buffer.getChannelData(1);
-				for (let i = 0; i < numSamples; i++) {
-					const t = i / sampleRate;
-					const lfo = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.25 * t);
-					const note1 = Math.sin(2 * Math.PI * 261.63 * t) * 0.15;
-					const note2 = Math.sin(2 * Math.PI * 329.63 * t) * 0.12;
-					const note3 = Math.sin(2 * Math.PI * 392.0 * t) * 0.1;
-					const wave = (note1 + note2 + note3) * lfo;
-					left[i] = wave;
-					right[i] = wave;
+				if (buffer && typeof buffer.getChannelData === 'function') {
+					const left = buffer.getChannelData(0);
+					const right = buffer.getChannelData(1);
+					for (let i = 0; i < numSamples; i++) {
+						const t = i / sampleRate;
+						const lfo = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.25 * t);
+						const note1 = Math.sin(2 * Math.PI * 261.63 * t) * 0.15;
+						const note2 = Math.sin(2 * Math.PI * 329.63 * t) * 0.12;
+						const note3 = Math.sin(2 * Math.PI * 392.0 * t) * 0.1;
+						const wave = (note1 + note2 + note3) * lfo;
+						left[i] = wave;
+						right[i] = wave;
+					}
 				}
 			}
 
@@ -165,16 +196,36 @@ export function BgmSettingsTab() {
 
 			previewSourceRef.current = source;
 			previewGainRef.current = gain;
+			setIsPreviewing(true);
 		} catch (err) {
 			console.error('Failed to preview BGM audio:', err);
 			setIsPreviewing(false);
+		} finally {
+			setIsLoadingPreview(false);
 		}
 	};
 
+	const togglePreview = async () => {
+		if (isPreviewing) {
+			stopPreview();
+			return;
+		}
+		await startPreview();
+	};
+
 	const handleSelectPreset = (url: string) => {
+		if (bgmAudioUrl === url) {
+			void togglePreview();
+			return;
+		}
+
+		const wasPreviewing = isPreviewing;
 		stopPreview();
 		setBgmAudioUrl(url);
 		setCustomUrl(url);
+		if (wasPreviewing) {
+			void startPreview(url);
+		}
 	};
 
 	const handleCustomUrlBlur = () => {
@@ -199,86 +250,140 @@ export function BgmSettingsTab() {
 	const volumePercent = Math.round(bgmVolume * 100);
 
 	return (
-		<div className="space-y-3 text-on-surface">
-			{/* 1. Master Toggle Header (Glassmorphic translucent) */}
-			<div className="p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md space-y-2.5 shadow-xs">
+		<div className="space-y-2.5 text-on-surface select-none pb-4">
+			{/* 1. Master Toggle & Live Sound Preview */}
+			<div className="p-2.5 rounded-2xl bg-white/5 border border-white/10 space-y-2 shadow-xs">
 				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-2.5">
-						<div className={`p-2 rounded-xl transition-all ${bgmEnabled ? 'bg-primary/20 text-primary border border-primary/40' : 'bg-white/10 text-on-surface-variant'}`}>
-							<Music size={18} />
+					<div className="flex items-center gap-2">
+						<div
+							className={`p-1.5 rounded-xl transition-all ${
+								bgmEnabled
+									? 'bg-primary/20 text-primary border border-primary/40'
+									: 'bg-white/10 text-on-surface-variant'
+							}`}
+						>
+							<Music size={16} />
 						</div>
-						<div>
-							<h3 className="text-xs font-bold text-on-surface flex items-center gap-2">
-								Nhạc Nền Đọc Sách
-								<span
-									className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${bgmEnabled ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-white/10 text-on-surface-variant'}`}
-								>
-									{bgmEnabled ? 'Đang bật' : 'Đã tắt'}
-								</span>
-							</h3>
-							<p className="text-[11px] text-on-surface-variant/80 mt-0.5">Bật/tắt nhạc nền thư giãn khi đọc sách bằng nút điều khiển thủ công</p>
+						<div className="flex items-center gap-1.5">
+							<h3 className="text-xs font-bold text-on-surface">Nhạc Nền</h3>
 						</div>
 					</div>
+
+					{/* Switch Toggle */}
 					<button
 						type="button"
-						onClick={() => setBgmEnabled(!bgmEnabled)}
-						className={`w-9 h-5 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${bgmEnabled ? 'bg-primary' : 'bg-white/20'}`}
+						onClick={() => {
+							triggerHaptic('light');
+							setBgmEnabled(!bgmEnabled);
+						}}
+						className={`w-9 h-5 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${
+							bgmEnabled ? 'bg-primary' : 'bg-white/20'
+						}`}
 						title={bgmEnabled ? 'Tắt nhạc nền' : 'Bật nhạc nền'}
 						aria-label="Chuyển đổi bật tắt nhạc nền"
 					>
-						<div className={`w-4 h-4 rounded-full bg-white shadow-xs transition-transform ${bgmEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+						<div
+							className={`w-4 h-4 rounded-full bg-white shadow-xs transition-transform ${
+								bgmEnabled ? 'translate-x-4' : 'translate-x-0'
+							}`}
+						/>
 					</button>
 				</div>
 
-				{/* Live Sound Preview Controls */}
-				<div className="flex items-center justify-between pt-2 border-t border-white/10 text-xs">
+				{/* Quick Preview Bar */}
+				<div className="flex items-center justify-between pt-1.5 border-t border-white/10 text-xs">
 					<div className="flex items-center gap-1.5 text-on-surface-variant">
-						<Radio size={13} className={isPreviewing ? 'text-primary animate-pulse' : 'text-on-surface-variant/60'} />
-						<span className="text-[11px]">{isPreviewing ? 'Đang phát nghe thử...' : 'Nghe thử giai điệu hiện tại'}</span>
+						<Radio
+							size={12}
+							className={isPreviewing ? 'text-primary animate-pulse' : 'text-on-surface-variant/60'}
+						/>
+						<span className="text-[11px] font-medium">
+							{isLoadingPreview ? 'Đang tải...' : isPreviewing ? 'Đang phát thử' : 'Thử âm thanh'}
+						</span>
 					</div>
+
 					<button
-						onClick={togglePreview}
-						disabled={!bgmEnabled}
-						className={`px-2.5 py-1 rounded-xl font-bold flex items-center gap-1.5 transition-all text-[11px] active:scale-95 ${isPreviewing ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 hover:bg-amber-500/30' : 'bg-primary/20 text-primary border border-primary/40 hover:bg-primary/30'} disabled:opacity-40 disabled:pointer-events-none`}
+						type="button"
+						onClick={() => {
+							triggerHaptic('light');
+							togglePreview();
+						}}
+						disabled={!bgmEnabled || isLoadingPreview}
+						className={`px-2.5 py-1 rounded-xl font-bold flex items-center gap-1.5 transition-all text-xs active:scale-95 cursor-pointer ${
+							isPreviewing
+								? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 hover:bg-amber-500/30'
+								: 'bg-primary/20 text-primary border border-primary/40 hover:bg-primary/30'
+						} disabled:opacity-40 disabled:pointer-events-none`}
 					>
-						{isPreviewing ? <Pause size={13} /> : <Play size={13} />}
-						{isPreviewing ? 'Tạm dừng' : 'Nghe thử'}
+						{isLoadingPreview ? (
+							<>
+								<Loader2 size={12} className="animate-spin text-primary" />
+								<span>Tải...</span>
+							</>
+						) : isPreviewing ? (
+							<>
+								<Pause size={12} className="fill-current" />
+								<span>Tạm dừng</span>
+							</>
+						) : (
+							<>
+								<Play size={12} className="fill-current" />
+								<span>Nghe thử</span>
+							</>
+						)}
 					</button>
 				</div>
 			</div>
 
-			{/* 2. Volume Slider & Presets (Glassmorphic translucent) */}
-			<div className={`p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md space-y-2.5 shadow-xs transition-opacity ${!bgmEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
+			{/* 2. Âm lượng (Compact Slider & Presets) */}
+			<div
+				className={`p-2.5 rounded-2xl bg-white/5 border border-white/10 space-y-2 shadow-xs transition-opacity ${
+					!bgmEnabled ? 'opacity-40 pointer-events-none' : ''
+				}`}
+			>
 				<div className="flex items-center justify-between">
-					<label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-						{volumePercent === 0 ? <VolumeX size={15} className="text-error" /> : <Volume2 size={15} className="text-primary" />}
-						Âm lượng Nhạc Nền: <span className="text-primary font-black">{volumePercent}%</span>
-					</label>
-					<span className="text-[10px] text-on-surface-variant/70 font-mono">Khuyên dùng 15% - 25%</span>
+					<div className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+						{volumePercent === 0 ? (
+							<VolumeX size={14} className="text-rose-400" />
+						) : (
+							<Volume2 size={14} className="text-primary" />
+						)}
+						<span>Âm lượng</span>
+					</div>
+					<span className="px-2 py-0.5 rounded-lg bg-primary/20 text-primary border border-primary/30 font-mono font-bold text-xs">
+						{volumePercent}%
+					</span>
 				</div>
 
-				<div className="flex items-center gap-3">
-					<input
-						type="range"
-						min="0"
-						max="1"
-						step="0.05"
-						value={bgmVolume}
-						onChange={(e) => setBgmVolume(parseFloat(e.target.value))}
-						className="w-full accent-primary h-1.5 bg-white/10 rounded-lg cursor-pointer"
-					/>
-				</div>
+				{/* Range Slider */}
+				<input
+					type="range"
+					min="0"
+					max="1"
+					step="0.05"
+					value={bgmVolume}
+					onChange={(e) => setBgmVolume(parseFloat(e.target.value))}
+					className="w-full accent-primary h-1.5 bg-white/10 rounded-lg cursor-pointer"
+				/>
 
-				{/* Quick Volume Preset Buttons */}
-				<div className="flex items-center justify-between gap-1.5 pt-0.5">
+				{/* Quick Volume Preset Chips */}
+				<div className="flex items-center justify-between gap-1 pt-0.5">
 					{[0.1, 0.2, 0.35, 0.5, 0.75].map((presetVol) => {
 						const pct = Math.round(presetVol * 100);
 						const isSelected = Math.abs(bgmVolume - presetVol) < 0.03;
 						return (
 							<button
 								key={presetVol}
-								onClick={() => setBgmVolume(presetVol)}
-								className={`flex-1 py-1 text-[11px] font-bold rounded-lg border transition-all text-center active:scale-95 ${isSelected ? 'bg-primary/30 text-primary border-primary/60 shadow-xs' : 'bg-white/5 border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/10'}`}
+								type="button"
+								onClick={() => {
+									triggerHaptic('light');
+									setBgmVolume(presetVol);
+								}}
+								className={`flex-1 py-1 text-[11px] font-mono font-bold rounded-lg border transition-all text-center active:scale-95 cursor-pointer ${
+									isSelected
+										? 'bg-primary/25 text-primary border-primary/50 shadow-xs'
+										: 'bg-white/5 border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/10'
+								}`}
 							>
 								{pct}%
 							</button>
@@ -287,71 +392,118 @@ export function BgmSettingsTab() {
 				</div>
 			</div>
 
-			{/* 3. Audio Source Selector (Glassmorphic translucent) */}
-			<div className={`p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md space-y-2.5 shadow-xs transition-opacity ${!bgmEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
-				<h4 className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-					<Music size={14} className="text-primary" />
-					Chọn Bản Nhạc Nền
-				</h4>
+			{/* 3. Danh sách bản nhạc (Compact 2-Column Grid) */}
+			<div
+				className={`p-2.5 rounded-2xl bg-white/5 border border-white/10 space-y-2 shadow-xs transition-opacity ${
+					!bgmEnabled ? 'opacity-40 pointer-events-none' : ''
+				}`}
+			>
+				<div className="flex items-center justify-between px-0.5">
+					<h4 className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+						<Music size={13} className="text-primary" />
+						<span>Giai điệu</span>
+					</h4>
+				</div>
 
-				<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+				<div className="grid grid-cols-2 gap-1.5">
 					{PRESET_MUSIC_LIST.map((preset) => {
 						const Icon = preset.icon;
 						const isSelected = bgmAudioUrl === preset.url;
+						const isPlayingThis = isSelected && isPreviewing;
+
 						return (
 							<button
 								key={preset.id}
-								onClick={() => handleSelectPreset(preset.url)}
-								className={`p-2 rounded-xl border text-left transition-all flex items-start gap-2 relative ${isSelected ? 'bg-primary/20 border-primary/60 text-on-surface shadow-xs' : 'bg-white/5 border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/10'}`}
+								type="button"
+								onClick={() => {
+									triggerHaptic('light');
+									handleSelectPreset(preset.url);
+								}}
+								className={`px-2.5 py-2 rounded-xl border text-left transition-all flex items-center justify-between gap-1.5 cursor-pointer active:scale-95 ${
+									isSelected
+										? 'bg-primary/20 border-primary/60 text-primary shadow-xs'
+										: 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface'
+								}`}
 							>
-								<div className={`p-1.5 rounded-lg ${isSelected ? 'bg-primary/30 text-primary' : 'bg-white/10 text-on-surface-variant'}`}>
-									<Icon size={15} />
-								</div>
-								<div className="flex-1 min-w-0">
-									<div className="text-xs font-bold truncate flex items-center gap-1">
-										{preset.name}
-										{isSelected && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
+								<div className="flex items-center gap-2 min-w-0 flex-1">
+									<div
+										className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border ${
+											isSelected
+												? 'bg-primary/30 border-primary/50 text-primary'
+												: 'bg-white/10 border-white/15 text-on-surface-variant'
+										}`}
+									>
+										{isPlayingThis ? (
+											<Radio size={12} className="text-primary animate-pulse" />
+										) : (
+											<Icon size={12} />
+										)}
 									</div>
-									<div className="text-[10px] text-on-surface-variant/70 line-clamp-1 mt-0.5">{preset.description}</div>
+									<span
+										className={`text-xs font-bold truncate ${
+											isSelected ? 'text-primary font-black' : 'text-on-surface'
+										}`}
+									>
+										{preset.name}
+									</span>
 								</div>
+								{isSelected && (
+									<Check size={12} strokeWidth={3} className="text-primary shrink-0" />
+								)}
 							</button>
 						);
 					})}
 				</div>
-
-				{/* Custom URL Input */}
-				<div className="space-y-1 pt-1.5 border-t border-white/10">
-					<label className="text-[10px] font-bold text-on-surface-variant flex items-center gap-1">
-						<ExternalLink size={11} />
-						URL file âm thanh tùy chọn (.mp3, .wav):
-					</label>
-					<input
-						type="url"
-						value={customUrl}
-						onChange={(e) => setCustomUrl(e.target.value)}
-						onBlur={handleCustomUrlBlur}
-						placeholder="https://domain.com/audio/bgm.mp3 hoặc /audio/bgm.mp3"
-						className="w-full text-xs px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-on-surface placeholder:text-on-surface-variant/40 focus:outline-hidden focus:border-primary"
-					/>
-				</div>
 			</div>
 
-			{/* 4. Advanced Timing & Ramp Controls */}
-			<div className={`p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md space-y-2.5 shadow-xs transition-opacity ${!bgmEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
-				<button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className="w-full flex items-center justify-between text-xs font-bold text-on-surface">
+			{/* 4. Cấu hình Nâng cao (Collapsible Accordion) */}
+			<div
+				className={`rounded-2xl bg-white/5 border border-white/10 overflow-hidden shadow-xs transition-opacity ${
+					!bgmEnabled ? 'opacity-40 pointer-events-none' : ''
+				}`}
+			>
+				<button
+					type="button"
+					onClick={() => {
+						triggerHaptic('light');
+						setShowAdvanced(!showAdvanced);
+					}}
+					className="w-full p-2.5 flex items-center justify-between text-xs font-bold text-on-surface hover:bg-white/5 transition-colors cursor-pointer"
+				>
 					<span className="flex items-center gap-1.5">
-						<Sliders size={14} className="text-primary" />
-						Cấu hình Nâng cao (Fade & Trễ ngắt câu)
+						<Sliders size={13} className="text-primary" />
+						<span>Cấu hình nâng cao</span>
 					</span>
-					<span className="text-[10px] text-primary font-bold">{showAdvanced ? 'Thu gọn' : 'Mở rộng'}</span>
+					{showAdvanced ? (
+						<ChevronUp size={13} className="text-on-surface-variant" />
+					) : (
+						<ChevronDown size={13} className="text-on-surface-variant" />
+					)}
 				</button>
 
 				{showAdvanced && (
-					<div className="space-y-2.5 pt-2 border-t border-white/10 animate-in fade-in duration-200">
+					<div className="p-3 border-t border-white/10 space-y-2.5 bg-black/20 animate-in fade-in duration-200">
+						{/* URL tùy chỉnh */}
+						<div className="space-y-1">
+							<span className="text-on-surface-variant text-[11px] flex items-center gap-1">
+								<ExternalLink size={11} />
+								URL nhạc tùy chỉnh:
+							</span>
+							<div className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-xl border border-white/15 focus-within:ring-1 focus-within:ring-primary/60">
+								<input
+									type="url"
+									value={customUrl}
+									onChange={(e) => setCustomUrl(e.target.value)}
+									onBlur={handleCustomUrlBlur}
+									placeholder="https://.../audio.mp3"
+									className="w-full bg-transparent text-xs text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none min-w-0 font-medium font-mono"
+								/>
+							</div>
+						</div>
 						{/* Fade In Ms */}
 						<div className="space-y-1">
 							<div className="flex justify-between text-xs">
-								<span className="text-on-surface-variant text-[11px]">Thời gian Fade In (tăng âm):</span>
+								<span className="text-on-surface-variant text-[11px]">Fade In (tăng âm):</span>
 								<span className="font-mono text-primary font-bold text-[11px]">{bgmFadeInMs} ms</span>
 							</div>
 							<input
@@ -368,7 +520,7 @@ export function BgmSettingsTab() {
 						{/* Fade Out Ms */}
 						<div className="space-y-1">
 							<div className="flex justify-between text-xs">
-								<span className="text-on-surface-variant text-[11px]">Thời gian Fade Out (giảm âm):</span>
+								<span className="text-on-surface-variant text-[11px]">Fade Out (giảm âm):</span>
 								<span className="font-mono text-primary font-bold text-[11px]">{bgmFadeOutMs} ms</span>
 							</div>
 							<input
@@ -387,7 +539,7 @@ export function BgmSettingsTab() {
 							<div className="flex justify-between text-xs">
 								<span className="text-on-surface-variant text-[11px] flex items-center gap-1">
 									<Clock size={11} />
-									Độ trễ chờ chuyển câu/dòng:
+									Trễ chờ chuyển câu/dòng:
 								</span>
 								<span className="font-mono text-primary font-bold text-[11px]">{bgmStopDelayMs} ms</span>
 							</div>
@@ -400,22 +552,30 @@ export function BgmSettingsTab() {
 								onChange={(e) => setBgmParameter('bgmStopDelayMs', parseInt(e.target.value, 10))}
 								className="w-full accent-primary h-1.5 bg-white/10 rounded-lg cursor-pointer"
 							/>
-							<p className="text-[10px] text-on-surface-variant/70">Khoảng trễ giữ nhạc phát liên tục không bị ngắt giữa các câu.</p>
 						</div>
 
 						{/* Only on Edge Read Aloud toggle */}
-						<div className="flex items-center justify-between pt-1">
+						<div className="flex items-center justify-between pt-1 border-t border-white/10">
 							<span className="text-xs text-on-surface font-medium flex items-center gap-1">
 								<Info size={12} className="text-primary" />
-								Chỉ phát khi Edge Read Aloud hoạt động
+								Chỉ phát khi đọc giọng Edge
 							</span>
 							<button
 								type="button"
-								onClick={() => setBgmParameter('bgmOnlyOnEdgeReadAloud', !bgmOnlyOnEdgeReadAloud)}
-								className={`w-8 h-4.5 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${bgmOnlyOnEdgeReadAloud ? 'bg-primary' : 'bg-white/20'}`}
+								onClick={() => {
+									triggerHaptic('light');
+									setBgmParameter('bgmOnlyOnEdgeReadAloud', !bgmOnlyOnEdgeReadAloud);
+								}}
+								className={`w-8 h-4.5 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${
+									bgmOnlyOnEdgeReadAloud ? 'bg-primary' : 'bg-white/20'
+								}`}
 								title="Chuyển đổi kích hoạt nhạc nền"
 							>
-								<div className={`w-3.5 h-3.5 rounded-full bg-white shadow-xs transition-transform ${bgmOnlyOnEdgeReadAloud ? 'translate-x-3.5' : 'translate-x-0'}`} />
+								<div
+									className={`w-3.5 h-3.5 rounded-full bg-white shadow-xs transition-transform ${
+										bgmOnlyOnEdgeReadAloud ? 'translate-x-3.5' : 'translate-x-0'
+									}`}
+								/>
 							</button>
 						</div>
 					</div>
@@ -426,11 +586,14 @@ export function BgmSettingsTab() {
 			<div className="flex justify-end pt-0.5">
 				<button
 					type="button"
-					onClick={handleResetDefaults}
-					className="px-2.5 py-1 text-xs font-bold text-on-surface-variant hover:text-on-surface bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 flex items-center gap-1.5 transition-all active:scale-95"
+					onClick={() => {
+						triggerHaptic('light');
+						handleResetDefaults();
+					}}
+					className="px-2.5 py-1 text-xs font-bold text-on-surface-variant hover:text-on-surface bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
 				>
 					<RotateCcw size={12} />
-					Khôi phục mặc định Nhạc Nền
+					<span>Mặc định</span>
 				</button>
 			</div>
 		</div>

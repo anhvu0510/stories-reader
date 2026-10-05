@@ -168,8 +168,8 @@ export function VerticalBatchChapterNav({
 							</motion.button>
 						)}
 
-						{/* BGM Toggle Button (shown ONLY when Edge Read Aloud highlight exists) */}
-						{hasBrowserReadAloudHighlight && onToggleBgm && (
+						{/* BGM Toggle Button (hiển thị khi mở menu điều khiển dọc) */}
+						{onToggleBgm && (
 							<motion.button
 								whileTap={{ scale: 0.88 }}
 								onClick={(e) => {

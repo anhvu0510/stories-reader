@@ -64,12 +64,12 @@ describe('BgmSettingsTab Component UI & Store Integration', () => {
 	it('QC-UI-1: Hiển thị giao diện cài đặt nhạc nền và cho phép chọn Preset âm thanh', async () => {
 		render(<BgmSettingsTab />);
 
-		expect(screen.getByText('Nhạc Nền Đọc Sách')).toBeDefined();
-		expect(screen.getByText('Tổng hợp Synth Ambient')).toBeDefined();
-		expect(screen.getByText('Lofi Piano Thư Giãn')).toBeDefined();
+		expect(screen.getByText('Nhạc Nền')).toBeDefined();
+		expect(screen.getByText('Synth Ambient')).toBeDefined();
+		expect(screen.getByText('Lofi Piano')).toBeDefined();
 
 		// Click chọn preset Lofi Piano
-		const lofiCard = screen.getByText('Lofi Piano Thư Giãn').closest('button');
+		const lofiCard = screen.getByText('Lofi Piano').closest('button');
 		if (lofiCard) {
 			fireEvent.click(lofiCard);
 		}

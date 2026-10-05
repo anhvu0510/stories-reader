@@ -11,6 +11,7 @@ export interface EdgeReadAloudBgmOptions {
 	stopDelayMs?: number;
 	enabled?: boolean;
 	isBgmPreviewing?: boolean;
+	isTTSActive?: boolean;
 }
 
 export interface EdgeReadAloudBgmReturn {
@@ -79,7 +80,8 @@ export function useEdgeReadAloudBgm({
 	fadeOutMs = 800,
 	stopDelayMs = 1500,
 	enabled = true,
-	isBgmPreviewing = false
+	isBgmPreviewing = false,
+	isTTSActive = false
 }: EdgeReadAloudBgmOptions): EdgeReadAloudBgmReturn {
 	const [isPlayingState, setIsPlayingState] = useState(false);
 	const audioCtxRef = useRef<AudioContext | null>(null);
@@ -201,16 +203,14 @@ export function useEdgeReadAloudBgm({
 			if (!ctx) return;
 
 			if (ctx.state === 'suspended') {
-				void ctx
-					.resume()
-					.then(() => {
-						if (ctx.state === 'running') {
-							setIsPlayingState(true);
-						}
-					})
-					.catch((err) => {
-						console.warn('[EdgeBgm] Could not resume isolated AudioContext:', err);
-					});
+				try {
+					await ctx.resume();
+					if (ctx.state === 'running') {
+						setIsPlayingState(true);
+					}
+				} catch (err) {
+					console.warn('[EdgeBgm] Could not resume isolated AudioContext:', err);
+				}
 			}
 
 			// Offload synthesis to background Web Worker if buffer is not loaded yet
@@ -449,6 +449,25 @@ export function useEdgeReadAloudBgm({
 		}
 	}, [isBgmPreviewing, enabled, stopBgm, startBgm]);
 
+	// Đồng bộ phát/dừng BGM theo trạng thái đọc TTS của App (hỗ trợ Android native & Web)
+	const prevTTSActiveRef = useRef(isTTSActive);
+	useEffect(() => {
+		if (prevTTSActiveRef.current !== isTTSActive) {
+			prevTTSActiveRef.current = isTTSActive;
+			if (!enabled || isBgmPreviewingRef.current) return;
+
+			if (isTTSActive) {
+				if (!isUserMutedRef.current) {
+					void startBgm(false);
+				}
+			} else {
+				if (!isManualPlayingRef.current && isPlayingRef.current) {
+					stopBgm(false);
+				}
+			}
+		}
+	}, [isTTSActive, enabled, startBgm, stopBgm]);
+
 	// Observe DOM for Edge Read Aloud state changes (auto-start, auto-pause on inactive highlight, auto-resume on start)
 	useEffect(() => {
 		if (!enabled || typeof document === 'undefined') return;
@@ -577,12 +596,22 @@ export function useEdgeReadAloudBgm({
 			try {
 				const resolvedUrl = getAssetUrl(audioUrl);
 				const response = await fetch(resolvedUrl, { signal: controller.signal });
+				if (response.ok === false) throw new Error(`HTTP error ${response.status}`);
+				const contentType = response.headers?.get ? response.headers.get('content-type') || '' : '';
+				if (contentType.includes('text/html')) {
+					throw new Error('Received HTML instead of audio');
+				}
 				const arrayBuffer = await response.arrayBuffer();
 
 				const ctx = getOrCreateAudioContext();
 				if (!ctx) return;
 
-				const decoded = await ctx.decodeAudioData(arrayBuffer);
+				const decoded = await new Promise<AudioBuffer>((resolve, reject) => {
+					const promise = ctx.decodeAudioData(arrayBuffer, resolve, reject);
+					if (promise && typeof promise.then === 'function') {
+						promise.then(resolve).catch(reject);
+					}
+				});
 
 				if (isMounted) {
 					if (decoded && decoded.duration > 0.1) {
@@ -609,6 +638,15 @@ export function useEdgeReadAloudBgm({
 			} catch (err: any) {
 				if (err.name !== 'AbortError') {
 					console.warn('[EdgeBgm] Could not load audio file, using synth ambient fallback:', err);
+					if (isMounted) {
+						const ctx = getOrCreateAudioContext();
+						if (ctx) {
+							const fallbackBuffer = createSynthesizedAmbientBuffer(ctx);
+							if (fallbackBuffer) {
+								audioBufferRef.current = fallbackBuffer;
+							}
+						}
+					}
 				}
 			}
 		};
