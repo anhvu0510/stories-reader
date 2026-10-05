@@ -670,13 +670,6 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			setCurrentChunkIndex(idx);
 			setIsLoading(false);
 			saveResumePosition(idx, 0);
-
-			const targetChunk = chunks[idx];
-			if (!targetChunk) return;
-			const firstWordMatch = targetChunk.text.match(/[^\s.,!?:;'"(){}[\]“”‘’\-–—]+/);
-			const firstCharIdx = firstWordMatch?.index ?? 0;
-			const firstCharLen = firstWordMatch?.[0]?.length ?? 1;
-			updateWordHighlight(idx, firstCharIdx, firstCharLen);
 		});
 
 		const unsubWord = activeNativeStream.onWordBoundary(({ chunkIndex, charIndex, charLength }) => {

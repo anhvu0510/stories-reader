@@ -47,12 +47,10 @@ public class GaplessStreamPlayer {
     private long currentSessionId = 0;
 
     private Runnable wordBoundaryTicker = null;
-    private int lastWordBoundaryCharIndex = -1;
-    private int currentBoundaryIndex = 0;
-    private long playbackStartRealtime = 0;
-    private int playbackBasePositionMs = 0;
-    private int lastRawPositionMs = 0;
-    private long lastRawPositionRealtime = 0;
+    private int lastWordBoundaryIndex = -1;
+    private int lastRawPosMs = 0;
+    private long lastRawTime = 0;
+    private int smoothPosMs = 0;
 
     public GaplessStreamPlayer(Context context, PlayerListener listener) {
         this.context = context.getApplicationContext();
@@ -169,12 +167,10 @@ public class GaplessStreamPlayer {
                     }
                     currentPlayer = mp;
                     currentChunkIndex = index;
-                    lastWordBoundaryCharIndex = -1;
-                    currentBoundaryIndex = 0;
-                    playbackStartRealtime = SystemClock.elapsedRealtime();
-                    playbackBasePositionMs = 0;
-                    lastRawPositionMs = 0;
-                    lastRawPositionRealtime = playbackStartRealtime;
+                    lastWordBoundaryIndex = -1;
+                    lastRawPosMs = 0;
+                    lastRawTime = 0;
+                    smoothPosMs = 0;
 
                     try {
                         mp.start();
@@ -309,12 +305,10 @@ public class GaplessStreamPlayer {
             currentChunkIndex = nextChunkIndex;
             nextPlayer = null;
             nextChunkIndex = -1;
-            lastWordBoundaryCharIndex = -1;
-            currentBoundaryIndex = 0;
-            playbackStartRealtime = SystemClock.elapsedRealtime();
-            playbackBasePositionMs = 0;
-            lastRawPositionMs = 0;
-            lastRawPositionRealtime = playbackStartRealtime;
+            lastWordBoundaryIndex = -1;
+            lastRawPosMs = 0;
+            lastRawTime = 0;
+            smoothPosMs = 0;
 
             if (listener != null) {
                 listener.onChunkStart(currentChunkIndex);
@@ -334,8 +328,6 @@ public class GaplessStreamPlayer {
     public synchronized void pause() {
         if (!isPlayingSafely()) return;
         try {
-            long now = SystemClock.elapsedRealtime();
-            playbackBasePositionMs = (int) (playbackBasePositionMs + (now - playbackStartRealtime));
             currentPlayer.pause();
             isPaused = true;
             stopWordBoundaryTicker();
@@ -351,10 +343,10 @@ public class GaplessStreamPlayer {
         if (currentPlayer == null || !isPaused) return;
         try {
             currentPlayer.start();
-            long now = SystemClock.elapsedRealtime();
-            playbackStartRealtime = now;
-            lastRawPositionRealtime = now;
             isPaused = false;
+            lastRawPosMs = currentPlayer.getCurrentPosition();
+            lastRawTime = SystemClock.elapsedRealtime();
+            smoothPosMs = lastRawPosMs;
             startWordBoundaryTicker();
             if (listener != null) {
                 listener.onPlaybackStateChange(true, false, false);
@@ -373,12 +365,10 @@ public class GaplessStreamPlayer {
         isPlaying = false;
         isPaused = false;
         stopWordBoundaryTicker();
-        currentBoundaryIndex = 0;
-        lastWordBoundaryCharIndex = -1;
-        playbackStartRealtime = 0;
-        playbackBasePositionMs = 0;
-        lastRawPositionMs = 0;
-        lastRawPositionRealtime = 0;
+        lastWordBoundaryIndex = -1;
+        lastRawPosMs = 0;
+        lastRawTime = 0;
+        smoothPosMs = 0;
 
         if (preparingCurrentPlayer != null) {
             MediaPlayer p = preparingCurrentPlayer;
@@ -411,7 +401,10 @@ public class GaplessStreamPlayer {
         stop();
         currentChunkIndex = -1;
         nextChunkIndex = -1;
-        lastWordBoundaryCharIndex = -1;
+        lastWordBoundaryIndex = -1;
+        lastRawPosMs = 0;
+        lastRawTime = 0;
+        smoothPosMs = 0;
         wordBoundariesSource = null;
         mainHandler.removeCallbacksAndMessages(null);
     }
@@ -429,108 +422,88 @@ public class GaplessStreamPlayer {
         this.wordBoundariesSource = source;
     }
 
-    private void emitInitialWordBoundary() {
-        if (wordBoundariesSource == null || currentBoundaryIndex > 0) return;
-        JSONArray boundaries = wordBoundariesSource.get(currentChunkIndex);
-        if (boundaries == null || boundaries.length() == 0) return;
-
-        JSONObject firstWb = boundaries.optJSONObject(0);
-        if (firstWb == null) return;
-
-        int charIdx = firstWb.optInt("charIndex", -1);
-        if (charIdx < 0) return;
-
-        lastWordBoundaryCharIndex = charIdx;
-        currentBoundaryIndex = 1;
-        if (listener == null) return;
-
-        listener.onWordBoundary(
-                currentChunkIndex,
-                charIdx,
-                firstWb.optInt("charLength", 1),
-                firstWb.optString("text", "")
-        );
-    }
-
-    private double calculateSmoothPositionSeconds(long now) {
-        int rawPosMs = 0;
+    private void checkWordBoundary() {
+        if (!isPlaying || !isPlayingSafely() || wordBoundariesSource == null) return;
         try {
-            rawPosMs = currentPlayer != null ? currentPlayer.getCurrentPosition() : 0;
-        } catch (Exception ignored) {}
+            long now = SystemClock.elapsedRealtime();
+            int rawPosMs = 0;
+            try {
+                rawPosMs = currentPlayer != null ? currentPlayer.getCurrentPosition() : 0;
+            } catch (Exception ignored) {}
 
-        if (rawPosMs > 0 && rawPosMs != lastRawPositionMs) {
-            lastRawPositionMs = rawPosMs;
-            lastRawPositionRealtime = now;
-        }
+            if (rawPosMs > lastRawPosMs) {
+                lastRawPosMs = rawPosMs;
+                lastRawTime = now;
+            }
 
-        long elapsedSinceStart = now - playbackStartRealtime;
-        long estimatedPosMs = playbackBasePositionMs + elapsedSinceStart;
-
-        if (lastRawPositionMs > 0) {
-            long elapsedSinceRaw = now - lastRawPositionRealtime;
-            long anchoredEstimate = lastRawPositionMs + elapsedSinceRaw;
-            if (Math.abs(estimatedPosMs - anchoredEstimate) > 250) {
-                playbackStartRealtime = now;
-                playbackBasePositionMs = lastRawPositionMs;
-                estimatedPosMs = lastRawPositionMs;
+            int estimatedPosMs;
+            if (lastRawPosMs > 0 && lastRawTime > 0) {
+                long elapsed = now - lastRawTime;
+                // Giới hạn ước tính nội suy tối đa 200ms vượt trước vị trí phần cứng để chống trôi khi audio bị nghẽn
+                estimatedPosMs = lastRawPosMs + (int) Math.min(elapsed, 200);
             } else {
-                estimatedPosMs = anchoredEstimate;
+                estimatedPosMs = rawPosMs;
             }
-        }
 
-        // Bù trừ độ trễ phần cứng audio (~35ms) để khớp chính xác với âm thanh tai người nghe thực tế
-        return Math.max(0.0, (double) (estimatedPosMs - 35) / 1000.0);
-    }
+            // Đảm bảo đồng hồ nội suy luôn tịnh tiến đơn điệu (monotonically non-decreasing), tuyệt đối không bao giờ giật lùi
+            if (estimatedPosMs > smoothPosMs) {
+                smoothPosMs = estimatedPosMs;
+            }
 
-    private void advanceWordBoundaries(double posSec) {
-        if (wordBoundariesSource == null) return;
-        JSONArray boundaries = wordBoundariesSource.get(currentChunkIndex);
-        if (boundaries == null || boundaries.length() == 0) return;
+            // Bù trừ độ trễ ngõ ra âm thanh phần cứng (~50ms) để highlight khớp chuẩn xác với âm thanh tai người nghe thực tế
+            double posSec = Math.max(0.0, (double) (smoothPosMs - 50) / 1000.0);
 
-        while (currentBoundaryIndex < boundaries.length()) {
-            JSONObject wb = boundaries.optJSONObject(currentBoundaryIndex);
-            if (wb == null) {
-                currentBoundaryIndex++;
-                continue;
+            JSONArray boundaries = wordBoundariesSource.get(currentChunkIndex);
+            if (boundaries == null || boundaries.length() == 0) return;
+
+            JSONObject activeWb = null;
+            int activeIdx = -1;
+            for (int i = 0; i < boundaries.length(); i++) {
+                JSONObject wb = boundaries.optJSONObject(i);
+                if (wb == null) continue;
+                double startSec = wb.optDouble("startSeconds", 0);
+                if (posSec < startSec) break;
+                activeWb = wb;
+                activeIdx = i;
             }
-            double startSec = wb.optDouble("startSeconds", 0);
-            if (posSec < startSec) {
-                break;
+
+            // Nếu vừa bắt đầu câu (lastWordBoundaryIndex < 0), lập tức lấy từ đầu tiên (index 0)
+            // để hiển thị ngay highlight dòng và chữ đầu tiên, triệt tiêu hoàn toàn độ trễ 200-300ms khi chuyển câu/đoạn
+            if (activeWb == null && lastWordBoundaryIndex < 0) {
+                activeWb = boundaries.optJSONObject(0);
+                activeIdx = 0;
             }
-            int charIdx = wb.optInt("charIndex", -1);
-            currentBoundaryIndex++;
-            if (charIdx < 0 || listener == null) {
-                continue;
+
+            if (activeWb == null || activeIdx <= lastWordBoundaryIndex) return;
+
+            lastWordBoundaryIndex = activeIdx;
+            int charIdx = activeWb.optInt("charIndex", -1);
+            if (charIdx >= 0 && listener != null) {
+                listener.onWordBoundary(
+                        currentChunkIndex,
+                        charIdx,
+                        activeWb.optInt("charLength", 1),
+                        activeWb.optString("text", "")
+                );
             }
-            lastWordBoundaryCharIndex = charIdx;
-            listener.onWordBoundary(
-                    currentChunkIndex,
-                    charIdx,
-                    wb.optInt("charLength", 1),
-                    wb.optString("text", "")
-            );
-        }
+        } catch (Exception ignored) {}
     }
 
     private void startWordBoundaryTicker() {
         stopWordBoundaryTicker();
-        emitInitialWordBoundary();
+        checkWordBoundary(); // Chạy ngay lập tức lần đầu (0ms) để highlight ngay từ đầu câu
 
         wordBoundaryTicker = new Runnable() {
             @Override
             public void run() {
                 if (!isPlaying || !isPlayingSafely() || wordBoundariesSource == null) return;
-                try {
-                    long now = SystemClock.elapsedRealtime();
-                    double posSec = calculateSmoothPositionSeconds(now);
-                    advanceWordBoundaries(posSec);
-                } catch (Exception ignored) {}
+                checkWordBoundary();
                 if (isPlaying) {
-                    mainHandler.postDelayed(this, 20);
+                    mainHandler.postDelayed(this, 25);
                 }
             }
         };
-        mainHandler.postDelayed(wordBoundaryTicker, 20);
+        mainHandler.postDelayed(wordBoundaryTicker, 25);
     }
 
     private void stopWordBoundaryTicker() {
