@@ -1,7 +1,7 @@
 {
-  "version": "1.0.328",
+  "version": "1.0.329",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "2cf6b43c26f53ba059c7670869611741e85c6bde44af0d1687bd9259f4055884",
-  "releaseNotes": "refactor: redesign voice settings tab with multi-engine support and audio previews",
-  "updatedAt": "2026-10-05T04:57:30Z"
+  "checksum": "b2618ba7d9eedc77519196558ffbb2b233984c0c59adb5ad0328221c794cacfe",
+  "releaseNotes": "refactor: improve audio node cleanup safety and streamline audio context management in useEdgeReadAloudBgm hook",
+  "updatedAt": "2026-10-05T05:04:14Z"
 }
