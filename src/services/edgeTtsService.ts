@@ -38,6 +38,8 @@ export interface EdgeTTSNativePluginInterface {
 	}>;
 	playChapter?(options: {
 		chunks: string[];
+		utterances?: import('./readAloudUtterancePlan').ReadAloudUtterance[];
+		sessionId?: string;
 		startIndex?: number;
 		voice?: string;
 		rate?: number;
@@ -50,6 +52,7 @@ export interface EdgeTTSNativePluginInterface {
 	resumePlayback?(): Promise<void>;
 	stopPlayback?(): Promise<void>;
 	seekToChunk?(options: { chunkIndex: number }): Promise<void>;
+	getPlaybackSnapshot?(): Promise<import('./edgeTtsNativeStream').PlaybackSnapshot | null>;
 	addListener?(eventName: string, listenerFunc: (data: any) => void): Promise<{ remove: () => Promise<void> }>;
 }
 

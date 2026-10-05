@@ -575,6 +575,66 @@ describe('useReadAloud Edge word boundaries', () => {
 		unmount();
 	});
 
+	it('sends a source-mapped utterance plan when Media3 mode is selected', async () => {
+		useReaderConfigStore.setState({
+			ttsEngine: 'edge',
+			edgeVoiceUri: 'vi-VN-HoaiMyNeural',
+			edgeBufferMode: 'media3'
+		});
+		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
+		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+		const startPlaybackSpy = vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue(undefined);
+		const paragraph = 'Đây là một câu tiếng Việt đủ dài để kiểm tra việc chia utterance tự nhiên. '.repeat(6).trim();
+		const { result, unmount } = renderHook(() => useReadAloud([paragraph], { chapterId: 'media3-chapter' }));
+
+		await act(async () => result.current.startReading());
+
+		const options = startPlaybackSpy.mock.calls[0][0];
+		expect(options.sessionId).toMatch(/^edge-media3-/);
+		expect(options.utterances?.length).toBeGreaterThan(1);
+		expect(options.utterances?.every((utterance) => utterance.text.length <= 220)).toBe(true);
+		expect(options.utterances?.[0]).toMatchObject({ paragraphIndex: 0, sourceStart: 0, sourceChunkIndex: 0 });
+		unmount();
+	});
+
+	it('uses persistent utterance and word highlights for Media3 boundaries', async () => {
+		useReaderConfigStore.setState({ ttsEngine: 'edge', edgeBufferMode: 'media3' });
+		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
+		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+		vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue(undefined);
+		const highlightSpy = vi.spyOn(DomWordHighlighter.prototype, 'highlightUtteranceAndWord').mockReturnValue(null);
+		document.body.innerHTML = '';
+		const container = document.createElement('div');
+		container.id = 'main-story-content';
+		container.innerHTML = '<article><div data-paragraph-index="0">Đoạn một trên native.</div></article>';
+		document.body.appendChild(container);
+		const { result, unmount } = renderHook(() => useReadAloud(['Đoạn một trên native.'], { chapterId: 'media3-highlight' }));
+
+		await act(async () => result.current.startReading());
+		await waitFor(() => expect(EdgeTTSNativeStreamService['wordBoundaryListeners'].size).toBeGreaterThan(0));
+		act(() => {
+			EdgeTTSNativeStreamService['playbackStateListeners'].forEach((listener) =>
+				listener({ isPlaying: true, isPaused: false, isBuffering: false })
+			);
+			EdgeTTSNativeStreamService['wordBoundaryListeners'].forEach((listener) =>
+				listener({
+					chunkIndex: 0,
+					utteranceIndex: 0,
+					paragraphIndex: 0,
+					sourceStart: 0,
+					sourceLength: 21,
+					charIndex: 5,
+					charLength: 3,
+					text: 'một'
+				})
+			);
+		});
+
+		expect(highlightSpy).toHaveBeenCalledWith(expect.any(HTMLElement), 0, 21, 5, 3);
+		container.remove();
+		unmount();
+	});
+
 	it('highlights word and line when EdgeTTSNativeStreamService emits onWordBoundary', async () => {
 		useReaderConfigStore.setState({ ttsEngine: 'edge', edgeVoiceUri: 'vi-VN-HoaiMyNeural' });
 		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
@@ -878,5 +938,3 @@ describe('useReadAloud browser speech ownership', () => {
 		expect(edgeStopSpy).not.toHaveBeenCalled();
 	});
 });
-
-
