@@ -454,6 +454,27 @@ public class GaplessStreamPlayer {
         stopWordBoundaryTicker();
 
         int completedIdx = currentChunkIndex;
+
+        // Đảm bảo toàn bộ các từ còn lại của câu cũ luôn được phát tuần tự trước khi chuyển câu mới
+        JSONArray boundaries = wordBoundariesSource != null ? wordBoundariesSource.get(completedIdx) : null;
+        if (boundaries != null && boundaries.length() > 0 && lastWordBoundaryIndex < boundaries.length() - 1) {
+            for (int i = Math.max(0, lastWordBoundaryIndex + 1); i < boundaries.length(); i++) {
+                JSONObject wb = boundaries.optJSONObject(i);
+                if (wb != null) {
+                    int charIdx = wb.optInt("charIndex", -1);
+                    if (charIdx >= 0 && listener != null) {
+                        listener.onWordBoundary(
+                                completedIdx,
+                                charIdx,
+                                wb.optInt("charLength", 1),
+                                wb.optString("text", "")
+                        );
+                    }
+                }
+            }
+            lastWordBoundaryIndex = boundaries.length() - 1;
+        }
+
         if (currentPlayer == completedPlayer) {
             currentPlayer = null;
         }
@@ -573,18 +594,23 @@ public class GaplessStreamPlayer {
         if (!isPlaying || !isPlayingSafely() || wordBoundariesSource == null) return;
         try {
             int posMs = currentPlayer != null ? currentPlayer.getCurrentPosition() : 0;
+            int durationMs = currentPlayer != null ? currentPlayer.getDuration() : 0;
             double posSec = (double) posMs / 1000.0;
 
             JSONArray boundaries = wordBoundariesSource.get(currentChunkIndex);
             if (boundaries == null || boundaries.length() == 0) return;
 
+            int totalWords = boundaries.length();
             JSONObject activeWb = null;
             int activeIdx = -1;
-            for (int i = 0; i < boundaries.length(); i++) {
+
+            // Kiểm tra vị trí từ khớp với posSec (lead-in 20ms để khớp nhịp đọc tự nhiên và bù trừ trễ audio buffer)
+            double leadSec = 0.02;
+            for (int i = 0; i < totalWords; i++) {
                 JSONObject wb = boundaries.optJSONObject(i);
                 if (wb == null) continue;
                 double startSec = wb.optDouble("startSeconds", 0);
-                if (posSec < startSec) break;
+                if ((posSec + leadSec) < startSec) break;
                 activeWb = wb;
                 activeIdx = i;
             }
@@ -596,16 +622,33 @@ public class GaplessStreamPlayer {
                 activeIdx = 0;
             }
 
+            // Xử lý từ cuối câu: Chỉ khi chạm sát điểm kết thúc audio (80ms cuối) mà từ cuối cùng chưa được kích hoạt,
+            // mới gán activeIdx = totalWords - 1, tránh hiện tượng đẩy vội các từ cuối gây nhảy cóc
+            if (durationMs > 0 && posMs >= durationMs - 80 && activeIdx < totalWords - 1) {
+                activeIdx = totalWords - 1;
+                activeWb = boundaries.optJSONObject(activeIdx);
+            }
+
             if (activeWb == null || activeIdx <= lastWordBoundaryIndex) return;
 
-            lastWordBoundaryIndex = activeIdx;
-            int charIdx = activeWb.optInt("charIndex", -1);
+            // Tuyệt đối chống nhảy cóc (Pacing catch-up): Nếu activeIdx đi trước do buffer HAL nhảy vọt,
+            // luôn tiến tuần tự từng từ một (mỗi tick 20ms) để mọi từ đều được hiển thị đầy đủ
+            int emitIdx = activeIdx;
+            if (lastWordBoundaryIndex >= 0 && activeIdx > lastWordBoundaryIndex + 1) {
+                emitIdx = lastWordBoundaryIndex + 1;
+            }
+
+            JSONObject emitWb = boundaries.optJSONObject(emitIdx);
+            if (emitWb == null) return;
+
+            lastWordBoundaryIndex = emitIdx;
+            int charIdx = emitWb.optInt("charIndex", -1);
             if (charIdx >= 0 && listener != null) {
                 listener.onWordBoundary(
                         currentChunkIndex,
                         charIdx,
-                        activeWb.optInt("charLength", 1),
-                        activeWb.optString("text", "")
+                        emitWb.optInt("charLength", 1),
+                        emitWb.optString("text", "")
                 );
             }
         } catch (Exception ignored) {}

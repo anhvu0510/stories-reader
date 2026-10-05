@@ -213,7 +213,7 @@ export function ReaderScreen() {
 	const isBgmPreviewing = useReaderConfigStore((state) => state.isBgmPreviewing ?? false);
 
 	// Background music automatically plays when Edge Read Aloud is active, app TTS is playing, or toggled manually
-	const { isPlaying: isBgmPlaying, toggleBgm } = useEdgeReadAloudBgm({
+	const { isPlaying: isBgmPlaying, toggleBgm, stopBgm } = useEdgeReadAloudBgm({
 		audioUrl: bgmAudioUrl,
 		volume: bgmVolume,
 		fadeInMs: bgmFadeInMs,
@@ -223,6 +223,11 @@ export function ReaderScreen() {
 		isBgmPreviewing,
 		isTTSActive: isTTSActive && isPlaying
 	});
+
+	const handleStopTTS = useCallback(() => {
+		stopReading();
+		stopBgm(true);
+	}, [stopReading, stopBgm]);
 
 	const handleToggleBgm = useCallback(() => {
 		toggleBgm();
@@ -541,7 +546,7 @@ export function ReaderScreen() {
 	const handleTitleDoubleClick = useCallback(async () => {
 		if (!bookId || isRefreshingLatest) return;
 		setIsRefreshingLatest(true);
-		stopReading();
+		handleStopTTS();
 		try {
 			// 1. Prioritize user's lastReadChapter from server API (same as history tab)
 			const lastRead = await Promise.resolve(BookRepository.getLastReadChapter(bookId, { forceFresh: true })).catch((err) => {
@@ -592,7 +597,7 @@ export function ReaderScreen() {
 		} finally {
 			setIsRefreshingLatest(false);
 		}
-	}, [bookId, chapterId, activeChapter, isRefreshingLatest, stopReading, loadChapter, navigate]);
+	}, [bookId, chapterId, activeChapter, isRefreshingLatest, handleStopTTS, loadChapter, navigate]);
 
 	const handleOpenHistory = useCallback(() => setShowHistorySheet(true), []);
 	const handleOpenChapterSelect = useCallback(() => setShowChapterSelectSheet(true), []);
@@ -600,10 +605,10 @@ export function ReaderScreen() {
 
 	const handlePullRefresh = useCallback(async () => {
 		clearResumePosition();
-		stopReading();
+		handleStopTTS();
 		await clearAllCaches();
 		await loadChapter(true);
-	}, [clearResumePosition, stopReading, loadChapter]);
+	}, [clearResumePosition, handleStopTTS, loadChapter]);
 
 	// Native Swipe Gestures for Mobile Chapter Navigation with Smooth Page Transitions
 	const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
@@ -807,7 +812,7 @@ export function ReaderScreen() {
 				isVisible={true}
 				isTTSActive={isTTSActive}
 				isRefreshingLatest={isRefreshingLatest}
-				onToggleTTS={() => (isTTSActive ? stopReading() : startReading())}
+				onToggleTTS={() => (isTTSActive ? handleStopTTS() : startReading())}
 				onOpenHistory={handleOpenHistory}
 				onTitleClick={handleTitleSingleClick}
 				onTitleDoubleClick={handleTitleDoubleClick}
@@ -825,10 +830,10 @@ export function ReaderScreen() {
 				showTTSControl={showTTSControlOnReader}
 				onToggleBgm={handleToggleBgm}
 				currentParagraphIndex={activeParagraphIndex}
-				onToggleTTS={() => (isTTSActive ? stopReading() : startReading())}
+				onToggleTTS={() => (isTTSActive ? handleStopTTS() : startReading())}
 				onTTSPlay={startReading}
 				onTTSPause={pauseReading}
-				onTTSStop={stopReading}
+				onTTSStop={handleStopTTS}
 				onTTSPrev={prevSection}
 				onTTSNext={nextSection}
 			/>

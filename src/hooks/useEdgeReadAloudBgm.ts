@@ -449,8 +449,8 @@ export function useEdgeReadAloudBgm({
 			return;
 		}
 
-		if (!isTTSActive && !isManualPlayingRef.current && isPlayingRef.current) {
-			stopBgm(false);
+		if (!isTTSActive && (isPlayingRef.current || sourceNodeRef.current)) {
+			stopBgm(true);
 		}
 	}, [isTTSActive, enabled, startBgm, stopBgm]);
 
@@ -477,8 +477,8 @@ export function useEdgeReadAloudBgm({
 				return;
 			}
 
-			if (wasActive && isPlayingRef.current && !isManualPlayingRef.current) {
-				stopBgm(false);
+			if (wasActive && (isPlayingRef.current || sourceNodeRef.current) && !isManualPlayingRef.current) {
+				stopBgm(true);
 			}
 			wasActive = isActive;
 		};

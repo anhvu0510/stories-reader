@@ -224,7 +224,8 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                         ? " [Cache: " + cacheRangeStr + " (+" + aheadCount + " câu gối đầu) - \"" + lastCachedSnippet + "\"]"
                         : " [Cache: Chưa có]";
 
-                String fullLogMessage = "[EdgeTTS:Stream] Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size()
+                String modeTag = "[" + currentBufferMode.toUpperCase(Locale.ROOT) + "]";
+                String fullLogMessage = "[EdgeTTS:Stream]" + modeTag + " Đang đọc câu " + (chunkIndex + 1) + "/" + currentChunks.size()
                         + ": \"" + snippet + "\"" + cacheInfoStr;
 
                 // 1. Luôn ghi log nội bộ Logcat thiết bị đầy đủ 100% các câu
@@ -239,6 +240,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                     try {
                         playDetails.put("chunkIndex", chunkIndex);
                         playDetails.put("totalChunks", currentChunks.size());
+                        playDetails.put("bufferMode", currentBufferMode);
                         if (currentChunks.size() > 0) {
                             int progressPct = (int) Math.round(((double) (chunkIndex + 1) / currentChunks.size()) * 100);
                             playDetails.put("progress", progressPct + "%");
@@ -490,7 +492,8 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                                         failDetails.put("rate", rate);
                                         failDetails.put("elapsedMs", elapsed);
                                         failDetails.put("fullText", text);
-                                        RemoteLogger.log("EdgeTTSNative_Stream", "warn", "[EdgeTTS] Không nhận được âm thanh từ máy chủ Edge (" + elapsed + "ms) - Nội dung: \"" + text + "\"", "NO_AUDIO", failDetails);
+                                        failDetails.put("bufferMode", currentBufferMode);
+                                        RemoteLogger.log("EdgeTTSNative_Stream", "warn", "[EdgeTTS][" + currentBufferMode.toUpperCase(Locale.ROOT) + "] Không nhận được âm thanh từ máy chủ Edge (" + elapsed + "ms) - Nội dung: \"" + text + "\"", "NO_AUDIO", failDetails);
                                         call.reject("No audio received from Edge TTS", "NO_AUDIO");
                                     } else {
                                         // Ghi log Logcat nội bộ thiết bị khi hoàn tất tổng hợp đơn lẻ
@@ -525,8 +528,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                         errDetails.put("elapsedMs", elapsed);
                         errDetails.put("statusCode", statusCode);
                         errDetails.put("fullText", text);
+                        errDetails.put("bufferMode", currentBufferMode);
                     } catch (Exception ignored) {}
-                    RemoteLogger.log("EdgeTTSNative_Stream", "error", "[EdgeTTS] Kết nối Edge WebSocket thất bại (" + elapsed + "ms, code: " + statusCode + ") - Nội dung: \"" + text + "\"", errorMsg, errDetails);
+                    RemoteLogger.log("EdgeTTSNative_Stream", "error", "[EdgeTTS][" + currentBufferMode.toUpperCase(Locale.ROOT) + "] Kết nối Edge WebSocket thất bại (" + elapsed + "ms, code: " + statusCode + ") - Nội dung: \"" + text + "\"", errorMsg, errDetails);
 
                     synchronized (isResolved) {
                         if (!isResolved[0]) {
@@ -635,9 +639,10 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
             startDetails.put("totalChunks", currentChunks.size());
             startDetails.put("voice", voice);
             startDetails.put("rate", rate);
+            startDetails.put("bufferMode", currentBufferMode);
             startDetails.put("snippet", RemoteLogger.formatSnippet(firstSentence));
         } catch (Exception ignored) {}
-        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Bắt đầu phát chương từ câu " + (startIndex + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(firstSentence) + "\"", null, startDetails);
+        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream][" + currentBufferMode.toUpperCase(Locale.ROOT) + "] Bắt đầu phát chương từ câu " + (startIndex + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(firstSentence) + "\"", null, startDetails);
 
         // Reset thời điểm log câu để câu đầu tiên luôn được gửi ngay lập tức
         lastChunkLogTime = 0;
@@ -759,6 +764,10 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                                                             int matchedLen = cleanWord.length();
                                                             if (charIndex < 0) {
                                                                 charIndex = foldedSourceText.indexOf(stripped, searchOffset[0]);
+                                                                matchedLen = stripped.length();
+                                                            }
+                                                            if (charIndex < 0 && searchOffset[0] > 0) {
+                                                                charIndex = foldedSourceText.indexOf(stripped, Math.max(0, searchOffset[0] - 6));
                                                                 matchedLen = stripped.length();
                                                             }
 
@@ -900,6 +909,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
             failDetails.put("totalChunks", currentChunks.size());
             failDetails.put("snippet", RemoteLogger.formatSnippet(text));
             failDetails.put("error", errMsg);
+            failDetails.put("bufferMode", currentBufferMode);
         } catch (Exception ignored) {}
 
         if (retryManager.canRetry(index)) {
@@ -917,14 +927,14 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
             }, delayMs);
         } else {
             RemoteLogger.log("EdgeTTSNative_Stream", "error",
-                    "[EdgeTTS:Stream] Thất bại tải audio câu " + (index + 1) + "/" + currentChunks.size()
+                    "[EdgeTTS:Stream][" + currentBufferMode.toUpperCase(Locale.ROOT) + "] Thất bại tải audio câu " + (index + 1) + "/" + currentChunks.size()
                             + " sau " + PrefetchRetryManager.DEFAULT_MAX_RETRIES + " lần thử: " + errMsg + " - Nội dung: \"" + RemoteLogger.formatSnippet(text) + "\"",
                     errMsg, failDetails);
 
             // Tự động bỏ qua câu lỗi nếu người dùng đang chờ câu này phát để không bị treo vĩnh viễn ở trạng thái Buffering
             if (index == currentPlayIndex && !player.hasCurrentPlayer()) {
                 RemoteLogger.log("EdgeTTSNative_Stream", "warn",
-                        "[EdgeTTS:Stream] Tự động bỏ qua câu lỗi " + (index + 1) + " để tiếp tục phát câu " + (index + 2) + "/" + currentChunks.size(),
+                        "[EdgeTTS:Stream][" + currentBufferMode.toUpperCase(Locale.ROOT) + "] Tự động bỏ qua câu lỗi " + (index + 1) + " để tiếp tục phát câu " + (index + 2) + "/" + currentChunks.size(),
                         null, failDetails);
                 int next = index + 1;
                 if (next < currentChunks.size()) {
@@ -982,8 +992,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
             JSONObject allDoneDetails = new JSONObject();
             try {
                 allDoneDetails.put("totalChunks", currentChunks.size());
+                allDoneDetails.put("bufferMode", currentBufferMode);
             } catch (Exception ignored) {}
-            RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Hoàn tất đọc hết toàn bộ chương (" + currentChunks.size() + " câu)", null, allDoneDetails);
+            RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream][" + currentBufferMode.toUpperCase(Locale.ROOT) + "] Hoàn tất đọc hết toàn bộ chương (" + currentChunks.size() + " câu)", null, allDoneDetails);
 
             stopPlaybackInternal(false);
             notifyListeners("onPlaybackComplete", new JSObject());
@@ -1045,9 +1056,10 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         try {
             pauseDetails.put("chunkIndex", currentIdx);
             pauseDetails.put("totalChunks", currentChunks.size());
+            pauseDetails.put("bufferMode", currentBufferMode);
             pauseDetails.put("snippet", RemoteLogger.formatSnippet(pausedText));
         } catch (Exception ignored) {}
-        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Tạm dừng đọc ở câu " + (currentIdx + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(pausedText) + "\"", null, pauseDetails);
+        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream][" + currentBufferMode.toUpperCase(Locale.ROOT) + "] Tạm dừng đọc ở câu " + (currentIdx + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(pausedText) + "\"", null, pauseDetails);
         call.resolve();
     }
 
@@ -1060,9 +1072,10 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         try {
             resumeDetails.put("chunkIndex", currentIdx);
             resumeDetails.put("totalChunks", currentChunks.size());
+            resumeDetails.put("bufferMode", currentBufferMode);
             resumeDetails.put("snippet", RemoteLogger.formatSnippet(resumeText));
         } catch (Exception ignored) {}
-        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Tiếp tục đọc câu " + (currentIdx + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(resumeText) + "\"", null, resumeDetails);
+        RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream][" + currentBufferMode.toUpperCase(Locale.ROOT) + "] Tiếp tục đọc câu " + (currentIdx + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(resumeText) + "\"", null, resumeDetails);
         maintainRollingBuffer();
         call.resolve();
     }
@@ -1171,8 +1184,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                 try {
                     stopDetails.put("lastChunkIndex", currentIdx);
                     stopDetails.put("totalChunks", total);
+                    stopDetails.put("bufferMode", currentBufferMode);
                 } catch (Exception ignored) {}
-                RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream] Dừng đọc chương và dọn dẹp cache tại câu " + (currentIdx + 1) + "/" + total, null, stopDetails);
+                RemoteLogger.log("EdgeTTSNative_Stream", "info", "[EdgeTTS:Stream][" + currentBufferMode.toUpperCase(Locale.ROOT) + "] Dừng đọc chương và dọn dẹp cache tại câu " + (currentIdx + 1) + "/" + total, null, stopDetails);
             }
         }
 
