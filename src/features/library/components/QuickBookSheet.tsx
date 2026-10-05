@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { X, Download, Search, RefreshCw, Trash2, Sparkles } from 'lucide-react';
 
@@ -23,7 +22,6 @@ interface QuickBookSheetProps {
 }
 
 export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
-	const navigate = useNavigate();
 	const showToast = useToastStore((state) => state.showToast);
 	const isOfflineMode = useAppStore((state) => state.isOfflineMode);
 	const configChapterLimit = useReaderConfigStore((state) => state.chapterLimit || 50);

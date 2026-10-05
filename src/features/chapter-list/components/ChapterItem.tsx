@@ -1,5 +1,4 @@
 import React, { forwardRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Sparkles, Clock, AlertCircle, Calendar } from 'lucide-react';
 
 import { triggerHaptic } from '@/hooks/useHaptic';
@@ -30,7 +29,6 @@ const formatDate = (dateStr?: string) => {
 };
 
 export const ChapterItem = forwardRef<HTMLDivElement, ChapterItemProps>(({ chapter, bookId, isActive = false, onClick, showStatus = true }, ref) => {
-	const navigate = useNavigate();
 	const formattedDate = formatDate(chapter.updatedAt);
 
 	const handleClick = () => {

@@ -114,7 +114,7 @@ export async function reportClientLog(
 	}
 }
 
-async function reportClientError(baseUrl: string | undefined, error: unknown, context: Record<string, unknown>) {
+export async function reportClientError(baseUrl: string | undefined, error: unknown, context: Record<string, unknown>) {
 	const errorMsg = error instanceof Error ? error.message : String(error);
 	return reportClientLog(baseUrl, {
 		level: 'error',

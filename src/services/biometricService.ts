@@ -42,10 +42,6 @@ class BiometricService {
 	 * Kiểm tra xem người dùng đã kích hoạt chế độ khóa sinh trắc học chưa (chỉ hỗ trợ trên Android)
 	 */
 	public isBiometricLockEnabled(): boolean {
-		// Passcode và bảo mật chỉ áp dụng cho mobile Android, không áp dụng trên Web
-		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
-			return false;
-		}
 		try {
 			return localStorage.getItem(STORAGE_KEY_BIOMETRIC_LOCK) === 'true';
 		} catch {
@@ -57,13 +53,6 @@ class BiometricService {
 	 * Bật hoặc tắt cờ cấu hình bảo mật sinh trắc học
 	 */
 	public setBiometricLockEnabled(enabled: boolean): void {
-		// Trên Web không áp dụng lưu cờ khóa bảo mật, dọn dẹp cờ cũ nếu có
-		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
-			try {
-				localStorage.removeItem(STORAGE_KEY_BIOMETRIC_LOCK);
-			} catch {}
-			return;
-		}
 		try {
 			if (enabled) {
 				localStorage.setItem(STORAGE_KEY_BIOMETRIC_LOCK, 'true');
@@ -113,10 +102,10 @@ class BiometricService {
 		negativeButtonText?: string;
 	}): Promise<BiometricAuthResponse> {
 		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
-			// Môi trường Web không áp dụng khóa bảo mật và passcode
+			// Môi trường Web không áp dụng sinh trắc học -> fallback sang passcode
 			return {
 				success: false,
-				fallbackToPasscode: false,
+				fallbackToPasscode: true,
 				errorMessage: 'Không áp dụng bảo mật sinh trắc học trên nền tảng web'
 			};
 		}

@@ -43,7 +43,7 @@ export interface UseNativeReadAloudResult {
 export function useNativeReadAloud(
 	paragraphs: string[],
 	chapterContext: ReadAloudChapterContext = {},
-	paragraphContexts: ReadAloudChapterContext[] = []
+	_paragraphContexts: ReadAloudChapterContext[] = []
 ): UseNativeReadAloudResult {
 	const activeDomain = useAppStore((state) => state.activeDomain);
 	const voiceUri = useReaderConfigStore((state) => state.voiceUri);

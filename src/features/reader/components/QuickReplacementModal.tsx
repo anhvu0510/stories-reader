@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, ArrowRight } from 'lucide-react';
+import { X, ArrowRight } from 'lucide-react';
 
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { ReplacementRepository } from '@/repositories/ReplacementRepository';

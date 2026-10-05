@@ -27,8 +27,8 @@ export interface VerticalBatchChapterNavProps {
 }
 
 export function VerticalBatchChapterNav({
-	chapters,
-	activeChapterId,
+	chapters: _chapters,
+	activeChapterId: _activeChapterId,
 	isVisible = true,
 	isTTSActive = false,
 	isTTSLoading = false,
@@ -36,12 +36,12 @@ export function VerticalBatchChapterNav({
 	isBgmActive = false,
 	showTTSControl = true,
 	onToggleBgm,
-	currentParagraphIndex = 0,
+	currentParagraphIndex: _currentParagraphIndex = 0,
 	onToggleTTS,
 	onTTSPlay,
 	onTTSPause,
 	onTTSStop,
-	onTTSPrev,
+	onTTSPrev: _onTTSPrev,
 	onTTSNext
 }: VerticalBatchChapterNavProps) {
 	const containerRef = useRef<HTMLDivElement | null>(null);

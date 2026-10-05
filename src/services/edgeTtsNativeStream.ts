@@ -93,44 +93,57 @@ class EdgeTTSNativeStreamServiceClass {
 			throw new Error('EdgeTTSNativeStream is only available on native Android');
 		}
 		await this.initListeners();
-		if (typeof (EdgeTTSNative as any).playChapter === 'function') {
-			await (EdgeTTSNative as any).playChapter(options);
+		const plugin = EdgeTTSNative as unknown as {
+			playChapter?: (opts: StartPlaybackOptions) => Promise<void>;
+			pausePlayback?: () => Promise<void>;
+			resumePlayback?: () => Promise<void>;
+			stopPlayback?: () => Promise<void>;
+			seekToChunk?: (opts: { chunkIndex: number }) => Promise<void>;
+			clearCache?: () => Promise<void>;
+		};
+		if (typeof plugin.playChapter === 'function') {
+			await plugin.playChapter(options);
 		}
 	}
 
 	public async pause(): Promise<void> {
 		if (!this.isAvailable()) return;
-		if (typeof (EdgeTTSNative as any).pausePlayback === 'function') {
-			await (EdgeTTSNative as any).pausePlayback();
+		const plugin = EdgeTTSNative as unknown as { pausePlayback?: () => Promise<void> };
+		if (typeof plugin.pausePlayback === 'function') {
+			await plugin.pausePlayback();
 		}
 	}
 
 	public async resume(): Promise<void> {
 		if (!this.isAvailable()) return;
-		if (typeof (EdgeTTSNative as any).resumePlayback === 'function') {
-			await (EdgeTTSNative as any).resumePlayback();
+		const plugin = EdgeTTSNative as unknown as { resumePlayback?: () => Promise<void> };
+		if (typeof plugin.resumePlayback === 'function') {
+			await plugin.resumePlayback();
 		}
 	}
 
 	public async stop(): Promise<void> {
 		if (!this.isAvailable()) return;
-		if (typeof (EdgeTTSNative as any).stopPlayback === 'function') {
-			await (EdgeTTSNative as any).stopPlayback();
+		const plugin = EdgeTTSNative as unknown as { stopPlayback?: () => Promise<void> };
+		if (typeof plugin.stopPlayback === 'function') {
+			await plugin.stopPlayback();
 		}
 	}
 
 	public async seekToChunk(chunkIndex: number): Promise<void> {
 		if (!this.isAvailable()) return;
-		if (typeof (EdgeTTSNative as any).seekToChunk === 'function') {
-			await (EdgeTTSNative as any).seekToChunk({ chunkIndex });
+		const plugin = EdgeTTSNative as unknown as { seekToChunk?: (opts: { chunkIndex: number }) => Promise<void> };
+		if (typeof plugin.seekToChunk === 'function') {
+			await plugin.seekToChunk({ chunkIndex });
 		}
 	}
 
 	public async clearCache(): Promise<void> {
 		if (!this.isAvailable()) return;
-		if (typeof (EdgeTTSNative as any).clearCache === 'function') {
+		const plugin = EdgeTTSNative as unknown as { clearCache?: () => Promise<void> };
+		if (typeof plugin.clearCache === 'function') {
 			try {
-				await (EdgeTTSNative as any).clearCache();
+				await plugin.clearCache();
 			} catch (e) {
 				console.warn('[EdgeTTSNativeStream] Failed to clear native cache:', e);
 			}

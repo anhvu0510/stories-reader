@@ -4,16 +4,12 @@ import {
 	X,
 	Languages,
 	Settings2,
-	Sparkles,
-	CheckSquare,
 	Square,
 	Search,
 	ChevronDown,
 	ChevronUp,
 	Loader,
 	Check,
-	KeyRound,
-	Group,
 	Zap,
 	Send,
 	UserCheck,
@@ -53,7 +49,6 @@ interface TranslationOptions {
 }
 
 const DEFAULT_VERTEX_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-flash'];
-const DEFAULT_CLI_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-flash'];
 
 const defaultOptions: TranslationOptions = {
 	model: 'gemini-2.5-flash-lite',

@@ -93,44 +93,57 @@ class NativeTTSStreamServiceClass {
 			throw new Error('NativeTTSStream is only available on native Android');
 		}
 		await this.initListeners();
-		if (typeof (NativeTTS as any).playChapter === 'function') {
-			await (NativeTTS as any).playChapter(options);
+		const plugin = NativeTTS as unknown as {
+			playChapter?: (opts: StartNativePlaybackOptions) => Promise<void>;
+			pausePlayback?: () => Promise<void>;
+			resumePlayback?: () => Promise<void>;
+			stopPlayback?: () => Promise<void>;
+			seekToChunk?: (opts: { chunkIndex: number }) => Promise<void>;
+			clearCache?: () => Promise<void>;
+		};
+		if (typeof plugin.playChapter === 'function') {
+			await plugin.playChapter(options);
 		}
 	}
 
 	public async pause(): Promise<void> {
 		if (!this.isAvailable()) return;
-		if (typeof (NativeTTS as any).pausePlayback === 'function') {
-			await (NativeTTS as any).pausePlayback();
+		const plugin = NativeTTS as unknown as { pausePlayback?: () => Promise<void> };
+		if (typeof plugin.pausePlayback === 'function') {
+			await plugin.pausePlayback();
 		}
 	}
 
 	public async resume(): Promise<void> {
 		if (!this.isAvailable()) return;
-		if (typeof (NativeTTS as any).resumePlayback === 'function') {
-			await (NativeTTS as any).resumePlayback();
+		const plugin = NativeTTS as unknown as { resumePlayback?: () => Promise<void> };
+		if (typeof plugin.resumePlayback === 'function') {
+			await plugin.resumePlayback();
 		}
 	}
 
 	public async stop(): Promise<void> {
 		if (!this.isAvailable()) return;
-		if (typeof (NativeTTS as any).stopPlayback === 'function') {
-			await (NativeTTS as any).stopPlayback();
+		const plugin = NativeTTS as unknown as { stopPlayback?: () => Promise<void> };
+		if (typeof plugin.stopPlayback === 'function') {
+			await plugin.stopPlayback();
 		}
 	}
 
 	public async seekToChunk(chunkIndex: number): Promise<void> {
 		if (!this.isAvailable()) return;
-		if (typeof (NativeTTS as any).seekToChunk === 'function') {
-			await (NativeTTS as any).seekToChunk({ chunkIndex });
+		const plugin = NativeTTS as unknown as { seekToChunk?: (opts: { chunkIndex: number }) => Promise<void> };
+		if (typeof plugin.seekToChunk === 'function') {
+			await plugin.seekToChunk({ chunkIndex });
 		}
 	}
 
 	public async clearCache(): Promise<void> {
 		if (!this.isAvailable()) return;
-		if (typeof (NativeTTS as any).clearCache === 'function') {
+		const plugin = NativeTTS as unknown as { clearCache?: () => Promise<void> };
+		if (typeof plugin.clearCache === 'function') {
 			try {
-				await (NativeTTS as any).clearCache();
+				await plugin.clearCache();
 			} catch (e) {
 				console.warn('[NativeTTSStream] Failed to clear native cache:', e);
 			}

@@ -47,9 +47,9 @@ export interface ChapterDetailItem {
 	content: string[];
 	compressedContent?: Uint8Array;
 	rootTab?: string;
-	chapterPlan?: any;
-	qaReports?: any;
-	continuitySnapshot?: any;
+	chapterPlan?: Record<string, unknown>;
+	qaReports?: unknown;
+	continuitySnapshot?: Record<string, unknown>;
 	createdAt?: string;
 	updatedAt?: string;
 }
@@ -96,7 +96,7 @@ export interface AIToken {
 	totalRequests?: number;
 	totalErrors?: number;
 	createdAt: string;
-	configAI?: any;
+	configAI?: Record<string, unknown>;
 	modelList: {
 		model: string;
 		rpmLimit: number;

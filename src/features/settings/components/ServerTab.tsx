@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
 import { Server, Plus, RefreshCw, Check, Trash2, Edit3, Loader2, Wifi, WifiOff, KeyRound } from 'lucide-react';
 
 import { useAppUpdate } from '@/hooks/useAppUpdate';

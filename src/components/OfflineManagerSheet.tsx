@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { X, Wifi, Download, Trash2, CheckCircle2, RotateCw } from 'lucide-react';
+import { X, Wifi, Download, Trash2, RotateCw } from 'lucide-react';
 
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { offlineDb } from '@/lib/offlineDb';
@@ -17,8 +17,6 @@ export function OfflineManagerSheet({ onClose, isEmbedded = false }: { onClose?:
 	const showToast = useToastStore((state) => state.showToast);
 	const [savedBooks, setSavedBooks] = useState<Book[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
-	const [downloadingBookId, setDownloadingBookId] = useState<string | null>(null);
-	const [progress, setProgress] = useState(0);
 
 	useEffect(() => {
 		fetchSavedBooks();

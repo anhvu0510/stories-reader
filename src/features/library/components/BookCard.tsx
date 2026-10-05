@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
 import { Sparkles, BookOpen, Trash2, Heart, MoreVertical, AlertCircle } from 'lucide-react';
 
 import { TranslationSheet } from '@/components/TranslationSheet';
@@ -31,7 +30,6 @@ interface BookCardProps {
 }
 
 export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect, isSelected, isSelectionMode }: BookCardProps) {
-	const navigate = useNavigate();
 	const [showQuickSheet, setShowQuickSheet] = useState(false);
 	const [showActionSheet, setShowActionSheet] = useState(false);
 	const [showTranslationSheet, setShowTranslationSheet] = useState(false);

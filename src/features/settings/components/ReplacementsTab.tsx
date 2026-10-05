@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Edit3, ArrowRight, Loader2, Save } from 'lucide-react';
+import { Search, Plus, Trash2, ArrowRight, Loader2 } from 'lucide-react';
 
 import { ReplacementRepository } from '@/repositories/ReplacementRepository';
 import { useToastStore } from '@/stores/useToastStore';

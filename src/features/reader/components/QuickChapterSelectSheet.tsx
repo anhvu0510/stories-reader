@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Download, RefreshCw, Search, Trash2, X } from 'lucide-react';
 
@@ -37,7 +36,6 @@ interface QuickChapterSelectSheetProps {
 }
 
 export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapterNumber, onClose }: QuickChapterSelectSheetProps) {
-	const navigate = useNavigate();
 	const showToast = useToastStore((state) => state.showToast);
 	const configChapterLimit = useReaderConfigStore((state) => state.chapterLimit || 50);
 	const [isDownloaded, setIsDownloaded] = useState(false);

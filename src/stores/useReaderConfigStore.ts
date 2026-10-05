@@ -108,12 +108,12 @@ const syncWithApi = (next: ReaderConfig) => {
 
 	if (debounceTimeout) clearTimeout(debounceTimeout);
 	debounceTimeout = setTimeout(() => {
-		const { voiceUri, speechRate, ...apiSync } = next;
+		const { voiceUri: _voiceUri, speechRate: _speechRate, ...apiSync } = next;
 		SettingsRepository.updateSettings(SETTINGS_KEY, apiSync);
 	}, 800);
 };
 
-export const useReaderConfigStore = create<ReaderConfigStore>((set, get) => {
+export const useReaderConfigStore = create<ReaderConfigStore>((set) => {
 	const initial = getInitialSettings(useAppStore.getState().isOfflineMode);
 
 	// Apply theme to DOM document immediately

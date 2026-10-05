@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Search, Wifi, WifiOff, Settings, BookOpenCheck, X, Tag, ArrowUpDown, Sparkles } from 'lucide-react';
+import { Search, Wifi, WifiOff, Settings, BookOpenCheck, X, Tag, ArrowUpDown } from 'lucide-react';
 
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { useAppStore } from '@/stores/useAppStore';

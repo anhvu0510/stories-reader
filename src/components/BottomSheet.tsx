@@ -104,11 +104,10 @@ export function BottomSheet({
 		// Giai đoạn 1: Xác định direction lock sau khi ngón tay di chuyển đủ xa (slop 12px)
 		// Giúp phân biệt rõ ràng scroll ngang (chuyển tab) vs kéo xuống đóng sheet
 		if (touchStartRef.current.lockDirection === 'none') {
-			if (absX >= 12 || absY >= 12) {
-				// Khi ngang chiếm ưu thế rõ ràng (ratio > 1.5) → lock horizontal, bỏ qua
-				touchStartRef.current.lockDirection = absX > absY * 1.5 ? 'horizontal' : 'vertical';
+			if (absX < 12 && absY < 12) {
+				return;
 			}
-			return;
+			touchStartRef.current.lockDirection = absX > absY * 1.5 ? 'horizontal' : 'vertical';
 		}
 
 		// Nếu đã lock horizontal (vuốt ngang) → bỏ qua hoàn toàn, không kéo sheet

@@ -19,7 +19,6 @@ import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
 import { clearAllCaches } from '@/shared/utils/cacheUtils';
 import { openNextChapter, openPrevChapter } from '@/shared/utils/openChapter';
-import { useAppStore } from '@/stores/useAppStore';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { useToastStore } from '@/stores/useToastStore';
 
@@ -121,7 +120,6 @@ export function ReaderScreen() {
 	const { bookId, chapterId } = useParams<{ bookId: string; chapterId: string }>();
 	const navigate = useNavigate();
 
-	const isOfflineMode = useAppStore((state) => state.isOfflineMode);
 	const showToast = useToastStore((state) => state.showToast);
 
 	// Store Selectors to prevent unnecessary re-renders
@@ -173,7 +171,6 @@ export function ReaderScreen() {
 		isPaused,
 		isLoading: isTTSLoading,
 		isTTSActive,
-		currentChunkIndex,
 		activeParagraphIndex,
 		startReading,
 		pauseReading,
@@ -513,7 +510,7 @@ export function ReaderScreen() {
 				setLoading(false);
 			}
 		},
-		[chapterId, groupLines, isEnabledReplace, batchChapterSize, isOfflineMode]
+		[chapterId, groupLines, isEnabledReplace, batchChapterSize]
 	);
 
 	useEffect(() => {

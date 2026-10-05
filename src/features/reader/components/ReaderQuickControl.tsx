@@ -1,10 +1,9 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ChevronsLeft, ChevronsRight, Settings, Sparkles, List } from 'lucide-react';
 
 import { triggerHaptic } from '@/hooks/useHaptic';
-import { openChapter, openNextChapter, openPrevChapter } from '@/shared/utils/openChapter';
+import { openNextChapter, openPrevChapter } from '@/shared/utils/openChapter';
 import { useAppStore } from '@/stores/useAppStore';
 import { useModalStore } from '@/stores/useModalStore';
 
@@ -47,7 +46,6 @@ export function ReaderQuickControl({
 	onOpenChapterSelect,
 	onOpenTranslation
 }: ReaderQuickControlProps) {
-	const navigate = useNavigate();
 	const isOfflineMode = useAppStore((state) => state.isOfflineMode);
 	const openSettings = useModalStore((state) => state.openSettings);
 

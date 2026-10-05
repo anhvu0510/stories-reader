@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'motion/react';
-import { BookOpen, Clock, Sparkles, Library, X, RotateCcw, Heart, Search, Tag, ArrowUpDown } from 'lucide-react';
+import { BookOpen, Clock, Sparkles, Library, X, RotateCcw, Heart } from 'lucide-react';
 
 import { BottomDock } from '@/components/BottomDock';
 import { OfflineManagerSheet } from '@/components/OfflineManagerSheet';

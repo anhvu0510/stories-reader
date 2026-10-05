@@ -21,15 +21,15 @@ interface ReaderHeaderProps {
 }
 
 export const ReaderHeader = memo(function ReaderHeader({
-	bookId,
+	bookId: _bookId,
 	bookName,
-	chapterNumber,
+	chapterNumber: _chapterNumber,
 	chapterTitle,
 	progress = 0,
-	isVisible = true,
-	isTTSActive = false,
+	isVisible: _isVisible = true,
+	isTTSActive: _isTTSActive = false,
 	isRefreshingLatest = false,
-	onToggleTTS,
+	onToggleTTS: _onToggleTTS,
 	onOpenHistory,
 	onTitleClick,
 	onTitleDoubleClick
@@ -46,7 +46,7 @@ export const ReaderHeader = memo(function ReaderHeader({
 		};
 	}, []);
 
-	const handleCenterClick = (e?: React.SyntheticEvent) => {
+	const handleCenterClick = (_e?: React.SyntheticEvent) => {
 		if (isRefreshingLatest) return;
 
 		tapCountRef.current += 1;

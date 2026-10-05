@@ -62,6 +62,10 @@ export const SettingsRepository = {
 		} catch (e) {}
 		settingsCache[key] = { data: { value }, timestamp: Date.now() };
 
+		if (isOffline) {
+			return { value };
+		}
+
 		const stringifiedValue = typeof value === 'string' ? value : JSON.stringify(value);
 
 		// Post to original backend API endpoint `/api/stories/setting` silently (no loading overlay)

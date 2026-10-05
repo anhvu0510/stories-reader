@@ -17,7 +17,6 @@ import { ChapterListScreen } from './features/chapter-list/ChapterListScreen';
 import { LibraryScreen } from './features/library/LibraryScreen';
 import { ReaderScreen } from './features/reader/ReaderScreen';
 import { useAppStore } from './stores/useAppStore';
-import { useModalStore } from './stores/useModalStore';
 import { useReaderConfigStore } from './stores/useReaderConfigStore';
 import { useToastStore } from './stores/useToastStore';
 
