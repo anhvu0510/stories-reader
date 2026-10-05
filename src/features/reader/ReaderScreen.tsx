@@ -488,12 +488,10 @@ export function ReaderScreen() {
 		[toggleZenControls]
 	);
 
-	// Fetch chapter data with smooth loading feedback & fresh DOM remount
+	// Fetch chapter data with instant loading feedback
 	const loadChapter = useCallback(
 		async (isForceFresh = false) => {
 			if (!chapterId) return;
-			const MIN_LOADING_TIME = 200;
-			const startTime = Date.now();
 			setLoading(true);
 			setError(null);
 			try {
@@ -501,21 +499,14 @@ export function ReaderScreen() {
 				const res = isForceFresh
 					? await ChapterRepository.getChapterContent(chapterId, groupLines, isEnabledReplace, '', effectiveBatchSize, { forceFresh: true })
 					: await ChapterRepository.getChapterContent(chapterId, groupLines, isEnabledReplace, '', effectiveBatchSize);
-				const elapsedTime = Date.now() - startTime;
-				if (elapsedTime < MIN_LOADING_TIME) {
-					await new Promise((resolve) => setTimeout(resolve, MIN_LOADING_TIME - elapsedTime));
-				}
-				// Force complete DOM flush & remount like F5 (clean slate, zero stale elements)
+				
+				// Cập nhật dữ liệu ngay khi API trả về, không trì hoãn nhân tạo
 				setDomResetKey((k) => k + 1);
 				setContentData(res);
 				if (typeof window !== 'undefined' && window.scrollTo) {
 					window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 				}
 			} catch (e: any) {
-				const elapsedTime = Date.now() - startTime;
-				if (elapsedTime < MIN_LOADING_TIME) {
-					await new Promise((resolve) => setTimeout(resolve, MIN_LOADING_TIME - elapsedTime));
-				}
 				setError(e.message || 'Lỗi khi tải nội dung chương');
 			} finally {
 				setLoading(false);
@@ -622,8 +613,11 @@ export function ReaderScreen() {
 	const [dragOffset, setDragOffset] = useState(0);
 	const readerContentRef = useRef<HTMLDivElement | null>(null);
 
-	// Tự động thu hồi transform và đưa vị trí đọc về đỉnh trang (top: 0) ngay khi sang chương mới
+	// Tự động thu hồi transform, giải phóng hướng vuốt và đưa vị trí đọc về đỉnh trang (top: 0) ngay khi sang chương mới
 	useEffect(() => {
+		setSwipeDirection(null);
+		setIsDragging(false);
+		setDragOffset(0);
 		if (readerContentRef.current) {
 			readerContentRef.current.style.transition = 'none';
 			readerContentRef.current.style.transform = 'translate3d(0px, 0, 0)';
@@ -858,10 +852,10 @@ export function ReaderScreen() {
 					{isChapterLoading ? (
 						<motion.div
 							key={`loading-skeleton-${chapterId}`}
-							initial={{ opacity: 0, x: swipeDirection === 'left' ? 40 : swipeDirection === 'right' ? -40 : 0 }}
-							animate={{ opacity: 1, x: 0 }}
+							initial={{ opacity: 0.6 }}
+							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
-							transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
+							transition={{ duration: 0.12 }}
 							className="w-full bg-background"
 						>
 							<ReaderChapterSkeleton titleHint={pendingTitleHint} />
@@ -869,9 +863,12 @@ export function ReaderScreen() {
 					) : (
 						<motion.div
 							key={`${chapter.chapterId}-${domResetKey}`}
-							initial={{ opacity: 0, x: swipeDirection === 'left' ? 40 : swipeDirection === 'right' ? -40 : 0 }}
+							initial={{
+								opacity: swipeDirection ? 0.4 : 0.9,
+								x: swipeDirection === 'left' ? 24 : swipeDirection === 'right' ? -24 : 0
+							}}
 							animate={{ opacity: 1, x: 0 }}
-							transition={{ duration: 0.22, ease: [0.25, 1, 0.5, 1] }}
+							transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
 							className="w-full"
 						>
 							<ChapterContentSection

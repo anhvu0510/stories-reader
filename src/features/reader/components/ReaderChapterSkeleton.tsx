@@ -5,100 +5,78 @@ export interface ReaderChapterSkeletonProps {
 	className?: string;
 	/** Gợi ý tiêu đề chương kế tiếp/trước đó nếu đã biết trước từ navigation */
 	titleHint?: string;
-	/** Hiển thị hay ẩn thanh điều khiển capsule giả lập ở đáy */
+	/** Giữ tương thích props cũ */
 	showBottomHint?: boolean;
 }
 
 /**
- * Skeleton Screen đa tầng (Rich Multi-Layer Reader Skeleton)
- * Mô phỏng chân thực bố cục một chương truyện với tiêu đề, metadata,
- * các đoạn văn tự nhiên (mở đầu, đối thoại, thân bài) và hiệu ứng AMOLED 120Hz shimmer.
+ * Skeleton Screen mô phỏng chính xác layout trang đọc truyện
+ * Khớp hoàn toàn cấu trúc, tỷ lệ và nhịp điệu typography của ChapterContentSection
  */
 export const ReaderChapterSkeleton = memo(function ReaderChapterSkeleton({
 	className = '',
-	titleHint,
-	showBottomHint = true
+	titleHint
 }: ReaderChapterSkeletonProps) {
 	return (
 		<div
 			data-testid="reader-chapter-skeleton"
 			aria-hidden="true"
-			className={`w-full min-h-[85vh] pt-[calc(max(env(safe-area-inset-top),0.75rem)+4.25rem)] sm:pt-24 pb-28 px-4 select-none relative overflow-hidden pointer-events-none ${className}`}
+			className={`w-full min-h-[85vh] pt-[calc(max(env(safe-area-inset-top),0.75rem)+4.25rem)] sm:pt-24 pb-24 select-none relative overflow-hidden pointer-events-none ${className}`}
 		>
-			{/* Tầng 1: Subtle Top Ambient Glow tạo chiều sâu ánh sáng dịu nhẹ */}
-			<div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-72 bg-gradient-to-b from-primary/12 via-primary/[0.03] to-transparent blur-3xl opacity-60" />
-
-			{/* Tầng 2: Tiêu đề chương & Thẻ Badge Metadata */}
-			<div className="mb-8 pt-0.5 space-y-2.5">
-				{/* Badge số chương / Indicator thanh dọc phát sáng */}
-				<div className="flex items-center gap-2">
-					<span className="w-1 h-4.5 rounded-full bg-primary inline-block shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse" />
+			{/* Tiêu đề chương khớp 100% với ChapterContentSection */}
+			<div className="px-4 mb-5 pt-0.5">
+				<h2 className="text-base sm:text-lg font-bold tracking-tight leading-snug flex items-center gap-2">
+					<span className="w-1 h-4 rounded-full bg-primary/70 inline-block shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.35)]" />
 					{titleHint ? (
-						<h2 className="text-base sm:text-lg font-bold text-on-surface/60 tracking-tight leading-snug line-clamp-1">
-							{titleHint}
-						</h2>
+						<p className="line-clamp-1 text-on-surface/70 text-sm sm:text-base font-semibold">{titleHint}</p>
 					) : (
-						<div className="h-5 w-48 rounded-md skeleton-shimmer" />
+						<div className="h-5 w-44 sm:w-56 rounded-md skeleton-shimmer opacity-85" />
 					)}
-					<div className="h-4.5 w-14 rounded-full skeleton-shimmer ml-auto opacity-70" />
-				</div>
-
-				{/* Metadata phụ: Thời gian đọc ước tính / Độ dài chữ */}
-				<div className="flex items-center gap-2.5 pl-3 opacity-60">
-					<div className="h-3 w-16 rounded skeleton-shimmer" />
-					<div className="w-1 h-1 rounded-full bg-on-surface-variant/40" />
-					<div className="h-3 w-24 rounded skeleton-shimmer" />
-					<div className="w-1 h-1 rounded-full bg-on-surface-variant/40" />
-					<div className="h-3 w-20 rounded skeleton-shimmer" />
-				</div>
+				</h2>
 			</div>
 
-			{/* Tầng 3: Các đoạn văn nhiều lớp (Multi-layer Paragraphs) bố cục tự nhiên như trang sách thật */}
-			<div className="space-y-6 opacity-90">
-				{/* Đoạn 1: Đoạn văn mở đầu (4 dòng, dòng cuối kết câu tự nhiên) */}
-				<div className="space-y-2.5">
+			{/* Các đoạn văn với nhịp điệu tự nhiên của trang sách */}
+			<article className="px-4 space-y-6 opacity-85">
+				{/* Đoạn 1: Mở đầu (4 dòng) */}
+				<div className="space-y-3">
+					<div className="h-4 w-full rounded-md skeleton-shimmer" />
+					<div className="h-4 w-[97%] rounded-md skeleton-shimmer" />
+					<div className="h-4 w-[93%] rounded-md skeleton-shimmer" />
+					<div className="h-4 w-[62%] rounded-md skeleton-shimmer" />
+				</div>
+
+				{/* Đoạn 2: Đoạn ngắn (3 dòng) */}
+				<div className="space-y-3">
+					<div className="h-4 w-[98%] rounded-md skeleton-shimmer" />
+					<div className="h-4 w-[94%] rounded-md skeleton-shimmer" />
+					<div className="h-4 w-[46%] rounded-md skeleton-shimmer" />
+				</div>
+
+				{/* Đoạn 3: Thân bài (5 dòng) */}
+				<div className="space-y-3">
 					<div className="h-4 w-full rounded-md skeleton-shimmer" />
 					<div className="h-4 w-[96%] rounded-md skeleton-shimmer" />
-					<div className="h-4 w-[93%] rounded-md skeleton-shimmer" />
+					<div className="h-4 w-[98%] rounded-md skeleton-shimmer" />
+					<div className="h-4 w-[89%] rounded-md skeleton-shimmer" />
+					<div className="h-4 w-[54%] rounded-md skeleton-shimmer" />
+				</div>
+
+				{/* Đoạn 4: Đoạn chuyển ý (4 dòng) */}
+				<div className="space-y-3">
+					<div className="h-4 w-[95%] rounded-md skeleton-shimmer" />
+					<div className="h-4 w-[97%] rounded-md skeleton-shimmer" />
+					<div className="h-4 w-[91%] rounded-md skeleton-shimmer" />
 					<div className="h-4 w-[68%] rounded-md skeleton-shimmer" />
 				</div>
 
-				{/* Đoạn 2: Lời thoại nhân vật (Thụt lề sang phải với viền accent mờ) */}
-				<div className="space-y-2.5 pl-3.5 border-l-2 border-primary/25 my-5">
-					<div className="h-4 w-[85%] rounded-md skeleton-shimmer" />
-					<div className="h-4 w-[52%] rounded-md skeleton-shimmer" />
-				</div>
-
-				{/* Đoạn 3: Đoạn văn thân bài cao trào (5 dòng với các độ dài so le) */}
-				<div className="space-y-2.5">
-					<div className="h-4 w-[98%] rounded-md skeleton-shimmer" />
-					<div className="h-4 w-[95%] rounded-md skeleton-shimmer" />
-					<div className="h-4 w-full rounded-md skeleton-shimmer" />
-					<div className="h-4 w-[89%] rounded-md skeleton-shimmer" />
-					<div className="h-4 w-[58%] rounded-md skeleton-shimmer" />
-				</div>
-
-				{/* Đoạn 4: Đoạn dẫn giải tiếp theo (4 dòng) */}
-				<div className="space-y-2.5">
-					<div className="h-4 w-[96%] rounded-md skeleton-shimmer" />
-					<div className="h-4 w-[92%] rounded-md skeleton-shimmer" />
-					<div className="h-4 w-[97%] rounded-md skeleton-shimmer" />
-					<div className="h-4 w-[73%] rounded-md skeleton-shimmer" />
-				</div>
-
-				{/* Đoạn 5: Đoạn kết thúc ngắn */}
-				<div className="space-y-2.5">
+				{/* Đoạn 5: Đoạn kết (3 dòng) */}
+				<div className="space-y-3">
+					<div className="h-4 w-[94%] rounded-md skeleton-shimmer" />
 					<div className="h-4 w-[88%] rounded-md skeleton-shimmer" />
-					<div className="h-4 w-[64%] rounded-md skeleton-shimmer" />
+					<div className="h-4 w-[40%] rounded-md skeleton-shimmer" />
 				</div>
-			</div>
-
-			{/* Tầng 4: Capsule Dock Skeleton ở đáy tạo cảm giác bố cục cân bằng, không trống trải */}
-			{showBottomHint && (
-				<div className="mt-12 flex justify-center opacity-40">
-					<div className="h-10 w-48 rounded-full skeleton-shimmer border border-outline-variant/20 shadow-sm" />
-				</div>
-			)}
+			</article>
 		</div>
 	);
 });
+
