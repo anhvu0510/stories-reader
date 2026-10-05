@@ -73,6 +73,21 @@ function createSynthesizedAmbientBuffer(ctx: AudioContext): AudioBuffer | null {
 	return buffer;
 }
 
+function safeDisconnect(node: AudioNode | null): void {
+	if (!node) return;
+	try {
+		node.disconnect();
+	} catch {}
+}
+
+function safeStopAndDisconnectSource(source: AudioBufferSourceNode | null): void {
+	if (!source) return;
+	try {
+		source.stop();
+		source.disconnect();
+	} catch {}
+}
+
 export function useEdgeReadAloudBgm({
 	audioUrl,
 	volume = 0.15,
@@ -105,22 +120,22 @@ export function useEdgeReadAloudBgm({
 			return audioCtxRef.current;
 		}
 		const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-
 		if (!AudioContextClass) return null;
 
 		const ctx = new AudioContextClass();
 		ctx.onstatechange = () => {
-			if (ctx.state === 'running') {
-				if (!isUserMutedRef.current && isManualPlayingRef.current) {
-					if (!sourceNodeRef.current || !isPlayingRef.current) {
-						void startBgmRef.current?.(true);
-					} else {
-						setIsPlayingState(true);
-					}
-				}
-			} else if (ctx.state === 'suspended') {
+			if (ctx.state === 'suspended') {
 				setIsPlayingState(false);
+				return;
 			}
+			if (ctx.state !== 'running') return;
+			if (isUserMutedRef.current || !isManualPlayingRef.current) return;
+
+			if (!sourceNodeRef.current || !isPlayingRef.current) {
+				void startBgmRef.current?.(true);
+				return;
+			}
+			setIsPlayingState(true);
 		};
 		audioCtxRef.current = ctx;
 		return ctx;
@@ -135,12 +150,8 @@ export function useEdgeReadAloudBgm({
 			const filter = ctx.createBiquadFilter();
 			filter.type = 'lowpass';
 			const now = ctx.currentTime;
-			if (filter.frequency && typeof filter.frequency.setValueAtTime === 'function') {
-				filter.frequency.setValueAtTime(2200, now);
-			}
-			if (filter.Q && typeof filter.Q.setValueAtTime === 'function') {
-				filter.Q.setValueAtTime(0.707, now);
-			}
+			filter.frequency?.setValueAtTime?.(2200, now);
+			filter.Q?.setValueAtTime?.(0.707, now);
 			lowPassFilterNodeRef.current = filter;
 			return filter;
 		} catch {
@@ -156,21 +167,11 @@ export function useEdgeReadAloudBgm({
 		try {
 			const compressor = ctx.createDynamicsCompressor();
 			const now = ctx.currentTime;
-			if (compressor.threshold && typeof compressor.threshold.setValueAtTime === 'function') {
-				compressor.threshold.setValueAtTime(-24, now);
-			}
-			if (compressor.knee && typeof compressor.knee.setValueAtTime === 'function') {
-				compressor.knee.setValueAtTime(30, now);
-			}
-			if (compressor.ratio && typeof compressor.ratio.setValueAtTime === 'function') {
-				compressor.ratio.setValueAtTime(12, now);
-			}
-			if (compressor.attack && typeof compressor.attack.setValueAtTime === 'function') {
-				compressor.attack.setValueAtTime(0.003, now);
-			}
-			if (compressor.release && typeof compressor.release.setValueAtTime === 'function') {
-				compressor.release.setValueAtTime(0.25, now);
-			}
+			compressor.threshold?.setValueAtTime?.(-24, now);
+			compressor.knee?.setValueAtTime?.(30, now);
+			compressor.ratio?.setValueAtTime?.(12, now);
+			compressor.attack?.setValueAtTime?.(0.003, now);
+			compressor.release?.setValueAtTime?.(0.25, now);
 			compressor.connect(ctx.destination);
 			compressorNodeRef.current = compressor;
 			return compressor;
@@ -245,10 +246,7 @@ export function useEdgeReadAloudBgm({
 			}
 
 			if (sourceNodeRef.current && !isPlayingRef.current) {
-				try {
-					sourceNodeRef.current.stop();
-					sourceNodeRef.current.disconnect();
-				} catch {}
+				safeStopAndDisconnectSource(sourceNodeRef.current);
 				sourceNodeRef.current = null;
 			}
 
@@ -344,27 +342,13 @@ export function useEdgeReadAloudBgm({
 				if (gain && ctx) {
 					try {
 						const now = ctx.currentTime;
-						if (typeof gain.gain.cancelScheduledValues === 'function') {
-							gain.gain.cancelScheduledValues(now);
-						}
-						if (typeof gain.gain.setValueAtTime === 'function') {
-							gain.gain.setValueAtTime(0, now);
-						}
+						gain.gain.cancelScheduledValues?.(now);
+						gain.gain.setValueAtTime?.(0, now);
 					} catch {}
 				}
 
-				if (source) {
-					try {
-						source.stop();
-						source.disconnect();
-					} catch {}
-				}
-
-				if (gain) {
-					try {
-						gain.disconnect();
-					} catch {}
-				}
+				safeStopAndDisconnectSource(source);
+				safeDisconnect(gain);
 
 				isPlayingRef.current = false;
 				sourceNodeRef.current = null;
@@ -388,12 +372,8 @@ export function useEdgeReadAloudBgm({
 				}
 
 				const now = ctx.currentTime;
-				if (typeof gain.gain.cancelScheduledValues === 'function') {
-					gain.gain.cancelScheduledValues(now);
-				}
-				if (typeof gain.gain.setValueAtTime === 'function') {
-					gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), now);
-				}
+				gain.gain.cancelScheduledValues?.(now);
+				gain.gain.setValueAtTime?.(Math.max(gain.gain.value, 0.0001), now);
 				if (typeof gain.gain.linearRampToValueAtTime === 'function') {
 					gain.gain.linearRampToValueAtTime(0, now + fadeOutMs / 1000);
 				} else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
@@ -402,11 +382,8 @@ export function useEdgeReadAloudBgm({
 
 				if (fadeOutTimerRef.current) clearTimeout(fadeOutTimerRef.current);
 				fadeOutTimerRef.current = setTimeout(() => {
-					try {
-						source.stop();
-						source.disconnect();
-						gain.disconnect();
-					} catch {}
+					safeStopAndDisconnectSource(source);
+					safeDisconnect(gain);
 
 					isPlayingRef.current = false;
 					sourceNodeRef.current = null;
@@ -425,46 +402,44 @@ export function useEdgeReadAloudBgm({
 
 	// Realtime enable/disable effect
 	useEffect(() => {
-		if (prevEnabledRef.current !== enabled) {
-			prevEnabledRef.current = enabled;
-			if (!enabled) {
-				if (isPlayingRef.current || sourceNodeRef.current) {
-					stopBgm(true);
-				}
-			}
+		if (prevEnabledRef.current === enabled) return;
+		prevEnabledRef.current = enabled;
+
+		if (!enabled && (isPlayingRef.current || sourceNodeRef.current)) {
+			stopBgm(true);
 		}
 	}, [enabled, stopBgm]);
 
 	// Pause reader BGM while user previews audio in Settings tab, resume when preview stops
 	useEffect(() => {
-		if (prevPreviewRef.current !== isBgmPreviewing) {
-			prevPreviewRef.current = isBgmPreviewing;
-			if (isBgmPreviewing) {
-				if (isPlayingRef.current || sourceNodeRef.current) {
-					stopBgm(true);
-				}
-			} else if (enabled && isManualPlayingRef.current && !isUserMutedRef.current) {
-				void startBgm(true);
-			}
+		if (prevPreviewRef.current === isBgmPreviewing) return;
+		prevPreviewRef.current = isBgmPreviewing;
+
+		if (isBgmPreviewing && (isPlayingRef.current || sourceNodeRef.current)) {
+			stopBgm(true);
+			return;
+		}
+
+		if (!isBgmPreviewing && enabled && isManualPlayingRef.current && !isUserMutedRef.current) {
+			void startBgm(true);
 		}
 	}, [isBgmPreviewing, enabled, stopBgm, startBgm]);
 
 	// Đồng bộ phát/dừng BGM theo trạng thái đọc TTS của App (hỗ trợ Android native & Web)
 	const prevTTSActiveRef = useRef(isTTSActive);
 	useEffect(() => {
-		if (prevTTSActiveRef.current !== isTTSActive) {
-			prevTTSActiveRef.current = isTTSActive;
-			if (!enabled || isBgmPreviewingRef.current) return;
+		if (prevTTSActiveRef.current === isTTSActive) return;
+		prevTTSActiveRef.current = isTTSActive;
 
-			if (isTTSActive) {
-				if (!isUserMutedRef.current) {
-					void startBgm(false);
-				}
-			} else {
-				if (!isManualPlayingRef.current && isPlayingRef.current) {
-					stopBgm(false);
-				}
-			}
+		if (!enabled || isBgmPreviewingRef.current) return;
+
+		if (isTTSActive && !isUserMutedRef.current) {
+			void startBgm(false);
+			return;
+		}
+
+		if (!isTTSActive && !isManualPlayingRef.current && isPlayingRef.current) {
+			stopBgm(false);
 		}
 	}, [isTTSActive, enabled, startBgm, stopBgm]);
 
@@ -479,23 +454,21 @@ export function useEdgeReadAloudBgm({
 			const isActive = isEdgeReadAloudActive();
 
 			if (hasInactive) {
-				// Edge Read Aloud is paused (e.g. msreadout-line-highlight msreadout-inactive-highlight)
-				if (isPlayingRef.current || sourceNodeRef.current) {
-					stopBgm(true);
-				}
-			} else if (isActive) {
-				// Edge Read Aloud is active reading (e.g. msreadout-line-highlight without inactive class)
-				// Resume BGM ONLY IF user had manually started BGM (isManualPlayingRef.current === true)
-				if (isManualPlayingRef.current && !isPlayingRef.current && !isUserMutedRef.current && !isBgmPreviewingRef.current) {
-					void startBgmRef.current?.(false);
-				}
-			} else {
-				// Edge Read Aloud highlight is no longer present in DOM
-				if (wasActive && isPlayingRef.current && !isManualPlayingRef.current) {
-					stopBgm(false);
-				}
+				if (isPlayingRef.current || sourceNodeRef.current) stopBgm(true);
+				wasActive = isActive;
+				return;
 			}
 
+			if (isActive) {
+				const canResume = isManualPlayingRef.current && !isPlayingRef.current && !isUserMutedRef.current && !isBgmPreviewingRef.current;
+				if (canResume) void startBgmRef.current?.(false);
+				wasActive = isActive;
+				return;
+			}
+
+			if (wasActive && isPlayingRef.current && !isManualPlayingRef.current) {
+				stopBgm(false);
+			}
 			wasActive = isActive;
 		};
 
@@ -515,20 +488,22 @@ export function useEdgeReadAloudBgm({
 
 	const toggleBgm = useCallback(() => {
 		const ctx = audioCtxRef.current;
-		const isCtxRunning = ctx && ctx.state === 'running';
+		const isCtxRunning = ctx?.state === 'running';
 		const currentlyActive = (isPlayingRef.current || Boolean(sourceNodeRef.current)) && isCtxRunning;
+
 		if (currentlyActive) {
 			isUserMutedRef.current = true;
 			isManualPlayingRef.current = false;
 			stopBgm(true);
 			setIsPlayingState(false);
-		} else {
-			isUserMutedRef.current = false;
-			isManualPlayingRef.current = true;
-			const hasInactive = typeof document !== 'undefined' && Boolean(document.querySelector(EDGE_READ_ALOUD_INACTIVE_SELECTOR));
-			if (!hasInactive) {
-				void startBgm(true);
-			}
+			return;
+		}
+
+		isUserMutedRef.current = false;
+		isManualPlayingRef.current = true;
+		const hasInactive = typeof document !== 'undefined' && Boolean(document.querySelector(EDGE_READ_ALOUD_INACTIVE_SELECTOR));
+		if (!hasInactive) {
+			void startBgm(true);
 		}
 	}, [startBgm, stopBgm]);
 
@@ -536,45 +511,39 @@ export function useEdgeReadAloudBgm({
 	useEffect(() => {
 		if (typeof window === 'undefined') return;
 
+		const unlockAudio = () => {
+			const ctx = getOrCreateAudioContext();
+			if (!ctx) return;
+
+			const triggerAutoPlayback = () => {
+				removeUnlockListeners();
+				if (isUserMutedRef.current || !isManualPlayingRef.current) return;
+				if (sourceNodeRef.current && isPlayingRef.current) return;
+				void startBgmRef.current?.(true);
+			};
+
+			if (ctx.state === 'suspended') {
+				void ctx.resume().then(() => {
+					if (ctx.state === 'running') triggerAutoPlayback();
+				}).catch(() => {});
+			} else if (ctx.state === 'running') {
+				triggerAutoPlayback();
+			}
+
+			try {
+				const dummy = ctx.createBuffer(1, 1, 22050);
+				const node = ctx.createBufferSource();
+				node.buffer = dummy;
+				node.connect(ctx.destination);
+				node.start(0);
+			} catch {}
+		};
+
 		const removeUnlockListeners = () => {
 			window.removeEventListener('pointerdown', unlockAudio, { capture: true });
 			window.removeEventListener('touchstart', unlockAudio, { capture: true });
 			window.removeEventListener('click', unlockAudio, { capture: true });
 			window.removeEventListener('keydown', unlockAudio, { capture: true });
-		};
-
-		const unlockAudio = () => {
-			const ctx = getOrCreateAudioContext();
-			if (ctx) {
-				if (ctx.state === 'suspended') {
-					void ctx
-						.resume()
-						.then(() => {
-							if (ctx.state === 'running') {
-								removeUnlockListeners();
-								if (!isUserMutedRef.current && isManualPlayingRef.current) {
-									void startBgmRef.current?.(true);
-								}
-							}
-						})
-						.catch(() => {});
-				} else if (ctx.state === 'running') {
-					removeUnlockListeners();
-					if (!isUserMutedRef.current && isManualPlayingRef.current) {
-						if (!sourceNodeRef.current || !isPlayingRef.current) {
-							void startBgmRef.current?.(true);
-						}
-					}
-				}
-				// Unlock WebAudio on iOS Safari with silent 1-sample buffer
-				try {
-					const dummy = ctx.createBuffer(1, 1, 22050);
-					const node = ctx.createBufferSource();
-					node.buffer = dummy;
-					node.connect(ctx.destination);
-					node.start(0);
-				} catch {}
-			}
 		};
 
 		window.addEventListener('pointerdown', unlockAudio, { capture: true, passive: true });
@@ -613,40 +582,34 @@ export function useEdgeReadAloudBgm({
 					}
 				});
 
-				if (isMounted) {
-					if (decoded && decoded.duration > 0.1) {
-						audioBufferRef.current = decoded;
-						// Realtime track update: if BGM is currently playing, seamlessly restart node with new track
-						if (isPlayingRef.current && sourceNodeRef.current && audioCtxRef.current) {
-							try {
-								sourceNodeRef.current.stop();
-								sourceNodeRef.current.disconnect();
-							} catch {}
-							sourceNodeRef.current = null;
-							isPlayingRef.current = false;
-							void startBgm(true);
-						}
-					}
-					if (!isUserMutedRef.current && isManualPlayingRef.current) {
-						void startBgm(true);
-					}
-				} else {
-					if (ctx.state !== 'closed') {
-						void ctx.close();
-					}
+				if (!isMounted) {
+					if (ctx.state !== 'closed') void ctx.close();
+					return;
+				}
+
+				if (!decoded || decoded.duration <= 0.1) return;
+
+				audioBufferRef.current = decoded;
+				const shouldRestart = isPlayingRef.current && sourceNodeRef.current && audioCtxRef.current;
+				if (shouldRestart) {
+					safeStopAndDisconnectSource(sourceNodeRef.current);
+					sourceNodeRef.current = null;
+					isPlayingRef.current = false;
+					void startBgm(true);
+				}
+
+				if (!isUserMutedRef.current && isManualPlayingRef.current) {
+					void startBgm(true);
 				}
 			} catch (err: any) {
-				if (err.name !== 'AbortError') {
-					console.warn('[EdgeBgm] Could not load audio file, using synth ambient fallback:', err);
-					if (isMounted) {
-						const ctx = getOrCreateAudioContext();
-						if (ctx) {
-							const fallbackBuffer = createSynthesizedAmbientBuffer(ctx);
-							if (fallbackBuffer) {
-								audioBufferRef.current = fallbackBuffer;
-							}
-						}
-					}
+				if (err?.name === 'AbortError') return;
+				console.warn('[EdgeBgm] Could not load audio file, using synth ambient fallback:', err);
+				if (!isMounted) return;
+
+				const ctx = getOrCreateAudioContext();
+				const fallbackBuffer = ctx ? createSynthesizedAmbientBuffer(ctx) : null;
+				if (fallbackBuffer) {
+					audioBufferRef.current = fallbackBuffer;
 				}
 			}
 		};
@@ -659,34 +622,17 @@ export function useEdgeReadAloudBgm({
 			if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
 			if (fadeOutTimerRef.current) clearTimeout(fadeOutTimerRef.current);
 
-			if (sourceNodeRef.current) {
-				try {
-					sourceNodeRef.current.stop();
-					sourceNodeRef.current.disconnect();
-				} catch {}
-				sourceNodeRef.current = null;
-			}
+			safeStopAndDisconnectSource(sourceNodeRef.current);
+			sourceNodeRef.current = null;
 
-			if (gainNodeRef.current) {
-				try {
-					gainNodeRef.current.disconnect();
-				} catch {}
-				gainNodeRef.current = null;
-			}
+			safeDisconnect(gainNodeRef.current);
+			gainNodeRef.current = null;
 
-			if (lowPassFilterNodeRef.current) {
-				try {
-					lowPassFilterNodeRef.current.disconnect();
-				} catch {}
-				lowPassFilterNodeRef.current = null;
-			}
+			safeDisconnect(lowPassFilterNodeRef.current);
+			lowPassFilterNodeRef.current = null;
 
-			if (compressorNodeRef.current) {
-				try {
-					compressorNodeRef.current.disconnect();
-				} catch {}
-				compressorNodeRef.current = null;
-			}
+			safeDisconnect(compressorNodeRef.current);
+			compressorNodeRef.current = null;
 
 			if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
 				void audioCtxRef.current.close();
