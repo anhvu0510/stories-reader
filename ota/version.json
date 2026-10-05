@@ -1,7 +1,7 @@
 {
-  "version": "1.0.325",
+  "version": "1.0.326",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "ab3833afb6ab4c319c62164d15e4395a5ef2003cdfab57858970f716d6bcb4b4",
-  "releaseNotes": "refactor: optimize TTS audio prefetching and cache management with concurrent lookahead and immediate eviction",
-  "updatedAt": "2026-10-04T18:26:48Z"
+  "checksum": "8d63e048f7dadb121fa83eb99957d4b9c5038965d30cbc9236e639a81678a6f8",
+  "releaseNotes": "feat: implement 30-second grace period and platform check for app lock listener",
+  "updatedAt": "2026-10-05T02:06:38Z"
 }
