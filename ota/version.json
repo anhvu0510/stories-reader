@@ -1,7 +1,7 @@
 {
-  "version": "1.0.326",
+  "version": "1.0.327",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "8d63e048f7dadb121fa83eb99957d4b9c5038965d30cbc9236e639a81678a6f8",
-  "releaseNotes": "feat: implement 30-second grace period and platform check for app lock listener",
-  "updatedAt": "2026-10-05T02:06:38Z"
+  "checksum": "b9bd07039fbf8405d28e5b96c19554929777bba67a045f4677280043c2130b50",
+  "releaseNotes": "refactor: optimize chapter loading transitions and redesign reader skeleton layout",
+  "updatedAt": "2026-10-05T04:05:02Z"
 }
