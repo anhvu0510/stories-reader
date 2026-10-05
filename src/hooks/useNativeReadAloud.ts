@@ -48,6 +48,7 @@ export function useNativeReadAloud(
 	const activeDomain = useAppStore((state) => state.activeDomain);
 	const voiceUri = useReaderConfigStore((state) => state.voiceUri);
 	const edgeVoiceUri = useReaderConfigStore((state) => state.edgeVoiceUri || 'vi-VN-HoaiMyNeural');
+	const edgeBufferMode = useReaderConfigStore((state) => state.edgeBufferMode || 'file');
 	const speechRate = useReaderConfigStore((state) => state.speechRate);
 	const ttsEngine = useReaderConfigStore((state) => state.ttsEngine || 'vieneu');
 
@@ -310,9 +311,10 @@ export function useNativeReadAloud(
 			rate: speechRate,
 			gatewayUrl: activeDomain?.url || getGatewayBaseUrl(),
 			bookTitle,
-			chapterTitle
+			chapterTitle,
+			bufferMode: edgeBufferMode
 		});
-	}, [activeNativeStream, chunks, getResumePosition, isPausedRef, chapterContext, ttsEngine, edgeVoiceUri, voiceUri, speechRate, activeDomain]);
+	}, [activeNativeStream, chunks, getResumePosition, isPausedRef, chapterContext, ttsEngine, edgeVoiceUri, edgeBufferMode, voiceUri, speechRate, activeDomain]);
 
 	const pauseReading = useCallback(() => {
 		if (activeNativeStream) {

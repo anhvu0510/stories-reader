@@ -87,18 +87,74 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
 
     private final ExecutorService prefetchExecutor = Executors.newFixedThreadPool(MAX_CONCURRENT_PREFETCH);
     private final Map<Integer, File> readyAudioFiles = new ConcurrentHashMap<>();
+    private final Map<Integer, byte[]> readyAudioBytes = new ConcurrentHashMap<>();
+    private String currentBufferMode = "file";
     private final Map<Integer, JSONArray> readyWordBoundaries = new ConcurrentHashMap<>();
     private final Set<Integer> inFlightIndices = Collections.synchronizedSet(new HashSet<>());
     private final Map<Integer, WebSocket> activeSockets = new ConcurrentHashMap<>();
 
+    private boolean isMemoryMode() {
+        return "memory".equalsIgnoreCase(currentBufferMode);
+    }
+
+    private Set<Integer> getReadyIndices() {
+        if (isMemoryMode()) {
+            return readyAudioBytes.keySet();
+        }
+        return readyAudioFiles.keySet();
+    }
+
+    private boolean hasReadyAudio(int index) {
+        if (isMemoryMode()) {
+            return readyAudioBytes.containsKey(index);
+        }
+        return readyAudioFiles.containsKey(index);
+    }
+
+    private void playChunkAudio(int index) {
+        if (isMemoryMode()) {
+            byte[] bytes = readyAudioBytes.get(index);
+            if (bytes != null) {
+                player.start(index, bytes);
+            }
+            return;
+        }
+        File file = readyAudioFiles.get(index);
+        if (file != null) {
+            player.start(index, file);
+        }
+    }
+
+    private void prepareNextAudio(int index) {
+        if (isMemoryMode()) {
+            byte[] bytes = readyAudioBytes.get(index);
+            if (bytes != null) {
+                player.prepareNext(index, bytes);
+            }
+            return;
+        }
+        File file = readyAudioFiles.get(index);
+        if (file != null) {
+            player.prepareNext(index, file);
+        }
+    }
+
+    private void evictOldChunks(int currentIdx) {
+        if (isMemoryMode()) {
+            cacheManager.evictOldMemoryChunks(currentIdx, readyAudioBytes, readyWordBoundaries, inFlightIndices);
+            return;
+        }
+        cacheManager.evictOldChunks(currentIdx, readyAudioFiles, readyWordBoundaries, inFlightIndices);
+    }
+
     /**
-     * Tìm chỉ số của câu nhỏ nhất hiện đã có sẵn trong bộ đệm cache âm thanh (readyAudioFiles).
+     * Tìm chỉ số của câu nhỏ nhất hiện đã có sẵn trong bộ đệm cache âm thanh (readyAudioFiles hoặc readyAudioBytes).
      *
      * @return Chỉ số câu nhỏ nhất đã cache xong, hoặc -1 nếu chưa có câu nào.
      */
     private int getFirstCachedChunkIndex() {
         int minIndex = Integer.MAX_VALUE;
-        for (Integer idx : readyAudioFiles.keySet()) {
+        for (Integer idx : getReadyIndices()) {
             if (idx != null && idx < minIndex) {
                 minIndex = idx;
             }
@@ -107,13 +163,13 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
     }
 
     /**
-     * Tìm chỉ số của câu xa nhất hiện đã có sẵn trong bộ đệm cache âm thanh (readyAudioFiles).
+     * Tìm chỉ số của câu xa nhất hiện đã có sẵn trong bộ đệm cache âm thanh (readyAudioFiles hoặc readyAudioBytes).
      *
      * @return Chỉ số câu lớn nhất đã cache xong, hoặc -1 nếu chưa có câu nào.
      */
     private int getLastCachedChunkIndex() {
         int maxIndex = -1;
-        for (Integer idx : readyAudioFiles.keySet()) {
+        for (Integer idx : getReadyIndices()) {
             if (idx != null && idx > maxIndex) {
                 maxIndex = idx;
             }
@@ -141,7 +197,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                 notifyListeners("onChunkStart", chunkData);
 
                 // Dọn dẹp sạch toàn bộ các câu quá khứ ngay lập tức để câu hiện tại luôn là câu đầu tiên của cache
-                cacheManager.evictOldChunks(chunkIndex, readyAudioFiles, readyWordBoundaries, inFlightIndices);
+                evictOldChunks(chunkIndex);
 
                 String playText = (chunkIndex >= 0 && chunkIndex < currentChunks.size()) ? currentChunks.get(chunkIndex) : "";
                 String snippet = RemoteLogger.formatSnippet(playText);
@@ -155,7 +211,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
 
                 // Đếm số câu gối đầu phía trước (ahead) đang sẵn sàng trong cache
                 int aheadCount = 0;
-                for (Integer idx : readyAudioFiles.keySet()) {
+                for (Integer idx : getReadyIndices()) {
                     if (idx != null && idx > chunkIndex) {
                         aheadCount++;
                     }
@@ -194,7 +250,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                             playDetails.put("lastCachedSnippet", lastCachedSnippet);
                         }
                         playDetails.put("aheadCachedCount", aheadCount);
-                        playDetails.put("cachedChunksCount", readyAudioFiles.size());
+                        playDetails.put("cachedChunksCount", getReadyIndices().size());
                     } catch (Exception ignored) {}
                     RemoteLogger.log("EdgeTTSNative_Stream", "info", fullLogMessage, null, playDetails);
                 }
@@ -283,6 +339,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
     public void clearCache(PluginCall call) {
         cacheManager.cleanCacheDir(true);
         readyAudioFiles.clear();
+        readyAudioBytes.clear();
         readyWordBoundaries.clear();
         if (player != null) {
             player.clearCache();
@@ -504,6 +561,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         String voice = call.getString("voice", "vi-VN-HoaiMyNeural");
         String pitch = call.getString("pitch", "+0Hz");
         String gatewayUrl = call.getString("gatewayUrl", "");
+        String bufferMode = call.getString("bufferMode", "file");
         currentBookTitle = call.getString("bookTitle", "Stories Reader");
         currentChapterTitle = call.getString("chapterTitle", "Chương đọc");
 
@@ -544,11 +602,13 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
             currentRate = rate;
             currentPitch = pitch;
             currentGatewayUrl = gatewayUrl;
+            currentBufferMode = bufferMode;
             if (!gatewayUrl.isEmpty()) {
                 RemoteLogger.setGatewayUrl(gatewayUrl);
             }
             isStreamingPlaying = true;
             readyAudioFiles.clear();
+            readyAudioBytes.clear();
             readyWordBoundaries.clear();
             inFlightIndices.clear();
             activeSockets.clear();
@@ -556,7 +616,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         }
 
         player.acquireWakeLock();
-        cacheManager.cleanCacheDir(true);
+        if (!isMemoryMode()) {
+            cacheManager.cleanCacheDir(true);
+        }
         player.reset();
         player.setWordBoundariesSource(readyWordBoundaries);
 
@@ -594,7 +656,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
 
     private void prefetchChunk(int index, long sessionId) {
         if (index < 0 || index >= currentChunks.size() || !isStreamingPlaying || sessionId != streamingSessionId) return;
-        if (readyAudioFiles.containsKey(index) || inFlightIndices.contains(index)) return;
+        if (hasReadyAudio(index) || inFlightIndices.contains(index)) return;
 
         inFlightIndices.add(index);
         String text = currentChunks.get(index);
@@ -729,45 +791,62 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                                     return;
                                 }
 
-                                if (audioBytes.length > 0) {
-                                    File chunkFile = cacheManager.getChunkFile(index);
-                                    try (FileOutputStream fos = new FileOutputStream(chunkFile)) {
-                                        fos.write(audioBytes);
-                                    }
+                                if (audioBytes.length == 0) {
+                                    inFlightIndices.remove(index);
+                                    activeSockets.remove(index);
+                                    webSocket.close(1000, "Empty audio");
+                                    handlePrefetchFailure(index, text, "Không nhận được âm thanh từ máy chủ Edge TTS", sessionId);
+                                    return;
+                                }
 
-                                    // Nếu trong quá trình ghi file phiên phát đã bị hủy thì xóa file ngay lập tức
-                                    if (sessionId != streamingSessionId || !isStreamingPlaying) {
-                                        if (chunkFile.exists()) {
-                                            chunkFile.delete();
-                                        }
-                                        inFlightIndices.remove(index);
-                                        activeSockets.remove(index);
-                                        webSocket.close(1000, "Aborted");
-                                        return;
-                                    }
-
-                                    readyAudioFiles.put(index, chunkFile);
+                                if (isMemoryMode()) {
+                                    readyAudioBytes.put(index, audioBytes);
                                     readyWordBoundaries.put(index, wordBoundaries);
                                     long elapsed = System.currentTimeMillis() - fetchStartTime;
 
-                                    // Ghi log Logcat nội bộ thiết bị khi nạp xong audio câu, tránh gửi HTTP RemoteLogger gây spam
-                                    Log.d(TAG, "[EdgeTTS:Stream] Đã nạp xong audio câu " + (index + 1) + "/" + currentChunks.size() + " (" + audioBytes.length + " bytes, " + wordBoundaries.length() + " từ, " + elapsed + "ms): \"" + RemoteLogger.formatSnippet(text) + "\"");
+                                    Log.d(TAG, "[EdgeTTS:Memory] Đã nạp xong RAM câu " + (index + 1) + "/" + currentChunks.size() + " (" + audioBytes.length + " bytes, " + wordBoundaries.length() + " từ, " + elapsed + "ms): \"" + RemoteLogger.formatSnippet(text) + "\"");
 
-                                    // Xóa bộ đếm retry khi nạp thành công
                                     retryManager.recordSuccess(index);
-
-                                    // Dọn dẹp cờ inFlight trước khi gọi onChunkAudioReady để maintainRollingBuffer thấy slot trống
                                     inFlightIndices.remove(index);
                                     activeSockets.remove(index);
                                     webSocket.close(1000, "Done");
 
                                     getBridge().getActivity().runOnUiThread(() -> onChunkAudioReady(index, sessionId));
-                                } else {
+                                    return;
+                                }
+
+                                File chunkFile = cacheManager.getChunkFile(index);
+                                try (FileOutputStream fos = new FileOutputStream(chunkFile)) {
+                                    fos.write(audioBytes);
+                                }
+
+                                // Nếu trong quá trình ghi file phiên phát đã bị hủy thì xóa file ngay lập tức
+                                if (sessionId != streamingSessionId || !isStreamingPlaying) {
+                                    if (chunkFile.exists()) {
+                                        chunkFile.delete();
+                                    }
                                     inFlightIndices.remove(index);
                                     activeSockets.remove(index);
-                                    webSocket.close(1000, "NoAudio");
-                                    handlePrefetchFailure(index, text, "Không nhận được âm thanh từ máy chủ Edge TTS", sessionId);
+                                    webSocket.close(1000, "Aborted");
+                                    return;
                                 }
+
+                                readyAudioFiles.put(index, chunkFile);
+                                readyWordBoundaries.put(index, wordBoundaries);
+                                long elapsed = System.currentTimeMillis() - fetchStartTime;
+
+                                // Ghi log Logcat nội bộ thiết bị khi nạp xong audio câu, tránh gửi HTTP RemoteLogger gây spam
+                                Log.d(TAG, "[EdgeTTS:Stream] Đã nạp xong audio câu " + (index + 1) + "/" + currentChunks.size() + " (" + audioBytes.length + " bytes, " + wordBoundaries.length() + " từ, " + elapsed + "ms): \"" + RemoteLogger.formatSnippet(text) + "\"");
+
+                                // Xóa bộ đếm retry khi nạp thành công
+                                retryManager.recordSuccess(index);
+
+                                // Dọn dẹp cờ inFlight trước khi gọi onChunkAudioReady để maintainRollingBuffer thấy slot trống
+                                inFlightIndices.remove(index);
+                                activeSockets.remove(index);
+                                webSocket.close(1000, "Done");
+
+                                getBridge().getActivity().runOnUiThread(() -> onChunkAudioReady(index, sessionId));
                             }
                         } catch (Exception ex) {
                             Log.e(TAG, "[EdgeTTS:Stream] Lỗi lưu cache audio câu " + index, ex);
@@ -832,7 +911,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                     + " (" + errMsg + "), tự động thử lại lần " + attempt + "/" + PrefetchRetryManager.DEFAULT_MAX_RETRIES + " sau " + delayMs + "ms...");
 
             mainHandler.postDelayed(() -> {
-                if (isStreamingPlaying && sessionId == streamingSessionId && !readyAudioFiles.containsKey(index)) {
+                if (isStreamingPlaying && sessionId == streamingSessionId && !hasReadyAudio(index)) {
                     prefetchChunk(index, sessionId);
                 }
             }, delayMs);
@@ -863,9 +942,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
 
         // Nếu là câu hiện tại cần đọc và player chưa phát: Khởi động phát ngay (tránh bế tắc logic khi player.currentChunkIndex = -1)
         if (index == currentPlayIndex && !player.hasCurrentPlayer()) {
-            player.start(index, readyAudioFiles.get(index));
+            playChunkAudio(index);
         } else if (index == currentPlayIndex + 1 && player.hasCurrentPlayer() && !player.hasNextPlayer()) {
-            player.prepareNext(index, readyAudioFiles.get(index));
+            prepareNextAudio(index);
             String nextText = (index >= 0 && index < currentChunks.size()) ? currentChunks.get(index) : "";
             // Ghi log Logcat nội bộ khi chuẩn bị sẵn sàng gapless cho câu tiếp theo
             Log.d(TAG, "[EdgeTTS:Stream] Đã chuẩn bị gapless câu tiếp theo " + (index + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(nextText) + "\"");
@@ -892,8 +971,8 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
             state.put("isBuffering", true);
             notifyListeners("onPlaybackStateChange", state);
 
-            if (readyAudioFiles.containsKey(nextIdx)) {
-                player.start(nextIdx, readyAudioFiles.get(nextIdx));
+            if (hasReadyAudio(nextIdx)) {
+                playChunkAudio(nextIdx);
             } else {
                 cancelPendingPrefetches(nextIdx);
                 prefetchChunk(nextIdx);
@@ -915,10 +994,10 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         if (!isStreamingPlaying || player.isPaused()) return;
 
         int currentIdx = (player != null && player.hasCurrentPlayer()) ? player.getCurrentChunkIndex() : currentPlayIndex;
-        cacheManager.evictOldChunks(currentIdx, readyAudioFiles, readyWordBoundaries, inFlightIndices);
+        evictOldChunks(currentIdx);
 
         // 1. Strict Priority: if currentPlayIndex is not yet ready, fetch it first
-        if (!readyAudioFiles.containsKey(currentPlayIndex) && currentPlayIndex >= 0 && currentPlayIndex < currentChunks.size()) {
+        if (!hasReadyAudio(currentPlayIndex) && currentPlayIndex >= 0 && currentPlayIndex < currentChunks.size()) {
             cancelPendingPrefetches(currentPlayIndex);
             prefetchChunk(currentPlayIndex);
             return;
@@ -926,8 +1005,8 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
 
         // 2. Prepare nextPlayer gapless transition if nextIdx is in cache
         int nextIdx = currentIdx + 1;
-        if (nextIdx < currentChunks.size() && readyAudioFiles.containsKey(nextIdx) && !player.hasNextPlayer() && player.hasCurrentPlayer()) {
-            player.prepareNext(nextIdx, readyAudioFiles.get(nextIdx));
+        if (nextIdx < currentChunks.size() && hasReadyAudio(nextIdx) && !player.hasNextPlayer() && player.hasCurrentPlayer()) {
+            prepareNextAudio(nextIdx);
         }
 
         // 3. Continuous Rolling Buffer:
@@ -938,7 +1017,7 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
             if (inFlightIndices.size() >= MAX_CONCURRENT_PREFETCH) {
                 break;
             }
-            if (!readyAudioFiles.containsKey(i) && !inFlightIndices.contains(i)) {
+            if (!hasReadyAudio(i) && !inFlightIndices.contains(i)) {
                 prefetchChunk(i);
             }
         }
@@ -1017,8 +1096,8 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         state.put("isBuffering", true);
         notifyListeners("onPlaybackStateChange", state);
 
-        if (readyAudioFiles.containsKey(targetIndex)) {
-            player.start(targetIndex, readyAudioFiles.get(targetIndex));
+        if (hasReadyAudio(targetIndex)) {
+            playChunkAudio(targetIndex);
         } else {
             prefetchChunk(targetIndex, sessionId);
         }
@@ -1073,8 +1152,9 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
 
         // Dọn dẹp sạch sẽ bộ nhớ đệm RAM và xóa toàn bộ file âm thanh đã tải trên đĩa để bắt đầu flow mới
         readyAudioFiles.clear();
+        readyAudioBytes.clear();
         readyWordBoundaries.clear();
-        if (cacheManager != null) {
+        if (cacheManager != null && !isMemoryMode()) {
             cacheManager.cleanCacheDir(true);
         }
 

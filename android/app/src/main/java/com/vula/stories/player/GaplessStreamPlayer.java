@@ -275,6 +275,172 @@ public class GaplessStreamPlayer {
     }
 
     /**
+     * Bắt đầu phát âm thanh từ bộ đệm RAM (in-memory) bằng ByteArrayMediaDataSource.
+     * Hoàn toàn không ghi đĩa, tối ưu 0ms I/O.
+     *
+     * @param index      Chỉ số câu cần phát
+     * @param audioBytes Mảng byte âm thanh thô trong RAM
+     */
+    public synchronized void start(int index, byte[] audioBytes) {
+        if (audioBytes == null || audioBytes.length == 0) return;
+
+        final long sessionId = ++currentSessionId;
+
+        if (preparingCurrentPlayer != null) {
+            safeReleasePlayer(preparingCurrentPlayer);
+            preparingCurrentPlayer = null;
+        }
+        if (preparingNextPlayer != null) {
+            safeReleasePlayer(preparingNextPlayer);
+            preparingNextPlayer = null;
+        }
+        if (currentPlayer != null) {
+            MediaPlayer old = currentPlayer;
+            currentPlayer = null;
+            safeReleasePlayer(old);
+        }
+        if (nextPlayer != null) {
+            MediaPlayer oldNext = nextPlayer;
+            nextPlayer = null;
+            nextChunkIndex = -1;
+            safeReleasePlayer(oldNext);
+        }
+
+        try {
+            currentChunkIndex = index;
+            isPlaying = true;
+            isPaused = false;
+
+            MediaPlayer player = new MediaPlayer();
+            preparingCurrentPlayer = player;
+            player.setDataSource(new ByteArrayMediaDataSource(audioBytes));
+            player.setOnPreparedListener(mp -> {
+                synchronized (GaplessStreamPlayer.this) {
+                    if (sessionId != currentSessionId || !isPlaying) {
+                        safeReleasePlayer(mp);
+                        if (preparingCurrentPlayer == mp) {
+                            preparingCurrentPlayer = null;
+                        }
+                        return;
+                    }
+
+                    if (preparingCurrentPlayer == mp) {
+                        preparingCurrentPlayer = null;
+                    }
+                    currentPlayer = mp;
+                    currentChunkIndex = index;
+                    lastWordBoundaryIndex = -1;
+
+                    try {
+                        mp.start();
+                    } catch (Exception ex) {
+                        Log.e(TAG, "Error starting in-memory MediaPlayer for chunk " + index, ex);
+                        safeReleasePlayer(mp);
+                        currentPlayer = null;
+                        mainHandler.post(() -> handleChunkCompletion(mp, sessionId));
+                        return;
+                    }
+
+                    if (listener != null) {
+                        listener.onChunkStart(index);
+                        listener.onPlaybackStateChange(true, false, false);
+                    }
+
+                    startWordBoundaryTicker();
+                }
+            });
+
+            player.setOnCompletionListener(mp -> mainHandler.post(() -> handleChunkCompletion(mp, sessionId)));
+            player.setOnErrorListener((mp, what, extra) -> {
+                Log.e(TAG, "MediaPlayer in-memory error: what=" + what + ", extra=" + extra);
+                mainHandler.post(() -> handleChunkCompletion(mp, sessionId));
+                return true;
+            });
+
+            isPlaying = true;
+            isPaused = false;
+            player.prepareAsync();
+        } catch (Exception ex) {
+            Log.e(TAG, "Error configuring in-memory player for chunk " + index, ex);
+            if (preparingCurrentPlayer != null) {
+                safeReleasePlayer(preparingCurrentPlayer);
+                preparingCurrentPlayer = null;
+            }
+        }
+    }
+
+    /**
+     * Chuẩn bị trước câu tiếp theo từ bộ nhớ RAM để chuyển tiếp gapless 0ms.
+     *
+     * @param nextIndex      Chỉ số câu tiếp theo
+     * @param nextAudioBytes Mảng byte âm thanh của câu tiếp theo trong RAM
+     */
+    public synchronized void prepareNext(int nextIndex, byte[] nextAudioBytes) {
+        if (!isPlaying || nextPlayer != null || currentPlayer == null) return;
+        if (nextAudioBytes == null || nextAudioBytes.length == 0) return;
+
+        if (preparingNextPlayer != null) {
+            safeReleasePlayer(preparingNextPlayer);
+            preparingNextPlayer = null;
+        }
+
+        final long sessionId = currentSessionId;
+
+        try {
+            MediaPlayer next = new MediaPlayer();
+            preparingNextPlayer = next;
+            next.setDataSource(new ByteArrayMediaDataSource(nextAudioBytes));
+            next.setOnPreparedListener(mp -> {
+                synchronized (GaplessStreamPlayer.this) {
+                    if (sessionId != currentSessionId || !isPlaying || currentPlayer == null) {
+                        safeReleasePlayer(mp);
+                        if (preparingNextPlayer == mp) {
+                            preparingNextPlayer = null;
+                        }
+                        return;
+                    }
+
+                    if (preparingNextPlayer == mp) {
+                        preparingNextPlayer = null;
+                    }
+                    nextPlayer = mp;
+                    nextChunkIndex = nextIndex;
+                    try {
+                        currentPlayer.setNextMediaPlayer(nextPlayer);
+                        Log.d(TAG, "Gapless connection ready (in-memory) for chunk " + nextIndex);
+                    } catch (Exception ex) {
+                        Log.w(TAG, "Failed setNextMediaPlayer (in-memory): " + ex.getMessage());
+                    }
+                }
+            });
+            next.setOnCompletionListener(mp -> mainHandler.post(() -> handleChunkCompletion(mp, sessionId)));
+            next.setOnErrorListener((mp, what, extra) -> {
+                Log.e(TAG, "Next in-memory MediaPlayer error: what=" + what + ", extra=" + extra);
+                synchronized (GaplessStreamPlayer.this) {
+                    if (sessionId == currentSessionId) {
+                        if (preparingNextPlayer == mp) {
+                            preparingNextPlayer = null;
+                        }
+                        if (nextPlayer == mp) {
+                            nextPlayer = null;
+                            nextChunkIndex = -1;
+                        }
+                    }
+                }
+                safeReleasePlayer(mp);
+                return true;
+            });
+            next.prepareAsync();
+        } catch (Exception ex) {
+            Log.w(TAG, "Error preparing in-memory next player: " + ex.getMessage());
+            if (preparingNextPlayer != null) {
+                safeReleasePlayer(preparingNextPlayer);
+                preparingNextPlayer = null;
+            }
+        }
+    }
+
+    /**
      * Xử lý khi một câu hoàn tất phát xong, chuyển sang câu tiếp theo liền mạch nếu có.
      *
      * @param completedPlayer MediaPlayer vừa hoàn thành

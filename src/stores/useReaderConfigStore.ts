@@ -49,6 +49,7 @@ const defaultSettings: ReaderConfig = {
 	vieneuApplyWatermark: true,
 	vieneuOutputSampleRate: 0,
 	edgeVoiceUri: 'vi-VN-HoaiMyNeural',
+	edgeBufferMode: 'file',
 	showTTSControlOnReader: true,
 	bgmEnabled: true,
 	bgmVolume: 0.2,
@@ -86,6 +87,7 @@ interface ReaderConfigStore extends ReaderConfig {
 	setVieneuModel: (model: string) => void;
 	setVieneuParameter: <K extends keyof ReaderConfig>(key: K, value: ReaderConfig[K]) => void;
 	setEdgeVoiceUri: (uri: string) => void;
+	setEdgeBufferMode: (mode: 'file' | 'memory') => void;
 	setShowTTSControlOnReader: (enabled: boolean) => void;
 	bgmOnlyOnEdgeReadAloud?: boolean;
 	isBgmPreviewing?: boolean;
@@ -231,6 +233,13 @@ export const useReaderConfigStore = create<ReaderConfigStore>((set) => {
 				const next = { ...state, edgeVoiceUri };
 				persist(next);
 				return { edgeVoiceUri };
+			});
+		},
+		setEdgeBufferMode: (edgeBufferMode) => {
+			set((state) => {
+				const next = { ...state, edgeBufferMode };
+				persist(next);
+				return { edgeBufferMode };
 			});
 		},
 		setShowTTSControlOnReader: (showTTSControlOnReader) => {

@@ -106,4 +106,39 @@ public class AudioCacheManager {
             Log.w(TAG, "Error in evictOldChunks: " + e.getMessage());
         }
     }
+
+    public void evictOldMemoryChunks(
+            int currentChunkIndex,
+            Map<Integer, byte[]> readyAudioBytes,
+            Map<Integer, JSONArray> readyWordBoundaries,
+            Set<Integer> inFlightIndices
+    ) {
+        if (readyAudioBytes == null) return;
+        try {
+            int thresholdIndex = currentChunkIndex - MAX_PAST_CHUNKS_RETAINED;
+            for (Integer idx : new ArrayList<>(readyAudioBytes.keySet())) {
+                if (idx != null && idx < thresholdIndex) {
+                    readyAudioBytes.remove(idx);
+                    if (readyWordBoundaries != null) readyWordBoundaries.remove(idx);
+                    if (inFlightIndices != null) inFlightIndices.remove(idx);
+                }
+            }
+
+            if (readyAudioBytes.size() > MAX_TOTAL_CACHE_FILES) {
+                List<Integer> sortedIndices = new ArrayList<>(readyAudioBytes.keySet());
+                Collections.sort(sortedIndices);
+                int toRemove = readyAudioBytes.size() - MAX_TOTAL_CACHE_FILES;
+                for (int i = 0; i < toRemove && i < sortedIndices.size(); i++) {
+                    Integer idx = sortedIndices.get(i);
+                    if (idx != null && idx < currentChunkIndex) {
+                        readyAudioBytes.remove(idx);
+                        if (readyWordBoundaries != null) readyWordBoundaries.remove(idx);
+                        if (inFlightIndices != null) inFlightIndices.remove(idx);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error in evictOldMemoryChunks: " + e.getMessage());
+        }
+    }
 }

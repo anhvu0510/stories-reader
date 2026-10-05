@@ -10,6 +10,7 @@ export interface StartPlaybackOptions {
 	gatewayUrl?: string;
 	bookTitle?: string;
 	chapterTitle?: string;
+	bufferMode?: 'file' | 'memory';
 }
 
 export interface WordBoundaryEvent {

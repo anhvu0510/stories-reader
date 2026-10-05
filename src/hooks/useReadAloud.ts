@@ -1134,6 +1134,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			isPausedRef.current = false;
 			const textChunks = chunks.map((c) => c.text);
 			const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.8;
+			const edgeBufferMode = useReaderConfigStore.getState().edgeBufferMode || 'file';
 			const targetVoice = ttsEngine === 'edge' ? (edgeVoiceUri || 'vi-VN-HoaiMyNeural') : voiceUri;
 
 			const bookTitle = chapterContext.bookName || (chapterContext.bookId ? `Truyện #${chapterContext.bookId}` : 'Stories Reader');
@@ -1152,7 +1153,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 				pitch: ttsEngine === 'edge' ? ('+0Hz' as any) : 1.0,
 				gatewayUrl: activeDomain?.url || getGatewayBaseUrl(),
 				bookTitle,
-				chapterTitle
+				chapterTitle,
+				bufferMode: edgeBufferMode
 			});
 			return;
 		}

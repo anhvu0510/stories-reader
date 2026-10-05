@@ -166,6 +166,7 @@ export interface ReaderConfig {
 	vieneuApplyWatermark?: boolean;
 	vieneuOutputSampleRate?: 0 | 24000 | 48000;
 	edgeVoiceUri?: string;
+	edgeBufferMode?: 'file' | 'memory';
 	showTTSControlOnReader?: boolean;
 	bgmEnabled?: boolean;
 	bgmVolume?: number;
