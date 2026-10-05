@@ -1,7 +1,7 @@
 {
-  "version": "1.0.333",
+  "version": "1.0.334",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "cd9f0e36215b77fe98001d6b6e7a3519f07c814d05d9f912793f78a54eef432a",
-  "releaseNotes": "refactor: improve word boundary tracking and smooth audio position calculation in GaplessStreamPlayer",
-  "updatedAt": "2026-10-05T08:27:04Z"
+  "checksum": "a875d8f26d25b9bf22065baa2d6fdbf942f6009e2d34c5c1fa7351077a7dd852",
+  "releaseNotes": "refactor: simplify position tracking and update word boundary ticker interval to 20ms in GaplessStreamPlayer",
+  "updatedAt": "2026-10-05T08:36:10Z"
 }
