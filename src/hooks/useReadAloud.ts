@@ -608,13 +608,15 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 		const readerContent = document.querySelector('#main-story-content');
 		if (!readerContent) {
-			highlighter.clear();
 			return;
 		}
 
 		const chunk = chunks[chunkIndex];
 		const pNode = readerContent.querySelector<HTMLElement>(`article > div[data-paragraph-index="${chunk.pIdx}"]`);
-		if (!pNode || nextCharIndex < 0 || nextCharLength <= 0) {
+		if (!pNode) {
+			return;
+		}
+		if (nextCharIndex < 0 || nextCharLength <= 0) {
 			highlighter.clear();
 			return;
 		}
@@ -668,6 +670,13 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			setCurrentChunkIndex(idx);
 			setIsLoading(false);
 			saveResumePosition(idx, 0);
+
+			const targetChunk = chunks[idx];
+			if (!targetChunk) return;
+			const firstWordMatch = targetChunk.text.match(/[^\s.,!?:;'"(){}[\]“”‘’\-–—]+/);
+			const firstCharIdx = firstWordMatch?.index ?? 0;
+			const firstCharLen = firstWordMatch?.[0]?.length ?? 1;
+			updateWordHighlight(idx, firstCharIdx, firstCharLen);
 		});
 
 		const unsubWord = activeNativeStream.onWordBoundary(({ chunkIndex, charIndex, charLength }) => {

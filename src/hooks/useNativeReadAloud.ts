@@ -196,6 +196,26 @@ export function useNativeReadAloud(
 			isPausedRef.current = false;
 			// Lưu lại vị trí câu đang phát để khôi phục khi mở lại
 			saveResumePosition(idx, 0);
+
+			const targetChunk = chunks[idx];
+			if (!targetChunk) return;
+			const firstWordMatch = targetChunk.text.match(/[^\s.,!?:;'"(){}[\]“”‘’\-–—]+/);
+			const firstCharIdx = firstWordMatch?.index ?? 0;
+			const firstCharLen = firstWordMatch?.[0]?.length ?? 1;
+			charIndexRef.current = firstCharIdx;
+			charLengthRef.current = firstCharLen;
+			const paragraphEl = document.querySelector(`[data-paragraph-index="${targetChunk.pIdx}"]`) as HTMLElement | null;
+			if (!paragraphEl) return;
+			const rects = wordHighlighterRef.current?.highlight(
+				paragraphEl,
+				targetChunk.startOffset + firstCharIdx,
+				firstCharLen,
+				targetChunk.startOffset,
+				targetChunk.length
+			);
+			if (rects?.line) {
+				scrollFollowerRef.current?.follow(rects.line);
+			}
 		});
 
 		// Khi có sự kiện vị trí từ chính xác (Word Boundary) từ bộ đếm 25ms dưới native:
