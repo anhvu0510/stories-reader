@@ -189,15 +189,15 @@ export function TranslationSheet({
 		// Load saved translate options from settings (force fresh fetch)
 		SettingsRepository.getSettings('stories.ui.translate', true)
 			.then((savedSettings) => {
-				if (!active) return;
-				if (savedSettings?.value) {
-					try {
-						const parsed = typeof savedSettings.value === 'string' ? JSON.parse(savedSettings.value) : savedSettings.value;
-						if (parsed && typeof parsed === 'object') {
-							if (parsed.platform === 'VERTEX_API') parsed.platform = 'AI_STUDIO';
-							setOptions((prev) => ({ ...prev, ...parsed }));
-						}
-					} catch (e) {}
+				if (!active || !savedSettings?.value) return;
+				try {
+					const parsed = typeof savedSettings.value === 'string' ? JSON.parse(savedSettings.value) : savedSettings.value;
+					if (parsed && typeof parsed === 'object') {
+						if (parsed.platform === 'VERTEX_API') parsed.platform = 'AI_STUDIO';
+						setOptions((prev) => ({ ...prev, ...parsed }));
+					}
+				} catch (err) {
+					console.debug('[TranslationSheet] Parse saved settings error:', err);
 				}
 			})
 			.catch(() => {});
@@ -467,42 +467,39 @@ export function TranslationSheet({
 		setSubmittingType(isSync ? 'sync' : 'async');
 		const platform = options.platform || 'VERTEX_API';
 
+		const chapterIdToUse = initialSelectedChapters[0] || currentChapterId;
+		if (activeTab === 'current' && !chapterIdToUse) {
+			showToast('Không xác định được chương hiện tại', 'error');
+			setIsSubmitting(false);
+			isSubmittingRef.current = false;
+			setSubmittingType(null);
+			return;
+		}
+
+		if (activeTab === 'batch_chapter' && selectedChapters.size === 0) {
+			showToast('Vui lòng chọn ít nhất 1 chương', 'error');
+			setIsSubmitting(false);
+			isSubmittingRef.current = false;
+			setSubmittingType(null);
+			return;
+		}
+
+		if (activeTab === 'story' && selectedBooks.size === 0) {
+			showToast('Vui lòng chọn ít nhất 1 truyện', 'error');
+			setIsSubmitting(false);
+			isSubmittingRef.current = false;
+			setSubmittingType(null);
+			return;
+		}
+
+		const chapterIds: string[] = activeTab === 'current'
+			? (chapterIdToUse ? [chapterIdToUse] : [])
+			: (activeTab === 'batch_chapter' ? Array.from(selectedChapters) : []);
+
+		const bookIds: string[] = activeTab === 'story' ? Array.from(selectedBooks) : [];
+
 		try {
 			if (isSync) {
-				// --- SYNC MODE (Đợi kết quả và reload) ---
-				let chapterIds: string[] = [];
-				let bookIds: string[] = [];
-
-				if (activeTab === 'current') {
-					const chapterIdToUse = initialSelectedChapters[0] || currentChapterId;
-					if (!chapterIdToUse) {
-						showToast('Không xác định được chương hiện tại', 'error');
-						setIsSubmitting(false);
-						isSubmittingRef.current = false;
-						setSubmittingType(null);
-						return;
-					}
-					chapterIds = [chapterIdToUse];
-				} else if (activeTab === 'batch_chapter') {
-					if (selectedChapters.size === 0) {
-						showToast('Vui lòng chọn ít nhất 1 chương', 'error');
-						setIsSubmitting(false);
-						isSubmittingRef.current = false;
-						setSubmittingType(null);
-						return;
-					}
-					chapterIds = Array.from(selectedChapters);
-				} else if (activeTab === 'story') {
-					if (selectedBooks.size === 0) {
-						showToast('Vui lòng chọn ít nhất 1 truyện', 'error');
-						setIsSubmitting(false);
-						isSubmittingRef.current = false;
-						setSubmittingType(null);
-						return;
-					}
-					bookIds = Array.from(selectedBooks);
-				}
-
 				showToast('Đang dịch AI trực tiếp (vui lòng chờ)...', 'info');
 				const res = await ChapterRepository.translate({
 					mode: 'current',
@@ -518,87 +515,61 @@ export function TranslationSheet({
 					currentChapterId: initialSelectedChapters[0] || currentChapterId
 				});
 
-				const firstChapterId = chapterIds[0];
-				const totalTokens = res?.totalTokens || (firstChapterId && res?.resultTrans?.[firstChapterId]?.chapter?.totalTokens) || 0;
+				const firstChapterId: string | undefined = chapterIds[0];
+				const transResult = res as any;
+				const chapterResult = firstChapterId ? transResult?.resultTrans?.[firstChapterId] : undefined;
+				const totalTokens = transResult?.totalTokens || chapterResult?.chapter?.totalTokens || 0;
 				const formattedTokens = totalTokens > 0 ? `${totalTokens.toLocaleString('vi-VN')} tokens` : '';
 				const successMsg = formattedTokens ? `🎉 Dịch thành công! Tokens: ${formattedTokens}` : '🎉 Dịch thành công!';
 
 				showToast(successMsg, 'success');
 				onClose();
 				if (onSuccess) onSuccess();
-			} else {
-				// --- ASYNC MODE (Đẩy vào queue ngầm) ---
-				if (activeTab === 'current') {
-					const chapterIdToUse = initialSelectedChapters[0] || currentChapterId;
-					if (!chapterIdToUse) {
-						showToast('Không xác định được chương hiện tại', 'error');
-						setIsSubmitting(false);
-						isSubmittingRef.current = false;
-						setSubmittingType(null);
-						return;
-					}
-
-					await ChapterRepository.translate({
-						mode: 'batch_chapter',
-						model: options.model,
-						platform: platform,
-						minWords: options.minWords,
-						maxWords: options.maxWords,
-						temperature: options.temperature,
-						retryTranslate: options.forceRetranslate,
-						bookId: currentBookId,
-						chapterId: [chapterIdToUse]
-					});
-					showToast('Đã gửi yêu cầu dịch vào hàng đợi', 'success');
-					setTimeout(() => onClose(), 1500);
-				} else if (activeTab === 'batch_chapter') {
-					if (selectedChapters.size === 0) {
-						showToast('Vui lòng chọn ít nhất 1 chương', 'error');
-						setIsSubmitting(false);
-						isSubmittingRef.current = false;
-						setSubmittingType(null);
-						return;
-					}
-
-					await ChapterRepository.translate({
-						mode: 'batch_chapter',
-						model: options.model,
-						platform: platform,
-						minWords: options.minWords,
-						maxWords: options.maxWords,
-						temperature: options.temperature,
-						retryTranslate: options.forceRetranslate,
-						batchingGroup: options.batchingGroup,
-						bookId: currentBookId,
-						chapterId: Array.from(selectedChapters),
-						currentChapterId: initialSelectedChapters[0] || currentChapterId
-					});
-					showToast(`Đã gửi yêu cầu dịch ${selectedChapters.size} chương`, 'success');
-					setTimeout(() => onClose(), 1500);
-				} else if (activeTab === 'story') {
-					if (selectedBooks.size === 0) {
-						showToast('Vui lòng chọn ít nhất 1 truyện', 'error');
-						setIsSubmitting(false);
-						isSubmittingRef.current = false;
-						setSubmittingType(null);
-						return;
-					}
-
-					await ChapterRepository.translate({
-						mode: 'story',
-						model: options.model,
-						platform: platform,
-						minWords: options.minWords,
-						maxWords: options.maxWords,
-						temperature: options.temperature,
-						retryTranslate: options.forceRetranslate,
-						batchingGroup: options.batchingGroup,
-						bookId: Array.from(selectedBooks),
-						currentChapterId: initialSelectedChapters[0] || currentChapterId
-					});
-					showToast(`Đã gửi yêu cầu dịch ${selectedBooks.size} truyện`, 'success');
-					setTimeout(() => onClose(), 1500);
-				}
+			} else if (activeTab === 'current') {
+				await ChapterRepository.translate({
+					mode: 'batch_chapter',
+					model: options.model,
+					platform: platform,
+					minWords: options.minWords,
+					maxWords: options.maxWords,
+					temperature: options.temperature,
+					retryTranslate: options.forceRetranslate,
+					bookId: currentBookId,
+					chapterId: [chapterIdToUse]
+				});
+				showToast('Đã gửi yêu cầu dịch vào hàng đợi', 'success');
+				setTimeout(() => onClose(), 1500);
+			} else if (activeTab === 'batch_chapter') {
+				await ChapterRepository.translate({
+					mode: 'batch_chapter',
+					model: options.model,
+					platform: platform,
+					minWords: options.minWords,
+					maxWords: options.maxWords,
+					temperature: options.temperature,
+					retryTranslate: options.forceRetranslate,
+					batchingGroup: options.batchingGroup,
+					bookId: currentBookId,
+					chapterId: Array.from(selectedChapters),
+					currentChapterId: initialSelectedChapters[0] || currentChapterId
+				});
+				showToast(`Đã gửi yêu cầu dịch ${selectedChapters.size} chương`, 'success');
+				setTimeout(() => onClose(), 1500);
+			} else if (activeTab === 'story') {
+				await ChapterRepository.translate({
+					mode: 'story',
+					model: options.model,
+					platform: platform,
+					minWords: options.minWords,
+					maxWords: options.maxWords,
+					temperature: options.temperature,
+					retryTranslate: options.forceRetranslate,
+					batchingGroup: options.batchingGroup,
+					bookId: Array.from(selectedBooks),
+					currentChapterId: initialSelectedChapters[0] || currentChapterId
+				});
+				showToast(`Đã gửi yêu cầu dịch ${selectedBooks.size} truyện`, 'success');
+				setTimeout(() => onClose(), 1500);
 			}
 		} catch (e: any) {
 			console.error(e);

@@ -5,6 +5,25 @@ import { useAppStore } from '@/stores/useAppStore';
 
 import type { Chapter, ChapterContent } from '@/shared/types';
 
+function normalizePagination(pag: any, limit: number, page: number, rawCount: number): { totalPages: number; total: number; currentPage: number } {
+	let totalPages: number;
+	let total: number;
+
+	if (pag.totalPages !== undefined || pag.total_pages !== undefined) {
+		totalPages = pag.totalPages ?? pag.total_pages;
+		total = pag.total ?? pag.totalItems ?? pag.total_count ?? totalPages * limit;
+	} else if (pag.total !== undefined || pag.totalItems !== undefined || pag.total_count !== undefined) {
+		total = pag.total ?? pag.totalItems ?? pag.total_count;
+		totalPages = Math.ceil(total / limit) || 1;
+	} else {
+		total = rawCount;
+		totalPages = rawCount >= limit ? page + 1 : page;
+	}
+
+	const currentPage = pag.currentPage ?? pag.page ?? page;
+	return { totalPages, total, currentPage };
+}
+
 export const ChapterRepository = {
 	async getChapters(
 		bookId: string,
@@ -57,30 +76,11 @@ export const ChapterRepository = {
 						bookId: c.bookId || bookId
 					}));
 					const pag = res.pagination || res.meta || {};
-
-					let totalPages: number;
-					let total: number;
-
-					if (pag.totalPages !== undefined || pag.total_pages !== undefined) {
-						totalPages = pag.totalPages ?? pag.total_pages;
-						total = pag.total ?? pag.totalItems ?? pag.total_count ?? totalPages * limit;
-					} else if (pag.total !== undefined || pag.totalItems !== undefined || pag.total_count !== undefined) {
-						total = pag.total ?? pag.totalItems ?? pag.total_count;
-						totalPages = Math.ceil(total / limit) || 1;
-					} else {
-						total = rawChapters.length;
-						totalPages = rawChapters.length >= limit ? page + 1 : page;
-					}
-
-					const currentPage = pag.currentPage ?? pag.page ?? page;
+					const pagination = normalizePagination(pag, limit, page, rawChapters.length);
 
 					return {
 						chapters: rawChapters,
-						pagination: {
-							currentPage,
-							totalPages,
-							total
-						}
+						pagination
 					};
 				}
 			} catch (e) {
@@ -141,19 +141,17 @@ export const ChapterRepository = {
 				}
 
 				const res = await apiClient.get<any>(`/api/books/${bookId}/chapters?${query.toString()}`, requestOptions);
-				if (res) {
-					const rawItems = res.chapters || res.data || res.items || (Array.isArray(res) ? res : []);
-					if (rawItems.length > 0) {
-						const c = rawItems[0];
-						return {
-							chapterId: String(c.chapterId || c._id || c.id || `chap-${c.chapterNumber || 1}`),
-							chapterNumber: typeof c.chapterNumber === 'number' ? c.chapterNumber : parseInt(c.chapterNumber, 10) || 1,
-							title: c.title || `Chương ${c.chapterNumber || 1}`,
-							state: c.state || 'SUCCEEDED',
-							updatedAt: c.updatedAt || new Date().toISOString(),
-							bookId: c.bookId || bookId
-						};
-					}
+				const rawItems = res?.chapters || res?.data || res?.items || (Array.isArray(res) ? res : []);
+				if (rawItems.length > 0) {
+					const c = rawItems[0];
+					return {
+						chapterId: String(c.chapterId || c._id || c.id || `chap-${c.chapterNumber || 1}`),
+						chapterNumber: typeof c.chapterNumber === 'number' ? c.chapterNumber : parseInt(c.chapterNumber, 10) || 1,
+						title: c.title || `Chương ${c.chapterNumber || 1}`,
+						state: c.state || 'SUCCEEDED',
+						updatedAt: c.updatedAt || new Date().toISOString(),
+						bookId: c.bookId || bookId
+					};
 				}
 			} catch (e: any) {
 				console.warn('Failed to fetch latest chapter online:', e);
@@ -198,19 +196,16 @@ export const ChapterRepository = {
 				allBookChapters = await offlineDb.getChapters(bookId);
 				allBookChapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
 				currentIdx = allBookChapters.findIndex((c) => c.chapterId === startChapterId);
+			}
 
-				if (targetBatchSize > 1 && currentIdx !== -1) {
-					const maxLookahead = Math.min(allBookChapters.length, currentIdx + targetBatchSize);
-					for (let i = currentIdx + 1; i < maxLookahead; i++) {
-						const nextChap = allBookChapters[i];
-						const nextContent = await offlineDb.getChapterContent(nextChap.chapterId);
-						if (nextContent) {
-							rawChapterItems.push(nextContent);
-						} else {
-							// Contiguous batch stops if a chapter is not downloaded
-							break;
-						}
-					}
+			const canLookahead = bookId && targetBatchSize > 1 && currentIdx !== -1;
+			if (canLookahead) {
+				const maxLookahead = Math.min(allBookChapters.length, currentIdx + targetBatchSize);
+				for (let i = currentIdx + 1; i < maxLookahead; i++) {
+					const nextChap = allBookChapters[i];
+					const nextContent = await offlineDb.getChapterContent(nextChap.chapterId);
+					if (!nextContent) break;
+					rawChapterItems.push(nextContent);
 				}
 			}
 

@@ -12,15 +12,13 @@ import { useHaptic } from '@/hooks/useHaptic';
  * sinh trắc học (vân tay / khuôn mặt), nếu không đúng hoặc huỷ thì cho phép nhập Passcode.
  */
 export function AppLockOverlay() {
-	// Passcode và màn hình khóa bảo mật chỉ áp dụng cho mobile Android, không áp dụng trên Web
-	if (!isAndroidApp()) return null;
-
+	const isAndroid = isAndroidApp();
 	const { isLocked, showPasscodeFallback, isAuthenticating, setShowPasscodeFallback, triggerBiometricPrompt, unlock } = useAppLockStore();
 	const { trigger: triggerHaptic } = useHaptic();
 
 	// Tự động kích hoạt quét sinh trắc học khi màn hình khóa xuất hiện (chỉ khi app đang hiển thị trên màn hình)
 	useEffect(() => {
-		if (isLocked && !showPasscodeFallback && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+		if (isAndroid && isLocked && !showPasscodeFallback && typeof document !== 'undefined' && document.visibilityState === 'visible') {
 			const timer = setTimeout(() => {
 				if (document.visibilityState === 'visible') {
 					triggerBiometricPrompt();
@@ -28,9 +26,10 @@ export function AppLockOverlay() {
 			}, 350);
 			return () => clearTimeout(timer);
 		}
-	}, [isLocked, showPasscodeFallback, triggerBiometricPrompt]);
+	}, [isAndroid, isLocked, showPasscodeFallback, triggerBiometricPrompt]);
 
-	if (!isLocked) return null;
+	// Passcode và màn hình khóa bảo mật chỉ áp dụng cho mobile Android khi đang ở trạng thái locked
+	if (!isAndroid || !isLocked) return null;
 
 	const handleManualTrigger = () => {
 		triggerHaptic('light');

@@ -130,13 +130,11 @@ export function BottomSheet({
 					sheetCardRef.current.style.transform = `translate3d(0, ${deltaY}px, 0)`;
 				}
 			}
-		} else {
+		} else if (currentDragYRef.current > 0 && sheetCardRef.current) {
 			// Người dùng đang cuộn lên — huỷ drag nếu đang kéo
-			if (currentDragYRef.current > 0 && sheetCardRef.current) {
-				currentDragYRef.current = 0;
-				sheetCardRef.current.style.transition = 'none';
-				sheetCardRef.current.style.transform = '';
-			}
+			currentDragYRef.current = 0;
+			sheetCardRef.current.style.transition = 'none';
+			sheetCardRef.current.style.transform = '';
 		}
 	};
 

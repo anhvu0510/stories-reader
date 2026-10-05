@@ -18,6 +18,14 @@ export interface GetBooksOptions {
 	forceFresh?: boolean;
 }
 
+async function syncOfflineLastReadBook(bookId: string, book: any): Promise<void> {
+	const offlineBook = await offlineDb.getBook(bookId);
+	if (!offlineBook || !book?.lastReadChapter) return;
+	offlineBook.lastReadChapter = book.lastReadChapter;
+	offlineBook.lastedReadAt = book.lastedReadAt || new Date().toISOString();
+	await offlineDb.saveBook(offlineBook);
+}
+
 export const BookRepository = {
 	async getBooks(
 		page: number = 1,
@@ -252,13 +260,9 @@ export const BookRepository = {
 				const res = await apiClient.get<any>(url, requestOptions);
 				const books = res?.books || res?.data || (Array.isArray(res) ? res : []);
 				const book = books.length > 0 ? books[0] : res?.book || null;
+
 				if (book?.lastReadChapter?.chapterId) {
-					const offlineBook = await offlineDb.getBook(bookId);
-					if (offlineBook) {
-						offlineBook.lastReadChapter = book.lastReadChapter;
-						offlineBook.lastedReadAt = book.lastedReadAt || new Date().toISOString();
-						await offlineDb.saveBook(offlineBook);
-					}
+					await syncOfflineLastReadBook(bookId, book);
 					return {
 						chapterId: book.lastReadChapter.chapterId,
 						chapterNumber: typeof book.lastReadChapter.chapterNumber === 'number' ? book.lastReadChapter.chapterNumber : parseInt(book.lastReadChapter.chapterNumber, 10) || 1,

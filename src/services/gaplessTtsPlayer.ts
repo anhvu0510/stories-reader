@@ -111,7 +111,7 @@ interface PrefetchedPcmStream {
 const MAX_PHRASE_CHARACTERS = 180;
 const DEFAULT_TARGET_CHARACTERS = 160;
 const DEFAULT_MAX_CHARACTERS = MAX_PHRASE_CHARACTERS;
-const WORD_PATTERN = /[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/gu;
+const WORD_PATTERN = /[^\s.,!?:;'"(){}[\]“”‘’\-–—]+/gu;
 interface BoundaryPauseProfile {
 	softBreak: number;
 	clause: number;

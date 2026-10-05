@@ -104,15 +104,17 @@ export function useNativeReadAloud(
 	const clearAllStaleResumePositions = useCallback((currentChapId?: string) => {
 		if (typeof window === 'undefined') return;
 		try {
+			const currentKey = currentChapId ? `stories_tts_pos_${currentChapId}` : null;
 			for (let i = localStorage.length - 1; i >= 0; i--) {
 				const key = localStorage.key(i);
-				if (key && key.startsWith('stories_tts_pos_')) {
-					if (!currentChapId || key !== `stories_tts_pos_${currentChapId}`) {
-						localStorage.removeItem(key);
-					}
+				const isStale = key?.startsWith('stories_tts_pos_') && key !== currentKey;
+				if (isStale && key) {
+					localStorage.removeItem(key);
 				}
 			}
-		} catch {}
+		} catch (err) {
+			console.debug('[NativeTTS] Clear stale positions error ignored:', err);
+		}
 	}, []);
 
 	useEffect(() => {

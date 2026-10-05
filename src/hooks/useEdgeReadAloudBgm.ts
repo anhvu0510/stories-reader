@@ -77,7 +77,9 @@ function safeDisconnect(node: AudioNode | null): void {
 	if (!node) return;
 	try {
 		node.disconnect();
-	} catch {}
+	} catch (err) {
+		console.debug('[EdgeBgm] Disconnect node ignored:', err);
+	}
 }
 
 function safeStopAndDisconnectSource(source: AudioBufferSourceNode | null): void {
@@ -85,7 +87,20 @@ function safeStopAndDisconnectSource(source: AudioBufferSourceNode | null): void
 	try {
 		source.stop();
 		source.disconnect();
-	} catch {}
+	} catch (err) {
+		console.debug('[EdgeBgm] Stop source ignored:', err);
+	}
+}
+
+function safeMuteGain(gain: GainNode | null, ctx: AudioContext | null): void {
+	if (!gain || !ctx) return;
+	try {
+		const now = ctx.currentTime;
+		gain.gain.cancelScheduledValues?.(now);
+		gain.gain.setValueAtTime?.(0, now);
+	} catch (err) {
+		console.debug('[EdgeBgm] Mute gain ignored:', err);
+	}
 }
 
 export function useEdgeReadAloudBgm({
@@ -339,13 +354,7 @@ export function useEdgeReadAloudBgm({
 				const gain = gainNodeRef.current;
 				const source = sourceNodeRef.current;
 
-				if (gain && ctx) {
-					try {
-						const now = ctx.currentTime;
-						gain.gain.cancelScheduledValues?.(now);
-						gain.gain.setValueAtTime?.(0, now);
-					} catch {}
-				}
+				safeMuteGain(gain, ctx);
 
 				safeStopAndDisconnectSource(source);
 				safeDisconnect(gain);
@@ -523,9 +532,12 @@ export function useEdgeReadAloudBgm({
 			};
 
 			if (ctx.state === 'suspended') {
-				void ctx.resume().then(() => {
-					if (ctx.state === 'running') triggerAutoPlayback();
-				}).catch(() => {});
+				void ctx
+					.resume()
+					.then(() => {
+						if (ctx.state === 'running') triggerAutoPlayback();
+					})
+					.catch(() => {});
 			} else if (ctx.state === 'running') {
 				triggerAutoPlayback();
 			}
@@ -536,7 +548,9 @@ export function useEdgeReadAloudBgm({
 				node.buffer = dummy;
 				node.connect(ctx.destination);
 				node.start(0);
-			} catch {}
+			} catch (err) {
+				console.debug('[EdgeBgm] Dummy audio buffer error ignored:', err);
+			}
 		};
 
 		const removeUnlockListeners = () => {
@@ -582,10 +596,11 @@ export function useEdgeReadAloudBgm({
 					}
 				});
 
-				if (!isMounted) {
-					if (ctx.state !== 'closed') void ctx.close();
+				if (!isMounted && ctx.state !== 'closed') {
+					void ctx.close();
 					return;
 				}
+				if (!isMounted) return;
 
 				if (!decoded || decoded.duration <= 0.1) return;
 
@@ -601,8 +616,9 @@ export function useEdgeReadAloudBgm({
 				if (!isUserMutedRef.current && isManualPlayingRef.current) {
 					void startBgm(true);
 				}
-			} catch (err: any) {
-				if (err?.name === 'AbortError') return;
+			} catch (err: unknown) {
+				const errorObj = err as { name?: string };
+				if (errorObj?.name === 'AbortError') return;
 				console.warn('[EdgeBgm] Could not load audio file, using synth ambient fallback:', err);
 				if (!isMounted) return;
 

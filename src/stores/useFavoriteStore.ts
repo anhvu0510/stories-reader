@@ -24,12 +24,12 @@ export const useFavoriteStore = create<FavoriteState>()(
 				if (exists) {
 					set({ favoriteBookIds: favoriteBookIds.filter((id) => id !== bookId) });
 					return false;
-				} else {
+				} 
 					set({
 						favoriteBookIds: [bookId, ...favoriteBookIds.filter((id) => id !== bookId)]
 					});
 					return true;
-				}
+				
 			},
 
 			addFavorite: (bookId: string) => {

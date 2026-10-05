@@ -53,6 +53,28 @@ const PRESET_MUSIC_LIST = [
 	}
 ];
 
+function createFallbackAmbientBuffer(ctx: AudioContext): AudioBuffer {
+	const sampleRate = ctx.sampleRate || 44100;
+	const duration = 4.0;
+	const numSamples = Math.floor(sampleRate * duration);
+	const buffer = ctx.createBuffer(2, numSamples, sampleRate);
+	if (!buffer || typeof buffer.getChannelData !== 'function') return buffer;
+
+	const left = buffer.getChannelData(0);
+	const right = buffer.getChannelData(1);
+	for (let i = 0; i < numSamples; i++) {
+		const t = i / sampleRate;
+		const lfo = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.25 * t);
+		const note1 = Math.sin(2 * Math.PI * 261.63 * t) * 0.15;
+		const note2 = Math.sin(2 * Math.PI * 329.63 * t) * 0.12;
+		const note3 = Math.sin(2 * Math.PI * 392.0 * t) * 0.1;
+		const wave = (note1 + note2 + note3) * lfo;
+		left[i] = wave;
+		right[i] = wave;
+	}
+	return buffer;
+}
+
 export function BgmSettingsTab() {
 	const {
 		bgmEnabled = true,
@@ -157,26 +179,9 @@ export function BgmSettingsTab() {
 				}
 				const arrayBuffer = await res.arrayBuffer();
 				buffer = await ctx.decodeAudioData(arrayBuffer);
-			} catch {
-				// Fallback sang synth ambient nếu nạp file thất bại
-				const sampleRate = ctx.sampleRate || 44100;
-				const duration = 4.0;
-				const numSamples = Math.floor(sampleRate * duration);
-				buffer = ctx.createBuffer(2, numSamples, sampleRate);
-				if (buffer && typeof buffer.getChannelData === 'function') {
-					const left = buffer.getChannelData(0);
-					const right = buffer.getChannelData(1);
-					for (let i = 0; i < numSamples; i++) {
-						const t = i / sampleRate;
-						const lfo = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.25 * t);
-						const note1 = Math.sin(2 * Math.PI * 261.63 * t) * 0.15;
-						const note2 = Math.sin(2 * Math.PI * 329.63 * t) * 0.12;
-						const note3 = Math.sin(2 * Math.PI * 392.0 * t) * 0.1;
-						const wave = (note1 + note2 + note3) * lfo;
-						left[i] = wave;
-						right[i] = wave;
-					}
-				}
+			} catch (err) {
+				console.debug('[BgmSettingsTab] Load audio file failed, using fallback:', err);
+				buffer = createFallbackAmbientBuffer(ctx);
 			}
 
 			if (ctx.state === 'suspended') {

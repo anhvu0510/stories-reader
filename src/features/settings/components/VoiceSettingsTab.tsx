@@ -165,9 +165,10 @@ export function VoiceSettingsTab() {
 			try {
 				if (NativeTTSService.isNative()) {
 					const engineData = await NativeTTSService.getEngines();
-					if (isMounted) {
-						setNativeEngines(engineData.engines || []);
-						if (engineData.defaultEngine) setActiveNativeEngine(engineData.defaultEngine);
+					if (!isMounted) return;
+					setNativeEngines(engineData.engines || []);
+					if (engineData.defaultEngine) {
+						setActiveNativeEngine(engineData.defaultEngine);
 					}
 				}
 				const voices = await NativeTTSService.getVoices();

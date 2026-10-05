@@ -207,12 +207,10 @@ export function usePullToRefresh({
 						setHasTriggeredThreshold(true);
 						triggerHaptic('light');
 					}
-				} else {
-					if (hasTriggeredHapticRef.current) {
+				} else if (hasTriggeredHapticRef.current) {
 						hasTriggeredHapticRef.current = false;
 						setHasTriggeredThreshold(false);
 					}
-				}
 			}
 		};
 

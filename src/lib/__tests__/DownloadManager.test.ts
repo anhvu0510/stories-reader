@@ -7,8 +7,10 @@ import { downloadManager } from '@/lib/DownloadManager';
 import { offlineDb } from '@/lib/offlineDb';
 import { useAppStore } from '@/stores/useAppStore';
 
-let oboeNodeHandlers: Record<string, Function> = {};
-let doneHandler: Function = () => {};
+type GenericCallback = (...args: any[]) => any;
+
+let oboeNodeHandlers: Record<string, GenericCallback> = {};
+let doneHandler: GenericCallback = () => {};
 let lastOptions: any = null;
 
 vi.mock('oboe', () => {
@@ -19,11 +21,11 @@ vi.mock('oboe', () => {
 			doneHandler = () => {};
 
 			const mockStream = {
-				node: vi.fn((pattern: string, cb: Function) => {
+				node: vi.fn((pattern: string, cb: GenericCallback) => {
 					oboeNodeHandlers[pattern] = cb;
 					return mockStream;
 				}),
-				done: vi.fn((cb: Function) => {
+				done: vi.fn((cb: GenericCallback) => {
 					doneHandler = cb;
 					return mockStream;
 				}),

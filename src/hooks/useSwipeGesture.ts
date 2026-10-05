@@ -184,7 +184,7 @@ export function useSwipeGesture({
 					if (state.isDragging) callbacksRef.current.onDragEnd?.('left');
 					callbacksRef.current.onSwipeLeft();
 					return;
-				} else if (deltaX > 0 && callbacksRef.current.onSwipeRight) {
+				} if (deltaX > 0 && callbacksRef.current.onSwipeRight) {
 					if (state.isDragging) callbacksRef.current.onDragEnd?.('right');
 					callbacksRef.current.onSwipeRight();
 					return;

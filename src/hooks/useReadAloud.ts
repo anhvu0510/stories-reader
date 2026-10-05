@@ -152,15 +152,17 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	const clearAllStaleResumePositions = useCallback((currentChapId?: string) => {
 		if (typeof window === 'undefined') return;
 		try {
+			const currentKey = currentChapId ? `stories_tts_pos_${currentChapId}` : null;
 			for (let i = localStorage.length - 1; i >= 0; i--) {
 				const key = localStorage.key(i);
-				if (key && key.startsWith('stories_tts_pos_')) {
-					if (!currentChapId || key !== `stories_tts_pos_${currentChapId}`) {
-						localStorage.removeItem(key);
-					}
+				const isStale = key?.startsWith('stories_tts_pos_') && key !== currentKey;
+				if (isStale && key) {
+					localStorage.removeItem(key);
 				}
 			}
-		} catch {}
+		} catch (err) {
+			console.debug('[ReadAloud] Clear stale positions error ignored:', err);
+		}
 	}, []);
 
 	useEffect(() => {
@@ -626,7 +628,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		}
 
 		const wordText = chunk.text.substring(nextCharIndex, nextCharIndex + nextCharLength);
-		const match = wordText.match(/[^\s.,!?:;'"(){}\[\]“”‘’\-–—]+/);
+		const match = wordText.match(/[^\s.,!?:;'"(){}[\]“”‘’\-–—]+/);
 		if (!match || match.index === undefined) {
 			return;
 		}
@@ -834,7 +836,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 						let charLen = end - start;
 						if (charLen <= 0) {
 							const remaining = textToSpeak.slice(start);
-							const nextDelim = remaining.search(/[\s.,!?:;'"(){}\[\]“”‘’\-–—]/);
+							const nextDelim = remaining.search(/[\s.,!?:;'"(){}[\]“”‘’\-–—]/);
 							charLen = nextDelim > 0 ? nextDelim : Math.min(remaining.length, 6);
 						}
 						updateWordHighlight(index, startOffset + start, charLen);
@@ -908,7 +910,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 				let charLen = e.charLength || 0;
 				if (charLen <= 0) {
 					const remaining = textToSpeak.slice(e.charIndex);
-					const nextDelim = remaining.search(/[\s.,!?:;'"(){}\[\]“”‘’\-–—]/);
+					const nextDelim = remaining.search(/[\s.,!?:;'"(){}[\]“”‘’\-–—]/);
 					charLen = nextDelim > 0 ? nextDelim : Math.min(remaining.length, 6);
 				}
 				updateWordHighlight(index, startOffset + e.charIndex, charLen);

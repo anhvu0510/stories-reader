@@ -205,7 +205,7 @@ class DownloadManager {
 			await new Promise<void>((resolve, reject) => {
 				let isBookSaved = false;
 				let bookSavePromise: Promise<void> | null = null;
-				let chapterPromises: Promise<any>[] = [];
+				const chapterPromises: Promise<any>[] = [];
 
 				const handleBookNode = (book: any) => {
 					const bookId = String(book.bookId || book._id || book.id || task.bookId);

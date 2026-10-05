@@ -8,6 +8,17 @@ import type { FontType, ReaderConfig, ThemeType } from '@/shared/types';
 
 const SETTINGS_KEY = 'stories.ui.config';
 
+function parseSettingsValue(res: any): any {
+	if (!res) return null;
+	const apiValue = res.value !== undefined ? res.value : res;
+	if (typeof apiValue !== 'string') return apiValue;
+	try {
+		return JSON.parse(apiValue);
+	} catch {
+		return null;
+	}
+}
+
 const defaultSettings: ReaderConfig = {
 	theme: 'default',
 	font: 'default',
@@ -288,24 +299,17 @@ export const useReaderConfigStore = create<ReaderConfigStore>((set, get) => {
 
 			try {
 				const res = await SettingsRepository.getSettings(SETTINGS_KEY);
-				if (res) {
-					let apiValue = res.value !== undefined ? res.value : res;
-					if (typeof apiValue === 'string') {
-						try {
-							apiValue = JSON.parse(apiValue);
-						} catch (e) {}
-					}
+				const apiValue = parseSettingsValue(res);
 
-					if (apiValue && typeof apiValue === 'object' && Object.keys(apiValue).length > 0 && !apiValue.error) {
-						set((state) => {
-							const next = { ...state, ...apiValue };
-							localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
-							if (typeof document !== 'undefined') {
-								document.documentElement.setAttribute('data-theme', next.theme || state.theme);
-							}
-							return apiValue;
-						});
-					}
+				if (apiValue && typeof apiValue === 'object' && Object.keys(apiValue).length > 0 && !apiValue.error) {
+					set((state) => {
+						const next = { ...state, ...apiValue };
+						localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+						if (typeof document !== 'undefined') {
+							document.documentElement.setAttribute('data-theme', next.theme || state.theme);
+						}
+						return apiValue;
+					});
 				}
 			} catch (e) {
 				console.warn('Failed to fetch server reader config:', e);

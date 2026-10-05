@@ -35,12 +35,14 @@ needed.
 
 ## Working pattern
 
-1. For code modifications or bug fixes: Use CodeGraph to trace the component, hook, repository, and tests involved. For Q&A, answer directly.
-2. Reproduce the behavior and add a focused Vitest test first when a practical
+1. **Language & Framework Best Practices First**: Before writing or refactoring any component, hook, or service, view the authoritative skill for React/TypeScript (`react-patterns`, `coding-standards`, `frontend-patterns`) and follow official React 19 & TypeScript 5.8 idioms.
+2. For code modifications or bug fixes: Use CodeGraph to trace the component, hook, repository, and tests involved. For Q&A, answer directly.
+3. Reproduce the behavior and add a focused Vitest test first when a practical
    seam exists.
-3. Keep screens compositional; put reusable lifecycle behavior in hooks, server
+4. Keep screens compositional; put reusable lifecycle behavior in hooks, server
    access in repositories/services, and persisted UI state in stores.
-4. Run the focused test, full suite, typecheck, and production build.
+5. Strictly enforce flat guard clauses with early returns: zero nested `if` statements (max depth of 1 level). Eliminate redundant `else` blocks after returns or throws.
+6. Run the focused test, full suite, typecheck, and production build.
 
 Use explicit types at component, hook, repository, and API boundaries. Do not
 add `any`, unchecked assertions, or untyped events/refs. Model nullable,
@@ -50,6 +52,8 @@ loading, offline, and error states explicitly.
 
 ### Always
 
+- Consult stack skills (`react-patterns`, `coding-standards`, `frontend-a11y`) before introducing new patterns or abstractions.
+- Keep branching flat: max 1 indentation level for conditional logic, return early on invalid states.
 - Parse and normalize external data at repository boundaries, not in rendering
   components.
 - Use functional state updates when based on previous state. Reserve effects

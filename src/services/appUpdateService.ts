@@ -125,15 +125,14 @@ export class AppUpdateService {
 			if (!res || !res.ok) {
 				const activeDomainUrl = useAppStore.getState().activeDomain?.url || getEncryptedDefaultGatewayUrl();
 				const fallback = activeDomainUrl ? `${activeDomainUrl.replace(/\/+$/, '')}/api/app-update/version` : '';
-				if (fallback) {
-					try {
-						res = await fetch(fallback, {
-							headers: { Accept: 'application/json' },
-							cache: 'no-store'
-						});
-					} catch {
-						return null;
-					}
+				if (!fallback) return null;
+				try {
+					res = await fetch(fallback, {
+						headers: { Accept: 'application/json' },
+						cache: 'no-store'
+					});
+				} catch {
+					return null;
 				}
 			}
 

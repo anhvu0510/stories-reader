@@ -34,6 +34,6 @@ self.onmessage = (event: MessageEvent<BgmSynthRequest>) => {
 	}
 
 	// Transfer buffers with 0-copy transferable objects
-	// @ts-ignore
+	// @ts-expect-error Web worker postMessage transferable support
 	self.postMessage({ left, right }, [left.buffer, right.buffer]);
 };

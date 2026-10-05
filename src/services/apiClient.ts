@@ -16,6 +16,39 @@ export interface RequestOptions extends RequestInit {
 	silent?: boolean;
 }
 
+async function fetchWithTimeout(url: string, fetchOptions: RequestInit, headers: HeadersInit, timeout: number): Promise<Response> {
+	const controller = new AbortController();
+	const id = setTimeout(() => controller.abort(), timeout);
+	try {
+		return await fetch(url, {
+			...fetchOptions,
+			headers,
+			signal: controller.signal
+		});
+	} finally {
+		clearTimeout(id);
+	}
+}
+
+async function executeWithRetry(url: string, fetchOptions: RequestInit, headers: HeadersInit, timeout: number, retries: number): Promise<Response> {
+	let attempts = 0;
+	let lastError: unknown;
+
+	while (attempts <= retries) {
+		try {
+			return await fetchWithTimeout(url, fetchOptions, headers, timeout);
+		} catch (err: unknown) {
+			lastError = err;
+			attempts++;
+			if (attempts > retries) break;
+			await new Promise((res) => setTimeout(res, 300 * attempts));
+		}
+	}
+
+	const errorMsg = (lastError as { message?: string })?.message || 'FETCH_FAILED';
+	throw new ApiError(errorMsg);
+}
+
 export async function fetchWithRetry(path: string, options: RequestOptions = {}, customRetries?: number, customTimeout?: number): Promise<Response> {
 	const isSilent = options.silent ?? false;
 	if (!isSilent) {
@@ -37,33 +70,8 @@ export async function fetchWithRetry(path: string, options: RequestOptions = {},
 			...fetchOptions.headers
 		};
 
-		let attempts = 0;
-		let lastError: any;
-
-		while (attempts <= retries) {
-			try {
-				const controller = new AbortController();
-				const id = setTimeout(() => controller.abort(), timeout);
-
-				const url = `${activeDomain.url.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
-				const response = await fetch(url, {
-					...fetchOptions,
-					headers,
-					signal: controller.signal
-				});
-
-				clearTimeout(id);
-				return response;
-			} catch (err: any) {
-				lastError = err;
-				attempts++;
-				if (attempts <= retries) {
-					await new Promise((res) => setTimeout(res, 300 * attempts));
-				}
-			}
-		}
-
-		throw new ApiError(lastError?.message || 'FETCH_FAILED');
+		const url = `${activeDomain.url.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
+		return await executeWithRetry(url, fetchOptions, headers, timeout, retries);
 	} finally {
 		if (!isSilent) {
 			useAppStore.getState().decrementApiLoading();

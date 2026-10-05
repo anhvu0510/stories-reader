@@ -12,13 +12,52 @@ export interface ReadingState {
 const STORAGE_PREFIX = 'reading_progress_';
 const MAX_PROGRESS_ITEMS = 20;
 
+const safeRemoveStorage = (key?: string | null): void => {
+	if (!key || typeof window === 'undefined') return;
+	try {
+		localStorage.removeItem(key);
+	} catch (err) {
+		console.debug('[ReadingProgress] Remove storage error ignored:', err);
+	}
+};
+
+const getProgressUpdatedAt = (key: string): number => {
+	try {
+		const raw = localStorage.getItem(key);
+		if (!raw) return 0;
+		const parsed: ReadingState = JSON.parse(raw);
+		return parsed.updatedAt || 0;
+	} catch {
+		return 0;
+	}
+};
+
+const detectActiveParagraphAndChapter = (): { paragraphIndex?: number; activeChapterId?: string } => {
+	if (typeof document === 'undefined' || typeof document.elementFromPoint !== 'function') return {};
+	const topOffset = 100;
+	const x = window.innerWidth / 2;
+	const el = document.elementFromPoint(x, topOffset);
+	const paraEl = el?.closest('[data-paragraph-index]') as HTMLElement | null;
+	if (!paraEl) return {};
+
+	const pIdx = paraEl.getAttribute('data-paragraph-index');
+	const paragraphIndex = pIdx !== null ? parseInt(pIdx, 10) : undefined;
+	const sectionEl = paraEl.closest('[data-chapter-id]') as HTMLElement | null;
+	const activeChapterId = sectionEl?.getAttribute('data-chapter-id') || undefined;
+
+	return { paragraphIndex, activeChapterId };
+};
+
+const getRelativeSectionScrollY = (activeChapterId: string, currentY: number): number => {
+	if (typeof document === 'undefined') return 0;
+	const sectionEl = document.getElementById(`chapter-section-${activeChapterId}`);
+	if (!sectionEl) return 0;
+	return Math.max(0, currentY - sectionEl.offsetTop);
+};
+
 export const clearReadingProgress = (bookId?: string, chapterId?: string) => {
 	if (!bookId || !chapterId) return;
-	try {
-		localStorage.removeItem(`${STORAGE_PREFIX}${bookId}_${chapterId}`);
-	} catch {
-		// Safe fallback
-	}
+	safeRemoveStorage(`${STORAGE_PREFIX}${bookId}_${chapterId}`);
 };
 
 /**
@@ -34,30 +73,14 @@ const cleanupOldProgress = () => {
 			}
 		}
 
-		if (keys.length > MAX_PROGRESS_ITEMS) {
-			const items: { key: string; updatedAt: number }[] = [];
-			for (const k of keys) {
-				try {
-					const raw = localStorage.getItem(k);
-					if (raw) {
-						const parsed: ReadingState = JSON.parse(raw);
-						items.push({ key: k, updatedAt: parsed.updatedAt || 0 });
-					} else {
-						items.push({ key: k, updatedAt: 0 });
-					}
-				} catch {
-					items.push({ key: k, updatedAt: 0 });
-				}
-			}
+		if (keys.length <= MAX_PROGRESS_ITEMS) return;
 
-			// Sort ascending (oldest first)
-			items.sort((a, b) => a.updatedAt - b.updatedAt);
+		const items = keys.map((k) => ({ key: k, updatedAt: getProgressUpdatedAt(k) }));
+		items.sort((a, b) => a.updatedAt - b.updatedAt);
 
-			// Remove excess oldest items
-			const deleteCount = items.length - MAX_PROGRESS_ITEMS;
-			for (let i = 0; i < deleteCount; i++) {
-				localStorage.removeItem(items[i].key);
-			}
+		const deleteCount = items.length - MAX_PROGRESS_ITEMS;
+		for (let i = 0; i < deleteCount; i++) {
+			safeRemoveStorage(items[i].key);
 		}
 	} catch {
 		// Ignore storage errors safely
@@ -100,14 +123,7 @@ export function useReadingProgress(bookId: string | undefined, chapterId: string
 						: undefined;
 
 			if (prevCId && prevCId !== chapterId) {
-				const oldKey = getStorageKey(bookId, prevCId);
-				if (oldKey) {
-					try {
-						localStorage.removeItem(oldKey);
-					} catch {
-						// Safe fallback
-					}
-				}
+				safeRemoveStorage(getStorageKey(bookId, prevCId));
 			}
 
 			// Khi chuyển sang chapter mới trong phiên đọc:
@@ -137,26 +153,7 @@ export function useReadingProgress(bookId: string | undefined, chapterId: string
 				// Do not overwrite progress until restoration has completed
 				if (!isRestoredRef.current) return;
 
-				let activeChapterId: string | undefined;
-				let paragraphIndex: number | undefined;
-
-				// Detect current paragraph visible near top of reader viewport (~100px)
-				if (typeof document !== 'undefined' && typeof document.elementFromPoint === 'function') {
-					const topOffset = 100;
-					const x = window.innerWidth / 2;
-					const el = document.elementFromPoint(x, topOffset);
-					const paraEl = el?.closest('[data-paragraph-index]') as HTMLElement | null;
-					if (paraEl) {
-						const pIdx = paraEl.getAttribute('data-paragraph-index');
-						if (pIdx !== null) {
-							paragraphIndex = parseInt(pIdx, 10);
-						}
-						const sectionEl = paraEl.closest('[data-chapter-id]') as HTMLElement | null;
-						if (sectionEl) {
-							activeChapterId = sectionEl.getAttribute('data-chapter-id') || undefined;
-						}
-					}
-				}
+				const { paragraphIndex, activeChapterId } = detectActiveParagraphAndChapter();
 
 				const currentY = window.scrollY || 0;
 				const totalHeight = typeof document !== 'undefined' ? document.documentElement.scrollHeight - window.innerHeight : 0;
@@ -178,13 +175,7 @@ export function useReadingProgress(bookId: string | undefined, chapterId: string
 				if (activeChapterId && activeChapterId !== chapterId) {
 					const activeKey = getStorageKey(bookId, activeChapterId);
 					if (activeKey) {
-						let relativeY = 0;
-						if (typeof document !== 'undefined') {
-							const sectionEl = document.getElementById(`chapter-section-${activeChapterId}`);
-							if (sectionEl) {
-								relativeY = Math.max(0, currentY - sectionEl.offsetTop);
-							}
-						}
+						const relativeY = getRelativeSectionScrollY(activeChapterId, currentY);
 						const activeState: ReadingState = {
 							chapterId: activeChapterId,
 							scrollY: relativeY,
@@ -294,7 +285,7 @@ export function useReadingProgress(bookId: string | undefined, chapterId: string
 						}, 80);
 					});
 					return;
-				} else if (savedState.isCompleted) {
+				} if (savedState.isCompleted) {
 					// Chapter was previously completed - start fresh from top and clear stale cache
 					clearReadingProgress(bookId, chapterId);
 				}
