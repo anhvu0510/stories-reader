@@ -1,7 +1,7 @@
 {
-  "version": "1.0.331",
+  "version": "1.0.332",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "6e0d52ba2b0cfd6213a69b1a206a7087d7259ea0af0800255706d0f4d062336b",
-  "releaseNotes": "fix: handle relative base asset URLs and improve background audio playback for Android and web",
-  "updatedAt": "2026-10-05T07:51:55Z"
+  "checksum": "20e134ebd032788de47730dfc9682aa2322003bfb0b343c314f0e8f6c59e720c",
+  "releaseNotes": "feat: improve read-aloud word highlighting sync and native stream player position tracking",
+  "updatedAt": "2026-10-05T08:06:48Z"
 }
