@@ -165,6 +165,9 @@ export function BgmSettingsTab() {
 
 			const ctx = new AudioContextClass();
 			previewAudioCtxRef.current = ctx;
+			if (ctx.state === 'suspended') {
+				void ctx.resume();
+			}
 
 			const targetUrl = urlToPlay || bgmAudioUrl;
 			const resolvedUrl = getAssetUrl(targetUrl);

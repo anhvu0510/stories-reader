@@ -16,7 +16,20 @@ describe('getAssetUrl Utility', () => {
 		expect(url).toBe(`${origin}/audio/ambient-bgm.mp3`);
 	});
 
-	it('QC-3: Trả về chuỗi rỗng khi path là falsy', () => {
+	it('QC-3: Chuẩn hóa đường dẫn tương đối khi BASE_URL là "./" (chuẩn build Capacitor Android)', () => {
+		const origin = window.location.origin;
+		const url = getAssetUrl('/audio/ambient-bgm.mp3', './');
+		expect(url).toBe(`${origin}/audio/ambient-bgm.mp3`);
+		expect(url).not.toContain('localhost.');
+	});
+
+	it('QC-4: Chuẩn hóa đường dẫn khi BASE_URL là subpath /stories/', () => {
+		const origin = window.location.origin;
+		const url = getAssetUrl('/audio/ambient-bgm.mp3', '/stories/');
+		expect(url).toBe(`${origin}/stories/audio/ambient-bgm.mp3`);
+	});
+
+	it('QC-5: Trả về chuỗi rỗng khi path là falsy', () => {
 		expect(getAssetUrl('')).toBe('');
 	});
 });

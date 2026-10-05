@@ -21,6 +21,7 @@ public class MainActivity extends BridgeActivity {
             webView.setHorizontalScrollBarEnabled(false);
             webView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
             webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+            webView.getSettings().setMediaPlaybackRequiresUserGesture(false);
         }
 
         // Register modern OnBackPressedCallback for Android 10-15+ edge swipe-back gesture & navigation buttons

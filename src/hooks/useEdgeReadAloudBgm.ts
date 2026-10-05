@@ -125,6 +125,8 @@ export function useEdgeReadAloudBgm({
 	const isUserMutedRef = useRef(false);
 	const isBgmPreviewingRef = useRef(isBgmPreviewing);
 	isBgmPreviewingRef.current = isBgmPreviewing;
+	const isTTSActiveRef = useRef(isTTSActive);
+	isTTSActiveRef.current = isTTSActive;
 	const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const fadeOutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const startBgmRef = useRef<((manual?: boolean) => Promise<void>) | null>(null);
@@ -610,11 +612,14 @@ export function useEdgeReadAloudBgm({
 					safeStopAndDisconnectSource(sourceNodeRef.current);
 					sourceNodeRef.current = null;
 					isPlayingRef.current = false;
-					void startBgm(true);
+					void startBgmRef.current?.(true);
 				}
 
 				if (!isUserMutedRef.current && isManualPlayingRef.current) {
 					void startBgm(true);
+				}
+				if (!isUserMutedRef.current && !isManualPlayingRef.current && isTTSActiveRef.current && !isPlayingRef.current) {
+					void startBgm(false);
 				}
 			} catch (err: unknown) {
 				const errorObj = err as { name?: string };
