@@ -39,9 +39,13 @@ export const STORAGE_KEY_BIOMETRIC_LOCK = 'stories_biometric_lock_enabled';
 
 class BiometricService {
 	/**
-	 * Kiểm tra xem người dùng đã kích hoạt chế độ khóa sinh trắc học chưa
+	 * Kiểm tra xem người dùng đã kích hoạt chế độ khóa sinh trắc học chưa (chỉ hỗ trợ trên Android)
 	 */
 	public isBiometricLockEnabled(): boolean {
+		// Passcode và bảo mật chỉ áp dụng cho mobile Android, không áp dụng trên Web
+		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+			return false;
+		}
 		try {
 			return localStorage.getItem(STORAGE_KEY_BIOMETRIC_LOCK) === 'true';
 		} catch {
@@ -53,6 +57,13 @@ class BiometricService {
 	 * Bật hoặc tắt cờ cấu hình bảo mật sinh trắc học
 	 */
 	public setBiometricLockEnabled(enabled: boolean): void {
+		// Trên Web không áp dụng lưu cờ khóa bảo mật, dọn dẹp cờ cũ nếu có
+		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+			try {
+				localStorage.removeItem(STORAGE_KEY_BIOMETRIC_LOCK);
+			} catch {}
+			return;
+		}
 		try {
 			if (enabled) {
 				localStorage.setItem(STORAGE_KEY_BIOMETRIC_LOCK, 'true');
@@ -68,14 +79,14 @@ class BiometricService {
 	 * Kiểm tra tính khả dụng của cảm biến sinh trắc học (vân tay / khuôn mặt)
 	 */
 	public async checkBiometricAvailability(): Promise<BiometricAvailability> {
-		if (!Capacitor.isNativePlatform()) {
+		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
 			// Trên môi trường trình duyệt Web không có phần cứng Android Biometric Native
 			return {
 				isAvailable: false,
 				hasHardware: false,
 				isEnrolled: false,
 				status: 'UNSUPPORTED',
-				errorMessage: 'Sinh trắc học native chỉ hỗ trợ trên thiết bị di động'
+				errorMessage: 'Sinh trắc học native chỉ hỗ trợ trên thiết bị di động Android'
 			};
 		}
 
@@ -101,12 +112,12 @@ class BiometricService {
 		subtitle?: string;
 		negativeButtonText?: string;
 	}): Promise<BiometricAuthResponse> {
-		if (!Capacitor.isNativePlatform()) {
-			// Môi trường Web fallback cho phép chuyển thẳng sang Passcode
+		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+			// Môi trường Web không áp dụng khóa bảo mật và passcode
 			return {
 				success: false,
-				fallbackToPasscode: true,
-				errorMessage: 'Thiết bị web không hỗ trợ sinh trắc học native, chuyển sang nhập passcode'
+				fallbackToPasscode: false,
+				errorMessage: 'Không áp dụng bảo mật sinh trắc học trên nền tảng web'
 			};
 		}
 
@@ -130,7 +141,7 @@ class BiometricService {
 	 * Hủy bỏ prompt quét sinh trắc học nếu đang chạy
 	 */
 	public async cancel(): Promise<void> {
-		if (!Capacitor.isNativePlatform()) return;
+		if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return;
 		try {
 			if (typeof NativeBiometricAuth.cancel === 'function') {
 				await NativeBiometricAuth.cancel();

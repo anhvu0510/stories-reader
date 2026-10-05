@@ -137,9 +137,13 @@ export function PasscodeModal({ isOpen, onClose, onSuccess, mode = 'secret_serve
 		if (server) {
 			setIsSuccess(true);
 			triggerHaptic('success');
-			// Tự động kích hoạt chế độ bảo vệ sinh trắc học trên ứng dụng Android
+			// Tự động kích hoạt chế độ bảo vệ sinh trắc học trên ứng dụng Android (trên web hàm này tự bỏ qua)
 			useAppLockStore.getState().enableLockAfterPasscode();
-			showToast(`Mở khóa máy chủ ${server.name} & kích hoạt sinh trắc học thành công!`, 'success');
+			const isLockActive = useAppLockStore.getState().isLockEnabled;
+			const successMessage = isLockActive
+				? `Mở khóa máy chủ ${server.name} & kích hoạt sinh trắc học thành công!`
+				: `Mở khóa máy chủ ${server.name} thành công!`;
+			showToast(successMessage, 'success');
 			setTimeout(() => {
 				onSuccess?.(server);
 				onClose();

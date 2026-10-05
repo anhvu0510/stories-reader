@@ -1,6 +1,14 @@
 import { create } from 'zustand';
+import { Capacitor } from '@capacitor/core';
 import { biometricService } from '@/services/biometricService';
 import { isValidTimePasscode } from '@/services/secretServerService';
+
+/**
+ * Kiểm tra xem ứng dụng có đang chạy trên môi trường di động Android hay không
+ */
+export function isAndroidApp(): boolean {
+	return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+}
 
 interface AppLockStore {
 	isLockEnabled: boolean;
@@ -39,18 +47,19 @@ function setSessionUnlocked(unlocked: boolean) {
 }
 
 export const useAppLockStore = create<AppLockStore>((set, get) => {
-	const initialLockEnabled = biometricService.isBiometricLockEnabled();
+	const initialLockEnabled = isAndroidApp() && biometricService.isBiometricLockEnabled();
 	const initialUnlocked = isSessionUnlocked();
 
 	return {
 		isLockEnabled: initialLockEnabled,
-		// Nếu đã kích hoạt khóa sinh trắc học và phiên chưa được mở khóa thì khóa ứng dụng
-		isLocked: initialLockEnabled && !initialUnlocked,
+		// Passcode/AppLock chỉ áp dụng cho Android; phiên chưa mở khóa thì mới khóa ứng dụng
+		isLocked: isAndroidApp() && initialLockEnabled && !initialUnlocked,
 		showPasscodeFallback: false,
 		isAuthenticating: false,
 
 		lock: () => {
-			if (!get().isLockEnabled) return;
+			// Tuyệt đối không khóa trên nền tảng web hoặc khi chưa bật bảo mật
+			if (!isAndroidApp() || !get().isLockEnabled) return;
 			setSessionUnlocked(false);
 			void biometricService.cancel();
 			set({
@@ -70,6 +79,8 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 		},
 
 		enableLockAfterPasscode: () => {
+			// Chỉ áp dụng kích hoạt khóa bảo mật trên mobile Android, không áp dụng cho web
+			if (!isAndroidApp()) return;
 			biometricService.setBiometricLockEnabled(true);
 			setSessionUnlocked(true);
 			set({
@@ -96,6 +107,9 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 		},
 
 		triggerBiometricPrompt: async () => {
+			// Không chạy trên web
+			if (!isAndroidApp()) return false;
+
 			// TUYỆT ĐỐI không gọi khi app đang ở background / ẩn màn hình
 			if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
 				return false;

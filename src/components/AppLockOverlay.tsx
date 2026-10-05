@@ -1,16 +1,20 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Fingerprint, KeyRound } from 'lucide-react';
-import { useAppLockStore } from '@/stores/useAppLockStore';
+import { useAppLockStore, isAndroidApp } from '@/stores/useAppLockStore';
 import { PasscodeModal } from '@/components/PasscodeModal';
 import { useHaptic } from '@/hooks/useHaptic';
 
 /**
  * Component màn hình khóa bảo mật toàn ứng dụng.
- * Tự động kích hoạt khi ứng dụng bị sleep hoặc mở lại, yêu cầu xác thực
+ * Chỉ áp dụng cho thiết bị di động Android, không áp dụng trên Web.
+ * Tự động kích hoạt khi ứng dụng bị sleep hoặc mở lại sau 30s, yêu cầu xác thực
  * sinh trắc học (vân tay / khuôn mặt), nếu không đúng hoặc huỷ thì cho phép nhập Passcode.
  */
 export function AppLockOverlay() {
+	// Passcode và màn hình khóa bảo mật chỉ áp dụng cho mobile Android, không áp dụng trên Web
+	if (!isAndroidApp()) return null;
+
 	const { isLocked, showPasscodeFallback, isAuthenticating, setShowPasscodeFallback, triggerBiometricPrompt, unlock } = useAppLockStore();
 	const { trigger: triggerHaptic } = useHaptic();
 
