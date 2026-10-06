@@ -1,7 +1,7 @@
 {
-  "version": "1.0.337",
+  "version": "1.0.338",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "ddb17c182ff405ea7d3a16b3b5dcef209a31cfb7b1b46dac804bf12e7d171a79",
-  "releaseNotes": "feat: add Media3-based native read-aloud playback engine and streaming support",
-  "updatedAt": "2026-10-05T10:20:51Z"
+  "checksum": "7b82af68e593cb94b3659ff92c1136abeaa555c559258c9d06fd424b08bc15ce",
+  "releaseNotes": "feat: implement adaptive clause segmenter and prefetching pipeline for TTS optimization",
+  "updatedAt": "2026-10-06T15:13:17Z"
 }
