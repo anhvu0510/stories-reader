@@ -1,6 +1,8 @@
 import { useCallback, useLayoutEffect, useRef } from 'react';
 import type { KeyboardEvent, PointerEvent, ReactNode } from 'react';
 import { GripHorizontal } from 'lucide-react';
+import { configureNativeControl, hasNativeReaderGestures, onNativeReaderGesture } from '@/services/nativeReaderGestures';
+import { hasNativeGestureBlocker } from '@/services/nativeGestureEligibility';
 
 interface ReadAloudControlFrameProps {
 	active: boolean;
@@ -25,6 +27,7 @@ export function ReadAloudControlFrame({ active, isVisible, children }: ReadAloud
 	const handleRef = useRef<HTMLButtonElement>(null);
 	const offset = useRef(0);
 	const drag = useRef<VerticalDrag | null>(null);
+	const nativeGestures = hasNativeReaderGestures();
 
 	const getBounds = useCallback(() => {
 		const frame = frameRef.current;
@@ -58,27 +61,52 @@ export function ReadAloudControlFrame({ active, isVisible, children }: ReadAloud
 		handleRef.current.releasePointerCapture(current.pointerId);
 	}, []);
 
+	const publishNativeGeometry = useCallback(() => {
+		if (!nativeGestures) return;
+		const bounds = getBounds();
+		const rect = handleRef.current?.getBoundingClientRect();
+		const enabled = active && isVisible && Boolean(bounds && rect) && !hasNativeGestureBlocker();
+		if (!enabled || !bounds || !rect) { configureNativeControl({ enabled: false }); return; }
+		configureNativeControl({ enabled: true, viewportWidth: window.innerWidth,
+			left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom,
+			offset: offset.current, ...bounds });
+	}, [nativeGestures, active, isVisible, getBounds]);
+
 	useLayoutEffect(() => {
 		const reclamp = () => {
 			stopDrag();
 			const bounds = getBounds();
 			if (!bounds) return;
 			applyOffset(Math.max(bounds.minimum, Math.min(bounds.maximum, offset.current)));
+			publishNativeGeometry();
 		};
 		reclamp();
+		const unsubscribe = onNativeReaderGesture((gesture) => {
+			if (!active || !isVisible || gesture.kind !== 'control-move') return;
+			applyOffset(gesture.offset);
+		});
+		const bodyObserver = nativeGestures ? new MutationObserver(publishNativeGeometry) : null;
+		bodyObserver?.observe(document.body, { attributes: true });
+		if (nativeGestures) window.addEventListener('transitionend', publishNativeGeometry);
+		if (nativeGestures) window.addEventListener('animationend', publishNativeGeometry);
 		const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(reclamp);
 		if (frameRef.current) observer?.observe(frameRef.current);
 		window.addEventListener('resize', reclamp);
 		window.visualViewport?.addEventListener('resize', reclamp);
-		window.visualViewport?.addEventListener('scroll', reclamp);
+		if (!nativeGestures) window.visualViewport?.addEventListener('scroll', reclamp);
 		return () => {
+			unsubscribe();
+			bodyObserver?.disconnect();
+			window.removeEventListener('transitionend', publishNativeGeometry);
+			window.removeEventListener('animationend', publishNativeGeometry);
+			if (nativeGestures) configureNativeControl({ enabled: false });
 			stopDrag();
 			observer?.disconnect();
 			window.removeEventListener('resize', reclamp);
 			window.visualViewport?.removeEventListener('resize', reclamp);
 			window.visualViewport?.removeEventListener('scroll', reclamp);
 		};
-	}, [active, isVisible, applyOffset, getBounds, stopDrag]);
+	}, [active, isVisible, applyOffset, getBounds, stopDrag, nativeGestures, publishNativeGeometry]);
 
 	const startDrag = (event: PointerEvent<HTMLButtonElement>) => {
 		if (!active || !isVisible || event.button !== 0 || drag.current) return;
@@ -112,11 +140,13 @@ export function ReadAloudControlFrame({ active, isVisible, children }: ReadAloud
 		if (!bounds) return;
 		const next = offset.current + (event.key === 'ArrowUp' ? -KEYBOARD_STEP : KEYBOARD_STEP);
 		applyOffset(Math.max(bounds.minimum, Math.min(bounds.maximum, next)));
+		publishNativeGeometry();
 	};
 
 	return (
 		<div
 			ref={frameRef}
+			data-reader-control="true"
 			role={active ? 'group' : undefined}
 			aria-label={active ? 'Điều khiển đọc thành tiếng' : undefined}
 			className={`w-fit flex flex-col items-center ${active ? 'gap-1' : 'gap-2'} pointer-events-auto box-border transform-gpu [--reader-control-safe-top:env(safe-area-inset-top,0px)] [--reader-control-safe-bottom:env(safe-area-inset-bottom,0px)] ${active ? 'rounded-[24px] border border-primary/25 bg-transparent p-1.5 max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-180px)] overflow-y-auto' : ''}`}
@@ -129,11 +159,11 @@ export function ReadAloudControlFrame({ active, isVisible, children }: ReadAloud
 					title="Kéo lên/xuống hoặc dùng phím mũi tên"
 					disabled={!isVisible}
 					className="w-9 h-6 shrink-0 flex items-center justify-center bg-transparent text-primary/70 cursor-ns-resize touch-none select-none rounded-full focus-visible:outline-2 focus-visible:outline-primary"
-					onPointerDown={startDrag}
-					onPointerMove={moveDrag}
-					onPointerUp={finishDrag}
-					onPointerCancel={finishDrag}
-					onLostPointerCapture={stopDrag}
+						onPointerDown={nativeGestures ? undefined : startDrag}
+						onPointerMove={nativeGestures ? undefined : moveDrag}
+						onPointerUp={nativeGestures ? undefined : finishDrag}
+						onPointerCancel={nativeGestures ? undefined : finishDrag}
+						onLostPointerCapture={nativeGestures ? undefined : stopDrag}
 					onKeyDown={moveWithKeyboard}
 					onClick={(event) => event.stopPropagation()}
 				>

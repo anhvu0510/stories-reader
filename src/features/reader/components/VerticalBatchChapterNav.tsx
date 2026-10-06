@@ -5,10 +5,12 @@ import { Loader2, LocateFixed, Music, Pause, Play, SkipForward, Square, Volume2 
 import { isEdgeReadAloudActive } from '@/hooks/useEdgeReadAloudBgm';
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { ReadAloudControlFrame } from './ReadAloudControlFrame';
+import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
 
 import type { ChapterDetailItem } from '@/shared/types';
 
 export interface VerticalBatchChapterNavProps {
+	onLocateReadingLine?: () => void;
 	chapters?: ChapterDetailItem[];
 	activeChapterId?: string;
 	isVisible?: boolean;
@@ -43,7 +45,8 @@ export function VerticalBatchChapterNav({
 	onTTSPause,
 	onTTSStop,
 	onTTSPrev: _onTTSPrev,
-	onTTSNext
+	onTTSNext,
+	onLocateReadingLine
 }: VerticalBatchChapterNavProps) {
 	const [hasBrowserReadAloudHighlight, setHasBrowserReadAloudHighlight] = useState(false);
 
@@ -77,6 +80,7 @@ export function VerticalBatchChapterNav({
 	}, []);
 
 	const handleJumpToHighlight = () => {
+		if (hasNativeReaderGestures() && isTTSActive) { onLocateReadingLine?.(); return; }
 		if (typeof document === 'undefined') return;
 		const highlightEl = document.querySelector('.msreadout-line-highlight, .msreadout-word-highlight, msreadoutspan');
 		if (highlightEl && typeof highlightEl.scrollIntoView === 'function') {
@@ -98,7 +102,7 @@ export function VerticalBatchChapterNav({
 					/* Inactive State: Single Floating 3D Circle Speaker Button + Conditional BGM & Locate Buttons */
 					<div className="flex flex-col items-center gap-2.5">
 						{/* Locate Highlight Button (shown when Edge Read Aloud highlight exists) */}
-						{hasBrowserReadAloudHighlight && (
+							{hasBrowserReadAloudHighlight && (
 							<motion.button
 								whileTap={{ scale: 0.88 }}
 								onClick={(e) => {
@@ -152,8 +156,8 @@ export function VerticalBatchChapterNav({
 				) : (
 					/* Keep the existing button styles inside the transparent draggable frame. */
 					<div className="flex flex-col items-center gap-2.5 animate-in fade-in zoom-in-90 duration-300 ease-out">
-						{/* Locate Highlight Button (shown when line highlight exists) */}
-						{hasBrowserReadAloudHighlight && (
+							{/* Native app restores following only on an explicit locate action. */}
+							{(hasBrowserReadAloudHighlight || (hasNativeReaderGestures() && onLocateReadingLine)) && (
 							<motion.button
 								whileTap={{ scale: 0.88 }}
 								onClick={(e) => {

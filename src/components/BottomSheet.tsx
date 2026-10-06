@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { triggerHaptic } from '@/hooks/useHaptic';
+import { useNativeSheetGesture } from '@/hooks/useNativeSheetGesture';
+import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
 import { cn } from '@/lib/utils';
 
 export interface BottomSheetProps {
@@ -38,6 +40,8 @@ export function BottomSheet({
 	useBodyScrollLock(isOpen);
 
 	const sheetCardRef = useRef<HTMLDivElement>(null);
+	const nativeGestures = hasNativeReaderGestures();
+	useNativeSheetGesture(isOpen, disableDrag, sheetCardRef, onClose);
 	const touchStartRef = useRef<{
 		startY: number;
 		startX: number;
@@ -204,9 +208,9 @@ export function BottomSheet({
 						animate={{ y: 0 }}
 						exit={{ y: '100%' }}
 						transition={{ type: 'spring', damping: 32, stiffness: 280, mass: 0.85 }}
-						onTouchStart={handleTouchStart}
-						onTouchMove={handleTouchMove}
-						onTouchEnd={handleTouchEnd}
+							onTouchStart={nativeGestures ? undefined : handleTouchStart}
+							onTouchMove={nativeGestures ? undefined : handleTouchMove}
+							onTouchEnd={nativeGestures ? undefined : handleTouchEnd}
 						onClick={(e) => e.stopPropagation()}
 						className={cn(
 							'relative z-10 w-full max-w-md mx-auto text-on-surface rounded-t-[32px] border-t sm:border shadow-[0_-12px_40px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden hide-scrollbar no-scrollbar box-border transform-gpu transition-colors duration-200 will-change-transform',

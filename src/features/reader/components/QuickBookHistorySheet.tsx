@@ -16,52 +16,101 @@ interface QuickBookHistorySheetProps {
 	onClose: () => void;
 }
 
+const PAGE_SIZE = 20;
+
 export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHistorySheetProps) {
 	const navigate = useNavigate();
 	const [historyBooks, setHistoryBooks] = useState<Book[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [loadingMore, setLoadingMore] = useState(false);
+	const [page, setPage] = useState(1);
+	const [hasMore, setHasMore] = useState(true);
 	useGlobalLoading(loading && historyBooks.length === 0);
 	const [searchQuery, setSearchQuery] = useState('');
 	const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
-	const fetchHistoryBooks = useCallback(async (querySearch: string = '') => {
-		setLoading(true);
+	const fetchHistoryBooks = useCallback(async (querySearch: string = '', pageToLoad: number = 1, isLoadMore: boolean = false) => {
+		if (isLoadMore) {
+			setLoadingMore(true);
+		} else {
+			setLoading(true);
+		}
+
 		try {
-			const res = await BookRepository.getBooks(1, 9999, querySearch, 'HISTORY', 'lastedReadAt', 'DESC');
-			const allBooks = res.books || [];
-			setHistoryBooks(allBooks);
+			const res = await BookRepository.getBooks(pageToLoad, PAGE_SIZE, querySearch, 'HISTORY', 'lastedReadAt', 'DESC');
+			const newBooks = res.books || [];
+			const totalPages = res.pagination?.totalPages ?? 1;
+			setHasMore(pageToLoad < totalPages && newBooks.length === PAGE_SIZE);
+			setPage(pageToLoad);
+
+			if (isLoadMore) {
+				setHistoryBooks((prev) => {
+					const existingIds = new Set(prev.map((b) => b.bookId));
+					const uniqueNew = newBooks.filter((b) => !existingIds.has(b.bookId));
+					return [...prev, ...uniqueNew];
+				});
+				return;
+			}
+
+			if (newBooks.length > 0) {
+				setHistoryBooks(newBooks);
+				return;
+			}
+
+			// Dự phòng: Nếu trang 1 không có lịch sử riêng, truy vấn tab ALL có chương đã đọc
+			if (pageToLoad === 1) {
+				const fallbackRes = await BookRepository.getBooks(1, PAGE_SIZE, querySearch, 'ALL', 'lastedReadAt', 'DESC');
+				const fallbackBooks = (fallbackRes.books || []).filter((b) => b.lastReadChapter || b.totalTranslated > 0);
+				setHistoryBooks(fallbackBooks);
+				setHasMore(fallbackBooks.length === PAGE_SIZE);
+			}
 		} catch {
-			try {
-				const res = await BookRepository.getBooks(1, 9999, querySearch, 'ALL', 'lastedReadAt', 'DESC');
-				const allBooks = res.books || [];
-				setHistoryBooks(allBooks.filter((b) => b.lastReadChapter || b.totalTranslated > 0));
-			} catch {}
+			if (pageToLoad === 1) {
+				try {
+					const fallbackRes = await BookRepository.getBooks(1, PAGE_SIZE, querySearch, 'ALL', 'lastedReadAt', 'DESC');
+					const fallbackBooks = (fallbackRes.books || []).filter((b) => b.lastReadChapter || b.totalTranslated > 0);
+					setHistoryBooks(fallbackBooks);
+					setHasMore(fallbackBooks.length === PAGE_SIZE);
+				} catch {}
+			}
 		} finally {
-			setLoading(false);
+			if (isLoadMore) {
+				setLoadingMore(false);
+			} else {
+				setLoading(false);
+			}
 		}
 	}, []);
 
 	useEffect(() => {
-		fetchHistoryBooks('');
+		fetchHistoryBooks('', 1, false);
 	}, [fetchHistoryBooks]);
+
+	const handleScroll = () => {
+		if (!scrollContainerRef.current || loading || loadingMore || !hasMore) return;
+		const { scrollTop, clientHeight, scrollHeight } = scrollContainerRef.current;
+		if (scrollTop + clientHeight < scrollHeight - 150) return;
+		fetchHistoryBooks(searchQuery, page + 1, true);
+	};
 
 	const handleSearchChange = (val: string) => {
 		setSearchQuery(val);
 		if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 
 		if (val.trim() === '') {
-			fetchHistoryBooks('');
+			fetchHistoryBooks('', 1, false);
 			return;
 		}
 
 		searchTimeoutRef.current = setTimeout(() => {
-			fetchHistoryBooks(val);
+			fetchHistoryBooks(val, 1, false);
 		}, 650);
 	};
 
 	const handleSearchSubmit = () => {
 		if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-		fetchHistoryBooks(searchQuery);
+		fetchHistoryBooks(searchQuery, 1, false);
 	};
 
 	const handleSwapBook = (book: Book) => {
@@ -235,7 +284,7 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
 			</div>
 
 			{/* Book List Area */}
-			<div className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-3">
+			<div ref={scrollContainerRef} onScroll={handleScroll} className="p-3 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-3">
 				{loading ? (
 					<div className="py-16 text-center text-xs text-on-surface-variant/60 font-medium" />
 				) : historyBooks.length === 0 ? (
@@ -260,6 +309,12 @@ export function QuickBookHistorySheet({ currentBookId, onClose }: QuickBookHisto
 									<span>{displayBooks.length} truyện</span>
 								</div>
 								<div className="space-y-3">{displayBooks.map((b) => renderBookCard(b, false))}</div>
+								{loadingMore && (
+									<div className="py-2.5 text-center text-xs text-primary font-medium flex items-center justify-center gap-2">
+										<span className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+										<span>Đang tải thêm...</span>
+									</div>
+								)}
 							</div>
 						) : (
 							searchQuery.trim() && <div className="py-10 text-center text-xs text-on-surface-variant/60 font-medium">Không tìm thấy truyện phù hợp với "{searchQuery}"</div>

@@ -9,6 +9,8 @@ import { EdgeTTSService, getGatewayBaseUrl, type EdgeSpeechWithBoundaries } from
 import { GaplessTtsPlayer, splitByDatabaseBoundaries, type SentenceChunk, WebAudioPlaybackEngine } from '@/services/gaplessTtsPlayer';
 import { NativeTTSService } from '@/services/nativeTtsService';
 import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
+import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
+import { bindNativeReadingInteraction } from '@/services/nativeReadingInteraction';
 import { buildReadAloudUtterancePlanFromChunks } from '@/services/readAloudUtterancePlan';
 import { TTSService, DEFAULT_VIENEU_SERVER_URL, type VieNeuRequestContext } from '@/services/ttsService';
 import { useAppStore } from '@/stores/useAppStore';
@@ -776,6 +778,10 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			lastInteractionTime.current = Date.now();
 			scrollFollowerRef.current?.notifyUserInteraction();
 		};
+		if (hasNativeReaderGestures() && scrollFollowerRef.current) {
+			const unsubscribe = bindNativeReadingInteraction(scrollFollowerRef.current, () => { lastInteractionTime.current = Date.now(); });
+			return () => { unsubscribe(); scrollFollowerRef.current?.cancel(); };
+		}
 		const onHold = () => scrollFollowerRef.current?.beginUserInteraction();
 		const onRelease = () => scrollFollowerRef.current?.endUserInteraction();
 		const onPointerHold = (event: PointerEvent) => {
@@ -1366,6 +1372,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		const chunkOffset = Math.max(0, textOffset - chunks[targetIndex].startOffset);
 		startReading(targetIndex, chunkOffset);
 	};
+	const locateReadingLine = () => scrollFollowerRef.current?.locateCurrentLine();
 
 	return {
 		isPlaying,
@@ -1380,6 +1387,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		nextSection,
 		prevSection,
 		jumpToContent,
+		locateReadingLine,
 		clearResumePosition
 	};
 }

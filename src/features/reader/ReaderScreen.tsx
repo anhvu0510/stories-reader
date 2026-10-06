@@ -18,6 +18,7 @@ import { offlineDb } from '@/lib/offlineDb';
 import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
 import { clearAllCaches } from '@/shared/utils/cacheUtils';
+import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
 import { openNextChapter, openPrevChapter } from '@/shared/utils/openChapter';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { useToastStore } from '@/stores/useToastStore';
@@ -178,6 +179,7 @@ export function ReaderScreen() {
 		nextSection,
 		prevSection,
 		jumpToContent,
+		locateReadingLine,
 		clearResumePosition
 	} = useReadAloud(
 		allParagraphs,
@@ -526,6 +528,7 @@ export function ReaderScreen() {
 
 	const handleTitleSingleClick = useCallback(() => {
 		if (typeof document === 'undefined') return;
+		if (hasNativeReaderGestures() && isTTSActive) { locateReadingLine(); return; }
 
 		// 1. Locate Edge / Browser Read Aloud highlight element
 		const highlightEl = document.querySelector('.msreadout-line-highlight, .msreadout-word-highlight, .msreadout-highlight, msreadoutspan, [class*="msreadout"], [data-readout-highlight]');
@@ -541,7 +544,7 @@ export function ReaderScreen() {
 				paragraphEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			}
 		}
-	}, [isPlaying, isPaused, activeParagraphIndex]);
+	}, [isPlaying, isPaused, activeParagraphIndex, isTTSActive, locateReadingLine]);
 
 	const handleTitleDoubleClick = useCallback(async () => {
 		if (!bookId || isRefreshingLatest) return;
@@ -760,7 +763,7 @@ export function ReaderScreen() {
 	if (error || !contentData) {
 		return (
 			<div className="min-h-dvh w-full max-w-md mx-auto bg-background flex flex-col items-center justify-center p-6 text-center">
-				<PullToRefresh onRefresh={handlePullRefresh} disabled={loading || isRefreshingLatest} showIndicator={false} />
+				<PullToRefresh onRefresh={handlePullRefresh} disabled={loading || isRefreshingLatest || (hasNativeReaderGestures() && isTTSActive)} showIndicator={false} />
 				<AlertCircle size={40} className="text-error mb-3" />
 				<h2 className="text-sm font-bold text-on-surface mb-1">Không thể tải chương</h2>
 				<p className="text-xs text-on-surface-variant max-w-xs mb-5">{error || 'Chương không tồn tại'}</p>
@@ -797,7 +800,7 @@ export function ReaderScreen() {
 			className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden hide-scrollbar no-scrollbar transition-colors duration-200 selection:bg-primary/25 selection:text-primary ${fontClass}`}
 		>
 			{/* Pull-to-refresh clear-cache gesture */}
-			<PullToRefresh onRefresh={handlePullRefresh} disabled={loading || isRefreshingLatest} showIndicator={false} />
+			<PullToRefresh onRefresh={handlePullRefresh} disabled={loading || isRefreshingLatest || (hasNativeReaderGestures() && isTTSActive)} showIndicator={false} />
 
 			{/* Subtle Top Ambient Lighting Glow */}
 			<div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-96 bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent blur-3xl" />
@@ -836,6 +839,7 @@ export function ReaderScreen() {
 				onTTSStop={handleStopTTS}
 				onTTSPrev={prevSection}
 				onTTSNext={nextSection}
+				onLocateReadingLine={locateReadingLine}
 			/>
 
 			{/* Reader Content Article - Frozen Memoized Multi-Chapter Section with Tap-to-Toggle Dock */}

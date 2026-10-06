@@ -77,7 +77,7 @@ describe('QuickBookHistorySheet', () => {
 		);
 
 		await waitFor(() => {
-			expect(getBooksSpy).toHaveBeenCalledWith(1, 9999, '', 'HISTORY', 'lastedReadAt', 'DESC');
+			expect(getBooksSpy).toHaveBeenCalledWith(1, 20, '', 'HISTORY', 'lastedReadAt', 'DESC');
 		});
 
 		await waitFor(() => {
@@ -103,11 +103,83 @@ describe('QuickBookHistorySheet', () => {
 		fireEvent.keyDown(searchInput, { key: 'Enter', code: 'Enter' });
 
 		await waitFor(() => {
-			expect(getBooksSpy).toHaveBeenCalledWith(1, 9999, 'Truyện Đang Đọc', 'HISTORY', 'lastedReadAt', 'DESC');
+			expect(getBooksSpy).toHaveBeenCalledWith(1, 20, 'Truyện Đang Đọc', 'HISTORY', 'lastedReadAt', 'DESC');
 		});
 
 		await waitFor(() => {
 			expect(screen.getByText('Truyện Đang Đọc')).toBeDefined();
+		});
+	});
+
+	it('loads more books when scrolling near bottom', async () => {
+		const onClose = vi.fn();
+		const page1Books: Book[] = Array.from({ length: 20 }, (_, i) => ({
+			bookId: `book-${i + 1}`,
+			bookName: `Truyện ${i + 1}`,
+			chapterCount: 10,
+			totalTranslated: 10,
+			totalPending: 0,
+			createdAt: '2026-01-01T00:00:00Z',
+			updatedAt: '2026-01-01T00:00:00Z',
+			lastedReadAt: '2026-01-01T00:00:00Z',
+			lastReadChapter: {
+				chapterId: `chap-${i + 1}`,
+				chapterNumber: '1',
+				title: 'Chương 1'
+			}
+		}));
+
+		const page2Books: Book[] = [
+			{
+				bookId: 'book-21',
+				bookName: 'Truyện 21',
+				chapterCount: 10,
+				totalTranslated: 10,
+				totalPending: 0,
+				createdAt: '2026-01-01T00:00:00Z',
+				updatedAt: '2026-01-01T00:00:00Z',
+				lastedReadAt: '2026-01-01T00:00:00Z',
+				lastReadChapter: {
+					chapterId: 'chap-21',
+					chapterNumber: '1',
+					title: 'Chương 1'
+				}
+			}
+		];
+
+		getBooksSpy.mockImplementation(async (page: number) => {
+			if (page === 1) {
+				return {
+					books: page1Books,
+					pagination: { currentPage: 1, totalPages: 2, total: 21 }
+				};
+			}
+			return {
+				books: page2Books,
+				pagination: { currentPage: 2, totalPages: 2, total: 21 }
+			};
+		});
+
+		const { container } = render(
+			<MemoryRouter>
+				<QuickBookHistorySheet currentBookId="book-1" onClose={onClose} />
+			</MemoryRouter>
+		);
+
+		await waitFor(() => {
+			expect(screen.getByText('Truyện 20')).toBeDefined();
+		});
+
+		const scrollContainer = document.querySelector('.overflow-y-auto')!;
+		Object.defineProperty(scrollContainer, 'scrollTop', { value: 800, writable: true });
+		Object.defineProperty(scrollContainer, 'clientHeight', { value: 400, writable: true });
+		Object.defineProperty(scrollContainer, 'scrollHeight', { value: 1300, writable: true });
+
+		fireEvent.scroll(scrollContainer);
+
+		await waitFor(() => {
+			expect(getBooksSpy).toHaveBeenCalledWith(2, 20, '', 'HISTORY', 'lastedReadAt', 'DESC');
+			expect(screen.getByText('Truyện 21')).toBeDefined();
 		});
 	});
 

@@ -7,6 +7,8 @@ import { NativeTTSStreamService } from '@/services/nativeTtsStream';
 import { getGatewayBaseUrl } from '@/services/edgeTtsService';
 import { splitByDatabaseBoundaries, type SentenceChunk } from '@/services/gaplessTtsPlayer';
 import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
+import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
+import { bindNativeReadingInteraction } from '@/services/nativeReadingInteraction';
 import { useAppStore } from '@/stores/useAppStore';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import type { ReadAloudChapterContext } from './useReadAloud';
@@ -27,6 +29,7 @@ export interface UseNativeReadAloudResult {
 	prevSection: () => void;
 	jumpToContent: (pIdx: number, textOffset?: number) => void;
 	clearResumePosition: () => void;
+	locateReadingLine: () => void;
 }
 
 /**
@@ -223,9 +226,13 @@ export function useNativeReadAloud(
 		const onUserScroll = () => {
 			scrollFollowerRef.current?.notifyUserInteraction();
 		};
-		window.addEventListener('wheel', onUserScroll, { passive: true });
-		window.addEventListener('touchmove', onUserScroll, { passive: true });
-		window.addEventListener('pointerdown', onUserScroll, { passive: true });
+		const unsubscribeInteraction = hasNativeReaderGestures() && scrollFollowerRef.current
+			? bindNativeReadingInteraction(scrollFollowerRef.current) : null;
+		if (!unsubscribeInteraction) {
+			window.addEventListener('wheel', onUserScroll, { passive: true });
+			window.addEventListener('touchmove', onUserScroll, { passive: true });
+			window.addEventListener('pointerdown', onUserScroll, { passive: true });
+		}
 
 		// Cập nhật trạng thái Play / Pause / Buffering từ Native:
 		const unsubState = activeNativeStream.onPlaybackStateChange(({ isPlaying: p, isPaused: pa, isBuffering: b }) => {
@@ -253,6 +260,8 @@ export function useNativeReadAloud(
 			unsubWord();
 			unsubState();
 			unsubDone();
+			unsubscribeInteraction?.();
+			scrollFollowerRef.current?.cancel();
 			window.removeEventListener('wheel', onUserScroll);
 			window.removeEventListener('touchmove', onUserScroll);
 			window.removeEventListener('pointerdown', onUserScroll);
@@ -269,6 +278,7 @@ export function useNativeReadAloud(
 	// Các phương thức điều khiển phát âm thanh
 	const startReading = useCallback(() => {
 		if (chunks.length === 0 || !activeNativeStream) return;
+		scrollFollowerRef.current?.resumeFollowing();
 
 		// Nếu đang tạm dừng thì chỉ cần tiếp tục
 		if (isPausedRef.current) {
@@ -351,6 +361,7 @@ export function useNativeReadAloud(
 
 	const nextSection = useCallback(() => {
 		if (!activeNativeStream) return;
+		scrollFollowerRef.current?.resumeFollowing();
 		const nextIdx = currentChunkIdxRef.current + 1;
 		if (nextIdx < chunks.length) {
 			setIsLoading(true);
@@ -368,6 +379,7 @@ export function useNativeReadAloud(
 
 	const prevSection = useCallback(() => {
 		if (!activeNativeStream) return;
+		scrollFollowerRef.current?.resumeFollowing();
 		if (currentChunkIdxRef.current > 0) {
 			const prevIdx = currentChunkIdxRef.current - 1;
 			setIsLoading(true);
@@ -418,6 +430,7 @@ export function useNativeReadAloud(
 		nextSection,
 		prevSection,
 		jumpToContent,
+		locateReadingLine: () => scrollFollowerRef.current?.locateCurrentLine(),
 		clearResumePosition
 	};
 }

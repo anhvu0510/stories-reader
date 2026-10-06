@@ -5,6 +5,36 @@ import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
 
 describe('ReadAloudScrollFollower', () => {
 	afterEach(() => vi.useRealTimers());
+	it('locates the active line explicitly from far away without seeking or restarting narration', () => {
+		const scrollTo = vi.fn();
+		const follower = new ReadAloudScrollFollower({
+			getScrollY: () => 2000, getViewportHeight: () => 800, scrollTo,
+			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true, autoReclaim: false
+		});
+		follower.notifyUserInteraction();
+		follower.follow(new DOMRect(0, 500, 300, 30));
+		follower.locateCurrentLine();
+		expect(scrollTo).toHaveBeenCalledWith(195);
+	});
+	it('does not steal Android scrolling after a touch or control drag, until explicitly located', () => {
+		vi.useFakeTimers();
+		const scrollTo = vi.fn();
+		const follower = new ReadAloudScrollFollower({
+			getScrollY: () => 0, getViewportHeight: () => 800, scrollTo,
+			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true,
+			autoReclaim: false
+		});
+		follower.follow(new DOMRect(0, 500, 300, 30));
+		follower.beginUserInteraction();
+		follower.endUserInteraction();
+		vi.advanceTimersByTime(1000);
+		follower.follow(new DOMRect(0, 650, 300, 30));
+		vi.advanceTimersByTime(1000);
+		expect(scrollTo).not.toHaveBeenCalled();
+		follower.resumeFollowing();
+		follower.follow(new DOMRect(0, 650, 300, 30));
+		expect(scrollTo).toHaveBeenCalledWith(345);
+	});
 	it('keeps manual selection stable until the user dismisses it', () => {
 		vi.useFakeTimers();
 		let selected = false;

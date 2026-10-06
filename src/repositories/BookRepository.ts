@@ -16,6 +16,7 @@ export interface GetBooksResult {
 
 export interface GetBooksOptions {
 	forceFresh?: boolean;
+	timeout?: number;
 }
 
 async function syncOfflineLastReadBook(bookId: string, book: any): Promise<void> {
@@ -62,9 +63,10 @@ export const BookRepository = {
 					query.append('_t', Date.now().toString());
 				}
 
+				const requestTimeout = options?.timeout ?? (tab === 'HISTORY' ? 10000 : 8000);
 				const requestOptions: any = {
-					timeout: 2500,
-					retries: 0
+					timeout: requestTimeout,
+					retries: 1
 				};
 				if (options?.forceFresh) {
 					requestOptions.headers = {
@@ -312,15 +314,27 @@ export const BookRepository = {
 
 		const lastedReadAt = new Date().toISOString();
 		const offlineBook = await offlineDb.getBook(bookId);
-		if (offlineBook) {
-			offlineBook.lastReadChapter = {
+		const targetBook: Book = offlineBook || {
+			bookId,
+			bookName: lastRead.title || 'Truyện',
+			chapterCount: lastRead.chapterNumber || 1,
+			totalTranslated: lastRead.chapterNumber || 1,
+			totalPending: 0,
+			createdAt: lastedReadAt,
+			updatedAt: lastedReadAt,
+			lastReadChapter: {
 				chapterId: lastRead.chapterId,
 				chapterNumber: lastRead.chapterNumber,
 				title: lastRead.title || `Chương ${lastRead.chapterNumber}`
-			};
-			offlineBook.lastedReadAt = lastedReadAt;
-			await offlineDb.saveBook(offlineBook);
-		}
+			}
+		};
+		targetBook.lastReadChapter = {
+			chapterId: lastRead.chapterId,
+			chapterNumber: lastRead.chapterNumber,
+			title: lastRead.title || `Chương ${lastRead.chapterNumber}`
+		};
+		targetBook.lastedReadAt = lastedReadAt;
+		await offlineDb.saveBook(targetBook);
 
 		const isOffline = useAppStore.getState().isOfflineMode;
 		if (!isOffline) {

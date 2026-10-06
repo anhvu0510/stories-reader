@@ -3,6 +3,8 @@ import { Capacitor } from '@capacitor/core';
 
 import { useModalStore } from '@/stores/useModalStore';
 import { triggerHaptic } from './useHaptic';
+import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
+import { useNativePullToRefresh } from './useNativePullToRefresh';
 
 export const isAndroidApp = (): boolean => {
 	if (typeof window === 'undefined') return false;
@@ -68,7 +70,9 @@ export function usePullToRefresh({
 	containerRef,
 	targetRef
 }: UsePullToRefreshOptions): UsePullToRefreshReturn {
-	const isSupported = enabled !== undefined ? enabled : disabled ? false : isAndroidApp();
+	const native = useNativePullToRefresh({ onRefresh, enabled, disabled, threshold, containerRef, targetRef });
+	const nativeGestures = hasNativeReaderGestures();
+	const isSupported = !nativeGestures && (enabled !== undefined ? enabled : disabled ? false : isAndroidApp());
 	const [pullDistance, setPullDistance] = useState(0);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [isPulling, setIsPulling] = useState(false);
@@ -266,6 +270,7 @@ export function usePullToRefresh({
 
 	const progress = Math.min(1, pullDistance / threshold);
 
+	if (nativeGestures) return native;
 	return {
 		pullDistance,
 		isRefreshing,

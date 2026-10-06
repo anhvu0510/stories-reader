@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core';
+
 interface ScrollFollowerEnvironment {
 	getScrollY: () => number;
 	getViewportHeight: () => number;
@@ -7,11 +9,13 @@ interface ScrollFollowerEnvironment {
 	requestFrame: (callback: FrameRequestCallback) => number;
 	cancelFrame: (handle: number) => void;
 	prefersReducedMotion: () => boolean;
+	autoReclaim?: boolean;
 }
 
 const READING_ANCHOR_RATIO = 0.4;
 
 const createBrowserEnvironment = (): ScrollFollowerEnvironment => ({
+	autoReclaim: Capacitor.getPlatform() !== 'android',
 	getScrollY: () => window.scrollY,
 	getViewportHeight: () => window.innerHeight,
 	getMaxScrollY: () => Math.max(0, document.documentElement.scrollHeight - window.innerHeight),
@@ -27,7 +31,8 @@ const createBrowserEnvironment = (): ScrollFollowerEnvironment => ({
  * Cơ chế thông minh:
  * - Khi dòng highlight đang có mặt trên màn hình: tự động cuộn nhẹ theo dòng highlight.
  * - Khi người dùng vuốt/cuộn màn hình (user scrolling): tạm ngưng auto-scroll để người dùng thao tác.
- * - Tiếp quản lại sau khi thao tác dừng và dòng đang đọc nằm trong viewport.
+ * - Web: tiếp quản lại khi thao tác dừng và dòng đang đọc nằm trong viewport.
+ * - Android: chỉ tiếp quản khi người dùng yêu cầu locate/play/navigation.
  */
 export class ReadAloudScrollFollower {
 	private targetY: number | null = null;
@@ -76,6 +81,7 @@ export class ReadAloudScrollFollower {
 
 	private scheduleReclaim(): void {
 		this.clearResumeTimer();
+		if (this.environment.autoReclaim === false) return;
 		this.resumeTimer = setTimeout(this.reclaimIfVisible, 250);
 	}
 
@@ -101,6 +107,12 @@ export class ReadAloudScrollFollower {
 		this.following = true;
 	}
 
+	public locateCurrentLine(): void {
+		const line = this.latestLine;
+		this.resumeFollowing();
+		if (line) this.follow(line, true);
+	}
+
 	public follow(line: DOMRect, recenter = false): void {
 		this.latestLine = line;
 		if (this.environment.hasTextSelection?.()) this.notifyUserInteraction();
@@ -117,14 +129,14 @@ export class ReadAloudScrollFollower {
 
 		// 1. Nếu dòng highlight đã trôi lên trên khỏi đỉnh màn hình (do người dùng cuộn xuống dưới):
 		// Tuyệt đối không cuộn giật ngược về lại, thả tự do cho người dùng đọc/thao tác tiếp
-		if (viewportBottom < 0) {
+		if (!recenter && viewportBottom < 0) {
 			this.stopAnimation();
 			return;
 		}
 
 		// 2. Nếu dòng highlight nằm quá xa phía dưới màn hình (người dùng đã cuộn lên trên đỉnh xem lại):
 		// Không tự động giật màn hình nhảy xuống
-		if (viewportTop > viewportHeight * 1.8) {
+		if (!recenter && viewportTop > viewportHeight * 1.8) {
 			this.stopAnimation();
 			return;
 		}

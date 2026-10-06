@@ -1,4 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
+import { configureNativeSwipe, hasNativeReaderGestures, onNativeReaderGesture, registerNativeGestureHitTest } from '@/services/nativeReaderGestures';
+import { eligibleNativeTarget } from '@/services/nativeGestureEligibility';
 
 export interface SwipeGestureOptions {
 	onSwipeLeft?: () => void;
@@ -33,6 +35,7 @@ export function useSwipeGesture({
 	edgeIgnoreWidth = 28,
 	disabled = false
 }: SwipeGestureOptions) {
+	const owner = useId();
 	const touchStateRef = useRef<TouchState | null>(null);
 	const callbacksRef = useRef({
 		onSwipeLeft,
@@ -55,6 +58,31 @@ export function useSwipeGesture({
 
 	useEffect(() => {
 		if (typeof window === 'undefined' || disabled) return;
+		if (hasNativeReaderGestures()) {
+			let dragging = false;
+			const removeHitTest = registerNativeGestureHitTest('swipe', owner, (x, y) => Boolean(eligibleNativeTarget(x, y)));
+			const unsubscribe = onNativeReaderGesture((gesture) => {
+				if (gesture.kind === 'swipe-move') {
+					if (!dragging) callbacksRef.current.onDragStart?.();
+					dragging = true;
+					callbacksRef.current.onDragMove?.(gesture.offset);
+					return;
+				}
+				if (gesture.kind !== 'swipe-end') return;
+				dragging = false;
+				callbacksRef.current.onDragEnd?.(gesture.settled);
+				if (gesture.settled === 'left') callbacksRef.current.onSwipeLeft?.();
+				if (gesture.settled === 'right') callbacksRef.current.onSwipeRight?.();
+			});
+			const effectiveThreshold = threshold ?? Math.max(120, Math.round(window.innerWidth * 0.35));
+			configureNativeSwipe({ enabled: true, owner, threshold: effectiveThreshold, minVelocity, maxDuration, edgeIgnoreWidth });
+			return () => {
+				unsubscribe();
+				removeHitTest();
+				configureNativeSwipe({ enabled: false, owner, threshold: effectiveThreshold, minVelocity, edgeIgnoreWidth });
+				if (dragging) callbacksRef.current.onDragEnd?.('cancel');
+			};
+		}
 
 		const handleTouchStart = (e: TouchEvent) => {
 			if (!e.touches || e.touches.length !== 1) {
@@ -217,5 +245,5 @@ export function useSwipeGesture({
 			window.removeEventListener('touchend', handleTouchEnd);
 			window.removeEventListener('touchcancel', handleTouchCancel);
 		};
-	}, [threshold, minVelocity, maxDuration, edgeIgnoreWidth, disabled]);
+		}, [threshold, minVelocity, maxDuration, edgeIgnoreWidth, disabled, owner]);
 }
