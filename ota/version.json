@@ -1,7 +1,7 @@
 {
-  "version": "1.0.347",
+  "version": "1.0.348",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "32f10ba3c9d6dc21d34905d2b2a3a6804788d7f4e5ea2441f913ecc5843e57ce",
-  "releaseNotes": "feat: add draggable ReadAloudControlFrame for vertical batch chapter navigation",
-  "updatedAt": "2026-10-06T17:05:55Z"
+  "checksum": "9a2e6b30c808b341e863520058b677776bdcc3b09811fd9db5b553b24581b965",
+  "releaseNotes": "refactor: update read-aloud scroll anchor to 40%, compact control frame, and add pull-to-refresh diagnostics",
+  "updatedAt": "2026-10-06T17:18:48Z"
 }
