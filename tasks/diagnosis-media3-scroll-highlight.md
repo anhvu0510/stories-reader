@@ -4,6 +4,10 @@
 
 The user clarified with a screenshot that blue must cover exactly the rendered screen line containing the yellow spoken word, not the full synthesis utterance. Media3 now calls the same `highlight` method as the other engines, using the native source-mapped absolute word offset. The utterance plan remains an audio unit only. Following is requested when the rendered line changes, with manual-scroll ownership preserved. A hook regression rejects calls to the utterance-wide highlighter and verifies repeated words on one line do not re-request scrolling.
 
+## Revised scroll ownership requirement
+
+The user's later rule supersedes permanent manual ownership: center the spoken line at 50% viewport height, yield immediately on touch/wheel/key input, and automatically resume when the full line is visible after 250 ms of no gesture or momentum scrolling. Holding the screen prevents reacquisition. Viewport scroll events re-check the stored current line even without a new word/line event. Pause, stop and unmount cancel pending reacquisition. Animation easing uses elapsed frame time and its target is clamped at document boundaries. Regression tests cover centering, gesture hold, momentum, visible-line reacquisition, offscreen retention and cleanup.
+
 ## Reproduction and root causes
 
 The focused Vitest loop reproduced three independent failures before the fix:

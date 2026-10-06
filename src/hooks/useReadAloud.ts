@@ -776,17 +776,39 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			lastInteractionTime.current = Date.now();
 			scrollFollowerRef.current?.notifyUserInteraction();
 		};
+		const onHold = () => scrollFollowerRef.current?.beginUserInteraction();
+		const onRelease = () => scrollFollowerRef.current?.endUserInteraction();
+		const onPointerHold = (event: PointerEvent) => {
+			if (event.pointerType === 'touch') return;
+			onHold();
+		};
+		const onPointerRelease = (event: PointerEvent) => {
+			if (event.pointerType === 'touch') return;
+			onRelease();
+		};
+		const onScroll = () => scrollFollowerRef.current?.notifyViewportScroll();
 		window.addEventListener('wheel', onInteraction, { passive: true });
 		window.addEventListener('touchmove', onInteraction, { passive: true });
-		window.addEventListener('pointerdown', onInteraction, { passive: true });
-		window.addEventListener('mousedown', onInteraction, { passive: true });
+		window.addEventListener('touchstart', onHold, { passive: true });
+		window.addEventListener('pointerdown', onPointerHold, { passive: true });
+		window.addEventListener('pointerup', onPointerRelease, { passive: true });
+		window.addEventListener('pointercancel', onPointerRelease, { passive: true });
+		window.addEventListener('touchend', onRelease, { passive: true });
+		window.addEventListener('touchcancel', onRelease, { passive: true });
+		window.addEventListener('scroll', onScroll, { passive: true });
 		window.addEventListener('keydown', onInteraction, { passive: true });
 		return () => {
 			window.removeEventListener('wheel', onInteraction);
 			window.removeEventListener('touchmove', onInteraction);
-			window.removeEventListener('pointerdown', onInteraction);
-			window.removeEventListener('mousedown', onInteraction);
+			window.removeEventListener('touchstart', onHold);
+			window.removeEventListener('pointerdown', onPointerHold);
+			window.removeEventListener('pointerup', onPointerRelease);
+			window.removeEventListener('pointercancel', onPointerRelease);
+			window.removeEventListener('touchend', onRelease);
+			window.removeEventListener('touchcancel', onRelease);
+			window.removeEventListener('scroll', onScroll);
 			window.removeEventListener('keydown', onInteraction);
+			scrollFollowerRef.current?.cancel();
 		};
 	}, []);
 
@@ -1235,6 +1257,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	};
 
 	const pauseReading = () => {
+		scrollFollowerRef.current?.cancel();
 		releaseWakeLock();
 		if (currentChunkIdxRef.current < chunks.length - 1) {
 			saveResumePosition(
