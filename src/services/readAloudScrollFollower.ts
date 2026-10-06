@@ -84,7 +84,7 @@ export class ReadAloudScrollFollower {
 		const bottom = this.latestLine.bottom - this.environment.getScrollY();
 		if (top < 0 || bottom > this.environment.getViewportHeight()) return;
 		this.following = true;
-		this.follow(this.latestLine);
+		this.follow(this.latestLine, true);
 	};
 
 	private clearResumeTimer(): void {
@@ -99,7 +99,7 @@ export class ReadAloudScrollFollower {
 		this.following = true;
 	}
 
-	public follow(line: DOMRect): void {
+	public follow(line: DOMRect, recenter = false): void {
 		this.latestLine = line;
 		if (this.environment.hasTextSelection?.()) this.notifyUserInteraction();
 		// Nếu người dùng vừa chạm/cuộn màn hình: nhường quyền thao tác hoàn toàn cho người dùng
@@ -127,6 +127,7 @@ export class ReadAloudScrollFollower {
 			return;
 		}
 
+		if (!recenter && viewportTop >= viewportHeight * 0.25 && viewportBottom <= viewportHeight * 0.75) return;
 		const maxScrollY = this.environment.getMaxScrollY?.() ?? Infinity;
 		this.targetY = Math.min(maxScrollY, Math.max(0, line.top + line.height / 2 - viewportHeight * 0.5));
 		if (Math.abs(this.targetY - scrollY) < 0.75) return;

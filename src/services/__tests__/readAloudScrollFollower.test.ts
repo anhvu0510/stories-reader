@@ -33,14 +33,18 @@ describe('ReadAloudScrollFollower', () => {
 		follower.follow(new DOMRect(0, 700, 300, 30));
 		expect(scrollTo).toHaveBeenCalledWith(100);
 	});
-	it('centers even a visible line instead of leaving it in a wide safe band', () => {
+	it('keeps several spoken lines stationary until the reading line reaches three quarters of the screen', () => {
 		const scrollTo = vi.fn();
 		const follower = new ReadAloudScrollFollower({
 			getScrollY: () => 0, getViewportHeight: () => 800, scrollTo,
 			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
 		});
 		follower.follow(new DOMRect(0, 500, 300, 30));
-		expect(scrollTo).toHaveBeenCalledWith(115);
+		follower.follow(new DOMRect(0, 540, 300, 30));
+		follower.follow(new DOMRect(0, 570, 300, 30));
+		expect(scrollTo).not.toHaveBeenCalled();
+		follower.follow(new DOMRect(0, 600, 300, 30));
+		expect(scrollTo).toHaveBeenCalledWith(215);
 	});
 
 	it('reclaims following only after scrolling settles with the active line visible', () => {

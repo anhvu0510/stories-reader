@@ -28,6 +28,7 @@ public class AndroidSpeechEngine {
     private final Context context;
     private TextToSpeech tts;
     private boolean isInitialized = false;
+    private volatile UtteranceProgressListener progressListener;
     private final List<Runnable> pendingTasks = new ArrayList<>();
 
     public AndroidSpeechEngine(Context context) {
@@ -41,6 +42,7 @@ public class AndroidSpeechEngine {
             synchronized (AndroidSpeechEngine.this) {
                 isInitialized = (status == TextToSpeech.SUCCESS);
                 if (isInitialized) {
+                    attachProgressListener();
                     executePendingTasks();
                 } else {
                     Log.e(TAG, "Khởi tạo TTS thất bại với mã: " + status);
@@ -53,10 +55,15 @@ public class AndroidSpeechEngine {
         };
 
         if (enginePackage != null && !enginePackage.trim().isEmpty()) {
-            tts = new TextToSpeech(context, listener, enginePackage.trim());
+            tts = createTextToSpeech(listener, enginePackage.trim());
             return;
         }
-        tts = new TextToSpeech(context, listener);
+        tts = createTextToSpeech(listener, null);
+    }
+
+    protected TextToSpeech createTextToSpeech(TextToSpeech.OnInitListener listener, String enginePackage) {
+        if (enginePackage != null) return new TextToSpeech(context, listener, enginePackage);
+        return new TextToSpeech(context, listener);
     }
 
     private void executePendingTasks() {
@@ -87,9 +94,13 @@ public class AndroidSpeechEngine {
     }
 
     public void setProgressListener(UtteranceProgressListener listener) {
-        if (tts != null) {
-            tts.setOnUtteranceProgressListener(listener);
-        }
+        progressListener = listener;
+        attachProgressListener();
+    }
+
+    private void attachProgressListener() {
+        if (tts == null || progressListener == null) return;
+        tts.setOnUtteranceProgressListener(progressListener);
     }
 
     public List<TextToSpeech.EngineInfo> getEngines() {

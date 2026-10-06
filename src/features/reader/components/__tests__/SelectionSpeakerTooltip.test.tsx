@@ -19,6 +19,7 @@ describe('SelectionSpeakerTooltip Component', () => {
 	});
 
 	afterEach(() => {
+		vi.useRealTimers();
 		cleanup();
 		containerDiv.remove();
 		vi.restoreAllMocks();
@@ -110,7 +111,8 @@ describe('SelectionSpeakerTooltip Component', () => {
 		outsideP.remove();
 	});
 
-	it('keeps selection and shows an explicit speaker action while reading', async () => {
+	it('hides the speaker and jumps once after selection settles while reading', async () => {
+		vi.useFakeTimers();
 		const p = document.createElement('div');
 		p.setAttribute('data-paragraph-index', '2');
 		p.textContent = 'Đoạn văn này đang được đọc to.';
@@ -149,20 +151,21 @@ describe('SelectionSpeakerTooltip Component', () => {
 		});
 
 		// Tooltip must NOT render when in TTS active mode
-		expect(screen.queryByTestId('selection-speaker-tooltip')).not.toBeNull();
+		expect(screen.queryByTestId('selection-speaker-tooltip')).toBeNull();
 
 		// Trigger mouseup (or touchend) after text selection in TTS active mode
 		act(() => {
 			window.dispatchEvent(new MouseEvent('mouseup'));
 		});
 
-		expect(onSpeak).not.toHaveBeenCalled();
-		expect(removeAllRanges).not.toHaveBeenCalled();
-		fireEvent.click(screen.getByTestId('selection-speaker-tooltip'));
+		act(() => vi.advanceTimersByTime(200));
 		expect(onSpeak).toHaveBeenCalledWith(2, 5);
+		expect(onSpeak).toHaveBeenCalledTimes(1);
+		expect(removeAllRanges).toHaveBeenCalled();
+		vi.useRealTimers();
 	});
 
-	it('allows the native context menu while reading without seeking or clearing selection', async () => {
+	it.each([false, true])('suppresses the reader context menu with reading active = %s', async (isTTSActive) => {
 		const p = document.createElement('div');
 		p.setAttribute('data-paragraph-index', '7');
 		p.textContent = 'Mục được chọn khi người dùng nhấn giữ trên mobile.';
@@ -170,7 +173,7 @@ describe('SelectionSpeakerTooltip Component', () => {
 
 		const onSpeak = vi.fn();
 		const removeAllRanges = vi.fn();
-		render(<SelectionSpeakerTooltip onSpeak={onSpeak} isTTSActive={true} />);
+		render(<SelectionSpeakerTooltip onSpeak={onSpeak} isTTSActive={isTTSActive} />);
 
 		const range = {
 			startContainer: p.firstChild!,
@@ -200,12 +203,27 @@ describe('SelectionSpeakerTooltip Component', () => {
 		const contextmenu = new MouseEvent('contextmenu', { cancelable: true });
 		act(() => { window.dispatchEvent(contextmenu); });
 
-		expect(contextmenu.defaultPrevented).toBe(false);
+		expect(contextmenu.defaultPrevented).toBe(true);
 		expect(onSpeak).not.toHaveBeenCalled();
 		expect(removeAllRanges).not.toHaveBeenCalled();
 	});
 
-	it('does not automatically seek when a held selection stabilizes', async () => {
+	it('keeps context menus outside reader content unchanged', () => {
+		const outside = document.createElement('input');
+		document.body.appendChild(outside);
+		render(<SelectionSpeakerTooltip onSpeak={vi.fn()} />);
+		vi.spyOn(window, 'getSelection').mockReturnValue({
+			isCollapsed: false,
+			rangeCount: 1,
+			getRangeAt: () => ({ startContainer: outside })
+		} as unknown as Selection);
+		const event = new MouseEvent('contextmenu', { cancelable: true });
+		window.dispatchEvent(event);
+		expect(event.defaultPrevented).toBe(false);
+		outside.remove();
+	});
+
+	it('automatically jumps when the selection stabilizes', async () => {
 		vi.useFakeTimers();
 		try {
 			const p = document.createElement('div');
@@ -250,8 +268,8 @@ describe('SelectionSpeakerTooltip Component', () => {
 				vi.advanceTimersByTime(300);
 			});
 
-			expect(onSpeak).not.toHaveBeenCalled();
-			expect(removeAllRanges).not.toHaveBeenCalled();
+			expect(onSpeak).toHaveBeenCalledWith(9, 11);
+			expect(removeAllRanges).toHaveBeenCalled();
 		} finally {
 			vi.useRealTimers();
 		}

@@ -1,5 +1,15 @@
 # Selection read-aloud diagnosis — 2026-10-06
 
+## Latest user-selected behavior
+
+The latest instruction supersedes explicit-speaker selection while reading. In active read mode the speaker is hidden, and a selected passage triggers the same playback entry point after 180 ms without another selectionchange. The pending timer is replaced on selection changes and canceled on mode changes/unmount. The jumped source position is deduplicated until selection is cleared. Idle mode retains the explicit speaker.
+
+The subsequent user instruction hides the reader's selection context menu in idle mode too. MainActivity checks only that the selected range starts inside main-story-content, independently of playback state. ReaderWebView wraps Chromium's floating ActionMode callback and removes its menu on every preparation, including selection-handle movement; it preserves the original selection lifecycle and content rectangle. The app overrides Capacitor's bridge layout to instantiate this WebView without modifying Capacitor dependencies. ActionMode.hide(2000) masks the initial transition; persistent suppression comes from the empty menu, not a polling timer. Input-field menus outside story content remain unchanged. Device validation is still needed for Samsung-specific timing/possible initial toolbar flashes.
+
+Latest regression coverage: idle and active reader context-menu suppression, unchanged outside-content menus, retained idle speaker, active automatic jump, native menu rebuilding, and preservation of native selection callbacks. No dependencies added.
+
+Regression: the previous tests fail on hidden-speaker, automatic-jump and context-menu rules before implementation and pass after implementation. The historical explicit-speaker behavior below is retained as context for the earlier fix, not the current read-mode specification.
+
 ## Reproduced defects
 
 - Native `jumpToContent` issued `seekToChunk` without starting a chapter. Media3's `seekTo` returns when no request exists, leaving the UI loading instead of taking the same startup path as the main speaker.

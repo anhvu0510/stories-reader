@@ -210,9 +210,7 @@ export function useNativeReadAloud(
 					const rects = wordHighlighterRef.current?.highlight(
 						paragraphEl,
 						chunk.startOffset + charIndex,
-						charLength,
-						chunk.startOffset,
-						chunk.length
+						charLength
 					);
 					if (rects?.line) {
 						scrollFollowerRef.current?.follow(rects.line);

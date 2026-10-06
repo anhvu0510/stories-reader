@@ -749,6 +749,12 @@ describe('useReadAloud Edge word boundaries', () => {
 		const stopSpy = vi.spyOn(NativeTTSStreamService, 'stop').mockResolvedValue(undefined);
 
 		const clearSpy = vi.spyOn(DomWordHighlighter.prototype, 'clear');
+		const highlightSpy = vi.spyOn(DomWordHighlighter.prototype, 'highlight').mockReturnValue(null);
+		document.body.innerHTML = '';
+		const content = document.createElement('main');
+		content.id = 'main-story-content';
+		content.innerHTML = '<article><div data-paragraph-index="1">Đoạn hai trên native device.</div></article>';
+		document.body.appendChild(content);
 
 		const paragraphs = ['Đoạn một trên native device.', 'Đoạn hai trên native device.'];
 		const { result, unmount } = renderHook(() =>
@@ -775,12 +781,18 @@ describe('useReadAloud Edge word boundaries', () => {
 		});
 
 		expect(clearSpy).not.toHaveBeenCalled();
+		act(() => {
+			NativeTTSStreamService['playbackStateListeners'].forEach((callback) => callback({ isPlaying: true, isPaused: false, isBuffering: false }));
+			NativeTTSStreamService['wordBoundaryListeners'].forEach((callback) => callback({ chunkIndex: 1, charIndex: 5, charLength: 3, text: 'hai' }));
+		});
+		expect(highlightSpy).toHaveBeenCalledWith(content.querySelector('[data-paragraph-index="1"]'), 5, 3);
 
 		act(() => result.current.pauseReading());
 		expect(pauseSpy).toHaveBeenCalled();
 
 		act(() => result.current.stopReading());
 		expect(stopSpy).toHaveBeenCalled();
+		content.remove();
 
 		unmount();
 	});

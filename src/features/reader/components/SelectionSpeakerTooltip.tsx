@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Volume2 } from 'lucide-react';
 import { triggerHaptic } from '@/hooks/useHaptic';
 
@@ -15,11 +15,22 @@ interface TooltipPosition {
 	charOffset: number;
 }
 
-export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-content' }: SelectionSpeakerTooltipProps) {
+export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-content', isTTSActive = false }: SelectionSpeakerTooltipProps) {
 	const [position, setPosition] = useState<TooltipPosition | null>(null);
-	const updateSelection = useCallback(() => {
+	const jumpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const lastJump = useRef<string | null>(null);
+	const onSpeakRef = useRef(onSpeak);
+	useEffect(() => { onSpeakRef.current = onSpeak; }, [onSpeak]);
+	const clearJump = useCallback(() => {
+		if (jumpTimer.current !== null) clearTimeout(jumpTimer.current);
+		jumpTimer.current = null;
+	}, []);
+	const updateSelection = useCallback((event?: Event) => {
+		if (event?.type === 'selectionchange') clearJump();
 		const selection = window.getSelection();
 		if (!selection || selection.isCollapsed || !selection.rangeCount || !selection.toString().trim()) {
+			clearJump();
+			lastJump.current = null;
 			setPosition(null);
 			return;
 		}
@@ -37,6 +48,20 @@ export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-con
 		const preRange = document.createRange();
 		preRange.selectNodeContents(paragraph);
 		preRange.setEnd(range.startContainer, range.startOffset);
+		const charOffset = preRange.toString().length;
+		if (isTTSActive) {
+			setPosition(null);
+			if (event?.type !== 'selectionchange') return;
+			const key = `${paragraphIndex}:${charOffset}`;
+			if (lastJump.current === key) return;
+			jumpTimer.current = setTimeout(() => {
+				jumpTimer.current = null;
+				lastJump.current = key;
+				onSpeakRef.current(paragraphIndex, charOffset);
+				selection.removeAllRanges();
+			}, 180);
+			return;
+		}
 		const rect = range.getBoundingClientRect();
 		if (rect.width === 0 && rect.height === 0) {
 			setPosition(null);
@@ -46,19 +71,32 @@ export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-con
 			? Math.max(16, rect.top - 38 - 12)
 			: rect.bottom + 12;
 		const left = Math.max(16, Math.min(window.innerWidth - 110 - 16, rect.left + rect.width / 2 - 55));
-		setPosition({ top, left, paragraphIndex, charOffset: preRange.toString().length });
-	}, [containerId]);
+		setPosition({ top, left, paragraphIndex, charOffset });
+	}, [containerId, isTTSActive, clearJump]);
 
 	useEffect(() => {
 		document.addEventListener('selectionchange', updateSelection);
 		window.addEventListener('resize', updateSelection);
 		window.addEventListener('scroll', updateSelection, { passive: true });
 		return () => {
+			clearJump();
 			document.removeEventListener('selectionchange', updateSelection);
 			window.removeEventListener('resize', updateSelection);
 			window.removeEventListener('scroll', updateSelection);
 		};
-	}, [updateSelection]);
+	}, [updateSelection, clearJump]);
+
+	useEffect(() => {
+		const onContextMenu = (event: Event) => {
+			const selection = window.getSelection();
+			if (!selection?.rangeCount || selection.isCollapsed) return;
+			const container = document.getElementById(containerId);
+			if (!container?.contains(selection.getRangeAt(0).startContainer)) return;
+			event.preventDefault();
+		};
+		window.addEventListener('contextmenu', onContextMenu);
+		return () => window.removeEventListener('contextmenu', onContextMenu);
+	}, [containerId]);
 
 	const handleAction = (event: React.MouseEvent<HTMLButtonElement>) => {
 		event.preventDefault();
@@ -70,7 +108,7 @@ export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-con
 		setPosition(null);
 	};
 
-	if (!position) return null;
+	if (isTTSActive || !position) return null;
 	return (
 		<button
 			type="button"

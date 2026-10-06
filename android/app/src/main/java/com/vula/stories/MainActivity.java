@@ -2,11 +2,48 @@ package com.vula.stories;
 
 import android.os.Bundle;
 import android.view.View;
+import android.view.ActionMode;
 import android.webkit.WebView;
 import androidx.activity.OnBackPressedCallback;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+    private ActionMode currentSelectionMode;
+
+    @Override
+    public void onActionModeStarted(ActionMode mode) {
+        super.onActionModeStarted(mode);
+        currentSelectionMode = mode;
+        if (mode.getType() != ActionMode.TYPE_FLOATING || getBridge() == null) return;
+        WebView webView = getBridge().getWebView();
+        if (webView == null) return;
+        // Reader selections use the app's speaker control, never the system toolbar.
+        // Preserve selection handles and normal input-field menus outside reader content.
+        String shouldHide = "(function(){"
+                + "var s=window.getSelection(),c=document.getElementById('main-story-content');"
+                + "return !!(s&&s.rangeCount&&!s.isCollapsed&&c&&c.contains(s.getRangeAt(0).startContainer));"
+                + "})()";
+        webView.evaluateJavascript(shouldHide, value -> {
+            if (!"true".equals(value) || currentSelectionMode != mode) return;
+            if (!(webView instanceof ReaderWebView)) return;
+            ((ReaderWebView) webView).suppressSelectionMenu(mode);
+        });
+    }
+
+    @Override
+    public void onActionModeFinished(ActionMode mode) {
+        if (currentSelectionMode == mode) clearSelectionMode(mode);
+        super.onActionModeFinished(mode);
+    }
+
+    private void clearSelectionMode(ActionMode mode) {
+        currentSelectionMode = null;
+        if (getBridge() == null) return;
+        WebView webView = getBridge().getWebView();
+        if (!(webView instanceof ReaderWebView)) return;
+        ((ReaderWebView) webView).clearSelectionMode(mode);
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(NativeTTSPlugin.class);
@@ -78,4 +115,3 @@ public class MainActivity extends BridgeActivity {
         handleIntelligentBack();
     }
 }
-

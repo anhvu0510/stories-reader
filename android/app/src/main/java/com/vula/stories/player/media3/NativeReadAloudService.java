@@ -20,6 +20,9 @@ import androidx.media3.exoplayer.source.MediaSource;
 import androidx.media3.exoplayer.source.ProgressiveMediaSource;
 import androidx.media3.session.MediaSession;
 import androidx.media3.session.MediaSessionService;
+import androidx.media3.session.DefaultMediaNotificationProvider;
+import com.vula.stories.player.ReadAloudArtwork;
+import com.vula.stories.R;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -86,6 +89,9 @@ public final class NativeReadAloudService extends MediaSessionService {
     @Override
     public void onCreate() {
         super.onCreate();
+        DefaultMediaNotificationProvider notificationProvider = new DefaultMediaNotificationProvider.Builder(this).build();
+        notificationProvider.setSmallIcon(R.drawable.ic_stat_read_aloud);
+        setMediaNotificationProvider(notificationProvider);
         DefaultLoadControl loadControl = new DefaultLoadControl.Builder()
                 .setBufferDurationsMs(LOW_WATERMARK_MS, TARGET_WATERMARK_MS, 250, 500)
                 .build();
@@ -175,6 +181,8 @@ public final class NativeReadAloudService extends MediaSessionService {
                 .setTitle(request.getChapterTitle())
                 .setArtist(request.getBookTitle())
                 .setDescription(utterance.getText())
+                .setAlbumTitle(request.getBookTitle())
+                .setArtworkData(ReadAloudArtwork.getPng(this), MediaMetadata.PICTURE_TYPE_FRONT_COVER)
                 .build();
         MediaItem item = new MediaItem.Builder()
                 .setMediaId(utterance.getId())

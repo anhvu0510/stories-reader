@@ -194,10 +194,11 @@ public class StoriesAudioService extends Service {
         PendingIntent stopPendingIntent = PendingIntent.getService(this, 4, stopIntent, intentFlags);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.ic_stat_read_aloud)
+                .setLargeIcon(ReadAloudArtwork.getBitmap(this))
                 .setContentTitle(lastChapterTitle != null && !lastChapterTitle.isEmpty() ? lastChapterTitle : "Stories Reader")
-                .setContentText(lastCurrentText != null && !lastCurrentText.isEmpty() ? lastCurrentText : "Đang phát...")
-                .setSubText(lastBookTitle != null && !lastBookTitle.isEmpty() ? lastBookTitle : "Stories Reader")
+                .setContentText(lastBookTitle)
+                .setSubText(lastTotalChunks > 0 ? "Stories · Câu " + (lastChunkIndex + 1) + "/" + lastTotalChunks : "Stories · Đọc truyện")
                 .setContentIntent(contentPendingIntent)
                 .setDeleteIntent(stopPendingIntent)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -310,9 +311,7 @@ public class StoriesAudioService extends Service {
             if (lastHasNext) actions |= PlaybackStateCompat.ACTION_SKIP_TO_NEXT;
 
             int state = lastIsPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
-            long position = (lastTotalChunks > 0 && lastChunkIndex >= 0)
-                    ? (long) lastChunkIndex * 1000L
-                    : PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN;
+            long position = PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN;
 
             PlaybackStateCompat playbackState = new PlaybackStateCompat.Builder()
                     .setActions(actions)
@@ -322,15 +321,14 @@ public class StoriesAudioService extends Service {
 
             // 2. Cập nhật MediaMetadata với Tên Chương, Tên Sách, Câu đang đọc và Tổng thời lượng (đơn vị chunk)
             MediaMetadataCompat.Builder metadataBuilder = new MediaMetadataCompat.Builder()
+                    .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, ReadAloudArtwork.getBitmap(this))
+                    .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, ReadAloudArtwork.getBitmap(this))
                     .putString(MediaMetadataCompat.METADATA_KEY_TITLE, lastChapterTitle)
                     .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, lastBookTitle)
                     .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, lastBookTitle)
                     .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, lastBookTitle)
                     .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_DESCRIPTION, lastCurrentText);
 
-            if (lastTotalChunks > 0) {
-                metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, (long) lastTotalChunks * 1000L);
-            }
             mediaSession.setMetadata(metadataBuilder.build());
         }
 
