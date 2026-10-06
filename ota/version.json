@@ -1,7 +1,7 @@
 {
-  "version": "1.0.348",
+  "version": "1.0.349",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "9a2e6b30c808b341e863520058b677776bdcc3b09811fd9db5b553b24581b965",
-  "releaseNotes": "refactor: update read-aloud scroll anchor to 40%, compact control frame, and add pull-to-refresh diagnostics",
-  "updatedAt": "2026-10-06T17:18:48Z"
+  "checksum": "2e1451e0a1616ffb512d6d8bde071522ce2e5cadd141dd0d0d66c0c7e3a8e71d",
+  "releaseNotes": "feat: implement native Android gesture recognition and pull-to-refresh integration for reader screens",
+  "updatedAt": "2026-10-06T17:41:23Z"
 }
