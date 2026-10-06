@@ -175,26 +175,4 @@ describe('DomWordHighlighter', () => {
 		expect(highlights.delete).toHaveBeenCalledWith('stories-tts-line');
 		root.remove();
 	});
-
-	it('keeps the utterance highlight stable while only replacing the active word', () => {
-		const root = document.createElement('div');
-		root.textContent = 'Một hai ba bốn';
-		document.body.appendChild(root);
-		const highlights = { set: vi.fn(), delete: vi.fn() };
-		const FakeHighlight = vi.fn(function (this: { ranges: Range[] }, ...ranges: Range[]) {
-			this.ranges = ranges;
-		});
-		Object.defineProperty(globalThis, 'Highlight', { configurable: true, value: FakeHighlight });
-		Object.defineProperty(globalThis, 'CSS', { configurable: true, value: { ...originalCss, highlights } });
-
-		const highlighter = new DomWordHighlighter('active-word');
-		highlighter.highlightUtteranceAndWord(root, 0, 15, 0, 3);
-		highlighter.highlightUtteranceAndWord(root, 0, 15, 4, 3);
-
-		const utteranceCalls = highlights.set.mock.calls.filter((call) => call[0] === 'stories-tts-utterance');
-		const wordCalls = highlights.set.mock.calls.filter((call) => call[0] === 'stories-tts-word');
-		expect(utteranceCalls).toHaveLength(1);
-		expect(wordCalls).toHaveLength(2);
-		expect(highlights.delete).not.toHaveBeenCalledWith('stories-tts-utterance');
-	});
 });

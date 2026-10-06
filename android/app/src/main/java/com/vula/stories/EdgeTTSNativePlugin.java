@@ -14,12 +14,6 @@ import com.vula.stories.logging.BreadcrumbTracker;
 import com.vula.stories.logging.RemoteLogger;
 import com.vula.stories.player.GaplessStreamPlayer;
 import com.vula.stories.player.StoriesAudioBridge;
-import com.vula.stories.player.media3.Media3ReadAloudBridge;
-import com.vula.stories.player.media3.PlaybackSnapshot;
-import com.vula.stories.player.media3.ReadAloudRequestNormalizer;
-import com.vula.stories.player.media3.ReadAloudSessionRequest;
-import com.vula.stories.player.media3.ReadAloudUtterance;
-import com.vula.stories.player.media3.WordBoundary;
 import com.vula.stories.tts.edge.AudioCacheManager;
 import com.vula.stories.tts.edge.EdgeAuth;
 
@@ -58,7 +52,7 @@ import okhttp3.WebSocketListener;
 import okio.ByteString;
 
 @CapacitorPlugin(name = "EdgeTTSNative")
-public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.AudioControlListener, Media3ReadAloudBridge.Listener {
+public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.AudioControlListener {
     private static final String TAG = "EdgeTTSNativePlugin";
 
     private OkHttpClient httpClient;
@@ -95,7 +89,6 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
     private final Map<Integer, File> readyAudioFiles = new ConcurrentHashMap<>();
     private final Map<Integer, byte[]> readyAudioBytes = new ConcurrentHashMap<>();
     private String currentBufferMode = "file";
-    private boolean isMedia3Active = false;
     private final Map<Integer, JSONArray> readyWordBoundaries = new ConcurrentHashMap<>();
     private final Set<Integer> inFlightIndices = Collections.synchronizedSet(new HashSet<>());
     private final Map<Integer, WebSocket> activeSockets = new ConcurrentHashMap<>();
@@ -195,7 +188,6 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
                 .build();
 
         cacheManager = new AudioCacheManager(getContext());
-        Media3ReadAloudBridge.registerListener(this);
         player = new GaplessStreamPlayer(getContext(), new GaplessStreamPlayer.PlayerListener() {
             @Override
             public void onChunkStart(int chunkIndex) {
@@ -588,11 +580,6 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
             }
         }
 
-        if ("media3".equalsIgnoreCase(bufferMode)) {
-            startMedia3Playback(call, chunksArray, startIndex, voice, rate, pitch);
-            return;
-        }
-
         final long sessionId;
         synchronized (this) {
             // Dừng luồng phát cũ và dọn dẹp cache trước khi khởi tạo phiên mới
@@ -666,79 +653,6 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
         }
 
         call.resolve();
-    }
-
-    private void startMedia3Playback(
-            PluginCall call,
-            JSArray chunksArray,
-            int startIndex,
-            String voice,
-            String rate,
-            String pitch
-    ) {
-        stopPlaybackInternal(false);
-        List<String> legacyChunks = parseChunks(chunksArray);
-        List<ReadAloudUtterance> utterances = parseUtterances(call.getArray("utterances"));
-        if (utterances.isEmpty()) utterances = ReadAloudRequestNormalizer.fromLegacyChunks(legacyChunks);
-        if (utterances.isEmpty()) {
-            call.reject("Utterances array cannot be empty", "INVALID_INPUT");
-            return;
-        }
-        int safeStartIndex = Math.max(0, Math.min(startIndex, utterances.size() - 1));
-        String sessionId = call.getString("sessionId", UUID.randomUUID().toString());
-        currentBufferMode = "media3";
-        currentVoice = voice;
-        currentRate = rate;
-        currentPitch = pitch;
-        currentPlayIndex = safeStartIndex;
-        currentChunks.clear();
-        for (ReadAloudUtterance utterance : utterances) currentChunks.add(utterance.getText());
-        isStreamingPlaying = true;
-        isMedia3Active = true;
-        Media3ReadAloudBridge.registerListener(this);
-        Media3ReadAloudBridge.start(
-                getContext(),
-                new ReadAloudSessionRequest(
-                        sessionId,
-                        utterances,
-                        safeStartIndex,
-                        voice,
-                        rate,
-                        pitch,
-                        currentBookTitle,
-                        currentChapterTitle
-                )
-        );
-        call.resolve();
-    }
-
-    private List<String> parseChunks(JSArray chunksArray) {
-        List<String> chunks = new ArrayList<>();
-        for (int index = 0; index < chunksArray.length(); index++) {
-            String text = chunksArray.optString(index, "");
-            chunks.add(text);
-        }
-        return chunks;
-    }
-
-    private List<ReadAloudUtterance> parseUtterances(JSArray utterancesArray) {
-        if (utterancesArray == null || utterancesArray.length() == 0) return Collections.emptyList();
-        List<ReadAloudUtterance> utterances = new ArrayList<>();
-        for (int index = 0; index < utterancesArray.length(); index++) {
-            JSONObject item = utterancesArray.optJSONObject(index);
-            if (item == null) continue;
-            String text = item.optString("text", "").trim();
-            if (text.isEmpty()) continue;
-            utterances.add(new ReadAloudUtterance(
-                    item.optString("id", "utterance-" + index),
-                    item.optInt("paragraphIndex", index),
-                    item.optInt("sourceStart", 0),
-                    item.optInt("sourceLength", text.length()),
-                    text,
-                    item.optInt("sourceChunkIndex", index)
-            ));
-        }
-        return utterances;
     }
 
     private void prefetchChunk(int index) {
@@ -1135,11 +1049,6 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
 
     @PluginMethod
     public void pausePlayback(PluginCall call) {
-        if (isMedia3Active) {
-            Media3ReadAloudBridge.pause(getContext());
-            call.resolve();
-            return;
-        }
         player.pause();
         int currentIdx = player.getCurrentChunkIndex();
         String pausedText = (currentIdx >= 0 && currentIdx < currentChunks.size()) ? currentChunks.get(currentIdx) : "";
@@ -1156,11 +1065,6 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
 
     @PluginMethod
     public void resumePlayback(PluginCall call) {
-        if (isMedia3Active) {
-            Media3ReadAloudBridge.resume(getContext());
-            call.resolve();
-            return;
-        }
         player.resume();
         int currentIdx = player.getCurrentChunkIndex();
         String resumeText = (currentIdx >= 0 && currentIdx < currentChunks.size()) ? currentChunks.get(currentIdx) : "";
@@ -1221,12 +1125,6 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
             return;
         }
 
-        if (isMedia3Active) {
-            Media3ReadAloudBridge.seek(getContext(), targetIndex);
-            call.resolve();
-            return;
-        }
-
         seekToChunkInternal(targetIndex);
         call.resolve();
     }
@@ -1245,12 +1143,6 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
 
         int currentIdx = (player != null) ? player.getCurrentChunkIndex() : -1;
         int total = currentChunks.size();
-
-        if (isMedia3Active) {
-            Media3ReadAloudBridge.stop(getContext());
-            Media3ReadAloudBridge.unregisterListener(this);
-            isMedia3Active = false;
-        }
 
         // Tăng streamingSessionId để vô hiệu hóa ngay lập tức toàn bộ các task tải trước đang chờ trong ThreadPool
         streamingSessionId++;
@@ -1369,103 +1261,11 @@ public class EdgeTTSNativePlugin extends Plugin implements StoriesAudioBridge.Au
 
     @Override
     protected void handleOnDestroy() {
-        if (isMedia3Active) {
-            Media3ReadAloudBridge.unregisterListener(this);
-            player.clearCache();
-            cacheManager.cleanCacheDir(true);
-            prefetchExecutor.shutdownNow();
-            super.handleOnDestroy();
-            return;
-        }
         stopPlaybackInternal(false);
         cacheManager.cleanCacheDir(true);
         try {
             prefetchExecutor.shutdownNow();
         } catch (Exception ignored) {}
         super.handleOnDestroy();
-    }
-
-    @Override
-    public void onSnapshot(PlaybackSnapshot snapshot) {
-        boolean isTerminal = snapshot.getState() == PlaybackSnapshot.State.IDLE
-                || snapshot.getState() == PlaybackSnapshot.State.COMPLETED
-                || snapshot.getState() == PlaybackSnapshot.State.ERROR;
-        isMedia3Active = !isTerminal;
-        if (isMedia3Active) currentBufferMode = "media3";
-
-        JSObject event = snapshotToJs(snapshot);
-        notifyListeners("onPlaybackSnapshot", event);
-
-        JSObject legacyState = new JSObject();
-        legacyState.put("sessionId", snapshot.getSessionId());
-        legacyState.put("isPlaying", snapshot.getState() == PlaybackSnapshot.State.PLAYING);
-        legacyState.put("isPaused", snapshot.getState() == PlaybackSnapshot.State.PAUSED);
-        legacyState.put("isBuffering", snapshot.getState() == PlaybackSnapshot.State.CONNECTING || snapshot.getState() == PlaybackSnapshot.State.BUFFERING);
-        notifyListeners("onPlaybackStateChange", legacyState);
-    }
-
-    @Override
-    public void onUtteranceStart(String sessionId, int utteranceIndex, ReadAloudUtterance utterance) {
-        currentPlayIndex = utteranceIndex;
-        JSObject event = new JSObject();
-        event.put("sessionId", sessionId);
-        event.put("chunkIndex", utterance.getSourceChunkIndex());
-        event.put("utteranceIndex", utteranceIndex);
-        event.put("paragraphIndex", utterance.getParagraphIndex());
-        event.put("sourceStart", utterance.getSourceStart());
-        event.put("sourceLength", utterance.getSourceLength());
-        notifyListeners("onChunkStart", event);
-    }
-
-    @Override
-    public void onWordBoundary(String sessionId, int utteranceIndex, ReadAloudUtterance utterance, WordBoundary boundary) {
-        JSObject event = new JSObject();
-        event.put("sessionId", sessionId);
-        event.put("chunkIndex", utterance.getSourceChunkIndex());
-        event.put("utteranceIndex", utteranceIndex);
-        event.put("paragraphIndex", utterance.getParagraphIndex());
-        event.put("sourceStart", utterance.getSourceStart());
-        event.put("sourceLength", utterance.getSourceLength());
-        event.put("charIndex", boundary.getCharIndex());
-        event.put("charLength", boundary.getCharLength());
-        event.put("text", boundary.getText());
-        notifyListeners("onWordBoundary", event);
-    }
-
-    @Override
-    public void onCompleted(String sessionId) {
-        isMedia3Active = false;
-        JSObject event = new JSObject();
-        event.put("sessionId", sessionId);
-        notifyListeners("onPlaybackComplete", event);
-    }
-
-    @Override
-    public void onError(String sessionId, int utteranceIndex, String code, String message) {
-        JSObject event = new JSObject();
-        event.put("sessionId", sessionId);
-        event.put("chunkIndex", utteranceIndex);
-        event.put("code", code);
-        event.put("message", message);
-        notifyListeners("onError", event);
-    }
-
-    @PluginMethod
-    public void getPlaybackSnapshot(PluginCall call) {
-        call.resolve(snapshotToJs(Media3ReadAloudBridge.getLatestSnapshot()));
-    }
-
-    private JSObject snapshotToJs(PlaybackSnapshot snapshot) {
-        JSObject event = new JSObject();
-        event.put("sessionId", snapshot.getSessionId());
-        event.put("state", snapshot.getState().name());
-        event.put("utteranceIndex", snapshot.getUtteranceIndex());
-        event.put("positionMs", snapshot.getPositionMs());
-        event.put("bufferedDurationMs", snapshot.getBufferedDurationMs());
-        event.put("rebufferCount", snapshot.getRebufferCount());
-        event.put("firstAudioLatencyMs", snapshot.getFirstAudioLatencyMs());
-        event.put("lastBufferingDurationMs", snapshot.getLastBufferingDurationMs());
-        if (snapshot.getErrorCode() != null) event.put("errorCode", snapshot.getErrorCode());
-        return event;
     }
 }

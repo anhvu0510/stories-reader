@@ -40,7 +40,6 @@ describe('VoiceSettingsTab Component', () => {
 			ttsEngine: 'edge',
 			speechRate: 1.0,
 			edgeVoiceUri: 'vi-VN-HoaiMyNeural',
-			edgeBufferMode: 'file',
 			voiceUri: ''
 		});
 	});
@@ -82,15 +81,5 @@ describe('VoiceSettingsTab Component', () => {
 
 		expect(useReaderConfigStore.getState().speechRate).toBeCloseTo(1.05);
 	});
-
-	it('offers Media3 as an isolated Edge buffer mode and persists the selection', () => {
-		render(<VoiceSettingsTab />);
-		fireEvent.click(screen.getByRole('button', { name: /Cài đặt máy chủ & kỹ thuật/i }));
-
-		const media3Button = screen.getByRole('button', { name: /Media3/i });
-		fireEvent.click(media3Button);
-
-		expect(useReaderConfigStore.getState().edgeBufferMode).toBe('media3');
-		expect(screen.getByText(/phát progressive/i)).toBeDefined();
-	});
 });
+

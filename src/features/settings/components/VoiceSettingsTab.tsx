@@ -26,42 +26,11 @@ import { EdgeTTSService, EdgeVoice, DEFAULT_EDGE_VOICES } from '@/services/edgeT
 import { NativeTTSService, NativeVoice, NativeTTSEngine } from '@/services/nativeTtsService';
 import { TTSService, VieNeuVoice, VieNeuModel, DEFAULT_VIENEU_SERVER_URL } from '@/services/ttsService';
 import { triggerHaptic } from '@/hooks/useHaptic';
-import type { EdgeBufferMode } from '@/shared/types';
 import { useAppStore } from '@/stores/useAppStore';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { showToast } from '@/stores/useToastStore';
 
 const SPEED_PRESETS = [0.8, 1.0, 1.25, 1.5, 1.8, 2.0];
-
-const EDGE_BUFFER_MODES: Array<{
-	value: EdgeBufferMode;
-	title: string;
-	subtitle: string;
-	badge: string;
-	description: string;
-}> = [
-	{
-		value: 'file',
-		title: 'Tệp tin tạm (Disk)',
-		subtitle: 'Ghi file MP3 đĩa',
-		badge: 'Disk Cache (Tệp tin)',
-		description: '• Mode Disk: Lưu file mp3 tạm vào bộ nhớ thiết bị theo cơ chế cuốn chiếu tiêu chuẩn.'
-	},
-	{
-		value: 'memory',
-		title: 'Bộ nhớ RAM (Memory)',
-		subtitle: 'MediaDataSource 0ms I/O',
-		badge: 'In-Memory (RAM)',
-		description: '• Mode RAM: Bỏ qua ghi đĩa, nạp trực tiếp vào RAM qua MediaDataSource để tối ưu độ trễ và giảm hao mòn bộ nhớ.'
-	},
-	{
-		value: 'media3',
-		title: 'Media3 Native',
-		subtitle: 'Progressive + nền',
-		badge: 'Media3 Native',
-		description: '• Mode Media3: Phát progressive từ byte đầu tiên, giữ phiên đọc nền và tự fallback sang file hoàn chỉnh nếu decoder không tương thích.'
-	}
-];
 
 type EngineCategory = 'edge' | 'vieneu' | 'browser';
 
@@ -130,7 +99,6 @@ export function VoiceSettingsTab() {
 	const [isPingTesting, setIsPingTesting] = useState(false);
 
 	const audioRef = useRef<HTMLAudioElement | null>(null);
-	const activeEdgeBufferMode = EDGE_BUFFER_MODES.find((mode) => mode.value === edgeBufferMode) ?? EDGE_BUFFER_MODES[0];
 
 	// 1. Tải song song danh sách Edge voices
 	useEffect(() => {
@@ -790,38 +758,49 @@ export function VoiceSettingsTab() {
 									<Zap size={12} className="text-primary" /> Bộ đệm âm thanh Edge TTS (Native)
 								</label>
 								<span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
-									{activeEdgeBufferMode.badge}
+									{edgeBufferMode === 'memory' ? 'In-Memory (RAM)' : 'Disk Cache (Tệp tin)'}
 								</span>
 							</div>
-							<div className="grid grid-cols-3 gap-1.5 bg-white/5 p-1 rounded-xl border border-white/10">
-								{EDGE_BUFFER_MODES.map((mode) => (
-									<button
-										key={mode.value}
-										type="button"
-										aria-pressed={edgeBufferMode === mode.value}
-										onClick={() => {
-											triggerHaptic('light');
-											setEdgeBufferMode(mode.value);
-										}}
-										className={`min-w-0 px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
-											edgeBufferMode === mode.value
-												? 'bg-primary text-on-primary shadow-xs'
-												: 'text-on-surface hover:bg-white/10'
-										}`}
-									>
-										<span className="w-full truncate">{mode.title}</span>
-										<span
-											className={`w-full truncate text-[9px] opacity-80 ${
-												edgeBufferMode === mode.value ? 'text-on-primary' : 'text-on-surface-variant'
-											}`}
-										>
-											{mode.subtitle}
-										</span>
-									</button>
-								))}
+							<div className="grid grid-cols-2 gap-1.5 bg-white/5 p-1 rounded-xl border border-white/10">
+								<button
+									type="button"
+									onClick={() => {
+										triggerHaptic('light');
+										setEdgeBufferMode('file');
+									}}
+									className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+										edgeBufferMode === 'file'
+											? 'bg-primary text-on-primary shadow-xs'
+											: 'text-on-surface hover:bg-white/10'
+									}`}
+								>
+									<span className="truncate">Tệp tin tạm (Disk)</span>
+									<span className={`text-[9px] opacity-80 ${edgeBufferMode === 'file' ? 'text-on-primary' : 'text-on-surface-variant'}`}>
+										Ghi file MP3 đĩa
+									</span>
+								</button>
+								<button
+									type="button"
+									onClick={() => {
+										triggerHaptic('light');
+										setEdgeBufferMode('memory');
+									}}
+									className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+										edgeBufferMode === 'memory'
+											? 'bg-primary text-on-primary shadow-xs'
+											: 'text-on-surface hover:bg-white/10'
+									}`}
+								>
+									<span className="truncate">Bộ nhớ RAM (Memory)</span>
+									<span className={`text-[9px] opacity-80 ${edgeBufferMode === 'memory' ? 'text-on-primary' : 'text-on-surface-variant'}`}>
+										MediaDataSource 0ms I/O
+									</span>
+								</button>
 							</div>
 							<p className="text-[10px] text-on-surface-variant/70 leading-relaxed px-0.5">
-								{activeEdgeBufferMode.description}
+								{edgeBufferMode === 'memory'
+									? '• Mode RAM: Bỏ qua ghi đĩa, nạp trực tiếp vào RAM qua MediaDataSource để tối ưu độ trễ và giảm hao mòn bộ nhớ.'
+									: '• Mode Disk: Lưu file mp3 tạm vào bộ nhớ thiết bị theo cơ chế cuốn chiếu tiêu chuẩn.'}
 							</p>
 						</div>
 

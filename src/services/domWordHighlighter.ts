@@ -29,7 +29,6 @@ export interface ReadAloudHighlightGeometry {
 
 const CSS_WORD_HIGHLIGHT_NAME = 'stories-tts-word';
 const CSS_LINE_HIGHLIGHT_NAME = 'stories-tts-line';
-const CSS_UTTERANCE_HIGHLIGHT_NAME = 'stories-tts-utterance';
 const LINE_Y_TOLERANCE = 4;
 const HIGHLIGHT_STYLE_ID = 'stories-tts-highlight-styles';
 
@@ -41,10 +40,6 @@ function ensureHighlightStyleSheet(): void {
 	style.id = HIGHLIGHT_STYLE_ID;
 	style.textContent = `
 ::highlight(stories-tts-line) {
-	background-color: rgba(147, 197, 253, 0.28);
-	color: inherit;
-}
-::highlight(stories-tts-utterance) {
 	background-color: rgba(147, 197, 253, 0.28);
 	color: inherit;
 }
@@ -65,7 +60,6 @@ export class DomWordHighlighter {
 	private readonly resizeObserver?: ResizeObserver;
 	private currentLineRange: Range | null = null;
 	private currentLineRect: DOMRect | null = null;
-	private currentUtteranceKey: string | null = null;
 
 	constructor(className: string) {
 		this.className = className;
@@ -139,42 +133,6 @@ export class DomWordHighlighter {
 		}
 
 		return { line: this.currentLineRect ?? documentLineRect, word: documentWordRect };
-	}
-
-	public highlightUtteranceAndWord(
-		rootElement: HTMLElement,
-		utteranceStart: number,
-		utteranceLength: number,
-		wordStart: number,
-		wordLength: number
-	): ReadAloudHighlightGeometry | null {
-		if (utteranceLength <= 0 || wordLength <= 0) return null;
-
-		const registry = this.getHighlightRegistry();
-		const HighlightConstructor = this.getHighlightConstructor();
-		if (!registry || !HighlightConstructor) return this.highlight(rootElement, wordStart, wordLength);
-
-		const utteranceRange = this.createTextRange(rootElement, utteranceStart, utteranceLength);
-		const wordRange = this.createTextRange(rootElement, wordStart, wordLength);
-		if (!utteranceRange || !wordRange) return null;
-
-		const utteranceKey = `${utteranceStart}:${utteranceLength}`;
-		if (this.currentUtteranceKey !== utteranceKey) {
-			const utteranceHighlight = new HighlightConstructor(utteranceRange);
-			utteranceHighlight.priority = 1;
-			registry.set(CSS_UTTERANCE_HIGHLIGHT_NAME, utteranceHighlight);
-			this.currentUtteranceKey = utteranceKey;
-		}
-
-		const wordHighlight = new HighlightConstructor(wordRange);
-		wordHighlight.priority = 2;
-		registry.set(CSS_WORD_HIGHLIGHT_NAME, wordHighlight);
-
-		const wordRects = typeof wordRange.getClientRects === 'function' ? Array.from(wordRange.getClientRects()) : [];
-		const utteranceRects = typeof utteranceRange.getClientRects === 'function' ? Array.from(utteranceRange.getClientRects()) : [];
-		const wordRect = this.unionRects(wordRects);
-		const utteranceRect = this.unionRects(utteranceRects);
-		return { line: utteranceRect, word: wordRect };
 	}
 
 	public clear(): void {
@@ -261,11 +219,9 @@ export class DomWordHighlighter {
 		const registry = this.getHighlightRegistry();
 		registry?.delete(CSS_WORD_HIGHLIGHT_NAME);
 		registry?.delete(CSS_LINE_HIGHLIGHT_NAME);
-		registry?.delete(CSS_UTTERANCE_HIGHLIGHT_NAME);
 		this.clearFallbackMarks();
 		this.currentLineRange = null;
 		this.currentLineRect = null;
-		this.currentUtteranceKey = null;
 	}
 
 	private getLineLayout(rootElement: HTMLElement, scrollX: number, scrollY: number): CachedLineLayout {

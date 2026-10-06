@@ -4,7 +4,7 @@ import { SettingsRepository } from '@/repositories/SettingsRepository';
 
 import { useAppStore } from './useAppStore';
 
-import type { EdgeBufferMode, FontType, ReaderConfig, ThemeType } from '@/shared/types';
+import type { FontType, ReaderConfig, ThemeType } from '@/shared/types';
 
 const SETTINGS_KEY = 'stories.ui.config';
 
@@ -87,7 +87,7 @@ interface ReaderConfigStore extends ReaderConfig {
 	setVieneuModel: (model: string) => void;
 	setVieneuParameter: <K extends keyof ReaderConfig>(key: K, value: ReaderConfig[K]) => void;
 	setEdgeVoiceUri: (uri: string) => void;
-	setEdgeBufferMode: (mode: EdgeBufferMode) => void;
+	setEdgeBufferMode: (mode: 'file' | 'memory') => void;
 	setShowTTSControlOnReader: (enabled: boolean) => void;
 	bgmOnlyOnEdgeReadAloud?: boolean;
 	isBgmPreviewing?: boolean;
