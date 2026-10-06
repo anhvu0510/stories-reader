@@ -3,6 +3,9 @@ package com.vula.stories.tts.edge;
 import android.content.Context;
 import android.util.Log;
 
+import com.vula.stories.player.source.AudioSource;
+import com.vula.stories.player.source.FileAudioSource;
+
 import org.json.JSONArray;
 
 import java.io.File;
@@ -87,7 +90,6 @@ public class AudioCacheManager {
             Set<Integer> inFlightIndices
     ) {
         try {
-            // Tier 1: Sliding Window - Xóa sạch các câu quá khứ để câu hiện tại luôn là câu đầu tiên trong cache
             int thresholdIndex = currentChunkIndex - MAX_PAST_CHUNKS_RETAINED;
             for (Map.Entry<Integer, File> entry : readyAudioFiles.entrySet()) {
                 int idx = entry.getKey();
@@ -99,7 +101,6 @@ public class AudioCacheManager {
                 removeMetadata(idx, readyWordBoundaries, inFlightIndices);
             }
 
-            // Tier 2: Hard File Cap - If file count still exceeds quota, delete oldest
             if (readyAudioFiles.size() <= MAX_TOTAL_CACHE_FILES) {
                 return;
             }
@@ -120,13 +121,60 @@ public class AudioCacheManager {
         }
     }
 
+    public void evictOldSources(
+            int currentChunkIndex,
+            Map<Integer, AudioSource> readySources,
+            Map<Integer, JSONArray> readyWordBoundaries,
+            Set<Integer> inFlightIndices
+    ) {
+        if (readySources == null) {
+            return;
+        }
+        try {
+            int thresholdIndex = currentChunkIndex - MAX_PAST_CHUNKS_RETAINED;
+            for (Map.Entry<Integer, AudioSource> entry : readySources.entrySet()) {
+                int idx = entry.getKey();
+                if (idx >= thresholdIndex) {
+                    continue;
+                }
+                AudioSource src = readySources.remove(idx);
+                if (src instanceof FileAudioSource) {
+                    deleteFileSafely(((FileAudioSource) src).getFile());
+                }
+                removeMetadata(idx, readyWordBoundaries, inFlightIndices);
+            }
+
+            if (readySources.size() <= MAX_TOTAL_CACHE_FILES) {
+                return;
+            }
+            List<Integer> sortedIndices = new ArrayList<>(readySources.keySet());
+            Collections.sort(sortedIndices);
+            int toRemove = readySources.size() - MAX_TOTAL_CACHE_FILES;
+            for (int i = 0; i < toRemove && i < sortedIndices.size(); i++) {
+                int idx = sortedIndices.get(i);
+                if (idx >= currentChunkIndex) {
+                    continue;
+                }
+                AudioSource src = readySources.remove(idx);
+                if (src instanceof FileAudioSource) {
+                    deleteFileSafely(((FileAudioSource) src).getFile());
+                }
+                removeMetadata(idx, readyWordBoundaries, inFlightIndices);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error in evictOldSources: " + e.getMessage());
+        }
+    }
+
     public void evictOldMemoryChunks(
             int currentChunkIndex,
             Map<Integer, byte[]> readyAudioBytes,
             Map<Integer, JSONArray> readyWordBoundaries,
             Set<Integer> inFlightIndices
     ) {
-        if (readyAudioBytes == null) return;
+        if (readyAudioBytes == null) {
+            return;
+        }
         try {
             int thresholdIndex = currentChunkIndex - MAX_PAST_CHUNKS_RETAINED;
             for (Integer idx : new ArrayList<>(readyAudioBytes.keySet())) {

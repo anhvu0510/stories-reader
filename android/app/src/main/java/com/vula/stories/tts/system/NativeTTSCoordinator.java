@@ -14,12 +14,14 @@ import com.vula.stories.logging.RemoteLogger;
 import com.vula.stories.player.NativeSpeechQueueManager;
 import com.vula.stories.player.StoriesAudioBridge;
 
+import org.json.JSONObject;
+
 import java.util.List;
 
 /**
  * Điều phối viên phát âm thanh Native TTS (Deep Module).
- * Kết nối AndroidSpeechEngine với NativeSpeechQueueManager, quản lý WakeLock
- * và đồng bộ thông báo / màn hình khóa qua StoriesAudioBridge.
+ * Kết nối AndroidSpeechEngine với NativeSpeechQueueManager, quản lý WakeLock,
+ * hàng đợi đơn/đa câu và đồng bộ thông báo / màn hình khóa qua StoriesAudioBridge.
  */
 public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlListener {
 
@@ -31,6 +33,16 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
         void onWordBoundary(int chunkIndex, int charIndex, int charLength, String text);
         void onPlaybackStateChange(boolean isPlaying, boolean isPaused, boolean isBuffering);
         void onPlaybackComplete();
+
+        void onUtteranceStart(String utteranceId);
+        void onUtteranceDone(String utteranceId);
+        void onUtteranceError(String utteranceId, String error);
+        void onUtteranceRangeStart(String utteranceId, int start, int end);
+    }
+
+    public interface SpeakCallback {
+        void onDone(String utteranceId);
+        void onError(String utteranceId, String error);
     }
 
     private final Context context;
@@ -49,6 +61,7 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
     private volatile boolean isStreamingPlaying = false;
     private int currentPlayIndex = 0;
     private long lastChunkLogTime = 0;
+    private SpeakCallback currentSpeakCallback = null;
 
     public NativeTTSCoordinator(
             Context context,
@@ -102,6 +115,10 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
             public void onStart(String utteranceId) {
                 if (utteranceId != null && utteranceId.startsWith(NativeSpeechQueueManager.UTTERANCE_PREFIX)) {
                     mainHandler.post(() -> queueManager.handleChunkStart(utteranceId));
+                    return;
+                }
+                if (eventListener != null) {
+                    eventListener.onUtteranceStart(utteranceId);
                 }
             }
 
@@ -109,7 +126,18 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
             public void onDone(String utteranceId) {
                 if (utteranceId != null && utteranceId.startsWith(NativeSpeechQueueManager.UTTERANCE_PREFIX)) {
                     mainHandler.post(() -> queueManager.handleChunkDone(utteranceId));
+                    return;
                 }
+                if (eventListener != null) {
+                    eventListener.onUtteranceDone(utteranceId);
+                }
+                synchronized (NativeTTSCoordinator.this) {
+                    if (currentSpeakCallback != null) {
+                        currentSpeakCallback.onDone(utteranceId);
+                        currentSpeakCallback = null;
+                    }
+                }
+                releaseWakeLock();
             }
 
             @Override
@@ -118,13 +146,28 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
                     mainHandler.post(() -> queueManager.handleChunkError(
                             utteranceId, speechEngine.getRawTts(), buildSpeechParams()
                     ));
+                    return;
                 }
+                if (eventListener != null) {
+                    eventListener.onUtteranceError(utteranceId, "Playback failed for " + utteranceId);
+                }
+                synchronized (NativeTTSCoordinator.this) {
+                    if (currentSpeakCallback != null) {
+                        currentSpeakCallback.onError(utteranceId, "Playback failed for " + utteranceId);
+                        currentSpeakCallback = null;
+                    }
+                }
+                releaseWakeLock();
             }
 
             @Override
             public void onRangeStart(String utteranceId, int start, int end, int frame) {
                 if (utteranceId != null && utteranceId.startsWith(NativeSpeechQueueManager.UTTERANCE_PREFIX)) {
                     mainHandler.post(() -> queueManager.handleRangeStart(utteranceId, start, end));
+                    return;
+                }
+                if (eventListener != null) {
+                    eventListener.onUtteranceRangeStart(utteranceId, start, end);
                 }
             }
         });
@@ -134,6 +177,34 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
         Bundle params = new Bundle();
         params.putString(TextToSpeech.Engine.KEY_PARAM_STREAM, String.valueOf(android.media.AudioManager.STREAM_MUSIC));
         return params;
+    }
+
+    public void speak(
+            String text,
+            String voice,
+            Float rate,
+            Float pitch,
+            String utteranceId,
+            SpeakCallback callback
+    ) {
+        speechEngine.applyVoiceSettings(voice, rate, pitch);
+        synchronized (this) {
+            currentSpeakCallback = callback;
+        }
+        acquireWakeLock();
+
+        Bundle params = new Bundle();
+        params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId);
+        int result = speechEngine.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId);
+        if (result != TextToSpeech.SUCCESS) {
+            synchronized (this) {
+                currentSpeakCallback = null;
+            }
+            releaseWakeLock();
+            if (callback != null) {
+                callback.onError(utteranceId, "TTS speak failed with code: " + result);
+            }
+        }
     }
 
     public void playChapter(
@@ -181,14 +252,29 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
     }
 
     private void logChunk(int chunkIndex, String playText, int total) {
-        long now = System.currentTimeMillis();
-        boolean isBoundary = (chunkIndex == 0 || (total > 0 && chunkIndex == total - 1));
-        if (!isBoundary && (now - lastChunkLogTime < MIN_CHUNK_LOG_INTERVAL_MS)) {
-            return;
-        }
-        lastChunkLogTime = now;
         String snippet = RemoteLogger.formatSnippet(playText);
         Log.d(TAG, "[NativeTTS:Direct] Đang đọc câu " + (chunkIndex + 1) + "/" + total + ": \"" + snippet + "\"");
+
+        long now = System.currentTimeMillis();
+        boolean isBoundary = (chunkIndex == 0 || (total > 0 && chunkIndex == total - 1));
+        if (isBoundary || (now - lastChunkLogTime >= MIN_CHUNK_LOG_INTERVAL_MS)) {
+            lastChunkLogTime = now;
+            JSONObject playDetails = new JSONObject();
+            try {
+                playDetails.put("chunkIndex", chunkIndex);
+                playDetails.put("totalChunks", total);
+                if (total > 0) {
+                    int progressPct = (int) Math.round(((double) (chunkIndex + 1) / total) * 100);
+                    playDetails.put("progress", progressPct + "%");
+                }
+                playDetails.put("snippet", snippet);
+            } catch (Exception e) {
+                Log.w(TAG, "Lỗi đóng gói playDetails log: " + e.getMessage());
+            }
+            RemoteLogger.log("NativeTTS_Stream", "info",
+                    "[NativeTTS:Direct] Đang đọc câu " + (chunkIndex + 1) + "/" + total + ": \"" + snippet + "\"",
+                    null, playDetails);
+        }
     }
 
     private void handlePlaybackStateChange(boolean isPlaying, boolean isPaused, boolean isBuffering) {
@@ -240,6 +326,13 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
         StoriesAudioBridge.unregisterListener(this);
         StoriesAudioBridge.stopPlayback(context);
         releaseWakeLock();
+
+        synchronized (this) {
+            if (currentSpeakCallback != null) {
+                currentSpeakCallback.onDone("");
+                currentSpeakCallback = null;
+            }
+        }
 
         if (emitEvent && eventListener != null) {
             eventListener.onPlaybackStateChange(false, false, false);

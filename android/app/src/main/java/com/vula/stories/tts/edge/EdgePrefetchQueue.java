@@ -26,16 +26,16 @@ import okhttp3.WebSocket;
 /**
  * Quản lý hàng đợi tải trước (Prefetch Queue) cho luồng đọc âm thanh Edge TTS.
  * Đóng gói quy trình:
- * - Tải trước cuốn chiếu (lookahead 1-2 câu).
- * - Giới hạn số lượng kết nối đồng thời (Max In-Flight = 2).
+ * - Tải trước cuốn chiếu (lookahead 10 câu - AudioCacheManager.BUFFER_LOOKAHEAD).
+ * - Giới hạn số lượng kết nối đồng thời (Max In-Flight = 3).
  * - Lưu trữ kết quả vào RAM (MemoryAudioSource) hoặc Tệp đĩa (FileAudioSource).
  * - Tự động thử lại khi lỗi mạng (Linear Backoff qua PrefetchRetryManager).
  */
 public class EdgePrefetchQueue {
 
     private static final String TAG = "EdgePrefetchQueue";
-    public static final int MAX_IN_FLIGHT = 2;
-    public static final int DEFAULT_LOOKAHEAD = 2;
+    public static final int MAX_IN_FLIGHT = 3;
+    public static final int DEFAULT_LOOKAHEAD = AudioCacheManager.BUFFER_LOOKAHEAD;
 
     public interface PrefetchListener {
         void onChunkReady(int index, AudioSource source);
@@ -89,7 +89,7 @@ public class EdgePrefetchQueue {
     }
 
     /**
-     * Kích hoạt tải trước các câu tiếp theo theo số lượng chỉ định.
+     * Kích hoạt tải trước các câu tiếp theo theo số lượng chỉ định (Lookahead).
      */
     public synchronized void prefetchAhead(int currentIndex, int lookaheadCount) {
         if (chunks.isEmpty() || currentIndex < 0) {
@@ -120,7 +120,6 @@ public class EdgePrefetchQueue {
             return;
         }
 
-        // Kiểm tra nếu câu đã có sẵn trên tệp đĩa cache (chế độ File)
         boolean isMemoryMode = "memory".equalsIgnoreCase(bufferMode);
         if (!isMemoryMode) {
             File cachedFile = cacheManager.getChunkFile(index);
@@ -228,12 +227,50 @@ public class EdgePrefetchQueue {
         }
     }
 
+    public void evictOldChunks(int currentIdx) {
+        cacheManager.evictOldSources(currentIdx, readySources, wordBoundariesSource, inFlightIndices);
+    }
+
     public AudioSource getAudioSource(int index) {
         return readySources.get(index);
     }
 
     public boolean isChunkReady(int index) {
         return readySources.containsKey(index);
+    }
+
+    public int getFirstCachedChunkIndex() {
+        int minIndex = Integer.MAX_VALUE;
+        for (Integer idx : readySources.keySet()) {
+            if (idx != null && idx < minIndex) {
+                minIndex = idx;
+            }
+        }
+        return minIndex == Integer.MAX_VALUE ? -1 : minIndex;
+    }
+
+    public int getLastCachedChunkIndex() {
+        int maxIndex = -1;
+        for (Integer idx : readySources.keySet()) {
+            if (idx != null && idx > maxIndex) {
+                maxIndex = idx;
+            }
+        }
+        return maxIndex;
+    }
+
+    public int getAheadCachedCount(int currentIdx) {
+        int count = 0;
+        for (Integer idx : readySources.keySet()) {
+            if (idx != null && idx > currentIdx) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public int getCachedChunksCount() {
+        return readySources.size();
     }
 
     public Map<Integer, JSONArray> getWordBoundariesSource() {

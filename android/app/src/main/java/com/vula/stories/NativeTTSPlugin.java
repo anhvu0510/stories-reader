@@ -1,6 +1,5 @@
 package com.vula.stories;
 
-import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
 
@@ -31,7 +30,6 @@ public class NativeTTSPlugin extends Plugin {
 
     private AndroidSpeechEngine speechEngine;
     private NativeTTSCoordinator coordinator;
-    private PluginCall currentSpeakCall = null;
 
     @Override
     public void load() {
@@ -75,6 +73,37 @@ public class NativeTTSPlugin extends Plugin {
             @Override
             public void onPlaybackComplete() {
                 notifyListeners("onPlaybackComplete", new JSObject());
+            }
+
+            @Override
+            public void onUtteranceStart(String utteranceId) {
+                JSObject data = new JSObject();
+                data.put("utteranceId", utteranceId);
+                notifyListeners("onStart", data);
+            }
+
+            @Override
+            public void onUtteranceDone(String utteranceId) {
+                JSObject data = new JSObject();
+                data.put("utteranceId", utteranceId);
+                notifyListeners("onDone", data);
+            }
+
+            @Override
+            public void onUtteranceError(String utteranceId, String error) {
+                JSObject data = new JSObject();
+                data.put("utteranceId", utteranceId);
+                data.put("error", error);
+                notifyListeners("onError", data);
+            }
+
+            @Override
+            public void onUtteranceRangeStart(String utteranceId, int start, int end) {
+                JSObject data = new JSObject();
+                data.put("utteranceId", utteranceId);
+                data.put("start", start);
+                data.put("end", end);
+                notifyListeners("onRangeStart", data);
             }
         };
     }
@@ -221,15 +250,19 @@ public class NativeTTSPlugin extends Plugin {
             Float pitch = call.getFloat("pitch", 1.0f);
             String utteranceId = call.getString("utteranceId", String.valueOf(System.currentTimeMillis()));
 
-            speechEngine.applyVoiceSettings(voice, rate, pitch);
-            Bundle params = new Bundle();
-            params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId);
-            int res = speechEngine.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId);
-            if (res != TextToSpeech.SUCCESS) {
-                call.reject("TTS speak failed with code: " + res);
-                return;
-            }
-            call.resolve();
+            coordinator.speak(text, voice, rate, pitch, utteranceId, new NativeTTSCoordinator.SpeakCallback() {
+                @Override
+                public void onDone(String id) {
+                    JSObject data = new JSObject();
+                    data.put("utteranceId", id);
+                    call.resolve(data);
+                }
+
+                @Override
+                public void onError(String id, String error) {
+                    call.reject(error);
+                }
+            });
         });
     }
 
