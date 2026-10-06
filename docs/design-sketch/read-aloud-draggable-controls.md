@@ -12,6 +12,8 @@
 
 User approved a narrower implementation: **không đổi style hiện tại, chỉ đóng khung trong suốt và cho kéo dọc**. Preserve every existing control button's classes, size, icons, colors, spacing and callbacks. Add only a transparent rounded enclosure with a subtle existing-primary border and a separate transparent grip. No new surface fill, font, palette, dependency, or TTS pipeline change. User requirements supersede visual redesign recommendations from the direction skills.
 
+2026-10-07 user refinement: smaller mobile density within the same approved style. Frame padding 6px, frame/handle gap 4px, grip 36×24px; existing playback buttons stay unchanged. No whole-frame scaling, color or icon-family change. This grip is smaller than the previous 44px recommendation; its 24px height is an explicit density/usability tradeoff to validate on Android.
+
 ## Sketch Board
 
 | Area | Decision to review | Source |

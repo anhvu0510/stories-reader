@@ -9,6 +9,8 @@ interface ScrollFollowerEnvironment {
 	prefersReducedMotion: () => boolean;
 }
 
+const READING_ANCHOR_RATIO = 0.4;
+
 const createBrowserEnvironment = (): ScrollFollowerEnvironment => ({
 	getScrollY: () => window.scrollY,
 	getViewportHeight: () => window.innerHeight,
@@ -129,7 +131,7 @@ export class ReadAloudScrollFollower {
 
 		if (!recenter && viewportTop >= viewportHeight * 0.25 && viewportBottom <= viewportHeight * 0.75) return;
 		const maxScrollY = this.environment.getMaxScrollY?.() ?? Infinity;
-		this.targetY = Math.min(maxScrollY, Math.max(0, line.top + line.height / 2 - viewportHeight * 0.5));
+		this.targetY = Math.min(maxScrollY, Math.max(0, line.top + line.height / 2 - viewportHeight * READING_ANCHOR_RATIO));
 		if (Math.abs(this.targetY - scrollY) < 0.75) return;
 		if (this.environment.prefersReducedMotion()) {
 			this.environment.scrollTo(this.targetY);

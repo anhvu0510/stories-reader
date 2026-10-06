@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="vi">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kiểm thử control mobile</title>
+<style>body{margin:0;background:#172033;color:#dce6f2;min-height:1500px;font-family:system-ui,sans-serif}main{max-width:420px;margin:auto;padding:80px 24px}h1{font-size:18px}p{font-family:Georgia,serif;font-size:23px;line-height:1.9}.note{font-family:system-ui,sans-serif;font-size:14px;line-height:1.6;color:#aebdd0}</style></head>
+<body><main><h1>Khung mobile nhỏ gọn</h1><p class="note">Component thật, dữ liệu kiểm thử. Giữ style nút cũ; chỉ thu nhỏ khung và tay nắm. Không phát âm thanh.</p><p>Người lữ khách dừng chân dưới tán cây. Một làn gió nhẹ lướt qua. Xa xa, tiếng chuông vang lên giữa thung lũng yên bình.</p><p>Buổi chiều trôi chậm. Những áng mây dần chuyển sắc phía sau ngọn núi.</p><p class="note" id="status" role="status">Sẵn sàng kiểm tra</p></main><div id="controls"></div>
+<script type="module">
+import '/src/index.css';
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {VerticalBatchChapterNav} from '/src/features/reader/components/VerticalBatchChapterNav.tsx';
+document.documentElement.classList.add('dark');
+const status = document.getElementById('status');
+createRoot(document.getElementById('controls')).render(React.createElement(VerticalBatchChapterNav,{
+  isVisible:true,isTTSActive:true,isTTSPlaying:true,
+  onToggleBgm:()=>{status.textContent='Đã bấm nhạc nền';},
+  onTTSPause:()=>{status.textContent='Đã bấm pause';},
+  onTTSNext:()=>{status.textContent='Đã bấm đoạn sau';},
+  onTTSStop:()=>{status.textContent='Đã bấm dừng';}
+}));
+</script></body></html>

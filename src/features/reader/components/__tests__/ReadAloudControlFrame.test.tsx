@@ -37,6 +37,14 @@ describe('ReadAloudControlFrame vertical movement', () => {
 		vi.unstubAllGlobals();
 	});
 
+	it('uses a compact transparent mobile shell while leaving playback controls unchanged', () => {
+		const { frame, handle } = setupFrame();
+		expect(frame.className).toContain('p-1.5');
+		expect(frame.className).toContain('gap-1');
+		expect(frame.className).toContain('bg-transparent');
+		expect(handle.className).toContain('w-9 h-6');
+	});
+
 	it('moves the entire frame only vertically from the handle without invoking playback', () => {
 		const { frame, handle, capture, release, offset, onStop } = setupFrame();
 		fireEvent.pointerDown(handle, { pointerId: 2, clientY: 500, button: 0 });

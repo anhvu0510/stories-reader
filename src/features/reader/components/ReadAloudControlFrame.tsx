@@ -119,7 +119,7 @@ export function ReadAloudControlFrame({ active, isVisible, children }: ReadAloud
 			ref={frameRef}
 			role={active ? 'group' : undefined}
 			aria-label={active ? 'Điều khiển đọc thành tiếng' : undefined}
-			className={`w-fit flex flex-col items-center gap-2 pointer-events-auto box-border transform-gpu [--reader-control-safe-top:env(safe-area-inset-top,0px)] [--reader-control-safe-bottom:env(safe-area-inset-bottom,0px)] ${active ? 'rounded-[24px] border border-primary/25 bg-transparent p-2 max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-180px)] overflow-y-auto' : ''}`}
+			className={`w-fit flex flex-col items-center ${active ? 'gap-1' : 'gap-2'} pointer-events-auto box-border transform-gpu [--reader-control-safe-top:env(safe-area-inset-top,0px)] [--reader-control-safe-bottom:env(safe-area-inset-bottom,0px)] ${active ? 'rounded-[24px] border border-primary/25 bg-transparent p-1.5 max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-180px)] overflow-y-auto' : ''}`}
 		>
 			{active && (
 				<button
@@ -128,7 +128,7 @@ export function ReadAloudControlFrame({ active, isVisible, children }: ReadAloud
 					aria-label="Kéo thanh điều khiển lên hoặc xuống"
 					title="Kéo lên/xuống hoặc dùng phím mũi tên"
 					disabled={!isVisible}
-					className="w-11 h-11 shrink-0 flex items-center justify-center bg-transparent text-primary/70 cursor-ns-resize touch-none select-none rounded-full focus-visible:outline-2 focus-visible:outline-primary"
+					className="w-9 h-6 shrink-0 flex items-center justify-center bg-transparent text-primary/70 cursor-ns-resize touch-none select-none rounded-full focus-visible:outline-2 focus-visible:outline-primary"
 					onPointerDown={startDrag}
 					onPointerMove={moveDrag}
 					onPointerUp={finishDrag}

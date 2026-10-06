@@ -22,7 +22,7 @@ describe('ReadAloudScrollFollower', () => {
 		selected = false;
 		follower.notifySelectionChange();
 		vi.advanceTimersByTime(300);
-		expect(scrollTo).toHaveBeenCalledWith(115);
+		expect(scrollTo).toHaveBeenCalledWith(195);
 	});
 	it('clamps centering to the page boundary so the animation can finish', () => {
 		const scrollTo = vi.fn();
@@ -44,7 +44,7 @@ describe('ReadAloudScrollFollower', () => {
 		follower.follow(new DOMRect(0, 570, 300, 30));
 		expect(scrollTo).not.toHaveBeenCalled();
 		follower.follow(new DOMRect(0, 600, 300, 30));
-		expect(scrollTo).toHaveBeenCalledWith(215);
+		expect(scrollTo).toHaveBeenCalledWith(295);
 	});
 
 	it('reclaims following only after scrolling settles with the active line visible', () => {
@@ -67,7 +67,7 @@ describe('ReadAloudScrollFollower', () => {
 		vi.advanceTimersByTime(100);
 		expect(scrollTo).not.toHaveBeenCalled();
 		vi.advanceTimersByTime(200);
-		expect(scrollTo).toHaveBeenCalledWith(515);
+		expect(scrollTo).toHaveBeenCalledWith(595);
 	});
 
 	it('cancels pending reacquisition when reading is paused or stopped', () => {
@@ -100,7 +100,7 @@ describe('ReadAloudScrollFollower', () => {
 		expect(scrollTo).not.toHaveBeenCalled();
 		follower.endUserInteraction();
 		vi.advanceTimersByTime(300);
-		expect(scrollTo).toHaveBeenCalledWith(135);
+		expect(scrollTo).toHaveBeenCalledWith(215);
 	});
 	it('coalesces changing line targets into one interruptible animation', () => {
 		let scrollY = 0;
@@ -131,7 +131,7 @@ describe('ReadAloudScrollFollower', () => {
 			callback(frame * 16);
 		}
 
-		expect(scrollY).toBeCloseTo(1200 + 15 - 800 * 0.5, 0);
+		expect(scrollY).toBeCloseTo(1200 + 15 - 800 * 0.4, 0);
 		expect(scrollTo.mock.calls.length).toBeLessThan(60);
 	});
 
