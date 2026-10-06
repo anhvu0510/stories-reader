@@ -1,7 +1,7 @@
 {
-  "version": "1.0.339",
+  "version": "1.0.340",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "36f8481094ba4209757dda0fcb15596f34edd738a45e1577ea53b2ffcfca127d",
-  "releaseNotes": "refactor: revert adaptive clause pipelining and restore chunk-based streaming TTS architecture",
-  "updatedAt": "2026-10-06T15:19:42Z"
+  "checksum": "b4b55901898d137b2ccda9ede7ed7d5cc8e4d88e6574d4ff093ee9c5554ffe4d",
+  "releaseNotes": "feat: add remote telemetry logging for EdgeTTS streaming errors, pause, resume, and gateway configuration",
+  "updatedAt": "2026-10-06T15:35:08Z"
 }
