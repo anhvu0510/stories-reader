@@ -11,8 +11,7 @@ import com.vula.stories.player.GaplessStreamPlayer;
 import com.vula.stories.player.StoriesAudioBridge;
 import com.vula.stories.player.media3.Media3PlaybackAdapter;
 import com.vula.stories.player.source.AudioSource;
-
-import org.json.JSONObject;
+import com.vula.stories.tts.edge.segment.ClauseSegment;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,8 +20,10 @@ import java.util.Locale;
 
 /**
  * Điều phối viên phiên phát streaming Edge TTS (Deep Module).
- * Quản lý vòng đời phát âm thanh, nạp trước (prefetch), chuyển tiếp không gián đoạn (gapless),
- * và đồng bộ thông báo / màn hình khóa qua StoriesAudioBridge.
+ * Tích hợp thuật toán Adaptive Clause Pipelining:
+ * - Chia câu thành các phân đoạn nhỏ để phát ngay lập tức (TTFA < 300ms).
+ * - Nối âm thanh các phân đoạn bằng 0ms gapless transition.
+ * - Bảo toàn chỉ số câu (chunkIndex) và ranh giới từ (word boundary) cho UI.
  */
 public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControlListener {
 
@@ -55,6 +56,7 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
 
     private boolean isStreamingPlaying = false;
     private int currentPlayIndex = 0;
+    private int currentSegmentIndex = 0;
     private long streamingSessionId = 0;
     private long lastChunkLogTime = 0;
 
@@ -101,7 +103,7 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
 
             @Override
             public void onAllCompleted() {
-                // Đã được xử lý trong handleChunkCompleted
+                // Đã xử lý trong handleChunkCompleted
             }
         };
     }
@@ -125,6 +127,7 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
             currentChunks.addAll(chunks);
         }
         currentPlayIndex = Math.max(0, Math.min(startIndex, currentChunks.size() - 1));
+        currentSegmentIndex = 0;
         currentVoice = voice;
         currentRate = rate;
         currentPitch = pitch;
@@ -137,11 +140,13 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
         prefetchQueue.configure(currentChunks, voice, rate, pitch, currentBufferMode, createPrefetchListener(sessionId));
         player.acquireWakeLock();
         player.reset();
+        player.setWordBoundariesSource(prefetchQueue.getWordBoundariesSource());
 
         if (eventListener != null) {
             eventListener.onPlaybackStateChange(true, false, true);
         }
 
+        // Tải ưu tiên phân đoạn đầu tiên của câu bắt đầu (TTFA < 300ms)
         prefetchQueue.startFetch(currentPlayIndex);
         prefetchQueue.prefetchAhead(currentPlayIndex, BUFFER_LOOKAHEAD);
     }
@@ -149,38 +154,69 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
     private EdgePrefetchQueue.PrefetchListener createPrefetchListener(final long sessionId) {
         return new EdgePrefetchQueue.PrefetchListener() {
             @Override
-            public void onChunkReady(int index, AudioSource source) {
-                onAudioSourceReady(index, source, sessionId);
+            public void onSegmentReady(ClauseSegment segment, AudioSource source) {
+                onAudioSourceReady(segment, source, sessionId);
             }
 
             @Override
-            public void onChunkFailed(int index, String reason) {
-                onAudioSourceFailed(index, reason, sessionId);
+            public void onSegmentFailed(ClauseSegment segment, String reason) {
+                onAudioSourceFailed(segment, reason, sessionId);
             }
         };
     }
 
-    private synchronized void onAudioSourceReady(int index, AudioSource source, long sessionId) {
+    private synchronized void onAudioSourceReady(ClauseSegment segment, AudioSource source, long sessionId) {
         if (!isStreamingPlaying || sessionId != streamingSessionId) {
             return;
         }
 
-        if (index == currentPlayIndex && !player.hasCurrentPlayer()) {
-            player.start(index, source);
-        } else if (index == currentPlayIndex + 1 && player.hasCurrentPlayer() && !player.hasNextPlayer()) {
-            player.prepareNext(index, source);
+        boolean isTargetCurrent = (segment.parentChunkIndex == currentPlayIndex && segment.segmentIndex == currentSegmentIndex);
+        if (isTargetCurrent && !player.hasCurrentPlayer()) {
+            player.start(segment.parentChunkIndex, source);
+            prepareNextSubSegment(segment);
+            return;
+        }
+
+        ClauseSegment activeSeg = getCurrentClauseSegment();
+        ClauseSegment nextNeeded = prefetchQueue.getNextSegment(activeSeg);
+        boolean isNextTarget = (nextNeeded != null && nextNeeded.parentChunkIndex == segment.parentChunkIndex
+                && nextNeeded.segmentIndex == segment.segmentIndex);
+
+        if (isNextTarget && player.hasCurrentPlayer() && !player.hasNextPlayer()) {
+            player.prepareNext(segment.parentChunkIndex, source);
         }
 
         prefetchQueue.prefetchAhead(currentPlayIndex, BUFFER_LOOKAHEAD);
     }
 
-    private synchronized void onAudioSourceFailed(int index, String reason, long sessionId) {
+    private ClauseSegment getCurrentClauseSegment() {
+        List<ClauseSegment> segs = prefetchQueue.getSegments(currentPlayIndex);
+        if (currentSegmentIndex >= 0 && currentSegmentIndex < segs.size()) {
+            return segs.get(currentSegmentIndex);
+        }
+        return prefetchQueue.getFirstSegment(currentPlayIndex);
+    }
+
+    private void prepareNextSubSegment(ClauseSegment current) {
+        ClauseSegment next = prefetchQueue.getNextSegment(current);
+        if (next == null || !prefetchQueue.isSegmentReady(next) || player.hasNextPlayer()) {
+            return;
+        }
+        AudioSource nextSource = prefetchQueue.getSegmentAudioSource(next);
+        if (nextSource != null && nextSource.isValid()) {
+            player.prepareNext(next.parentChunkIndex, nextSource);
+        }
+    }
+
+    private synchronized void onAudioSourceFailed(ClauseSegment segment, String reason, long sessionId) {
         if (!isStreamingPlaying || sessionId != streamingSessionId) {
             return;
         }
-        Log.w(TAG, "Tải audio câu " + index + " thất bại: " + reason);
-        if (index == currentPlayIndex && !player.hasCurrentPlayer()) {
-            int nextIndex = index + 1;
+        Log.w(TAG, "Tải phân đoạn " + segment.parentChunkIndex + ":" + segment.segmentIndex + " thất bại: " + reason);
+
+        boolean isTargetCurrent = (segment.parentChunkIndex == currentPlayIndex && segment.segmentIndex == currentSegmentIndex);
+        if (isTargetCurrent && !player.hasCurrentPlayer()) {
+            int nextIndex = segment.parentChunkIndex + 1;
             if (nextIndex < currentChunks.size()) {
                 seek(nextIndex);
                 return;
@@ -193,8 +229,8 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
     }
 
     private void handlePlayerChunkStart(int chunkIndex) {
-        currentPlayIndex = chunkIndex;
-        if (eventListener != null) {
+        // Chỉ thông báo onChunkStart cho Web UI khi phân đoạn đầu tiên của câu bắt đầu đọc
+        if (currentSegmentIndex == 0 && eventListener != null) {
             eventListener.onChunkStart(chunkIndex);
         }
 
@@ -204,7 +240,9 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
                 chunkIndex > 0, chunkIndex < currentChunks.size() - 1, chunkIndex, currentChunks.size()
         );
 
-        logChunkProgress(chunkIndex, playText);
+        if (currentSegmentIndex == 0) {
+            logChunkProgress(chunkIndex, playText);
+        }
         prefetchQueue.prefetchAhead(chunkIndex, BUFFER_LOOKAHEAD);
     }
 
@@ -228,7 +266,7 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
         if (!isStreamingPlaying && !isPlaying) {
             return;
         }
-        int idx = player.getCurrentChunkIndex();
+        int idx = currentPlayIndex;
         String text = (idx >= 0 && idx < currentChunks.size()) ? currentChunks.get(idx) : "";
         StoriesAudioBridge.updatePlayback(
                 context, currentBookTitle, currentChapterTitle, text, isPlaying,
@@ -236,28 +274,28 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
         );
     }
 
-    private void handleChunkCompleted(int completedIndex) {
+    private void handleChunkCompleted(int completedChunkIndex) {
         if (!isStreamingPlaying) {
             return;
         }
-        int nextIndex = completedIndex + 1;
-        currentPlayIndex = nextIndex;
 
-        if (nextIndex < currentChunks.size()) {
-            if (player.hasCurrentPlayer() && player.getCurrentChunkIndex() == nextIndex) {
-                prefetchQueue.prefetchAhead(nextIndex, BUFFER_LOOKAHEAD);
-                return;
-            }
-            if (eventListener != null) {
-                eventListener.onPlaybackStateChange(true, false, true);
-            }
-            AudioSource nextSource = prefetchQueue.getAudioSource(nextIndex);
-            if (nextSource != null && nextSource.isValid()) {
-                player.start(nextIndex, nextSource);
-            } else {
-                prefetchQueue.startFetch(nextIndex);
-            }
-            prefetchQueue.prefetchAhead(nextIndex, BUFFER_LOOKAHEAD);
+        List<ClauseSegment> segs = prefetchQueue.getSegments(currentPlayIndex);
+
+        // 1. Nếu câu hiện tại còn phân đoạn con tiếp theo
+        if (currentSegmentIndex + 1 < segs.size()) {
+            currentSegmentIndex++;
+            ClauseSegment nextSeg = segs.get(currentSegmentIndex);
+            advanceToSubSegment(nextSeg);
+            return;
+        }
+
+        // 2. Đã đọc hết toàn bộ phân đoạn của câu hiện tại -> Chuyển sang câu tiếp theo
+        int nextChunkIndex = currentPlayIndex + 1;
+        currentPlayIndex = nextChunkIndex;
+        currentSegmentIndex = 0;
+
+        if (nextChunkIndex < currentChunks.size()) {
+            advanceToNextChunk(nextChunkIndex);
             return;
         }
 
@@ -267,21 +305,70 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
         }
     }
 
+    private void advanceToSubSegment(ClauseSegment nextSeg) {
+        if (player.hasCurrentPlayer()) {
+            // GaplessStreamPlayer đã tự động chuyển 0ms sang nextPlayer
+            prepareNextSubSegment(nextSeg);
+            prefetchQueue.prefetchAhead(currentPlayIndex, BUFFER_LOOKAHEAD);
+            return;
+        }
+
+        if (eventListener != null) {
+            eventListener.onPlaybackStateChange(true, false, true);
+        }
+        AudioSource source = prefetchQueue.getSegmentAudioSource(nextSeg);
+        if (source != null && source.isValid()) {
+            player.start(currentPlayIndex, source);
+            prepareNextSubSegment(nextSeg);
+        } else {
+            prefetchQueue.startFetch(nextSeg);
+        }
+        prefetchQueue.prefetchAhead(currentPlayIndex, BUFFER_LOOKAHEAD);
+    }
+
+    private void advanceToNextChunk(int nextChunkIndex) {
+        ClauseSegment firstSeg = prefetchQueue.getFirstSegment(nextChunkIndex);
+        if (player.hasCurrentPlayer()) {
+            // Đã chuyển 0ms sang nextPlayer của câu tiếp theo
+            if (firstSeg != null) {
+                prepareNextSubSegment(firstSeg);
+            }
+            prefetchQueue.prefetchAhead(nextChunkIndex, BUFFER_LOOKAHEAD);
+            return;
+        }
+
+        if (eventListener != null) {
+            eventListener.onPlaybackStateChange(true, false, true);
+        }
+        AudioSource nextSource = prefetchQueue.getAudioSource(nextChunkIndex);
+        if (nextSource != null && nextSource.isValid() && firstSeg != null) {
+            player.start(nextChunkIndex, nextSource);
+            prepareNextSubSegment(firstSeg);
+        } else {
+            prefetchQueue.startFetch(nextChunkIndex);
+        }
+        prefetchQueue.prefetchAhead(nextChunkIndex, BUFFER_LOOKAHEAD);
+    }
+
     public synchronized void seek(int targetIndex) {
         if (targetIndex < 0 || targetIndex >= currentChunks.size()) {
             return;
         }
         streamingSessionId++;
         currentPlayIndex = targetIndex;
+        currentSegmentIndex = 0;
         player.reset();
+        player.setWordBoundariesSource(prefetchQueue.getWordBoundariesSource());
 
         if (eventListener != null) {
             eventListener.onPlaybackStateChange(true, false, true);
         }
 
+        ClauseSegment first = prefetchQueue.getFirstSegment(targetIndex);
         AudioSource source = prefetchQueue.getAudioSource(targetIndex);
-        if (source != null && source.isValid()) {
+        if (source != null && source.isValid() && first != null) {
             player.start(targetIndex, source);
+            prepareNextSubSegment(first);
         } else {
             prefetchQueue.startFetch(targetIndex);
         }
@@ -312,6 +399,7 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
         streamingSessionId++;
         isStreamingPlaying = false;
         currentPlayIndex = 0;
+        currentSegmentIndex = 0;
         player.releaseWakeLock();
         player.reset();
         prefetchQueue.cancelAll();
