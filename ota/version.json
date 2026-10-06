@@ -1,7 +1,7 @@
 {
-  "version": "1.0.340",
+  "version": "1.0.341",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "b4b55901898d137b2ccda9ede7ed7d5cc8e4d88e6574d4ff093ee9c5554ffe4d",
-  "releaseNotes": "feat: add remote telemetry logging for EdgeTTS streaming errors, pause, resume, and gateway configuration",
-  "updatedAt": "2026-10-06T15:35:08Z"
+  "checksum": "6debc015c3a440cf88166631f64ea288830946ec130e6b51a33784b75fa6c5c6",
+  "releaseNotes": "fix: resolve Media3 foreground service crash and optimize read-aloud scroll following behavior",
+  "updatedAt": "2026-10-06T15:53:39Z"
 }
