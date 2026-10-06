@@ -21,6 +21,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
+import org.json.JSONObject;
 
 /**
  * Capacitor Plugin cho Edge TTS (Thin IPC Controller).
@@ -137,6 +138,19 @@ public class EdgeTTSNativePlugin extends Plugin {
 
             @Override
             public void onError(int statusCode, String message) {
+                JSONObject errDetails = new JSONObject();
+                try {
+                    errDetails.put("voice", voice);
+                    errDetails.put("rate", rate);
+                    errDetails.put("textLength", text.length());
+                    errDetails.put("statusCode", statusCode);
+                    errDetails.put("fullText", text);
+                } catch (Exception ignored) {
+                }
+                RemoteLogger.log("EdgeTTSNative_Stream", "error",
+                        "[EdgeTTS] Kết nối Edge WebSocket thất bại (code: " + statusCode + ") - Nội dung: \""
+                                + RemoteLogger.formatSnippet(text) + "\"", message, errDetails);
+
                 JSObject details = new JSObject();
                 details.put("statusCode", statusCode);
                 details.put("message", message);
@@ -151,6 +165,11 @@ public class EdgeTTSNativePlugin extends Plugin {
         if (chunksArray == null || chunksArray.length() == 0) {
             call.reject("Chunks array cannot be empty", "INVALID_INPUT");
             return;
+        }
+
+        String gatewayUrl = call.getString("gatewayUrl", "");
+        if (!gatewayUrl.isEmpty()) {
+            RemoteLogger.setGatewayUrl(gatewayUrl);
         }
 
         int startIndex = call.getInt("startIndex", 0);

@@ -203,6 +203,23 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
             return;
         }
         Log.w(TAG, "Tải audio câu " + index + " thất bại: " + reason);
+        String text = (index >= 0 && index < currentChunks.size()) ? currentChunks.get(index) : "";
+        JSONObject failDetails = new JSONObject();
+        try {
+            failDetails.put("chunkIndex", index);
+            failDetails.put("totalChunks", currentChunks.size());
+            failDetails.put("bufferMode", currentBufferMode);
+            failDetails.put("snippet", RemoteLogger.formatSnippet(text));
+            failDetails.put("error", reason);
+        } catch (Exception e) {
+            Log.w(TAG, "Lỗi đóng gói failDetails telemetry: " + e.getMessage());
+        }
+        RemoteLogger.log("EdgeTTSNative_Stream", "error",
+                "[EdgeTTS:Stream][" + currentBufferMode.toUpperCase(Locale.ROOT) + "] Thất bại tải audio câu "
+                        + (index + 1) + "/" + currentChunks.size() + " sau nhiều lần thử: " + reason
+                        + " - Nội dung: \"" + RemoteLogger.formatSnippet(text) + "\"",
+                reason, failDetails);
+
         if (index == currentPlayIndex && !player.hasCurrentPlayer()) {
             skipFailedChunk(index, reason);
         }
@@ -386,6 +403,21 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
             return;
         }
         player.pause();
+        int currentIdx = (player != null) ? player.getCurrentChunkIndex() : -1;
+        String pausedText = (currentIdx >= 0 && currentIdx < currentChunks.size()) ? currentChunks.get(currentIdx) : "";
+        JSONObject pauseDetails = new JSONObject();
+        try {
+            pauseDetails.put("chunkIndex", currentIdx);
+            pauseDetails.put("totalChunks", currentChunks.size());
+            pauseDetails.put("bufferMode", currentBufferMode);
+            pauseDetails.put("snippet", RemoteLogger.formatSnippet(pausedText));
+        } catch (Exception e) {
+            Log.w(TAG, "Lỗi đóng gói pauseDetails telemetry: " + e.getMessage());
+        }
+        RemoteLogger.log("EdgeTTSNative_Stream", "info",
+                "[EdgeTTS:Stream][" + currentBufferMode.toUpperCase(Locale.ROOT) + "] Tạm dừng đọc ở câu "
+                        + (currentIdx + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(pausedText) + "\"",
+                null, pauseDetails);
     }
 
     public void resume() {
@@ -394,6 +426,21 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
             return;
         }
         player.resume();
+        int currentIdx = (player != null) ? player.getCurrentChunkIndex() : -1;
+        String resumeText = (currentIdx >= 0 && currentIdx < currentChunks.size()) ? currentChunks.get(currentIdx) : "";
+        JSONObject resumeDetails = new JSONObject();
+        try {
+            resumeDetails.put("chunkIndex", currentIdx);
+            resumeDetails.put("totalChunks", currentChunks.size());
+            resumeDetails.put("bufferMode", currentBufferMode);
+            resumeDetails.put("snippet", RemoteLogger.formatSnippet(resumeText));
+        } catch (Exception e) {
+            Log.w(TAG, "Lỗi đóng gói resumeDetails telemetry: " + e.getMessage());
+        }
+        RemoteLogger.log("EdgeTTSNative_Stream", "info",
+                "[EdgeTTS:Stream][" + currentBufferMode.toUpperCase(Locale.ROOT) + "] Tiếp tục đọc câu "
+                        + (currentIdx + 1) + "/" + currentChunks.size() + ": \"" + RemoteLogger.formatSnippet(resumeText) + "\"",
+                null, resumeDetails);
         prefetchQueue.prefetchAhead(currentPlayIndex, BUFFER_LOOKAHEAD);
     }
 
