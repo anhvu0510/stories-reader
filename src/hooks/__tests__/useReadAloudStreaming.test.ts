@@ -598,6 +598,21 @@ describe('useReadAloud Edge word boundaries', () => {
 		unmount();
 	});
 
+	it('starts a native chapter through the main playback pipeline when reading from a selection before playback', async () => {
+		useReaderConfigStore.setState({ ttsEngine: 'edge', edgeBufferMode: 'media3' });
+		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
+		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+		const start = vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue(undefined);
+		const seek = vi.spyOn(EdgeTTSNativeStreamService, 'seekToChunk').mockResolvedValue(undefined);
+		const paragraphs = ['Đoạn đầu.', 'Đoạn được chọn để đọc.'];
+		const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
+		act(() => result.current.jumpToContent(1, 5));
+		expect(start).toHaveBeenCalledWith(expect.objectContaining({ bufferMode: 'media3', startIndex: 1, utterances: expect.any(Array) }));
+		expect(start.mock.calls[0][0].utterances?.[1]).toMatchObject({ paragraphIndex: 1, sourceStart: 5, text: 'được chọn để đọc.' });
+		expect(seek).not.toHaveBeenCalled();
+		unmount();
+	});
+
 	it('uses the same rendered-line and word highlighter for Media3 and follows only line changes', async () => {
 		useReaderConfigStore.setState({ ttsEngine: 'edge', edgeBufferMode: 'media3' });
 		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');

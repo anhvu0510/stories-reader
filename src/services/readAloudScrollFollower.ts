@@ -2,6 +2,7 @@ interface ScrollFollowerEnvironment {
 	getScrollY: () => number;
 	getViewportHeight: () => number;
 	getMaxScrollY?: () => number;
+	hasTextSelection?: () => boolean;
 	scrollTo: (top: number) => void;
 	requestFrame: (callback: FrameRequestCallback) => number;
 	cancelFrame: (handle: number) => void;
@@ -12,6 +13,7 @@ const createBrowserEnvironment = (): ScrollFollowerEnvironment => ({
 	getScrollY: () => window.scrollY,
 	getViewportHeight: () => window.innerHeight,
 	getMaxScrollY: () => Math.max(0, document.documentElement.scrollHeight - window.innerHeight),
+	hasTextSelection: () => Boolean(window.getSelection()?.toString().trim()),
 	scrollTo: (top) => window.scrollTo({ top, behavior: 'auto' }),
 	requestFrame: (callback) => window.requestAnimationFrame(callback),
 	cancelFrame: (handle) => window.cancelAnimationFrame(handle),
@@ -62,6 +64,14 @@ export class ReadAloudScrollFollower {
 		this.scheduleReclaim();
 	}
 
+	public notifySelectionChange(): void {
+		if (this.environment.hasTextSelection?.()) {
+			this.notifyUserInteraction();
+			return;
+		}
+		this.notifyViewportScroll();
+	}
+
 	private scheduleReclaim(): void {
 		this.clearResumeTimer();
 		this.resumeTimer = setTimeout(this.reclaimIfVisible, 250);
@@ -69,7 +79,7 @@ export class ReadAloudScrollFollower {
 
 	private readonly reclaimIfVisible = (): void => {
 		this.resumeTimer = null;
-		if (this.userHolding || !this.latestLine) return;
+		if (this.userHolding || !this.latestLine || this.environment.hasTextSelection?.()) return;
 		const top = this.latestLine.top - this.environment.getScrollY();
 		const bottom = this.latestLine.bottom - this.environment.getScrollY();
 		if (top < 0 || bottom > this.environment.getViewportHeight()) return;
@@ -91,6 +101,7 @@ export class ReadAloudScrollFollower {
 
 	public follow(line: DOMRect): void {
 		this.latestLine = line;
+		if (this.environment.hasTextSelection?.()) this.notifyUserInteraction();
 		// Nếu người dùng vừa chạm/cuộn màn hình: nhường quyền thao tác hoàn toàn cho người dùng
 		if (!this.following) {
 			this.ensureReclaimScheduled();

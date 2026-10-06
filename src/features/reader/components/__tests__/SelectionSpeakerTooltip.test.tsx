@@ -110,7 +110,7 @@ describe('SelectionSpeakerTooltip Component', () => {
 		outsideP.remove();
 	});
 
-	it('does NOT render speaker tooltip when isTTSActive is true, but jumps to selection on interaction end', async () => {
+	it('keeps selection and shows an explicit speaker action while reading', async () => {
 		const p = document.createElement('div');
 		p.setAttribute('data-paragraph-index', '2');
 		p.textContent = 'Đoạn văn này đang được đọc to.';
@@ -149,18 +149,20 @@ describe('SelectionSpeakerTooltip Component', () => {
 		});
 
 		// Tooltip must NOT render when in TTS active mode
-		expect(screen.queryByTestId('selection-speaker-tooltip')).toBeNull();
+		expect(screen.queryByTestId('selection-speaker-tooltip')).not.toBeNull();
 
 		// Trigger mouseup (or touchend) after text selection in TTS active mode
 		act(() => {
 			window.dispatchEvent(new MouseEvent('mouseup'));
 		});
 
+		expect(onSpeak).not.toHaveBeenCalled();
+		expect(removeAllRanges).not.toHaveBeenCalled();
+		fireEvent.click(screen.getByTestId('selection-speaker-tooltip'));
 		expect(onSpeak).toHaveBeenCalledWith(2, 5);
-		expect(removeAllRanges).toHaveBeenCalled();
 	});
 
-	it('in TTS active mode, automatically jumps to selection on Android touchcancel or contextmenu without mouseup/touchend', async () => {
+	it('allows the native context menu while reading without seeking or clearing selection', async () => {
 		const p = document.createElement('div');
 		p.setAttribute('data-paragraph-index', '7');
 		p.textContent = 'Mục được chọn khi người dùng nhấn giữ trên mobile.';
@@ -195,15 +197,15 @@ describe('SelectionSpeakerTooltip Component', () => {
 		} as any);
 
 		// Android long-press fires contextmenu / touchcancel when native ActionMode appears
-		act(() => {
-			window.dispatchEvent(new MouseEvent('contextmenu', { cancelable: true }));
-		});
+		const contextmenu = new MouseEvent('contextmenu', { cancelable: true });
+		act(() => { window.dispatchEvent(contextmenu); });
 
-		expect(onSpeak).toHaveBeenCalledWith(7, 4);
-		expect(removeAllRanges).toHaveBeenCalled();
+		expect(contextmenu.defaultPrevented).toBe(false);
+		expect(onSpeak).not.toHaveBeenCalled();
+		expect(removeAllRanges).not.toHaveBeenCalled();
 	});
 
-	it('in TTS active mode, automatically jumps when user presses and holds (selectionchange stabilizes)', async () => {
+	it('does not automatically seek when a held selection stabilizes', async () => {
 		vi.useFakeTimers();
 		try {
 			const p = document.createElement('div');
@@ -248,11 +250,10 @@ describe('SelectionSpeakerTooltip Component', () => {
 				vi.advanceTimersByTime(300);
 			});
 
-			expect(onSpeak).toHaveBeenCalledWith(9, 11);
-			expect(removeAllRanges).toHaveBeenCalled();
+			expect(onSpeak).not.toHaveBeenCalled();
+			expect(removeAllRanges).not.toHaveBeenCalled();
 		} finally {
 			vi.useRealTimers();
 		}
 	});
 });
-

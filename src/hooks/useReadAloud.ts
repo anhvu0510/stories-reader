@@ -232,8 +232,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		}));
 	}, [paragraphs]);
 	const media3Utterances = useMemo(() => buildReadAloudUtterancePlanFromChunks(chunks), [chunks]);
-	const getMedia3UtteranceIndex = (chunkIndex: number): number => {
-		const utteranceIndex = media3Utterances.findIndex((utterance) => utterance.sourceChunkIndex === chunkIndex);
+	const getMedia3UtteranceIndex = (chunkIndex: number, sourceOffset?: number): number => {
+		const utteranceIndex = media3Utterances.findIndex((utterance) => utterance.sourceChunkIndex === chunkIndex && (sourceOffset === undefined || sourceOffset < utterance.sourceStart + utterance.sourceLength));
 		return utteranceIndex >= 0 ? utteranceIndex : 0;
 	};
 
@@ -787,6 +787,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			onRelease();
 		};
 		const onScroll = () => scrollFollowerRef.current?.notifyViewportScroll();
+		const onSelection = () => scrollFollowerRef.current?.notifySelectionChange();
+		document.addEventListener('selectionchange', onSelection);
 		window.addEventListener('wheel', onInteraction, { passive: true });
 		window.addEventListener('touchmove', onInteraction, { passive: true });
 		window.addEventListener('touchstart', onHold, { passive: true });
@@ -798,6 +800,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		window.addEventListener('scroll', onScroll, { passive: true });
 		window.addEventListener('keydown', onInteraction, { passive: true });
 		return () => {
+			document.removeEventListener('selectionchange', onSelection);
 			window.removeEventListener('wheel', onInteraction);
 			window.removeEventListener('touchmove', onInteraction);
 			window.removeEventListener('touchstart', onHold);
@@ -1136,7 +1139,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	const startReading = (targetIndex?: number, targetOffset?: number) => {
 		scrollFollowerRef.current?.resumeFollowing();
 		void requestWakeLock();
-		if (isPaused) {
+		if (isPaused && targetIndex === undefined) {
 			setIsPaused(false);
 			setIsPlaying(true);
 			setIsLoading(false);
@@ -1227,7 +1230,13 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 				const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.8;
 				const edgeBufferMode = useReaderConfigStore.getState().edgeBufferMode || 'file';
 				const isMedia3Mode = ttsEngine === 'edge' && edgeBufferMode === 'media3';
-				const nativeStartIndex = isMedia3Mode ? getMedia3UtteranceIndex(targetIdx) : targetIdx;
+				const sourceOffset = (chunks[targetIdx]?.startOffset ?? 0) + targetOff;
+				const nativeStartIndex = isMedia3Mode ? getMedia3UtteranceIndex(targetIdx, sourceOffset) : targetIdx;
+				const playbackUtterances = media3Utterances.map((utterance, index) => {
+					if (index !== nativeStartIndex || sourceOffset <= utterance.sourceStart) return utterance;
+					const offset = sourceOffset - utterance.sourceStart;
+					return { ...utterance, id: `${utterance.id}-from-${sourceOffset}`, text: utterance.text.slice(offset), sourceStart: sourceOffset, sourceLength: utterance.sourceLength - offset };
+				});
 			const targetVoice = ttsEngine === 'edge' ? (edgeVoiceUri || 'vi-VN-HoaiMyNeural') : voiceUri;
 
 			const bookTitle = chapterContext.bookName || (chapterContext.bookId ? `Truyện #${chapterContext.bookId}` : 'Stories Reader');
@@ -1240,7 +1249,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 				void activeNativeStream.startPlayback({
 					chunks: textChunks,
-					...(isMedia3Mode ? { utterances: media3Utterances, sessionId: `edge-media3-${newSessionId}` } : {}),
+					...(isMedia3Mode ? { utterances: playbackUtterances, sessionId: `edge-media3-${newSessionId}` } : {}),
 					startIndex: nativeStartIndex,
 				voice: targetVoice,
 				rate: currentSpeechRate,
@@ -1353,28 +1362,9 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			targetIndex = chunks.findIndex((c) => c.pIdx === pIdx);
 		}
 
-		if (targetIndex !== -1) {
-			const targetChunk = chunks[targetIndex];
-			const chunkOffset = Math.max(0, textOffset - (targetChunk?.startOffset ?? 0));
-			playSessionIdRef.current += 1;
-			stopAudioPlayer();
-			if (ownsBrowserSpeechQueueRef.current && synth) synth.cancel();
-			ownsBrowserSpeechQueueRef.current = false;
-			utteranceRef.current = null;
-
-			setIsLoading(true);
-			setIsPlaying(false);
-			setIsPaused(false);
-			isPlayingRef.current = true;
-			isPausedRef.current = false;
-			currentChunkIdxRef.current = targetIndex;
-			if (activeNativeStream) {
-				const nativeIndex = useReaderConfigStore.getState().edgeBufferMode === 'media3' ? getMedia3UtteranceIndex(targetIndex) : targetIndex;
-				void activeNativeStream.seekToChunk(nativeIndex);
-				return;
-			}
-			playChunk(targetIndex, chunkOffset);
-		}
+		if (targetIndex === -1) return;
+		const chunkOffset = Math.max(0, textOffset - chunks[targetIndex].startOffset);
+		startReading(targetIndex, chunkOffset);
 	};
 
 	return {

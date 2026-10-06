@@ -5,6 +5,25 @@ import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
 
 describe('ReadAloudScrollFollower', () => {
 	afterEach(() => vi.useRealTimers());
+	it('keeps manual selection stable until the user dismisses it', () => {
+		vi.useFakeTimers();
+		let selected = false;
+		const scrollTo = vi.fn();
+		const follower = new ReadAloudScrollFollower({
+			getScrollY: () => 0, getViewportHeight: () => 800, hasTextSelection: () => selected,
+			scrollTo, requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
+		});
+		follower.follow(new DOMRect(0, 500, 300, 30));
+		scrollTo.mockClear();
+		selected = true;
+		follower.notifySelectionChange();
+		vi.advanceTimersByTime(1000);
+		expect(scrollTo).not.toHaveBeenCalled();
+		selected = false;
+		follower.notifySelectionChange();
+		vi.advanceTimersByTime(300);
+		expect(scrollTo).toHaveBeenCalledWith(115);
+	});
 	it('clamps centering to the page boundary so the animation can finish', () => {
 		const scrollTo = vi.fn();
 		const follower = new ReadAloudScrollFollower({
