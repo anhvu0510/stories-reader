@@ -1,7 +1,7 @@
 {
-  "version": "1.0.341",
+  "version": "1.0.342",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "6debc015c3a440cf88166631f64ea288830946ec130e6b51a33784b75fa6c5c6",
-  "releaseNotes": "fix: resolve Media3 foreground service crash and optimize read-aloud scroll following behavior",
-  "updatedAt": "2026-10-06T15:53:39Z"
+  "checksum": "93e50322557c7140fa26177eee42aae4340ed87b3c215cd1096ad4d29c733a04",
+  "releaseNotes": "fix: include preparing slots in player checks and update word boundaries source on player reset",
+  "updatedAt": "2026-10-06T15:57:51Z"
 }
