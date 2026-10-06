@@ -47,10 +47,6 @@ public class AudioCacheManager {
         return new File(getCacheDir(), "chunk_" + index + fileExtension);
     }
 
-    public File getSegmentFile(int chunkIndex, int segmentIndex) {
-        return new File(getCacheDir(), "chunk_" + chunkIndex + "_" + segmentIndex + fileExtension);
-    }
-
     private void deleteFileSafely(File file) {
         if (file != null && file.exists()) {
             file.delete();
