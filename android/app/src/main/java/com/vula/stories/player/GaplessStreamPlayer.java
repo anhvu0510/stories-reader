@@ -287,7 +287,6 @@ public class GaplessStreamPlayer {
     public synchronized void reset() {
         stop();
         currentChunkIndex = -1;
-        wordBoundariesSource = null;
         mainHandler.removeCallbacksAndMessages(null);
     }
 
@@ -377,10 +376,10 @@ public class GaplessStreamPlayer {
     }
 
     public boolean hasCurrentPlayer() {
-        return currentSlot.hasPlayer();
+        return currentSlot.hasPlayer() || preparingCurrentSlot != null;
     }
 
     public boolean hasNextPlayer() {
-        return nextSlot.hasPlayer();
+        return nextSlot.hasPlayer() || preparingNextSlot != null;
     }
 }

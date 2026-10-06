@@ -140,6 +140,7 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
             cacheManager.cleanCacheDir(true);
         }
         player.reset();
+        player.setWordBoundariesSource(prefetchQueue.getWordBoundariesSource());
 
         if (eventListener != null) {
             eventListener.onPlaybackStateChange(true, false, true);
@@ -383,6 +384,7 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
         streamingSessionId++;
         currentPlayIndex = targetIndex;
         player.reset();
+        player.setWordBoundariesSource(prefetchQueue.getWordBoundariesSource());
 
         if (eventListener != null) {
             eventListener.onPlaybackStateChange(true, false, true);
