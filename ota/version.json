@@ -1,7 +1,7 @@
 {
-  "version": "1.0.343",
+  "version": "1.0.344",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "3434c8a849bbfd00b362ba3b873c72005227194bf7a7005a3d52e97d5ca97f25",
-  "releaseNotes": "refactor: update Media3 TTS to use rendered line highlighting instead of utterance highlighting",
-  "updatedAt": "2026-10-06T16:01:41Z"
+  "checksum": "506217e16f3cdcae688dedf4dde8d6b4b2acdbff90d149df66dc264d5206f622",
+  "releaseNotes": "feat: improve read-aloud scroll follower behavior with auto-reclaim and touch state handling",
+  "updatedAt": "2026-10-06T16:16:53Z"
 }
