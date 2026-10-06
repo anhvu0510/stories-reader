@@ -1,7 +1,7 @@
 {
-  "version": "1.0.345",
+  "version": "1.0.346",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "764303a07a46043515a5361c53ef0d4f6c31f5bd858da53fb4e3354ee553813c",
-  "releaseNotes": "feat: add SelectionSpeakerTooltip component and integrate text selection read-aloud functionality",
-  "updatedAt": "2026-10-06T16:28:08Z"
+  "checksum": "ae7b25f29f94fb977a4c029b392759a696a67901e08a88f3af41a54321cf2ae0",
+  "releaseNotes": "feat: add native Android text-to-speech life cycle tests and selection playback improvements",
+  "updatedAt": "2026-10-06T16:50:42Z"
 }
