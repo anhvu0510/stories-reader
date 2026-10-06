@@ -681,7 +681,6 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		chunkIndex: number,
 		paragraphIndex: number,
 		sourceStart: number,
-		sourceLength: number,
 		wordCharIndex: number,
 		wordCharLength: number
 	) => {
@@ -702,14 +701,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			currentCharIndex: sourceStart + wordCharIndex,
 			currentCharLength: wordCharLength
 		});
-		const geometry = highlighter.highlightUtteranceAndWord(
-			paragraphNode,
-			sourceStart,
-			sourceLength,
-			sourceStart + wordCharIndex,
-			wordCharLength
-		);
-		if (geometry?.utteranceChanged) scrollFollowerRef.current?.follow(geometry.line);
+		const geometry = highlighter.highlight(paragraphNode, absoluteWordIndex, wordCharLength);
+		if (geometry?.lineChanged) scrollFollowerRef.current?.follow(geometry.line);
 	};
 
 	const activeNativeStream = useMemo(() => {
@@ -738,7 +731,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			if (!isPlayingRef.current) return;
 			const { chunkIndex, charIndex, charLength, paragraphIndex, sourceStart, sourceLength } = event;
 			if (paragraphIndex !== undefined && sourceStart !== undefined && sourceLength !== undefined) {
-				updateMedia3Highlight(chunkIndex, paragraphIndex, sourceStart, sourceLength, charIndex, charLength);
+				updateMedia3Highlight(chunkIndex, paragraphIndex, sourceStart, charIndex, charLength);
 				return;
 			}
 			updateWordHighlight(chunkIndex, charIndex, charLength);

@@ -1,5 +1,9 @@
 # Media3 scroll/highlight diagnosis — 2026-10-06
 
+## Revised visual requirement
+
+The user clarified with a screenshot that blue must cover exactly the rendered screen line containing the yellow spoken word, not the full synthesis utterance. Media3 now calls the same `highlight` method as the other engines, using the native source-mapped absolute word offset. The utterance plan remains an audio unit only. Following is requested when the rendered line changes, with manual-scroll ownership preserved. A hook regression rejects calls to the utterance-wide highlighter and verifies repeated words on one line do not re-request scrolling.
+
 ## Reproduction and root causes
 
 The focused Vitest loop reproduced three independent failures before the fix:

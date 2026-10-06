@@ -598,16 +598,17 @@ describe('useReadAloud Edge word boundaries', () => {
 		unmount();
 	});
 
-	it('uses persistent utterance and word highlights for Media3 boundaries', async () => {
+	it('uses the same rendered-line and word highlighter for Media3 and follows only line changes', async () => {
 		useReaderConfigStore.setState({ ttsEngine: 'edge', edgeBufferMode: 'media3' });
 		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
 		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
 		vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue(undefined);
 		const rect = new DOMRect(20, 700, 200, 30);
-		const highlightSpy = vi.spyOn(DomWordHighlighter.prototype, 'highlightUtteranceAndWord')
-			.mockReturnValueOnce({ line: rect, word: rect, utteranceChanged: true })
-			.mockReturnValue({ line: rect, word: rect, utteranceChanged: false });
+		const highlightSpy = vi.spyOn(DomWordHighlighter.prototype, 'highlight')
+			.mockReturnValueOnce({ line: rect, word: rect, lineChanged: true })
+			.mockReturnValue({ line: rect, word: rect, lineChanged: false });
 		const followSpy = vi.spyOn(ReadAloudScrollFollower.prototype, 'follow');
+		const utteranceSpy = vi.spyOn(DomWordHighlighter.prototype, 'highlightUtteranceAndWord');
 		document.body.innerHTML = '';
 		const container = document.createElement('div');
 		container.id = 'main-story-content';
@@ -636,7 +637,7 @@ describe('useReadAloud Edge word boundaries', () => {
 			);
 		});
 
-		expect(highlightSpy).toHaveBeenCalledWith(expect.any(HTMLElement), 0, 21, 5, 3);
+		expect(highlightSpy).toHaveBeenCalledWith(expect.any(HTMLElement), 5, 3);
 		act(() => {
 			for (const charIndex of [5, 9]) {
 				EdgeTTSNativeStreamService['wordBoundaryListeners'].forEach((listener) => listener({
@@ -647,6 +648,7 @@ describe('useReadAloud Edge word boundaries', () => {
 		});
 		expect(followSpy).toHaveBeenCalledTimes(1);
 		expect(highlightSpy).toHaveBeenCalledTimes(2);
+		expect(utteranceSpy).not.toHaveBeenCalled();
 		container.remove();
 		unmount();
 	});

@@ -26,6 +26,7 @@ export interface ReadAloudHighlightGeometry {
 	line: DOMRect;
 	word: DOMRect;
 	utteranceChanged?: boolean;
+	lineChanged?: boolean;
 }
 
 const CSS_WORD_HIGHLIGHT_NAME = 'stories-tts-word';
@@ -125,6 +126,7 @@ export class DomWordHighlighter {
 			lineRange &&
 			this.currentLineRange.startContainer === lineRange.startContainer &&
 			this.currentLineRange.startOffset === lineRange.startOffset &&
+			this.currentLineRange.endContainer === lineRange.endContainer &&
 			this.currentLineRange.endOffset === lineRange.endOffset;
 
 		if (!isSameLine) {
@@ -141,7 +143,7 @@ export class DomWordHighlighter {
 			}
 		}
 
-		return { line: this.currentLineRect ?? documentLineRect, word: documentWordRect };
+		return { line: documentLineRect, word: documentWordRect, lineChanged: !isSameLine };
 	}
 
 	public highlightUtteranceAndWord(

@@ -195,9 +195,11 @@ describe('DomWordHighlighter', () => {
 
 		const highlighter = new DomWordHighlighter('active-word');
 		// Highlight word 1
-		highlighter.highlight(root, 0, 3);
+		const firstGeometry = highlighter.highlight(root, 0, 3);
 		// Highlight word 2 on same line
-		highlighter.highlight(root, 4, 3);
+		const secondGeometry = highlighter.highlight(root, 4, 3);
+		expect(firstGeometry?.lineChanged).toBe(true);
+		expect(secondGeometry?.lineChanged).toBe(false);
 
 		// delete() should NOT have been called between consecutive words to prevent strobe flicker
 		expect(highlights.delete).not.toHaveBeenCalled();
