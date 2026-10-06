@@ -136,6 +136,8 @@ export interface ApiDomain {
 export type ThemeType = 'default' | 'sepia' | 'royal-vn' | 'obsidian' | 'modern-vn' | 'midnight' | 'Amoled';
 export type FontType = 'default' | 'palatino' | 'bookerly' | 'font_viet_tay' | 'merriweather' | 'lora' | 'charter';
 
+export type EdgeBufferMode = 'file' | 'memory' | 'media3';
+
 export interface ReaderConfig {
 	theme: ThemeType;
 	font: FontType;
@@ -166,7 +168,7 @@ export interface ReaderConfig {
 	vieneuApplyWatermark?: boolean;
 	vieneuOutputSampleRate?: 0 | 24000 | 48000;
 	edgeVoiceUri?: string;
-	edgeBufferMode?: 'file' | 'memory';
+	edgeBufferMode?: EdgeBufferMode;
 	showTTSControlOnReader?: boolean;
 	bgmEnabled?: boolean;
 	bgmVolume?: number;

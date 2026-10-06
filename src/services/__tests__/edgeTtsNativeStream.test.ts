@@ -7,6 +7,7 @@ const { mockEdgeTTSNative } = vi.hoisted(() => ({
 		stopPlayback: vi.fn(),
 		seekToChunk: vi.fn(),
 		clearCache: vi.fn(),
+		getPlaybackSnapshot: vi.fn(),
 		addListener: vi.fn()
 	}
 }));
@@ -32,6 +33,7 @@ import { EdgeTTSNativeStreamService } from '@/services/edgeTtsNativeStream';
 describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
 	beforeEach(() => {
 		vi.restoreAllMocks();
+		vi.clearAllMocks();
 		EdgeTTSNativeStreamService.resetForTesting();
 		vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('android');
 		mockEdgeTTSNative.playChapter.mockResolvedValue(undefined);
@@ -39,6 +41,7 @@ describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
 		mockEdgeTTSNative.resumePlayback.mockResolvedValue(undefined);
 		mockEdgeTTSNative.stopPlayback.mockResolvedValue(undefined);
 		mockEdgeTTSNative.seekToChunk.mockResolvedValue(undefined);
+		mockEdgeTTSNative.getPlaybackSnapshot.mockResolvedValue(null);
 		mockEdgeTTSNative.addListener.mockResolvedValue({ remove: vi.fn() });
 	});
 
@@ -119,5 +122,51 @@ describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
 
 		wordBoundaryListener?.({ chunkIndex: 1, charIndex: 4, charLength: 2, text: 'số' });
 		expect(onWordBoundarySpy).toHaveBeenCalledWith({ chunkIndex: 1, charIndex: 4, charLength: 2, text: 'số' });
+	});
+
+	it('ignores events from stale sessions and replays the latest snapshot', async () => {
+		const handlers = new Map<string, (data: unknown) => void>();
+		mockEdgeTTSNative.addListener.mockImplementation((eventName: string, handler: (data: unknown) => void) => {
+			handlers.set(eventName, handler);
+			return Promise.resolve({ remove: vi.fn() });
+		});
+
+		await EdgeTTSNativeStreamService.startPlayback({ chunks: ['Một'], sessionId: 'session-new' });
+		const onChunkStart = vi.fn();
+		const onSnapshot = vi.fn();
+		EdgeTTSNativeStreamService.onChunkStart(onChunkStart);
+
+		handlers.get('onChunkStart')?.({ sessionId: 'session-old', chunkIndex: 0 });
+		handlers.get('onChunkStart')?.({ sessionId: 'session-new', chunkIndex: 0 });
+		handlers.get('onPlaybackSnapshot')?.({
+			sessionId: 'session-new',
+			state: 'PLAYING',
+			utteranceIndex: 0,
+			positionMs: 120,
+			bufferedDurationMs: 4800,
+			rebufferCount: 0
+		});
+		EdgeTTSNativeStreamService.onSnapshot(onSnapshot);
+
+		expect(onChunkStart).toHaveBeenCalledTimes(1);
+		expect(onSnapshot).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'session-new', state: 'PLAYING' }));
+	});
+
+	it('pulls the replayable native snapshot when listeners reconnect', async () => {
+		mockEdgeTTSNative.getPlaybackSnapshot.mockResolvedValue({
+			sessionId: 'surviving-session',
+			state: 'PAUSED',
+			utteranceIndex: 4,
+			positionMs: 900,
+			bufferedDurationMs: 5000,
+			rebufferCount: 1
+		});
+		const onSnapshot = vi.fn();
+
+		await EdgeTTSNativeStreamService.initListeners();
+		EdgeTTSNativeStreamService.onSnapshot(onSnapshot);
+
+		expect(mockEdgeTTSNative.getPlaybackSnapshot).toHaveBeenCalledTimes(1);
+		expect(onSnapshot).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'surviving-session', state: 'PAUSED' }));
 	});
 });
