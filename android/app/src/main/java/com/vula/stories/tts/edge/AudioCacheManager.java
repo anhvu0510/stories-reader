@@ -47,16 +47,32 @@ public class AudioCacheManager {
         return new File(getCacheDir(), "chunk_" + index + fileExtension);
     }
 
+    private void deleteFileSafely(File file) {
+        if (file != null && file.exists()) {
+            file.delete();
+        }
+    }
+
+    private void removeMetadata(int idx, Map<Integer, JSONArray> readyWordBoundaries, Set<Integer> inFlightIndices) {
+        if (readyWordBoundaries != null) {
+            readyWordBoundaries.remove(idx);
+        }
+        if (inFlightIndices != null) {
+            inFlightIndices.remove(idx);
+        }
+    }
+
     public void cleanCacheDir(boolean purgeAll) {
         try {
             File dir = getCacheDir();
             File[] files = dir.listFiles();
-            if (files != null) {
-                long now = System.currentTimeMillis();
-                for (File f : files) {
-                    if (purgeAll || (now - f.lastModified() > 60 * 60 * 1000L)) {
-                        f.delete();
-                    }
+            if (files == null) {
+                return;
+            }
+            long now = System.currentTimeMillis();
+            for (File f : files) {
+                if (purgeAll || (now - f.lastModified() > 60 * 60 * 1000L)) {
+                    f.delete();
                 }
             }
         } catch (Exception e) {
@@ -75,32 +91,29 @@ public class AudioCacheManager {
             int thresholdIndex = currentChunkIndex - MAX_PAST_CHUNKS_RETAINED;
             for (Map.Entry<Integer, File> entry : readyAudioFiles.entrySet()) {
                 int idx = entry.getKey();
-                if (idx < thresholdIndex) {
-                    File file = readyAudioFiles.remove(idx);
-                    if (file != null && file.exists()) {
-                        file.delete();
-                    }
-                    if (readyWordBoundaries != null) readyWordBoundaries.remove(idx);
-                    if (inFlightIndices != null) inFlightIndices.remove(idx);
+                if (idx >= thresholdIndex) {
+                    continue;
                 }
+                File file = readyAudioFiles.remove(idx);
+                deleteFileSafely(file);
+                removeMetadata(idx, readyWordBoundaries, inFlightIndices);
             }
 
             // Tier 2: Hard File Cap - If file count still exceeds quota, delete oldest
-            if (readyAudioFiles.size() > MAX_TOTAL_CACHE_FILES) {
-                List<Integer> sortedIndices = new ArrayList<>(readyAudioFiles.keySet());
-                Collections.sort(sortedIndices);
-                int toRemove = readyAudioFiles.size() - MAX_TOTAL_CACHE_FILES;
-                for (int i = 0; i < toRemove && i < sortedIndices.size(); i++) {
-                    int idx = sortedIndices.get(i);
-                    if (idx < currentChunkIndex) { // Never delete current playing chunk
-                        File file = readyAudioFiles.remove(idx);
-                        if (file != null && file.exists()) {
-                            file.delete();
-                        }
-                        if (readyWordBoundaries != null) readyWordBoundaries.remove(idx);
-                        if (inFlightIndices != null) inFlightIndices.remove(idx);
-                    }
+            if (readyAudioFiles.size() <= MAX_TOTAL_CACHE_FILES) {
+                return;
+            }
+            List<Integer> sortedIndices = new ArrayList<>(readyAudioFiles.keySet());
+            Collections.sort(sortedIndices);
+            int toRemove = readyAudioFiles.size() - MAX_TOTAL_CACHE_FILES;
+            for (int i = 0; i < toRemove && i < sortedIndices.size(); i++) {
+                int idx = sortedIndices.get(i);
+                if (idx >= currentChunkIndex) {
+                    continue;
                 }
+                File file = readyAudioFiles.remove(idx);
+                deleteFileSafely(file);
+                removeMetadata(idx, readyWordBoundaries, inFlightIndices);
             }
         } catch (Exception e) {
             Log.w(TAG, "Error in evictOldChunks: " + e.getMessage());
@@ -117,25 +130,26 @@ public class AudioCacheManager {
         try {
             int thresholdIndex = currentChunkIndex - MAX_PAST_CHUNKS_RETAINED;
             for (Integer idx : new ArrayList<>(readyAudioBytes.keySet())) {
-                if (idx != null && idx < thresholdIndex) {
-                    readyAudioBytes.remove(idx);
-                    if (readyWordBoundaries != null) readyWordBoundaries.remove(idx);
-                    if (inFlightIndices != null) inFlightIndices.remove(idx);
+                if (idx == null || idx >= thresholdIndex) {
+                    continue;
                 }
+                readyAudioBytes.remove(idx);
+                removeMetadata(idx, readyWordBoundaries, inFlightIndices);
             }
 
-            if (readyAudioBytes.size() > MAX_TOTAL_CACHE_FILES) {
-                List<Integer> sortedIndices = new ArrayList<>(readyAudioBytes.keySet());
-                Collections.sort(sortedIndices);
-                int toRemove = readyAudioBytes.size() - MAX_TOTAL_CACHE_FILES;
-                for (int i = 0; i < toRemove && i < sortedIndices.size(); i++) {
-                    Integer idx = sortedIndices.get(i);
-                    if (idx != null && idx < currentChunkIndex) {
-                        readyAudioBytes.remove(idx);
-                        if (readyWordBoundaries != null) readyWordBoundaries.remove(idx);
-                        if (inFlightIndices != null) inFlightIndices.remove(idx);
-                    }
+            if (readyAudioBytes.size() <= MAX_TOTAL_CACHE_FILES) {
+                return;
+            }
+            List<Integer> sortedIndices = new ArrayList<>(readyAudioBytes.keySet());
+            Collections.sort(sortedIndices);
+            int toRemove = readyAudioBytes.size() - MAX_TOTAL_CACHE_FILES;
+            for (int i = 0; i < toRemove && i < sortedIndices.size(); i++) {
+                Integer idx = sortedIndices.get(i);
+                if (idx == null || idx >= currentChunkIndex) {
+                    continue;
                 }
+                readyAudioBytes.remove(idx);
+                removeMetadata(idx, readyWordBoundaries, inFlightIndices);
             }
         } catch (Exception e) {
             Log.w(TAG, "Error in evictOldMemoryChunks: " + e.getMessage());

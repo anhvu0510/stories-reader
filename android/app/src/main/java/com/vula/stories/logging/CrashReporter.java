@@ -79,7 +79,9 @@ public class CrashReporter implements Thread.UncaughtExceptionHandler {
                 } else {
                     deviceObj.put("appVersionCode", pInfo.versionCode);
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                Log.w(TAG, "Lỗi đọc PackageInfo khi báo cáo sự cố: " + e.getMessage());
+            }
             crashDetails.put("device", deviceObj);
 
             // 2. Memory Telemetry
@@ -102,7 +104,9 @@ public class CrashReporter implements Thread.UncaughtExceptionHandler {
                     memObj.put("systemTotalMb", mi.totalMem / (1024 * 1024));
                     memObj.put("isLowMemory", mi.lowMemory);
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                Log.w(TAG, "Lỗi đọc MemoryInfo khi báo cáo sự cố: " + e.getMessage());
+            }
             crashDetails.put("memory", memObj);
 
             // 3. Action Breadcrumbs

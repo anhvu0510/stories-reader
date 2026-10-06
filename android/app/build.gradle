@@ -1,6 +1,21 @@
 apply plugin: 'com.android.application'
+apply plugin: 'checkstyle'
 def computedVersionCode = ((int) (System.currentTimeMillis() / 1000))
 def computedVersionName = System.getenv("APP_VERSION") ?: "1.0.4"
+
+checkstyle {
+    toolVersion = '10.12.5'
+}
+
+task checkstyle(type: Checkstyle) {
+    configFile file("${rootDir}/config/checkstyle/checkstyle.xml")
+    source 'src/main/java'
+    include '**/*.java'
+    exclude '**/R.java'
+    exclude '**/BuildConfig.java'
+    classpath = files()
+    ignoreFailures = false
+}
 
 android {
     namespace "com.vula.stories"

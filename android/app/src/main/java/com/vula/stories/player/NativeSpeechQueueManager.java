@@ -71,7 +71,9 @@ public class NativeSpeechQueueManager {
         if (utteranceId != null && utteranceId.startsWith(UTTERANCE_PREFIX)) {
             try {
                 return Integer.parseInt(utteranceId.substring(UTTERANCE_PREFIX.length()));
-            } catch (Exception ignored) {}
+            } catch (NumberFormatException e) {
+                Log.w(TAG, "Không thể phân giải chunkIndex từ utteranceId: " + utteranceId);
+            }
         }
         return -1;
     }
@@ -140,14 +142,15 @@ public class NativeSpeechQueueManager {
      */
     public synchronized void handleRangeStart(String utteranceId, int start, int end) {
         int index = parseChunkIndex(utteranceId);
-        if (index >= 0 && index < chunks.size()) {
-            String text = chunks.get(index);
-            if (start >= 0 && end <= text.length() && start < end) {
-                String word = text.substring(start, end);
-                if (listener != null) {
-                    listener.onWordBoundary(index, start, end - start, word);
-                }
-            }
+        if (index < 0 || index >= chunks.size()) {
+            return;
+        }
+        String text = chunks.get(index);
+        if (start < 0 || end > text.length() || start >= end) {
+            return;
+        }
+        if (listener != null) {
+            listener.onWordBoundary(index, start, end - start, text.substring(start, end));
         }
     }
 
@@ -156,20 +159,22 @@ public class NativeSpeechQueueManager {
      */
     public synchronized void handleChunkDone(String utteranceId) {
         int index = parseChunkIndex(utteranceId);
-        if (index >= 0) {
-            if (listener != null) {
-                listener.onChunkCompleted(index);
-            }
+        if (index < 0) {
+            return;
+        }
+        if (listener != null) {
+            listener.onChunkCompleted(index);
+        }
 
-            // Kiểm tra xem đã đọc hết toàn bộ chương sách chưa
-            if (index >= chunks.size() - 1) {
-                isPlaying = false;
-                isPaused = false;
-                if (listener != null) {
-                    listener.onAllCompleted();
-                    listener.onPlaybackStateChange(false, false, false);
-                }
-            }
+        // Kiểm tra xem đã đọc hết toàn bộ chương sách chưa
+        if (index < chunks.size() - 1) {
+            return;
+        }
+        isPlaying = false;
+        isPaused = false;
+        if (listener != null) {
+            listener.onAllCompleted();
+            listener.onPlaybackStateChange(false, false, false);
         }
     }
 
@@ -178,20 +183,23 @@ public class NativeSpeechQueueManager {
      */
     public synchronized void handleChunkError(String utteranceId, TextToSpeech tts, Bundle params) {
         int index = parseChunkIndex(utteranceId);
-        if (index >= 0) {
-            Log.w(TAG, "Chunk error on " + utteranceId + ", skipping to next chunk");
+        if (index < 0) {
+            return;
+        }
+        Log.w(TAG, "Chunk error on " + utteranceId + ", skipping to next chunk");
+        if (listener != null) {
+            listener.onChunkCompleted(index);
+        }
+        if (index < chunks.size() - 1 && isPlaying) {
+            startSpeaking(tts, index + 1, params);
+            return;
+        }
+        if (index >= chunks.size() - 1) {
+            isPlaying = false;
+            isPaused = false;
             if (listener != null) {
-                listener.onChunkCompleted(index);
-            }
-            if (index < chunks.size() - 1 && isPlaying) {
-                startSpeaking(tts, index + 1, params);
-            } else if (index >= chunks.size() - 1) {
-                isPlaying = false;
-                isPaused = false;
-                if (listener != null) {
-                    listener.onAllCompleted();
-                    listener.onPlaybackStateChange(false, false, false);
-                }
+                listener.onAllCompleted();
+                listener.onPlaybackStateChange(false, false, false);
             }
         }
     }

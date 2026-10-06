@@ -127,8 +127,12 @@ public class RemoteLogger {
                     @Override
                     public void onResponse(Call call, Response response) {
                         try {
-                            response.close();
-                        } catch (Exception ignored) {}
+                            if (response != null) {
+                                response.close();
+                            }
+                        } catch (Exception e) {
+                            Log.w(TAG, "Lỗi đóng phản hồi HTTP async log: " + e.getMessage());
+                        }
                     }
                 });
             }

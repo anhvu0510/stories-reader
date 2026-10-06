@@ -1,5 +1,7 @@
 package com.vula.stories;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
@@ -21,6 +23,7 @@ import java.util.concurrent.Executor;
 @CapacitorPlugin(name = "BiometricAuth")
 public class BiometricPlugin extends Plugin {
 
+    private static final String TAG = "BiometricPlugin";
     private BiometricPrompt currentBiometricPrompt = null;
 
     /**
@@ -118,7 +121,9 @@ public class BiometricPlugin extends Plugin {
                 if (currentBiometricPrompt != null) {
                     try {
                         currentBiometricPrompt.cancelAuthentication();
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) {
+                        Log.d(TAG, "Hủy prompt sinh trắc học trước đó: " + e.getMessage());
+                    }
                     currentBiometricPrompt = null;
                 }
 
@@ -194,7 +199,9 @@ public class BiometricPlugin extends Plugin {
         if (currentBiometricPrompt != null) {
             try {
                 currentBiometricPrompt.cancelAuthentication();
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                Log.d(TAG, "Hủy xác thực sinh trắc học an toàn: " + e.getMessage());
+            }
             currentBiometricPrompt = null;
         }
         JSObject res = new JSObject();

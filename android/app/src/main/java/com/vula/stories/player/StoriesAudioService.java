@@ -359,7 +359,9 @@ public class StoriesAudioService extends Service {
         if (mediaSession != null) {
             try {
                 mediaSession.setActive(false);
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                Log.w(TAG, "Lỗi hủy kích hoạt MediaSession: " + e.getMessage());
+            }
         }
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -367,12 +369,16 @@ public class StoriesAudioService extends Service {
             } else {
                 stopForeground(true);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            Log.w(TAG, "Lỗi dừng Foreground service: " + e.getMessage());
+        }
 
         if (notificationManager != null) {
             try {
                 notificationManager.cancel(NOTIFICATION_ID);
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                Log.w(TAG, "Lỗi hủy thông báo Media Notification: " + e.getMessage());
+            }
         }
 
         isForegroundActive = false;
@@ -387,7 +393,9 @@ public class StoriesAudioService extends Service {
         if (mediaSession != null) {
             try {
                 mediaSession.release();
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                Log.w(TAG, "Lỗi giải phóng MediaSession: " + e.getMessage());
+            }
             mediaSession = null;
         }
         super.onDestroy();

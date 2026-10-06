@@ -11,4 +11,4 @@ if [ -z "${ANDROID_HOME:-}" ] && [ -d "$HOME/Library/Android/sdk" ]; then
 fi
 
 cd android
-./gradlew test "$@"
+./gradlew checkstyle test "$@"
