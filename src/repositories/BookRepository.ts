@@ -216,7 +216,7 @@ export const BookRepository = {
 		}
 		try {
 			let url = `/api/books?bookId=${encodeURIComponent(bookId)}&limit=1`;
-			const requestOptions: any = { timeout: 3500, retries: 0 };
+			const requestOptions: any = { timeout: 10000, retries: 0 };
 			if (options?.forceFresh) {
 				url += `&_t=${Date.now()}`;
 				requestOptions.headers = {
