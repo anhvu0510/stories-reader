@@ -4,6 +4,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { DomWordHighlighter } from '@/services/domWordHighlighter';
+import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
 import { EdgeTTSService } from '@/services/edgeTtsService';
 import { splitParagraphIntoSentences } from '@/services/gaplessTtsPlayer';
 import { NativeTTSService } from '@/services/nativeTtsService';
@@ -602,13 +603,18 @@ describe('useReadAloud Edge word boundaries', () => {
 		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
 		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
 		vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue(undefined);
-		const highlightSpy = vi.spyOn(DomWordHighlighter.prototype, 'highlightUtteranceAndWord').mockReturnValue(null);
+		const rect = new DOMRect(20, 700, 200, 30);
+		const highlightSpy = vi.spyOn(DomWordHighlighter.prototype, 'highlightUtteranceAndWord')
+			.mockReturnValueOnce({ line: rect, word: rect, utteranceChanged: true })
+			.mockReturnValue({ line: rect, word: rect, utteranceChanged: false });
+		const followSpy = vi.spyOn(ReadAloudScrollFollower.prototype, 'follow');
 		document.body.innerHTML = '';
 		const container = document.createElement('div');
 		container.id = 'main-story-content';
 		container.innerHTML = '<article><div data-paragraph-index="0">Đoạn một trên native.</div></article>';
 		document.body.appendChild(container);
-		const { result, unmount } = renderHook(() => useReadAloud(['Đoạn một trên native.'], { chapterId: 'media3-highlight' }));
+		const paragraphs = ['Đoạn một trên native.'];
+		const { result, unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId: 'media3-highlight' }));
 
 		await act(async () => result.current.startReading());
 		await waitFor(() => expect(EdgeTTSNativeStreamService['wordBoundaryListeners'].size).toBeGreaterThan(0));
@@ -631,6 +637,16 @@ describe('useReadAloud Edge word boundaries', () => {
 		});
 
 		expect(highlightSpy).toHaveBeenCalledWith(expect.any(HTMLElement), 0, 21, 5, 3);
+		act(() => {
+			for (const charIndex of [5, 9]) {
+				EdgeTTSNativeStreamService['wordBoundaryListeners'].forEach((listener) => listener({
+					chunkIndex: 0, utteranceIndex: 0, paragraphIndex: 0, sourceStart: 0,
+					sourceLength: 21, charIndex, charLength: 3, text: 'từ'
+				}));
+			}
+		});
+		expect(followSpy).toHaveBeenCalledTimes(1);
+		expect(highlightSpy).toHaveBeenCalledTimes(2);
 		container.remove();
 		unmount();
 	});

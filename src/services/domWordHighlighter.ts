@@ -25,6 +25,7 @@ interface CachedLineLayout {
 export interface ReadAloudHighlightGeometry {
 	line: DOMRect;
 	word: DOMRect;
+	utteranceChanged?: boolean;
 }
 
 const CSS_WORD_HIGHLIGHT_NAME = 'stories-tts-word';
@@ -66,6 +67,8 @@ export class DomWordHighlighter {
 	private currentLineRange: Range | null = null;
 	private currentLineRect: DOMRect | null = null;
 	private currentUtteranceKey: string | null = null;
+	private currentUtteranceRoot: HTMLElement | null = null;
+	private currentUtteranceRect: DOMRect | null = null;
 
 	constructor(className: string) {
 		this.className = className;
@@ -152,29 +155,61 @@ export class DomWordHighlighter {
 
 		const registry = this.getHighlightRegistry();
 		const HighlightConstructor = this.getHighlightConstructor();
-		if (!registry || !HighlightConstructor) return this.highlight(rootElement, wordStart, wordLength);
+		if (!registry || !HighlightConstructor) {
+			return this.highlightFallbackUtterance(rootElement, utteranceStart, utteranceLength, wordStart, wordLength);
+		}
 
-		const utteranceRange = this.createTextRange(rootElement, utteranceStart, utteranceLength);
 		const wordRange = this.createTextRange(rootElement, wordStart, wordLength);
-		if (!utteranceRange || !wordRange) return null;
+		if (!wordRange) return null;
 
 		const utteranceKey = `${utteranceStart}:${utteranceLength}`;
-		if (this.currentUtteranceKey !== utteranceKey) {
-			const utteranceHighlight = new HighlightConstructor(utteranceRange);
-			utteranceHighlight.priority = 1;
-			registry.set(CSS_UTTERANCE_HIGHLIGHT_NAME, utteranceHighlight);
-			this.currentUtteranceKey = utteranceKey;
-		}
+		const utteranceChanged = this.currentUtteranceRoot !== rootElement || this.currentUtteranceKey !== utteranceKey;
+		if (utteranceChanged) this.setUtteranceHighlight(rootElement, utteranceStart, utteranceLength, registry, HighlightConstructor);
 
 		const wordHighlight = new HighlightConstructor(wordRange);
 		wordHighlight.priority = 2;
 		registry.set(CSS_WORD_HIGHLIGHT_NAME, wordHighlight);
 
-		const wordRects = typeof wordRange.getClientRects === 'function' ? Array.from(wordRange.getClientRects()) : [];
-		const utteranceRects = typeof utteranceRange.getClientRects === 'function' ? Array.from(utteranceRange.getClientRects()) : [];
-		const wordRect = this.unionRects(wordRects);
-		const utteranceRect = this.unionRects(utteranceRects);
-		return { line: utteranceRect, word: wordRect };
+		const wordRect = this.getDocumentRect(wordRange);
+		if (!wordRect || !this.currentUtteranceRect) return null;
+		return { line: this.currentUtteranceRect, word: wordRect, utteranceChanged };
+	}
+
+	private highlightFallbackUtterance(root: HTMLElement, start: number, length: number, wordStart: number, wordLength: number): ReadAloudHighlightGeometry | null {
+		const key = `${start}:${length}`;
+		const utteranceChanged = this.currentUtteranceRoot !== root || this.currentUtteranceKey !== key;
+		const geometry = this.highlight(root, wordStart, wordLength);
+		this.currentUtteranceRoot = root;
+		this.currentUtteranceKey = key;
+		if (!geometry) return null;
+		return { ...geometry, utteranceChanged };
+	}
+
+	private setUtteranceHighlight(
+		rootElement: HTMLElement,
+		start: number,
+		length: number,
+		registry: HighlightRegistryLike,
+		HighlightConstructor: HighlightConstructorLike
+	): void {
+		const range = this.createTextRange(rootElement, start, length);
+		if (!range) return;
+		const highlight = new HighlightConstructor(range);
+		highlight.priority = 1;
+		registry.set(CSS_UTTERANCE_HIGHLIGHT_NAME, highlight);
+		this.currentUtteranceKey = `${start}:${length}`;
+		this.currentUtteranceRoot = rootElement;
+		this.currentUtteranceRect = this.getDocumentRect(range);
+	}
+
+	private getDocumentRect(range: Range): DOMRect | null {
+		const rects = typeof range.getClientRects === 'function' ? Array.from(range.getClientRects()) : [];
+		const visibleRects = rects.filter((rect) => rect.width > 0 && rect.height > 0);
+		if (visibleRects.length === 0) return null;
+		const rect = this.unionRects(visibleRects);
+		const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
+		const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+		return new DOMRect(rect.left + scrollX, rect.top + scrollY, rect.width, rect.height);
 	}
 
 	public clear(): void {
@@ -266,6 +301,8 @@ export class DomWordHighlighter {
 		this.currentLineRange = null;
 		this.currentLineRect = null;
 		this.currentUtteranceKey = null;
+		this.currentUtteranceRoot = null;
+		this.currentUtteranceRect = null;
 	}
 
 	private getLineLayout(rootElement: HTMLElement, scrollX: number, scrollY: number): CachedLineLayout {

@@ -97,6 +97,9 @@ public final class NativeReadAloudService extends MediaSessionService {
         player.setAudioAttributes(audioAttributes, true);
         player.addListener(createPlayerListener());
         mediaSession = new MediaSession.Builder(this, player).build();
+        // Direct bridge commands never connect a MediaController/onGetSession.
+        // Register here so Media3 observes buffering and starts its foreground notification.
+        addSession(mediaSession);
         synthesizer = new EdgeStreamingSynthesizer();
     }
 
@@ -130,7 +133,10 @@ public final class NativeReadAloudService extends MediaSessionService {
 
     private void startPendingRequest() {
         ReadAloudSessionRequest pendingRequest = Media3ReadAloudBridge.consumePendingRequest();
-        if (pendingRequest == null || pendingRequest.getUtterances().isEmpty()) return;
+        if (pendingRequest == null || pendingRequest.getUtterances().isEmpty()) {
+            stopSelf();
+            return;
+        }
         cancelSynthesis();
         player.stop();
         player.clearMediaItems();
@@ -157,6 +163,7 @@ public final class NativeReadAloudService extends MediaSessionService {
         player.setMediaSources(mediaSources, request.getStartIndex(), 0L);
         player.prepare();
         player.play();
+        triggerNotificationUpdate();
         scheduleBuffer(request.getStartIndex());
         mainHandler.removeCallbacks(progressTicker);
         mainHandler.post(progressTicker);

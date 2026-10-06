@@ -21,28 +21,33 @@ const createBrowserEnvironment = (): ScrollFollowerEnvironment => ({
  * Cơ chế thông minh:
  * - Khi dòng highlight đang có mặt trên màn hình: tự động cuộn nhẹ theo dòng highlight.
  * - Khi người dùng vuốt/cuộn màn hình (user scrolling): tạm ngưng auto-scroll để người dùng thao tác.
- * - Khi người dùng thả tay ra: nếu dòng highlight đã trôi khỏi màn hình (mất khỏi viewport),
- *   tuyệt đối KHÔNG cuộn giật về lại, để người dùng tự do đọc tiếp ở vị trí vừa cuộn tới.
+ * - Giữ quyền cuộn cho người dùng đến khi họ chủ động bắt đầu đọc/điều hướng lại.
  */
 export class ReadAloudScrollFollower {
 	private targetY: number | null = null;
 	private animationFrame: number | null = null;
-	private userInteractingUntil = 0;
+	private following = true;
 
 	constructor(private readonly environment: ScrollFollowerEnvironment = createBrowserEnvironment()) {}
 
 	/**
 	 * Thông báo rằng người dùng đang tương tác chạm/cuộn màn hình.
-	 * Hủy ngay lập tức animation cuộn tự động và tạm hoãn auto-scroll trong 1.2s.
+ * Hủy ngay lập tức animation cuộn tự động và nhường quyền cuộn cho người dùng.
 	 */
 	public notifyUserInteraction(): void {
-		this.userInteractingUntil = Date.now() + 1200;
+		this.following = false;
 		this.cancel();
+	}
+
+	/** Only an explicit playback/navigation action restores following. */
+	public resumeFollowing(): void {
+		this.cancel();
+		this.following = true;
 	}
 
 	public follow(line: DOMRect): void {
 		// Nếu người dùng vừa chạm/cuộn màn hình: nhường quyền thao tác hoàn toàn cho người dùng
-		if (Date.now() < this.userInteractingUntil) {
+		if (!this.following) {
 			this.cancel();
 			return;
 		}
@@ -100,7 +105,7 @@ export class ReadAloudScrollFollower {
 		}
 
 		// Nếu người dùng bắt đầu vuốt ngón tay trong lúc animation đang chạy: dừng ngay
-		if (Date.now() < this.userInteractingUntil) {
+		if (!this.following) {
 			this.cancel();
 			return;
 		}

@@ -20,6 +20,41 @@ afterEach(() => {
 });
 
 describe('DomWordHighlighter', () => {
+	it('moves the blue utterance range to a different paragraph with identical offsets', () => {
+		const first = document.createElement('div');
+		const second = document.createElement('div');
+		first.textContent = 'Một hai ba';
+		second.textContent = 'Bốn năm sáu';
+		const highlights = { set: vi.fn(), delete: vi.fn() };
+		const FakeHighlight = vi.fn(function (this: { ranges: Range[] }, ...ranges: Range[]) { this.ranges = ranges; });
+		Object.defineProperty(globalThis, 'Highlight', { configurable: true, value: FakeHighlight });
+		Object.defineProperty(globalThis, 'CSS', { configurable: true, value: { highlights } });
+		const highlighter = new DomWordHighlighter('active-word');
+		highlighter.highlightUtteranceAndWord(first, 0, 10, 0, 3);
+		highlighter.highlightUtteranceAndWord(second, 0, 10, 0, 3);
+		const calls = highlights.set.mock.calls.filter(([name]) => name === 'stories-tts-utterance');
+		expect(calls).toHaveLength(2);
+		expect(calls[1][1].ranges[0].startContainer.parentElement).toBe(second);
+	});
+
+	it('returns document coordinates for a multi-line utterance after the page has scrolled', () => {
+		const root = document.createElement('div');
+		root.textContent = 'Một hai ba bốn';
+		const FakeHighlight = vi.fn();
+		Object.defineProperty(globalThis, 'Highlight', { configurable: true, value: FakeHighlight });
+		Object.defineProperty(globalThis, 'CSS', { configurable: true, value: { highlights: { set: vi.fn(), delete: vi.fn() } } });
+		vi.spyOn(window, 'scrollY', 'get').mockReturnValue(600);
+		const originalCreateRange = document.createRange.bind(document);
+		vi.spyOn(document, 'createRange').mockImplementation(() => {
+			const range = originalCreateRange();
+			Object.defineProperty(range, 'getClientRects', { value: () => [new DOMRect(20, 100, 240, 30), new DOMRect(20, 130, 100, 30)] });
+			return range;
+		});
+		const highlighter = new DomWordHighlighter('active-word');
+		const geometry = highlighter.highlightUtteranceAndWord(root, 0, 14, 0, 3);
+		expect(geometry?.line.top).toBe(700);
+		expect(geometry?.word.top).toBe(700);
+	});
 	it('moves the highlight without rebuilding unrelated formatted DOM', () => {
 		const root = document.createElement('div');
 		root.innerHTML = '<strong>Xin</strong> chào bạn';
@@ -187,6 +222,16 @@ describe('DomWordHighlighter', () => {
 		Object.defineProperty(globalThis, 'Highlight', { configurable: true, value: FakeHighlight });
 		Object.defineProperty(globalThis, 'CSS', { configurable: true, value: { ...originalCss, highlights } });
 
+		let utteranceLayoutReads = 0;
+		const originalCreateRange = document.createRange.bind(document);
+		vi.spyOn(document, 'createRange').mockImplementation(() => {
+			const range = originalCreateRange();
+			Object.defineProperty(range, 'getClientRects', { value: () => {
+				if (range.toString() === root.textContent) utteranceLayoutReads += 1;
+				return [new DOMRect(20, 40, 260, 30)];
+			} });
+			return range;
+		});
 		const highlighter = new DomWordHighlighter('active-word');
 		highlighter.highlightUtteranceAndWord(root, 0, 15, 0, 3);
 		highlighter.highlightUtteranceAndWord(root, 0, 15, 4, 3);
@@ -195,6 +240,7 @@ describe('DomWordHighlighter', () => {
 		const wordCalls = highlights.set.mock.calls.filter((call) => call[0] === 'stories-tts-word');
 		expect(utteranceCalls).toHaveLength(1);
 		expect(wordCalls).toHaveLength(2);
+		expect(utteranceLayoutReads).toBe(1);
 		expect(highlights.delete).not.toHaveBeenCalledWith('stories-tts-utterance');
 	});
 });

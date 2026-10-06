@@ -97,4 +97,24 @@ describe('ReadAloudScrollFollower', () => {
 		expect(scrollTo).not.toHaveBeenCalled();
 		expect(requestFrame).not.toHaveBeenCalled();
 	});
+	it('does not reclaim scrolling after the user has moved away for more than 1.2 seconds', () => {
+		const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
+		const requestFrame = vi.fn();
+		const follower = new ReadAloudScrollFollower({
+			getScrollY: () => 0,
+			getViewportHeight: () => 800,
+			scrollTo: vi.fn(),
+			requestFrame,
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => false
+		});
+		follower.notifyUserInteraction();
+		now.mockReturnValue(4000);
+		follower.follow(new DOMRect(0, 900, 300, 30));
+		expect(requestFrame).not.toHaveBeenCalled();
+		follower.resumeFollowing();
+		follower.follow(new DOMRect(0, 900, 300, 30));
+		expect(requestFrame).toHaveBeenCalledOnce();
+		now.mockRestore();
+	});
 });

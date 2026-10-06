@@ -690,6 +690,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		const readerContent = document.querySelector('#main-story-content');
 		const paragraphNode = readerContent?.querySelector<HTMLElement>(`article > div[data-paragraph-index="${paragraphIndex}"]`);
 		if (!paragraphNode) return;
+		const absoluteWordIndex = sourceStart + wordCharIndex;
+		if (currentParagraphIndexRef.current === paragraphIndex && charIndexRef.current === absoluteWordIndex && charLengthRef.current === wordCharLength) return;
 
 		currentChunkIdxRef.current = chunkIndex;
 		currentParagraphIndexRef.current = paragraphIndex;
@@ -707,7 +709,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			sourceStart + wordCharIndex,
 			wordCharLength
 		);
-		if (geometry?.line) scrollFollowerRef.current?.follow(geometry.line);
+		if (geometry?.utteranceChanged) scrollFollowerRef.current?.follow(geometry.line);
 	};
 
 	const activeNativeStream = useMemo(() => {
@@ -1117,6 +1119,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	};
 
 	const startReading = (targetIndex?: number, targetOffset?: number) => {
+		scrollFollowerRef.current?.resumeFollowing();
 		void requestWakeLock();
 		if (isPaused) {
 			setIsPaused(false);
@@ -1272,6 +1275,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	};
 
 	const nextSection = () => {
+		scrollFollowerRef.current?.resumeFollowing();
 		lastInteractionTime.current = 0;
 		if (currentChunkIdxRef.current < chunks.length - 1) {
 			const nextIdx = currentChunkIdxRef.current + 1;
@@ -1300,6 +1304,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	};
 
 	const prevSection = () => {
+		scrollFollowerRef.current?.resumeFollowing();
 		lastInteractionTime.current = 0;
 		if (currentChunkIdxRef.current > 0) {
 			const prevIdx = currentChunkIdxRef.current - 1;
