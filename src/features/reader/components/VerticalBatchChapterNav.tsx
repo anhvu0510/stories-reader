@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Loader2, LocateFixed, Music, Pause, Play, SkipForward, Square, Volume2 } from 'lucide-react';
 
 import { isEdgeReadAloudActive } from '@/hooks/useEdgeReadAloudBgm';
 import { triggerHaptic } from '@/hooks/useHaptic';
+import { ReadAloudControlFrame } from './ReadAloudControlFrame';
 
 import type { ChapterDetailItem } from '@/shared/types';
 
@@ -44,7 +45,6 @@ export function VerticalBatchChapterNav({
 	onTTSPrev: _onTTSPrev,
 	onTTSNext
 }: VerticalBatchChapterNavProps) {
-	const containerRef = useRef<HTMLDivElement | null>(null);
 	const [hasBrowserReadAloudHighlight, setHasBrowserReadAloudHighlight] = useState(false);
 
 	// Edge Read Aloud owns this class; the app TTS uses a separate namespace.
@@ -89,10 +89,11 @@ export function VerticalBatchChapterNav({
 
 	return (
 		<div
-			aria-hidden="true"
-			className={`fixed bottom-[100px] left-0 right-0 z-40 w-full max-w-md mx-auto px-4 pointer-events-none box-border overflow-x-hidden transition-all duration-300 cubic-bezier(0.16,1,0.3,1) transform-gpu ${isVisible ? 'translate-x-0 opacity-100' : '-translate-x-14 opacity-0 pointer-events-none'}`}
+			aria-hidden={!isVisible}
+			inert={!isVisible}
+			className={`fixed bottom-[100px] left-0 right-0 z-40 w-full max-w-md mx-auto px-4 pointer-events-none box-border transition-all duration-300 cubic-bezier(0.16,1,0.3,1) transform-gpu ${isVisible ? 'translate-x-0 opacity-100' : '-translate-x-14 opacity-0 pointer-events-none'}`}
 		>
-			<div ref={containerRef} className="w-fit flex flex-col items-center gap-2 pointer-events-auto box-border transition-all duration-300 transform-gpu">
+			<ReadAloudControlFrame active={isTTSActive} isVisible={isVisible}>
 				{!isTTSActive ? (
 					/* Inactive State: Single Floating 3D Circle Speaker Button + Conditional BGM & Locate Buttons */
 					<div className="flex flex-col items-center gap-2.5">
@@ -149,7 +150,7 @@ export function VerticalBatchChapterNav({
 						)}
 					</div>
 				) : (
-					/* Active State: Vertical Stack of Independent Floating 3D Circle Buttons */
+					/* Keep the existing button styles inside the transparent draggable frame. */
 					<div className="flex flex-col items-center gap-2.5 animate-in fade-in zoom-in-90 duration-300 ease-out">
 						{/* Locate Highlight Button (shown when line highlight exists) */}
 						{hasBrowserReadAloudHighlight && (
@@ -263,7 +264,7 @@ export function VerticalBatchChapterNav({
 						</motion.button>
 					</div>
 				)}
-			</div>
+			</ReadAloudControlFrame>
 		</div>
 	);
 }

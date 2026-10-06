@@ -181,4 +181,23 @@ describe('VerticalBatchChapterNav Component', () => {
 		fireEvent.click(bgmBtn);
 		expect(mockOnToggleBgm).toHaveBeenCalledTimes(1);
 	});
+
+	it('encloses active controls in a transparent frame without changing button styles', () => {
+		render(<VerticalBatchChapterNav isTTSActive isTTSPlaying />);
+		const frame = screen.getByRole('group', { name: 'Điều khiển đọc thành tiếng' });
+		expect(frame.className).toContain('bg-transparent');
+		expect(screen.getByRole('button', { name: 'Kéo thanh điều khiển lên hoặc xuống' })).toBeDefined();
+		const pause = screen.getByRole('button', { name: 'Tạm dừng đọc' });
+		expect(frame.contains(pause)).toBe(true);
+		expect(pause.className).toContain('w-9.5 h-9.5 rounded-full');
+		expect(pause.className).toContain('bg-primary/25');
+		expect(screen.getByRole('button', { name: 'Dừng đọc' }).className).toContain('bg-rose-500/10');
+	});
+
+	it('keeps the idle speaker unchanged without a frame or drag handle', () => {
+		render(<VerticalBatchChapterNav />);
+		expect(screen.queryByRole('group', { name: 'Điều khiển đọc thành tiếng' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Kéo thanh điều khiển lên hoặc xuống' })).toBeNull();
+		expect(screen.getByRole('button', { name: 'Bật đọc thành tiếng' }).className).toContain('w-9 h-9 rounded-full');
+	});
 });
