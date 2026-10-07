@@ -15,7 +15,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -33,6 +32,7 @@ public class GaplessStreamPlayer {
         void onPlaybackStateChange(boolean isPlaying, boolean isPaused, boolean isBuffering);
         void onChunkCompleted(int completedIndex);
         void onAllCompleted();
+        default void onPlaybackError(int chunkIndex, String message) {}
     }
 
     private final Context context;
@@ -115,7 +115,7 @@ public class GaplessStreamPlayer {
 
             @Override
             public void onError(PlayerSlot errorSlot, int what, int extra) {
-                mainHandler.post(() -> handleChunkCompletion(errorSlot, sessionId));
+                mainHandler.post(() -> handleSlotError(errorSlot, what, extra, sessionId));
             }
         });
     }
@@ -133,8 +133,7 @@ public class GaplessStreamPlayer {
 
         boolean started = currentSlot.start();
         if (!started) {
-            currentSlot.release();
-            mainHandler.post(() -> handleChunkCompletion(slot, sessionId));
+            handleSlotError(slot, -1, 0, sessionId);
             return;
         }
 
@@ -174,8 +173,7 @@ public class GaplessStreamPlayer {
 
             @Override
             public void onError(PlayerSlot errorSlot, int what, int extra) {
-                errorSlot.release();
-                preparingNextSlot = null;
+                mainHandler.post(() -> handleSlotError(errorSlot, what, extra, sessionId));
             }
         });
     }
@@ -196,12 +194,13 @@ public class GaplessStreamPlayer {
             completedSlot.release();
             return;
         }
+        if (completedSlot != currentSlot) return;
         stopWordBoundaryTicker();
 
         int completedIdx = currentChunkIndex;
-        drainRemainingWordBoundaries(completedIdx);
 
         completedSlot.release();
+        currentSlot = new PlayerSlot();
 
         if (nextSlot.isPrepared()) {
             currentSlot = nextSlot;
@@ -224,16 +223,17 @@ public class GaplessStreamPlayer {
         }
     }
 
-    private void drainRemainingWordBoundaries(int completedIdx) {
-        JSONArray boundaries = wordBoundariesSource != null ? wordBoundariesSource.get(completedIdx) : null;
-        List<JSONObject> remaining = wordBoundaryTracker.drainRemainingBoundaries(boundaries);
-        for (JSONObject wb : remaining) {
-            int charIdx = wb.optInt("charIndex", -1);
-            if (charIdx >= 0 && listener != null) {
-                listener.onWordBoundary(
-                        completedIdx, charIdx, wb.optInt("charLength", 1), wb.optString("text", "")
-                );
-            }
+    private synchronized void handleSlotError(PlayerSlot slot, int what, int extra, long sessionId) {
+        if (sessionId != currentSessionId || !isPlaying) return;
+        if (slot != currentSlot && slot != nextSlot && slot != preparingCurrentSlot && slot != preparingNextSlot) return;
+        stopWordBoundaryTicker();
+        currentSlot.pause();
+        slot.release();
+        isPlaying = false;
+        isPaused = true;
+        if (listener != null) {
+            listener.onPlaybackStateChange(false, true, false);
+            listener.onPlaybackError(currentChunkIndex, "Audio playback failed: " + what + "/" + extra);
         }
     }
 

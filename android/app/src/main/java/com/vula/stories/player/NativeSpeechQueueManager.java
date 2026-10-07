@@ -32,6 +32,7 @@ public class NativeSpeechQueueManager {
         void onPlaybackStateChange(boolean isPlaying, boolean isPaused, boolean isBuffering);
         void onChunkCompleted(int chunkIndex);
         void onAllCompleted();
+        default void onChunkError(int chunkIndex, String message) {}
     }
 
     private final List<String> chunks = new ArrayList<>();
@@ -39,6 +40,8 @@ public class NativeSpeechQueueManager {
     private int currentChunkIndex = 0;
     private volatile boolean isPlaying = false;
     private volatile boolean isPaused = false;
+    private long generation = 0;
+    private int lastQueuedIndex = -1;
 
     public NativeSpeechQueueManager() {}
 
@@ -50,6 +53,7 @@ public class NativeSpeechQueueManager {
      * Thiết lập danh sách các câu cần đọc và vị trí câu bắt đầu.
      */
     public synchronized void setChunks(List<String> newChunks, int startIndex) {
+        generation += 1;
         this.chunks.clear();
         if (newChunks != null) {
             this.chunks.addAll(newChunks);
@@ -68,14 +72,24 @@ public class NativeSpeechQueueManager {
      * Giải mã chỉ số câu (chunkIndex) từ mã UtteranceId.
      */
     public static int parseChunkIndex(String utteranceId) {
-        if (utteranceId != null && utteranceId.startsWith(UTTERANCE_PREFIX)) {
-            try {
-                return Integer.parseInt(utteranceId.substring(UTTERANCE_PREFIX.length()));
-            } catch (NumberFormatException e) {
-                Log.w(TAG, "Không thể phân giải chunkIndex từ utteranceId: " + utteranceId);
-            }
+        if (utteranceId == null || !utteranceId.startsWith(UTTERANCE_PREFIX)) return -1;
+        try {
+            String index = utteranceId.substring(UTTERANCE_PREFIX.length()).split("_g", 2)[0];
+            return Integer.parseInt(index);
+        } catch (NumberFormatException error) {
+            Log.w(TAG, "Invalid speech utterance id: " + utteranceId);
+            return -1;
         }
-        return -1;
+    }
+
+    private String activeUtteranceId(int index) {
+        return buildUtteranceId(index) + "_g" + generation;
+    }
+
+    private int activeChunkIndex(String id) {
+        int index = parseChunkIndex(id);
+        if (!isPlaying || index < 0 || index >= chunks.size()) return -1;
+        return activeUtteranceId(index).equals(id) ? index : -1;
     }
 
     /**
@@ -87,20 +101,21 @@ public class NativeSpeechQueueManager {
         if (tts == null || chunks.isEmpty()) return;
 
         int validStart = Math.max(0, Math.min(startIndex, chunks.size() - 1));
+        generation += 1;
         currentChunkIndex = validStart;
         isPlaying = true;
         isPaused = false;
 
         // Phát câu khởi đầu (QUEUE_FLUSH)
         String firstText = chunks.get(validStart);
-        tts.speak(firstText, TextToSpeech.QUEUE_FLUSH, params, buildUtteranceId(validStart));
-
-        // Nạp trước các câu gối đầu tiếp theo (QUEUE_ADD)
-        int maxAhead = Math.min(chunks.size() - 1, validStart + QUEUE_LOOKAHEAD);
-        for (int i = validStart + 1; i <= maxAhead; i++) {
-            String nextText = chunks.get(i);
-            tts.speak(nextText, TextToSpeech.QUEUE_ADD, params, buildUtteranceId(i));
+        lastQueuedIndex = validStart;
+        int result = tts.speak(firstText, TextToSpeech.QUEUE_FLUSH, params, activeUtteranceId(validStart));
+        if (result != TextToSpeech.SUCCESS) {
+            handleChunkError(activeUtteranceId(validStart), tts, params);
+            return;
         }
+        maintainQueue(tts, params);
+        if (!isPlaying) return;
 
         if (listener != null) {
             listener.onPlaybackStateChange(true, false, false);
@@ -114,9 +129,14 @@ public class NativeSpeechQueueManager {
         if (tts == null || !isPlaying || chunks.isEmpty()) return;
 
         int targetLookahead = Math.min(chunks.size() - 1, currentChunkIndex + QUEUE_LOOKAHEAD);
-        for (int i = currentChunkIndex + 1; i <= targetLookahead; i++) {
+        for (int i = lastQueuedIndex + 1; i <= targetLookahead; i++) {
             String aheadText = chunks.get(i);
-            tts.speak(aheadText, TextToSpeech.QUEUE_ADD, params, buildUtteranceId(i));
+            int result = tts.speak(aheadText, TextToSpeech.QUEUE_ADD, params, activeUtteranceId(i));
+            if (result != TextToSpeech.SUCCESS) {
+                handleChunkError(activeUtteranceId(i), tts, params);
+                return;
+            }
+            lastQueuedIndex = i;
         }
     }
 
@@ -124,16 +144,12 @@ public class NativeSpeechQueueManager {
      * Xử lý khi bắt đầu đọc một câu văn (onStart callback từ TextToSpeech).
      */
     public synchronized void handleChunkStart(String utteranceId) {
-        int index = parseChunkIndex(utteranceId);
-        if (index >= 0) {
-            currentChunkIndex = index;
-            isPlaying = true;
-            isPaused = false;
-
-            if (listener != null) {
-                listener.onChunkStart(index);
-                listener.onPlaybackStateChange(true, false, false);
-            }
+        int index = activeChunkIndex(utteranceId);
+        if (index < currentChunkIndex || index < 0) return;
+        currentChunkIndex = index;
+        if (listener != null) {
+            listener.onChunkStart(index);
+            listener.onPlaybackStateChange(true, false, false);
         }
     }
 
@@ -141,8 +157,8 @@ public class NativeSpeechQueueManager {
      * Xử lý khi đọc đến từng từ cụ thể trong câu (onRangeStart callback thời gian thực).
      */
     public synchronized void handleRangeStart(String utteranceId, int start, int end) {
-        int index = parseChunkIndex(utteranceId);
-        if (index < 0 || index >= chunks.size()) {
+        int index = activeChunkIndex(utteranceId);
+        if (index < 0 || index != currentChunkIndex) {
             return;
         }
         String text = chunks.get(index);
@@ -158,8 +174,8 @@ public class NativeSpeechQueueManager {
      * Xử lý khi đọc xong một câu văn (onDone callback).
      */
     public synchronized void handleChunkDone(String utteranceId) {
-        int index = parseChunkIndex(utteranceId);
-        if (index < 0) {
+        int index = activeChunkIndex(utteranceId);
+        if (index < 0 || index != currentChunkIndex) {
             return;
         }
         if (listener != null) {
@@ -179,32 +195,20 @@ public class NativeSpeechQueueManager {
     }
 
     /**
-     * Xử lý khi một câu đọc bị lỗi (onError callback). Tự động chuyển câu kế tiếp.
+     * Preserve the failed sentence so resume retries it; never report it as read.
      */
     public synchronized void handleChunkError(String utteranceId, TextToSpeech tts, Bundle params) {
-        int index = parseChunkIndex(utteranceId);
-        if (index < 0) {
-            return;
-        }
-        Log.w(TAG, "Chunk error on " + utteranceId + ", skipping to next chunk");
-        if (listener != null) {
-            listener.onChunkCompleted(index);
-        }
-        if (index < chunks.size() - 1 && isPlaying) {
-            startSpeaking(tts, index + 1, params);
-            return;
-        }
-        if (index >= chunks.size() - 1) {
-            isPlaying = false;
-            isPaused = false;
-            if (listener != null) {
-                listener.onAllCompleted();
-                listener.onPlaybackStateChange(false, false, false);
-            }
-        }
+        int index = activeChunkIndex(utteranceId);
+        if (index < 0) return;
+        Log.e(TAG, "Speech failed at sentence " + index);
+        currentChunkIndex = Math.min(currentChunkIndex, index);
+        notifyPaused();
+        if (tts != null) tts.stop();
+        if (listener != null) listener.onChunkError(index, "Device speech failed at sentence " + index);
     }
 
     public synchronized void notifyPaused() {
+        generation += 1;
         isPlaying = false;
         isPaused = true;
         if (listener != null) {
@@ -221,6 +225,7 @@ public class NativeSpeechQueueManager {
     }
 
     public synchronized void notifyStopped() {
+        generation += 1;
         isPlaying = false;
         isPaused = false;
         if (listener != null) {

@@ -69,8 +69,8 @@ public final class NativeReadAloudService extends MediaSessionService {
     private ExoPlayer player;
     private MediaSession mediaSession;
     private EdgeStreamingSynthesizer synthesizer;
-    private ReadAloudSessionRequest request;
-    private int lastBoundaryIndex = -1;
+    private volatile ReadAloudSessionRequest request;
+    private final PlaybackWordBoundaryTracker wordBoundaryTracker = new PlaybackWordBoundaryTracker();
     private long lastSnapshotAt;
     private long sessionStartedAt;
     private long bufferingStartedAt;
@@ -156,7 +156,7 @@ public final class NativeReadAloudService extends MediaSessionService {
         bufferingStartedAt = sessionStartedAt;
         firstAudioLatencyMs = -1L;
         lastBufferingDurationMs = -1L;
-        lastBoundaryIndex = -1;
+        wordBoundaryTracker.reset();
         stateMachine.start(request.getSessionId(), request.getStartIndex());
         publishSnapshot();
 
@@ -246,14 +246,20 @@ public final class NativeReadAloudService extends MediaSessionService {
                             if (!isActive(activeRequest)) return;
                             source.complete();
                             sockets.remove(index);
-                            mainHandler.post(() -> scheduleBuffer(Math.max(index + 1, player.getCurrentMediaItemIndex())));
+                            mainHandler.post(() -> {
+                                if (!isActive(activeRequest)) return;
+                                scheduleBuffer(player.getCurrentMediaItemIndex());
+                            });
                         }
 
                         @Override
                         public void onFailure(IOException error) {
                             if (!isActive(activeRequest)) return;
                             sockets.remove(index);
-                            handleSynthesisFailure(activeRequest, index, attempt, source, error);
+                            mainHandler.post(() -> {
+                                if (!isActive(activeRequest)) return;
+                                handleSynthesisFailure(activeRequest, index, attempt, source, error);
+                            });
                         }
                     }
             );
@@ -273,7 +279,10 @@ public final class NativeReadAloudService extends MediaSessionService {
         if (source.size() == 0 && retryPolicy.canRetry(completedAttempts)) {
             double jitter = (Math.random() - 0.5) * 0.4;
             long delayMs = retryPolicy.delayMillis(attempt, jitter);
-            mainHandler.postDelayed(() -> startSynthesis(index, completedAttempts), delayMs);
+            mainHandler.postDelayed(() -> {
+                if (!isActive(activeRequest)) return;
+                startSynthesis(index, completedAttempts);
+            }, delayMs);
             return;
         }
         source.fail(error);
@@ -289,7 +298,7 @@ public final class NativeReadAloudService extends MediaSessionService {
                 if (request == null) return;
                 int index = player.getCurrentMediaItemIndex();
                 if (index < 0 || index >= request.getUtterances().size()) return;
-                lastBoundaryIndex = -1;
+                wordBoundaryTracker.reset();
                 ReadAloudUtterance utterance = request.getUtterances().get(index);
                 Media3ReadAloudBridge.publishUtteranceStart(request.getSessionId(), index, utterance);
                 scheduleBuffer(index);
@@ -366,12 +375,8 @@ public final class NativeReadAloudService extends MediaSessionService {
         if (request == null || !player.isPlaying()) return;
         int index = player.getCurrentMediaItemIndex();
         List<WordBoundary> words = boundaries.get(index);
-        if (words == null || words.isEmpty()) return;
-        int nextIndex = lastBoundaryIndex + 1;
-        if (nextIndex >= words.size()) return;
-        WordBoundary boundary = words.get(nextIndex);
-        if (boundary.getStartTimeMs() > player.getCurrentPosition() + 20L) return;
-        lastBoundaryIndex = nextIndex;
+        WordBoundary boundary = wordBoundaryTracker.findDueBoundary(words, player.getCurrentPosition());
+        if (boundary == null) return;
         Media3ReadAloudBridge.publishWordBoundary(
                 request.getSessionId(),
                 index,
@@ -410,7 +415,7 @@ public final class NativeReadAloudService extends MediaSessionService {
     }
 
     private boolean isActive(ReadAloudSessionRequest candidate) {
-        return request != null && request.getSessionId().equals(candidate.getSessionId());
+        return request == candidate;
     }
 
     private void pausePlayback() {
@@ -427,7 +432,7 @@ public final class NativeReadAloudService extends MediaSessionService {
 
     private void seekTo(int index) {
         if (request == null || index < 0 || index >= request.getUtterances().size()) return;
-        lastBoundaryIndex = -1;
+        wordBoundaryTracker.reset();
         stateMachine.transition(request.getSessionId(), PlaybackSnapshot.State.SEEKING, index, 0L, 0L);
         publishSnapshot();
         player.seekTo(index, 0L);

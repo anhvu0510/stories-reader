@@ -59,9 +59,6 @@ Commands run with RTK:
   gesture suite has 6 tests, zero failures (debug and release).
 - Final full Vitest: 68 files, 428 passed, 3 legacy expected failures (431 total).
 - Final lint/typecheck: zero errors; 105 pre-existing warnings, no new warning.
-- Final `npm run cap:build`: web production build, Capacitor asset sync and
-  native debug APK assemble all succeed; existing large-chunk warning remains.
-- `git diff --check` succeeds. No temporary debug instrumentation remains.
 
 The three expected-failure tests from the preceding diagnosis still describe the
 legacy JS refresh adapter. This task preserves it for browser/older APK fallback;

@@ -35,6 +35,7 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
         void onWordBoundary(int chunkIndex, int charIndex, int charLength, String text);
         void onPlaybackStateChange(boolean isPlaying, boolean isPaused, boolean isBuffering);
         void onPlaybackComplete();
+        default void onPlaybackError(int index, String message) {}
     }
 
     private final Context context;
@@ -57,6 +58,7 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
     private int currentPlayIndex = 0;
     private long streamingSessionId = 0;
     private long lastChunkLogTime = 0;
+    private boolean awaitingSpeechRetry = false;
 
     public EdgeStreamingCoordinator(
             Context context,
@@ -97,6 +99,11 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
             @Override
             public void onChunkCompleted(int completedIndex) {
                 handleChunkCompleted(completedIndex);
+            }
+
+            @Override
+            public void onPlaybackError(int chunkIndex, String message) {
+                failCurrentChunk(chunkIndex, message);
             }
 
             @Override
@@ -186,7 +193,7 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
     }
 
     private synchronized void onAudioSourceReady(int index, AudioSource source, long sessionId) {
-        if (!isStreamingPlaying || sessionId != streamingSessionId) {
+        if (!isStreamingPlaying || awaitingSpeechRetry || sessionId != streamingSessionId) {
             return;
         }
 
@@ -222,32 +229,17 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
                 reason, failDetails);
 
         if (index == currentPlayIndex && !player.hasCurrentPlayer()) {
-            skipFailedChunk(index, reason);
+            failCurrentChunk(index, reason);
         }
     }
 
-    private void skipFailedChunk(int index, String error) {
-        JSONObject failDetails = new JSONObject();
-        try {
-            failDetails.put("chunkIndex", index);
-            failDetails.put("totalChunks", currentChunks.size());
-            failDetails.put("error", error);
-        } catch (Exception e) {
-            Log.w(TAG, "Lỗi đóng gói failDetails: " + e.getMessage());
-        }
-        RemoteLogger.log("EdgeTTSNative_Stream", "warn",
-                "[EdgeTTS:Stream][" + currentBufferMode.toUpperCase(Locale.ROOT) + "] Tự động bỏ qua câu lỗi "
-                        + (index + 1) + " để tiếp tục phát câu " + (index + 2) + "/" + currentChunks.size(),
-                null, failDetails);
-
-        int nextIndex = index + 1;
-        if (nextIndex < currentChunks.size()) {
-            seek(nextIndex);
-            return;
-        }
-        stop(false);
+    private void failCurrentChunk(int index, String error) {
+        awaitingSpeechRetry = true;
+        player.reset();
+        prefetchQueue.cancelAll();
         if (eventListener != null) {
-            eventListener.onPlaybackComplete();
+            eventListener.onPlaybackStateChange(false, true, false);
+            eventListener.onPlaybackError(index, error);
         }
     }
 
@@ -381,7 +373,9 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
         if (targetIndex < 0 || targetIndex >= currentChunks.size()) {
             return;
         }
-        streamingSessionId++;
+        // Seeking keeps the same chapter cache and its in-flight synthesis callbacks.
+        // GaplessStreamPlayer.reset() invalidates only the old playback callbacks.
+        awaitingSpeechRetry = false;
         currentPlayIndex = targetIndex;
         player.reset();
         player.setWordBoundariesSource(prefetchQueue.getWordBoundariesSource());
@@ -423,6 +417,10 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
     }
 
     public void resume() {
+        if (awaitingSpeechRetry) {
+            seek(currentPlayIndex);
+            return;
+        }
         if (media3Adapter != null && media3Adapter.isMedia3Active()) {
             media3Adapter.resume(context);
             return;
@@ -456,6 +454,7 @@ public class EdgeStreamingCoordinator implements StoriesAudioBridge.AudioControl
         }
         streamingSessionId++;
         isStreamingPlaying = false;
+        awaitingSpeechRetry = false;
         currentPlayIndex = 0;
         player.releaseWakeLock();
         player.reset();

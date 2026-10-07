@@ -25,6 +25,7 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
     private final EventDispatcher eventDispatcher;
     private boolean isMedia3Active = false;
     private int currentPlayIndex = 0;
+    private String activeSessionId;
 
     public Media3PlaybackAdapter(EventDispatcher eventDispatcher) {
         this.eventDispatcher = eventDispatcher;
@@ -45,6 +46,7 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
     public void unregister() {
         Media3ReadAloudBridge.unregisterListener(this);
         isMedia3Active = false;
+        activeSessionId = null;
     }
 
     public void pause(Context context) {
@@ -95,6 +97,7 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
                 : UUID.randomUUID().toString();
 
         currentPlayIndex = safeStartIndex;
+        activeSessionId = sessionId;
         isMedia3Active = true;
         Media3ReadAloudBridge.registerListener(this);
         Media3ReadAloudBridge.start(
@@ -152,6 +155,8 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
 
     @Override
     public void onSnapshot(PlaybackSnapshot snapshot) {
+        if (activeSessionId == null) activeSessionId = snapshot.getSessionId();
+        if (!matchesSession(snapshot.getSessionId())) return;
         boolean isTerminal = snapshot.getState() == PlaybackSnapshot.State.IDLE
                 || snapshot.getState() == PlaybackSnapshot.State.COMPLETED
                 || snapshot.getState() == PlaybackSnapshot.State.ERROR;
@@ -164,12 +169,15 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
         legacyState.put("sessionId", snapshot.getSessionId());
         legacyState.put("isPlaying", snapshot.getState() == PlaybackSnapshot.State.PLAYING);
         legacyState.put("isPaused", snapshot.getState() == PlaybackSnapshot.State.PAUSED);
-        legacyState.put("isBuffering", snapshot.getState() == PlaybackSnapshot.State.CONNECTING || snapshot.getState() == PlaybackSnapshot.State.BUFFERING);
+        legacyState.put("isBuffering", snapshot.getState() == PlaybackSnapshot.State.CONNECTING
+                || snapshot.getState() == PlaybackSnapshot.State.BUFFERING
+                || snapshot.getState() == PlaybackSnapshot.State.SEEKING);
         eventDispatcher.sendEvent("onPlaybackStateChange", legacyState);
     }
 
     @Override
     public void onUtteranceStart(String sessionId, int utteranceIndex, ReadAloudUtterance utterance) {
+        if (!matchesSession(sessionId)) return;
         currentPlayIndex = utteranceIndex;
         JSObject event = new JSObject();
         event.put("sessionId", sessionId);
@@ -183,6 +191,7 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
 
     @Override
     public void onWordBoundary(String sessionId, int utteranceIndex, ReadAloudUtterance utterance, WordBoundary boundary) {
+        if (!matchesSession(sessionId)) return;
         JSObject event = new JSObject();
         event.put("sessionId", sessionId);
         event.put("chunkIndex", utterance.getSourceChunkIndex());
@@ -198,6 +207,7 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
 
     @Override
     public void onCompleted(String sessionId) {
+        if (!matchesSession(sessionId)) return;
         isMedia3Active = false;
         JSObject event = new JSObject();
         event.put("sessionId", sessionId);
@@ -206,12 +216,17 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
 
     @Override
     public void onError(String sessionId, int utteranceIndex, String code, String message) {
+        if (!matchesSession(sessionId)) return;
         JSObject event = new JSObject();
         event.put("sessionId", sessionId);
         event.put("chunkIndex", utteranceIndex);
         event.put("code", code);
         event.put("message", message);
         eventDispatcher.sendEvent("onError", event);
+    }
+
+    private boolean matchesSession(String sessionId) {
+        return activeSessionId != null && activeSessionId.equals(sessionId);
     }
 
     public static JSObject snapshotToJs(PlaybackSnapshot snapshot) {

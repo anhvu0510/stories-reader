@@ -90,6 +90,14 @@ public class EdgeTTSNativePlugin extends Plugin {
             public void onPlaybackComplete() {
                 notifyListeners("onPlaybackComplete", new JSObject());
             }
+
+            @Override
+            public void onPlaybackError(int index, String message) {
+                JSObject data = new JSObject();
+                data.put("chunkIndex", index);
+                data.put("message", message);
+                notifyListeners("onError", data);
+            }
         };
     }
 

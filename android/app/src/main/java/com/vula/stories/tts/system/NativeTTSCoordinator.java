@@ -103,6 +103,12 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
             }
 
             @Override
+            public void onChunkError(int chunkIndex, String message) {
+                if (eventListener != null) eventListener.onUtteranceError(
+                        NativeSpeechQueueManager.buildUtteranceId(chunkIndex), message);
+            }
+
+            @Override
             public void onAllCompleted() {
                 handleAllCompleted();
             }
@@ -302,8 +308,8 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
     }
 
     public void pause() {
-        speechEngine.stop();
         queueManager.notifyPaused();
+        speechEngine.stop();
         int idx = queueManager.getCurrentChunkIndex();
         int total = queueManager.getTotalChunks();
         StoriesAudioBridge.updatePlayback(
@@ -315,14 +321,13 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
     public void resume() {
         speechEngine.applyVoiceSettings(currentVoice, currentRate, currentPitch);
         queueManager.startSpeaking(speechEngine.getRawTts(), queueManager.getCurrentChunkIndex(), buildSpeechParams());
-        queueManager.notifyResumed();
     }
 
     public void stop(boolean emitEvent) {
         isStreamingPlaying = false;
         lastChunkLogTime = 0;
-        speechEngine.stop();
         queueManager.notifyStopped();
+        speechEngine.stop();
         StoriesAudioBridge.unregisterListener(this);
         StoriesAudioBridge.stopPlayback(context);
         releaseWakeLock();

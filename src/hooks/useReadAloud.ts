@@ -205,6 +205,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	}, []);
 
 	const currentChunkIdxRef = useRef<number>(0);
+	const pendingNativeChunkRef = useRef<number | null>(null);
 	const isPlayingRef = useRef(false);
 	const isPausedRef = useRef(false);
 	const playSessionIdRef = useRef<number>(0);
@@ -674,7 +675,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 		const offset = nextCharIndex + match.index;
 		const geometry = highlighter.highlight(pNode, chunk.startOffset + offset, match[0].length);
-		if (geometry?.line) {
+		if (geometry?.lineChanged) {
 			scrollFollowerRef.current?.follow(geometry.line);
 		}
 	};
@@ -694,7 +695,6 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		const absoluteWordIndex = sourceStart + wordCharIndex;
 		if (currentParagraphIndexRef.current === paragraphIndex && charIndexRef.current === absoluteWordIndex && charLengthRef.current === wordCharLength) return;
 
-		currentChunkIdxRef.current = chunkIndex;
 		currentParagraphIndexRef.current = paragraphIndex;
 		charIndexRef.current = sourceStart + wordCharIndex;
 		charLengthRef.current = wordCharLength;
@@ -723,6 +723,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 		const unsubChunk = activeNativeStream.onChunkStart((idx) => {
 			if (!isPlayingRef.current) return;
+			if (pendingNativeChunkRef.current !== null && idx !== pendingNativeChunkRef.current) return;
+			pendingNativeChunkRef.current = null;
 			currentChunkIdxRef.current = idx;
 			setCurrentChunkIndex(idx);
 			setIsLoading(false);
@@ -732,6 +734,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		const unsubWord = activeNativeStream.onWordBoundary((event) => {
 			if (!isPlayingRef.current) return;
 			const { chunkIndex, charIndex, charLength, paragraphIndex, sourceStart, sourceLength } = event;
+			if (pendingNativeChunkRef.current !== null && chunkIndex !== pendingNativeChunkRef.current) return;
+			if (chunkIndex !== currentChunkIdxRef.current) return;
 			if (paragraphIndex !== undefined && sourceStart !== undefined && sourceLength !== undefined) {
 				updateMedia3Highlight(chunkIndex, paragraphIndex, sourceStart, charIndex, charLength);
 				return;
@@ -740,10 +744,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		});
 
 		const unsubState = activeNativeStream.onPlaybackStateChange(({ isPlaying: p, isPaused: pa, isBuffering: b }) => {
-			if (p) {
-				setIsPlaying(true);
-				isPlayingRef.current = true;
-			}
+			setIsPlaying(p);
+			isPlayingRef.current = p || b;
 			setIsPaused(pa);
 			isPausedRef.current = pa;
 			setIsLoading(b);
@@ -751,6 +753,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 		const unsubDone = activeNativeStream.onPlaybackComplete(() => {
 			if (!isPlayingRef.current) return;
+			if (pendingNativeChunkRef.current !== null) return;
 			clearResumePosition();
 			stopReading(true);
 		});
@@ -1232,6 +1235,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			setIsLoading(true);
 			isPlayingRef.current = true;
 			isPausedRef.current = false;
+			pendingNativeChunkRef.current = null;
 				const textChunks = chunks.map((c) => c.text);
 				const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.8;
 				const edgeBufferMode = useReaderConfigStore.getState().edgeBufferMode || 'file';
@@ -1255,7 +1259,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 				void activeNativeStream.startPlayback({
 					chunks: textChunks,
-					...(isMedia3Mode ? { utterances: playbackUtterances, sessionId: `edge-media3-${newSessionId}` } : {}),
+					...(isMedia3Mode ? { utterances: playbackUtterances, sessionId: `edge-media3-${crypto.randomUUID()}` } : {}),
 					startIndex: nativeStartIndex,
 				voice: targetVoice,
 				rate: currentSpeechRate,
@@ -1323,7 +1327,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			isPausedRef.current = false;
 			currentChunkIdxRef.current = nextIdx;
 			if (activeNativeStream) {
-				const nativeIndex = useReaderConfigStore.getState().edgeBufferMode === 'media3' ? getMedia3UtteranceIndex(nextIdx) : nextIdx;
+				pendingNativeChunkRef.current = nextIdx;
+				const nativeIndex = ttsEngine === 'edge' && useReaderConfigStore.getState().edgeBufferMode === 'media3' ? getMedia3UtteranceIndex(nextIdx) : nextIdx;
 				void activeNativeStream.seekToChunk(nativeIndex);
 				return;
 			}
@@ -1352,7 +1357,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			isPausedRef.current = false;
 			currentChunkIdxRef.current = prevIdx;
 			if (activeNativeStream) {
-				const nativeIndex = useReaderConfigStore.getState().edgeBufferMode === 'media3' ? getMedia3UtteranceIndex(prevIdx) : prevIdx;
+				pendingNativeChunkRef.current = prevIdx;
+				const nativeIndex = ttsEngine === 'edge' && useReaderConfigStore.getState().edgeBufferMode === 'media3' ? getMedia3UtteranceIndex(prevIdx) : prevIdx;
 				void activeNativeStream.seekToChunk(nativeIndex);
 				return;
 			}

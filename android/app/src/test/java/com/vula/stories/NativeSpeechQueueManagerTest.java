@@ -6,6 +6,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.vula.stories.player.NativeSpeechQueueManager;
+import android.os.Bundle;
+import android.speech.tts.TextToSpeech;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -22,6 +24,59 @@ import java.util.List;
  * - Đảm bảo chuyển giao trạng thái Play / Pause / Resume / Seek mượt mà.
  */
 public class NativeSpeechQueueManagerTest {
+
+    private static final class RecordingTts extends TextToSpeech {
+        final List<String> ids = new ArrayList<>();
+        RecordingTts() { super(null, null); }
+        @Override
+        public int speak(CharSequence text, int mode, Bundle params, String id) {
+            ids.add(id);
+            return SUCCESS;
+        }
+    }
+
+    @Test
+    public void rollingQueueEnqueuesEachSentenceExactlyOnce() {
+        RecordingTts tts = new RecordingTts();
+        queueManager.setChunks(Arrays.asList("0", "1", "2", "3", "4", "5", "6", "7"), 0);
+        queueManager.startSpeaking(tts, 0, null);
+        queueManager.handleChunkStart(tts.ids.get(0));
+        queueManager.maintainQueue(tts, null);
+        queueManager.handleChunkStart(tts.ids.get(1));
+        queueManager.maintainQueue(tts, null);
+        List<Integer> indexes = new ArrayList<>();
+        for (String id : tts.ids) indexes.add(NativeSpeechQueueManager.parseChunkIndex(id));
+        assertEquals(Arrays.asList(0, 1, 2, 3, 4, 5, 6), indexes);
+    }
+
+    @Test
+    public void seekRejectsCallbacksFromFlushedQueueIncludingSameSentence() {
+        RecordingTts tts = new RecordingTts();
+        queueManager.setChunks(chunks, 0);
+        queueManager.startSpeaking(tts, 0, null);
+        String oldId = tts.ids.get(0);
+        queueManager.startSpeaking(tts, 1, null);
+        String newId = tts.ids.get(3);
+        queueManager.handleChunkStart(oldId);
+        assertEquals(1, queueManager.getCurrentChunkIndex());
+        queueManager.startSpeaking(tts, 0, null);
+        queueManager.handleChunkStart(newId);
+        assertEquals(0, queueManager.getCurrentChunkIndex());
+        queueManager.notifyStopped();
+        queueManager.handleChunkStart(tts.ids.get(tts.ids.size() - 1));
+        assertFalse(queueManager.isPlaying());
+    }
+
+    @Test
+    public void speechFailurePausesOnFailedSentenceInsteadOfSkippingIt() {
+        RecordingTts tts = new RecordingTts();
+        queueManager.setChunks(chunks, 0);
+        queueManager.startSpeaking(tts, 0, null);
+        queueManager.handleChunkError(tts.ids.get(0), tts, null);
+        assertEquals(0, queueManager.getCurrentChunkIndex());
+        assertTrue(queueManager.isPaused());
+        assertEquals(3, tts.ids.size());
+    }
 
     private NativeSpeechQueueManager queueManager;
     private List<String> chunks;
@@ -58,6 +113,8 @@ public class NativeSpeechQueueManagerTest {
     @Test
     public void testOnRangeStart_anhXaChinhXacTuTheoThoiGianThuc() {
         queueManager.setChunks(chunks, 0);
+        RecordingTts tts = new RecordingTts();
+        queueManager.startSpeaking(tts, 0, null);
 
         final List<String> capturedWords = new ArrayList<>();
         final List<Integer> capturedIndices = new ArrayList<>();
@@ -83,14 +140,14 @@ public class NativeSpeechQueueManagerTest {
         });
 
         // Giả lập callback onRangeStart từ Android TextToSpeech engine khi phát từ "Tiêu" (start=0, end=4)
-        queueManager.handleRangeStart("speech_chunk_0", 0, 4);
+        queueManager.handleRangeStart(tts.ids.get(0), 0, 4);
 
         assertEquals(1, capturedWords.size());
         assertEquals("Tiêu", capturedWords.get(0));
         assertEquals(Integer.valueOf(0), capturedIndices.get(0));
 
         // Giả lập callback onRangeStart khi phát từ "Viêm" (start=5, end=9)
-        queueManager.handleRangeStart("speech_chunk_0", 5, 9);
+        queueManager.handleRangeStart(tts.ids.get(0), 5, 9);
         assertEquals(2, capturedWords.size());
         assertEquals("Viêm", capturedWords.get(1));
         assertEquals(Integer.valueOf(5), capturedIndices.get(1));
@@ -127,7 +184,9 @@ public class NativeSpeechQueueManagerTest {
         });
 
         // Khi bắt đầu phát
-        queueManager.handleChunkStart("speech_chunk_1");
+        RecordingTts tts = new RecordingTts();
+        queueManager.startSpeaking(tts, 1, null);
+        queueManager.handleChunkStart(tts.ids.get(0));
         assertTrue(queueManager.isPlaying());
         assertFalse(queueManager.isPaused());
         assertEquals(1, queueManager.getCurrentChunkIndex());
@@ -177,7 +236,9 @@ public class NativeSpeechQueueManagerTest {
         });
 
         // Hoàn tất chunk cuối cùng (index 2)
-        queueManager.handleChunkDone("speech_chunk_2");
+        RecordingTts tts = new RecordingTts();
+        queueManager.startSpeaking(tts, 2, null);
+        queueManager.handleChunkDone(tts.ids.get(0));
         assertTrue("Khi câu cuối cùng đọc xong, phải kích hoạt onAllCompleted", allCompletedFired[0]);
     }
 }

@@ -1,5 +1,7 @@
 package com.vula.stories;
 
+import com.vula.stories.player.NativeSpeechQueueManager;
+
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
 
@@ -94,6 +96,8 @@ public class NativeTTSPlugin extends Plugin {
                 JSObject data = new JSObject();
                 data.put("utteranceId", utteranceId);
                 data.put("error", error);
+                data.put("message", error);
+                data.put("chunkIndex", NativeSpeechQueueManager.parseChunkIndex(utteranceId));
                 notifyListeners("onError", data);
             }
 
