@@ -1,7 +1,7 @@
 {
-  "version": "1.0.357",
+  "version": "1.0.358",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "b8c72532bb894214bf3d1bbd1ba73fe7a4eb06b890c12711f3682aefaa5c9bdd",
-  "releaseNotes": "fix: retain word and line highlights during silent gaps and buffering transitions",
-  "updatedAt": "2026-10-07T06:45:04Z"
+  "checksum": "2cee3ab55222b2465931971f22fbc0b9856c9848b0db0264bb77aedcd4816240",
+  "releaseNotes": "refactor: support native playback resume via startCharIndex to preserve cached utterance keys",
+  "updatedAt": "2026-10-07T06:53:45Z"
 }
