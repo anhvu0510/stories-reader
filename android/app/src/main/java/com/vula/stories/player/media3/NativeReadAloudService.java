@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.BiConsumer;
 
 import okhttp3.WebSocket;
 
@@ -64,9 +65,25 @@ public final class NativeReadAloudService extends MediaSessionService {
     private final Map<Integer, WebSocket> sockets = new ConcurrentHashMap<>();
     private final Map<Integer, Integer> retryCounts = new ConcurrentHashMap<>();
     private final Set<Integer> scheduledIndices = Collections.synchronizedSet(new HashSet<>());
+    private final Set<Integer> inFlightIndices = ConcurrentHashMap.newKeySet();
     private final Set<Integer> fallbackIndices = Collections.synchronizedSet(new HashSet<>());
+    private final List<MediaSource> playlistSources = new ArrayList<>();
+    private BiConsumer<Runnable, Long> retryScheduler = (task, delay) -> mainHandler.postDelayed(task, delay);
 
     private ExoPlayer player;
+    private ReadAloudPlaybackControl playbackControl = new ReadAloudPlaybackControl() {
+        @Override public int currentIndex() { return player.getCurrentMediaItemIndex(); }
+        @Override public long positionMs() { return player.getCurrentPosition(); }
+        @Override public boolean playWhenReady() { return player.getPlayWhenReady(); }
+        @Override public void replaceSource(int index, AppendableAudioSource source) {
+            playlistSources.set(index, createProgressiveMediaSource(index, source));
+            player.setMediaSources(playlistSources, false);
+        }
+        @Override public void seek(int index, long positionMs) { player.seekTo(index, positionMs); }
+        @Override public void prepare() { player.prepare(); }
+        @Override public void play() { player.play(); }
+        @Override public void pause() { player.pause(); }
+    };
     private MediaSession mediaSession;
     private EdgeStreamingSynthesizer synthesizer;
     private volatile ReadAloudSessionRequest request;
@@ -149,6 +166,7 @@ public final class NativeReadAloudService extends MediaSessionService {
         sources.clear();
         boundaries.clear();
         scheduledIndices.clear();
+        inFlightIndices.clear();
         fallbackIndices.clear();
         retryCounts.clear();
         request = pendingRequest;
@@ -160,13 +178,13 @@ public final class NativeReadAloudService extends MediaSessionService {
         stateMachine.start(request.getSessionId(), request.getStartIndex());
         publishSnapshot();
 
-        List<MediaSource> mediaSources = new ArrayList<>();
+        playlistSources.clear();
         for (int index = 0; index < request.getUtterances().size(); index++) {
             AppendableAudioSource source = new AppendableAudioSource();
             sources.put(index, source);
-            mediaSources.add(createProgressiveMediaSource(index, source));
+            playlistSources.add(createProgressiveMediaSource(index, source));
         }
-        player.setMediaSources(mediaSources, request.getStartIndex(), 0L);
+        player.setMediaSources(playlistSources, request.getStartIndex(), 0L);
         player.prepare();
         player.play();
         triggerNotificationUpdate();
@@ -204,17 +222,9 @@ public final class NativeReadAloudService extends MediaSessionService {
         }
         List<Integer> planned = bufferPolicy.planIndices(currentIndex, request.getUtterances().size(), estimates);
         for (Integer index : planned) {
-            if (scheduledIndices.size() - completedSynthesisCount() >= MAX_CONCURRENT_SYNTHESIS) break;
+            if (inFlightIndices.size() >= MAX_CONCURRENT_SYNTHESIS) break;
             startSynthesis(index, 0);
         }
-    }
-
-    private int completedSynthesisCount() {
-        int completed = 0;
-        for (AppendableAudioSource source : sources.values()) {
-            if (source.isCompleted()) completed += 1;
-        }
-        return completed;
     }
 
     private void startSynthesis(int index, int attempt) {
@@ -224,8 +234,10 @@ public final class NativeReadAloudService extends MediaSessionService {
         ReadAloudUtterance utterance = activeRequest.getUtterances().get(index);
         AppendableAudioSource source = sources.get(index);
         if (source == null) return;
+        inFlightIndices.add(index);
 
         synthesisExecutor.submit(() -> {
+            if (!isActiveSource(activeRequest, index, source)) return;
             WebSocket socket = synthesizer.synthesize(
                     utterance,
                     activeRequest.getVoice(),
@@ -234,38 +246,43 @@ public final class NativeReadAloudService extends MediaSessionService {
                     new EdgeStreamingSynthesizer.Listener() {
                         @Override
                         public void onAudio(byte[] bytes) {
-                            if (!isActive(activeRequest)) return;
+                            if (!isActiveSource(activeRequest, index, source)) return;
                             source.append(bytes);
                         }
 
                         @Override
                         public void onWordBoundary(WordBoundary boundary) {
-                            if (!isActive(activeRequest)) return;
+                            if (!isActiveSource(activeRequest, index, source)) return;
                             boundaries.computeIfAbsent(index, ignored -> Collections.synchronizedList(new ArrayList<>())).add(boundary);
                         }
 
                         @Override
                         public void onComplete() {
-                            if (!isActive(activeRequest)) return;
+                            if (!isActiveSource(activeRequest, index, source)) return;
                             source.complete();
                             sockets.remove(index);
+                            inFlightIndices.remove(index);
                             mainHandler.post(() -> {
-                                if (!isActive(activeRequest)) return;
+                                if (!isActiveSource(activeRequest, index, source)) return;
                                 scheduleBuffer(player.getCurrentMediaItemIndex());
                             });
                         }
 
                         @Override
                         public void onFailure(IOException error) {
-                            if (!isActive(activeRequest)) return;
+                            if (!isActiveSource(activeRequest, index, source)) return;
                             sockets.remove(index);
                             mainHandler.post(() -> {
-                                if (!isActive(activeRequest)) return;
+                                if (!isActiveSource(activeRequest, index, source)) return;
                                 handleSynthesisFailure(activeRequest, index, attempt, source, error);
                             });
                         }
                     }
             );
+            if (!isActiveSource(activeRequest, index, source)) {
+                socket.cancel();
+                return;
+            }
             sockets.put(index, socket);
         });
     }
@@ -277,21 +294,60 @@ public final class NativeReadAloudService extends MediaSessionService {
             AppendableAudioSource source,
             IOException error
     ) {
+        if (!isActiveSource(activeRequest, index, source)) return;
         int completedAttempts = attempt + 1;
         retryCounts.put(index, completedAttempts);
-        if (source.size() == 0 && retryPolicy.canRetry(completedAttempts)) {
+        if (retryPolicy.canRetry(completedAttempts)) {
+            AppendableAudioSource retrySource = resetSynthesisSource(index);
+            source.fail(error);
             double jitter = (Math.random() - 0.5) * 0.4;
             long delayMs = retryPolicy.delayMillis(attempt, jitter);
-            mainHandler.postDelayed(() -> {
-                if (!isActive(activeRequest)) return;
+            retryScheduler.accept(() -> {
+                if (!isActiveSource(activeRequest, index, retrySource)) return;
                 startSynthesis(index, completedAttempts);
             }, delayMs);
             return;
         }
         source.fail(error);
-        stateMachine.fail(activeRequest.getSessionId(), index, "SYNTHESIS_FAILED");
-        publishSnapshot();
-        Media3ReadAloudBridge.publishError(activeRequest.getSessionId(), index, "SYNTHESIS_FAILED", error.getMessage());
+        inFlightIndices.remove(index);
+        if (index != playbackControl.currentIndex()) {
+            scheduleBuffer(playbackControl.currentIndex());
+            return;
+        }
+        failPlayback(index, "SYNTHESIS_FAILED", error.getMessage());
+    }
+
+    private AppendableAudioSource resetSynthesisSource(int index) {
+        int currentIndex = playbackControl.currentIndex();
+        long position = playbackControl.positionMs();
+        boolean wasPlaying = playbackControl.playWhenReady();
+        AppendableAudioSource replacement = new AppendableAudioSource();
+        sources.put(index, replacement);
+        boundaries.remove(index);
+        fallbackIndices.remove(index);
+        playbackControl.replaceSource(index, replacement);
+        playbackControl.seek(currentIndex, position);
+        if (index != currentIndex) return replacement;
+        wordBoundaryTracker.reset();
+        playbackControl.prepare();
+        if (wasPlaying) playbackControl.play();
+        return replacement;
+    }
+
+    private void prioritizeSynthesis(int targetIndex) {
+        AppendableAudioSource target = sources.get(targetIndex);
+        if (target != null && target.isCompleted() && target.getFailure() == null) return;
+        for (Integer index : new ArrayList<>(inFlightIndices)) {
+            if (index == targetIndex || index == targetIndex + 1) continue;
+            AppendableAudioSource oldSource = sources.get(index);
+            resetSynthesisSource(index);
+            scheduledIndices.remove(index);
+            inFlightIndices.remove(index);
+            retryCounts.remove(index);
+            WebSocket socket = sockets.remove(index);
+            if (socket != null) socket.cancel();
+            if (oldSource != null) oldSource.fail(new IOException("Synthesis superseded by seek"));
+        }
     }
 
     private Player.Listener createPlayerListener() {
@@ -321,6 +377,7 @@ public final class NativeReadAloudService extends MediaSessionService {
 
     private void publishPlayerState(int playbackState) {
         if (request == null) return;
+        if (playbackState == Player.STATE_IDLE && stateMachine.snapshot().getState() == PlaybackSnapshot.State.ERROR) return;
         int index = Math.max(0, player.getCurrentMediaItemIndex());
         PlaybackSnapshot.State state = PlaybackSnapshot.State.IDLE;
         if (playbackState == Player.STATE_BUFFERING) state = PlaybackSnapshot.State.BUFFERING;
@@ -344,12 +401,23 @@ public final class NativeReadAloudService extends MediaSessionService {
         if (request == null) return;
         int index = player.getCurrentMediaItemIndex();
         AppendableAudioSource source = sources.get(index);
-        if (source != null && source.isCompleted() && source.size() > 0 && fallbackIndices.add(index)) {
-            if (activateCompletedFileFallback(index, source.snapshot())) return;
+        if (source != null && source.getFailure() != null) {
+            failPlayback(index, "SYNTHESIS_FAILED", source.getFailure().getMessage());
+            return;
         }
-        stateMachine.fail(request.getSessionId(), index, "DECODER_FAILED");
+        if (source != null && source.isCompleted() && source.size() > 0 && fallbackIndices.add(index)
+                && activateCompletedFileFallback(index, source.snapshot())) return;
+        failPlayback(index, "DECODER_FAILED", error.getMessage());
+    }
+
+    private void failPlayback(int index, String code, String message) {
+        PlaybackSnapshot snapshot = stateMachine.snapshot();
+        if (snapshot.getState() == PlaybackSnapshot.State.ERROR && snapshot.getUtteranceIndex() == index
+                && code.equals(snapshot.getErrorCode())) return;
+        playbackControl.pause();
+        stateMachine.fail(request.getSessionId(), index, code);
         publishSnapshot();
-        Media3ReadAloudBridge.publishError(request.getSessionId(), index, "DECODER_FAILED", error.getMessage());
+        Media3ReadAloudBridge.publishError(request.getSessionId(), index, code, message);
     }
 
     private boolean activateCompletedFileFallback(int index, byte[] audio) {
@@ -414,11 +482,17 @@ public final class NativeReadAloudService extends MediaSessionService {
 
     private long estimateDurationMs(ReadAloudUtterance utterance) {
         int characters = Math.max(1, utterance.getText().length());
-        return Math.max(700L, Math.round((characters / 12.0) * 1_000L));
+        String rate = request.getRate().replace("%", "");
+        double speed = Math.max(0.1, 1.0 + Double.parseDouble(rate) / 100.0);
+        return Math.max(700L, Math.round((characters / 12.0) * 1_000L / speed));
     }
 
     private boolean isActive(ReadAloudSessionRequest candidate) {
         return request == candidate;
+    }
+
+    private boolean isActiveSource(ReadAloudSessionRequest candidate, int index, AppendableAudioSource source) {
+        return isActive(candidate) && sources.get(index) == source;
     }
 
     private void pausePlayback() {
@@ -429,6 +503,9 @@ public final class NativeReadAloudService extends MediaSessionService {
 
     private void resumePlayback() {
         if (request == null) return;
+        int index = playbackControl.currentIndex();
+        recoverFailedSynthesis(index);
+        scheduleBuffer(index);
         player.play();
         publishPlayerState(player.getPlaybackState());
     }
@@ -438,9 +515,20 @@ public final class NativeReadAloudService extends MediaSessionService {
         wordBoundaryTracker.reset();
         stateMachine.transition(request.getSessionId(), PlaybackSnapshot.State.SEEKING, index, 0L, 0L);
         publishSnapshot();
-        player.seekTo(index, 0L);
-        player.play();
+        playbackControl.seek(index, 0L);
+        recoverFailedSynthesis(index);
+        prioritizeSynthesis(index);
+        playbackControl.play();
         scheduleBuffer(index);
+    }
+
+    private void recoverFailedSynthesis(int index) {
+        AppendableAudioSource source = sources.get(index);
+        if (source == null || source.getFailure() == null) return;
+        resetSynthesisSource(index);
+        scheduledIndices.remove(index);
+        inFlightIndices.remove(index);
+        retryCounts.remove(index);
     }
 
     private void stopSession() {
@@ -455,6 +543,7 @@ public final class NativeReadAloudService extends MediaSessionService {
     }
 
     private void cancelSynthesis() {
+        inFlightIndices.clear();
         for (WebSocket socket : sockets.values()) socket.cancel();
         sockets.clear();
     }

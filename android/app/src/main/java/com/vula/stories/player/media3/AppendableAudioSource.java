@@ -15,13 +15,22 @@ public final class AppendableAudioSource {
     private static final long READ_WAIT_MS = 250L;
 
     private final Object lock = new Object();
-    private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    private static final class AudioBuffer extends ByteArrayOutputStream {
+        int copy(long position, byte[] target, int offset, int length) {
+            int readLength = Math.min(length, count - (int) position);
+            System.arraycopy(buf, (int) position, target, offset, readLength);
+            return readLength;
+        }
+    }
+
+    private final AudioBuffer buffer = new AudioBuffer();
     private boolean completed;
     private IOException failure;
 
     public void append(byte[] bytes) {
         if (bytes == null || bytes.length == 0) return;
         synchronized (lock) {
+            if (completed) return;
             buffer.write(bytes, 0, bytes.length);
             lock.notifyAll();
         }
@@ -51,6 +60,12 @@ public final class AppendableAudioSource {
     public boolean isCompleted() {
         synchronized (lock) {
             return completed;
+        }
+    }
+
+    public IOException getFailure() {
+        synchronized (lock) {
+            return failure;
         }
     }
 
@@ -86,10 +101,8 @@ public final class AppendableAudioSource {
             synchronized (lock) {
                 awaitBytes();
                 if (failure != null) throw failure;
-                byte[] available = buffer.toByteArray();
-                if (position >= available.length && completed) return C.RESULT_END_OF_INPUT;
-                int readLength = Math.min(length, available.length - (int) position);
-                System.arraycopy(available, (int) position, target, offset, readLength);
+                if (position >= buffer.size() && completed) return C.RESULT_END_OF_INPUT;
+                int readLength = buffer.copy(position, target, offset, length);
                 position += readLength;
                 bytesTransferred(readLength);
                 return readLength;

@@ -30,13 +30,19 @@ public final class EdgeStreamingSynthesizer {
     }
 
     private final OkHttpClient httpClient;
+    private final WebSocket.Factory webSockets;
 
     public EdgeStreamingSynthesizer() {
-        httpClient = new OkHttpClient.Builder()
+        this(new OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .writeTimeout(15, TimeUnit.SECONDS)
-                .build();
+                .build());
+    }
+
+    public EdgeStreamingSynthesizer(WebSocket.Factory webSockets) {
+        this.webSockets = webSockets;
+        this.httpClient = webSockets instanceof OkHttpClient client ? client : null;
     }
 
     public WebSocket synthesize(ReadAloudUtterance utterance, String voice, String rate, String pitch, Listener listener) {
@@ -47,7 +53,7 @@ public final class EdgeStreamingSynthesizer {
         String requestId = UUID.randomUUID().toString().replace("-", "");
         Request request = EdgeAuth.buildWebSocketRequest(EdgeAuth.buildWebSocketUrl());
 
-        return httpClient.newWebSocket(request, new WebSocketListener() {
+        return webSockets.newWebSocket(request, new WebSocketListener() {
             @Override
             public void onOpen(WebSocket webSocket, Response response) {
                 webSocket.send(EdgeAuth.buildSpeechConfigMessage());
@@ -56,6 +62,7 @@ public final class EdgeStreamingSynthesizer {
 
             @Override
             public void onMessage(WebSocket webSocket, ByteString payload) {
+                if (finished.get()) return;
                 byte[] frame = payload.toByteArray();
                 if (frame.length < 2) return;
                 ByteBuffer buffer = ByteBuffer.wrap(frame);
@@ -71,6 +78,7 @@ public final class EdgeStreamingSynthesizer {
 
             @Override
             public void onMessage(WebSocket webSocket, String payload) {
+                if (finished.get()) return;
                 try {
                     if (payload.contains("Path:audio.metadata")) {
                         emitMetadata(payload, foldedText, searchOffset, listener);
@@ -87,12 +95,25 @@ public final class EdgeStreamingSynthesizer {
 
             @Override
             public void onFailure(WebSocket webSocket, Throwable error, Response response) {
-                failOnce(finished, listener, new IOException("Edge synthesis failed", error));
+                String status = response == null ? "" : " (HTTP " + response.code() + ")";
+                failOnce(finished, listener, new IOException("Edge synthesis failed" + status + ": " + error.getMessage(), error));
+            }
+
+            @Override
+            public void onClosing(WebSocket webSocket, int code, String reason) {
+                failOnce(finished, listener, new IOException("Edge closed before turn.end: " + code + " " + reason));
+                webSocket.close(code, reason);
+            }
+
+            @Override
+            public void onClosed(WebSocket webSocket, int code, String reason) {
+                failOnce(finished, listener, new IOException("Edge closed before turn.end: " + code + " " + reason));
             }
         });
     }
 
     public void shutdown() {
+        if (httpClient == null) return;
         httpClient.dispatcher().executorService().shutdownNow();
         httpClient.connectionPool().evictAll();
     }
