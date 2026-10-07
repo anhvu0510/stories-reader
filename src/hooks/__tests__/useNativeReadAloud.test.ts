@@ -1,17 +1,20 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, cleanup } from '@testing-library/react';
 import { useNativeReadAloud } from '@/hooks/useNativeReadAloud';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { DomWordHighlighter } from '@/services/domWordHighlighter';
+import { NativeTTSStreamService } from '@/services/nativeTtsStream';
 
 describe('useNativeReadAloud Hook', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.spyOn(NativeTTSStreamService, 'stop').mockResolvedValue(undefined);
 		localStorage.clear();
 	});
 
 	afterEach(() => {
+		cleanup();
 		vi.restoreAllMocks();
 		localStorage.clear();
 	});
@@ -23,9 +26,7 @@ describe('useNativeReadAloud Hook', () => {
 		const startPlaybackSpy = vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue(undefined);
 
 		const paragraphs = ['Đoạn văn thứ nhất trên app Android.', 'Đoạn văn thứ hai.'];
-		const { result, unmount } = renderHook(() =>
-			useNativeReadAloud(paragraphs, { bookId: 'b123', chapterId: 'c456', chapterNumber: 10 })
-		);
+		const { result, unmount } = renderHook(() => useNativeReadAloud(paragraphs, { bookId: 'b123', chapterId: 'c456', chapterNumber: 10 }));
 
 		await act(async () => {
 			result.current.startReading();
@@ -84,9 +85,7 @@ describe('useNativeReadAloud Hook', () => {
 		const stopSpy = vi.spyOn(EdgeTTSNativeStreamService, 'stop').mockResolvedValue(undefined);
 
 		const paragraphs = ['Câu kiểm tra tạm dừng.'];
-		const { result, unmount } = renderHook(() =>
-			useNativeReadAloud(paragraphs, { bookId: 'b1', chapterId: 'c1', chapterNumber: 1 })
-		);
+		const { result, unmount } = renderHook(() => useNativeReadAloud(paragraphs, { bookId: 'b1', chapterId: 'c1', chapterNumber: 1 }));
 
 		await act(async () => {
 			result.current.startReading();
@@ -114,9 +113,7 @@ describe('useNativeReadAloud Hook', () => {
 		const startPlaybackSpy = vi.spyOn(NativeTTSStreamService, 'startPlayback').mockResolvedValue(undefined);
 
 		const paragraphs = ['Câu kiểm tra giọng đọc máy thiết bị.'];
-		const { result, unmount } = renderHook(() =>
-			useNativeReadAloud(paragraphs, { bookId: 'b2', chapterId: 'c2', chapterNumber: 2 })
-		);
+		const { result, unmount } = renderHook(() => useNativeReadAloud(paragraphs, { bookId: 'b2', chapterId: 'c2', chapterNumber: 2 }));
 
 		await act(async () => {
 			result.current.startReading();
@@ -145,6 +142,7 @@ describe('useNativeReadAloud Hook', () => {
 		const clearSpy = vi.spyOn(DomWordHighlighter.prototype, 'clear');
 
 		const container = document.createElement('div');
+		container.id = 'main-story-content';
 		const article = document.createElement('article');
 		const pDiv = document.createElement('div');
 		pDiv.setAttribute('data-paragraph-index', '0');
@@ -154,9 +152,7 @@ describe('useNativeReadAloud Hook', () => {
 		document.body.appendChild(container);
 
 		const paragraphs = ['Một hai ba.'];
-		const { result, unmount } = renderHook(() =>
-			useNativeReadAloud(paragraphs, { bookId: 'b3', chapterId: 'c3', chapterNumber: 3 })
-		);
+		const { result, unmount } = renderHook(() => useNativeReadAloud(paragraphs, { bookId: 'b3', chapterId: 'c3', chapterNumber: 3 }));
 
 		await act(async () => {
 			result.current.startReading();
@@ -164,9 +160,7 @@ describe('useNativeReadAloud Hook', () => {
 
 		// Giả lập sự kiện onWordBoundary từ native
 		act(() => {
-			EdgeTTSNativeStreamService['wordBoundaryListeners'].forEach((cb) =>
-				cb({ chunkIndex: 0, charIndex: 0, charLength: 3, text: 'Một' })
-			);
+			EdgeTTSNativeStreamService['wordBoundaryListeners'].forEach((cb) => cb({ chunkIndex: 0, charIndex: 0, charLength: 3, text: 'Một' }));
 		});
 		expect(highlightSpy).toHaveBeenCalled();
 
@@ -188,13 +182,11 @@ describe('useNativeReadAloud Hook', () => {
 		useReaderConfigStore.setState({ ttsEngine: 'edge', edgeVoiceUri: 'vi-VN-HoaiMyNeural' });
 		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
 		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
-		vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue(undefined);
+		const startSpy = vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue(undefined);
 		const seekSpy = vi.spyOn(EdgeTTSNativeStreamService, 'seekToChunk').mockResolvedValue(undefined);
 
 		const paragraphs = ['Câu 1.', 'Câu 2.', 'Câu 3.'];
-		const { result, unmount } = renderHook(() =>
-			useNativeReadAloud(paragraphs, { bookId: 'b4', chapterId: 'c4', chapterNumber: 4 })
-		);
+		const { result, unmount } = renderHook(() => useNativeReadAloud(paragraphs, { bookId: 'b4', chapterId: 'c4', chapterNumber: 4 }));
 
 		await act(async () => {
 			result.current.startReading();
@@ -216,7 +208,7 @@ describe('useNativeReadAloud Hook', () => {
 		act(() => {
 			result.current.jumpToContent(2);
 		});
-		expect(seekSpy).toHaveBeenCalledWith(2);
+		expect(startSpy).toHaveBeenLastCalledWith(expect.objectContaining({ startIndex: 2 }));
 
 		unmount();
 	});
@@ -228,9 +220,7 @@ describe('useNativeReadAloud Hook', () => {
 		const stopSpy = vi.spyOn(EdgeTTSNativeStreamService, 'stop').mockResolvedValue(undefined);
 
 		const paragraphs = ['Chương mới người dùng chỉ lướt qua xem.'];
-		const { result, unmount } = renderHook(() =>
-			useNativeReadAloud(paragraphs, { bookId: 'b5', chapterId: 'c5', chapterNumber: 5 })
-		);
+		const { result, unmount } = renderHook(() => useNativeReadAloud(paragraphs, { bookId: 'b5', chapterId: 'c5', chapterNumber: 5 }));
 
 		// Gọi stop khi chưa từng startReading (mô phỏng unmount hoặc chuyển trang)
 		act(() => {

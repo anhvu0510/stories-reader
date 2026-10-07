@@ -9,6 +9,8 @@ public final class AdaptiveBufferPolicy {
     public static final int MAX_LOOKAHEAD_UTTERANCES = 16;
     private final long lowWatermarkMs;
     private final long targetWatermarkMs;
+    private final List<Long> synthesisTimes = new ArrayList<>();
+    private long adaptiveTargetMs;
 
     public AdaptiveBufferPolicy(long lowWatermarkMs, long targetWatermarkMs) {
         if (lowWatermarkMs < 0L || targetWatermarkMs < lowWatermarkMs) {
@@ -16,6 +18,14 @@ public final class AdaptiveBufferPolicy {
         }
         this.lowWatermarkMs = lowWatermarkMs;
         this.targetWatermarkMs = targetWatermarkMs;
+        this.adaptiveTargetMs = targetWatermarkMs;
+    }
+
+    public void observeSynthesis(long elapsedMs) {
+        synthesisTimes.add(Math.max(0L, elapsedMs));
+        if (synthesisTimes.size() > 8) synthesisTimes.remove(0);
+        long slowest = Collections.max(synthesisTimes);
+        adaptiveTargetMs = Math.max(targetWatermarkMs, Math.min(30_000L, slowest * 2L + 2_000L));
     }
 
     public boolean shouldBuffer(long bufferedDurationMs) {
@@ -35,7 +45,7 @@ public final class AdaptiveBufferPolicy {
         // Current playback is not lookahead. Always prepare at least the next utterance,
         // even when the current sentence alone exceeds the target watermark.
         for (int offset = 1; currentIndex + offset < totalUtterances && offset <= MAX_LOOKAHEAD_UTTERANCES; offset++) {
-            if (offset > 1 && plannedDurationMs >= targetWatermarkMs) break;
+            if (offset > 1 && plannedDurationMs >= adaptiveTargetMs) break;
             indices.add(currentIndex + offset);
             plannedDurationMs += durationAt(estimatedDurationsMs, offset);
         }

@@ -12,6 +12,7 @@ public final class Media3ReadAloudBridge {
         void onSnapshot(PlaybackSnapshot snapshot);
         void onUtteranceStart(String sessionId, int utteranceIndex, ReadAloudUtterance utterance);
         void onWordBoundary(String sessionId, int utteranceIndex, ReadAloudUtterance utterance, WordBoundary boundary);
+        default void onTimeline(PlaybackSnapshot snapshot, ReadAloudUtterance utterance, java.util.List<WordBoundary> words) {}
         void onCompleted(String sessionId);
         void onError(String sessionId, int utteranceIndex, String code, String message);
     }
@@ -70,6 +71,11 @@ public final class Media3ReadAloudBridge {
     static void publishWordBoundary(String sessionId, int index, ReadAloudUtterance utterance, WordBoundary boundary) {
         Listener currentListener = listener;
         if (currentListener != null) currentListener.onWordBoundary(sessionId, index, utterance, boundary);
+    }
+
+    static void publishTimeline(PlaybackSnapshot snapshot, ReadAloudUtterance utterance, java.util.List<WordBoundary> words) {
+        Listener currentListener = listener;
+        if (currentListener != null) currentListener.onTimeline(snapshot, utterance, words);
     }
 
     static void publishCompleted(String sessionId) {

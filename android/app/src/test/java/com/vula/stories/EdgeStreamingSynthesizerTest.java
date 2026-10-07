@@ -11,6 +11,8 @@ import okhttp3.WebSocketListener;
 import okio.ByteString;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import java.util.ArrayList;
+import java.util.List;
 
 public class EdgeStreamingSynthesizerTest {
     private static final class Socket implements WebSocket {
@@ -25,18 +27,22 @@ public class EdgeStreamingSynthesizerTest {
         int failures;
         int completions;
         int audioFrames;
+        final List<WordBoundary> words = new ArrayList<>();
         @Override public void onAudio(byte[] bytes) { audioFrames++; }
-        @Override public void onWordBoundary(WordBoundary word) {}
+        @Override public void onWordBoundary(WordBoundary word) { words.add(word); }
         @Override public void onComplete() { completions++; }
         @Override public void onFailure(IOException error) { failures++; }
     }
     private static WebSocketListener listener(Events events) {
+        return listener(events, "Câu đầu.");
+    }
+    private static WebSocketListener listener(Events events, String text) {
         WebSocketListener[] captured = new WebSocketListener[1];
         EdgeStreamingSynthesizer synth = new EdgeStreamingSynthesizer((request, callback) -> {
             captured[0] = callback;
             return new Socket();
         });
-        synth.synthesize(new ReadAloudUtterance("u0", 0, 0, 8, "Câu đầu.", 0),
+        synth.synthesize(new ReadAloudUtterance("u0", 0, 0, text.length(), text, 0),
                 "voice", "+0%", "+0Hz", events);
         return captured[0];
     }
@@ -66,5 +72,26 @@ public class EdgeStreamingSynthesizerTest {
         assertEquals(1, events.failures);
         assertEquals(0, events.audioFrames);
         assertEquals(0, events.completions);
+    }
+    @Test public void duplicateMetadataCannotMapBackToAnAlreadySpokenWord() {
+        Events events = new Events();
+        WebSocketListener listener = listener(events);
+        String metadata = "Path:audio.metadata\r\n\r\n{\"Metadata\":[{\"Type\":\"WordBoundary\",\"Data\":{\"Offset\":1000000,\"text\":{\"Text\":\"Câu\"}}}]}";
+        listener.onMessage(new Socket(), metadata);
+        listener.onMessage(new Socket(), metadata);
+        assertEquals(1, events.words.size());
+    }
+    @Test public void normalizedWordsKeepOriginalUnicodeOffsets() {
+        Events events = new Events();
+        WebSocketListener listener = listener(events, "Me\u0301 đang.");
+        listener.onMessage(new Socket(), "Path:audio.metadata\r\n\r\n{\"Metadata\":[{\"Type\":\"WordBoundary\",\"Data\":{\"Offset\":1000000,\"Duration\":500000,\"text\":{\"Text\":\"Mé\"}}},{\"Type\":\"WordBoundary\",\"Data\":{\"Offset\":2000000,\"text\":{\"Text\":\"đang\"}}}]}" );
+        assertEquals(3, events.words.get(0).getCharLength());
+        assertEquals(4, events.words.get(1).getCharIndex());
+    }
+    @Test public void wordsCannotMatchInsideAnotherLatinWord() {
+        Events events = new Events();
+        WebSocketListener listener = listener(events, "nhanh anh.");
+        listener.onMessage(new Socket(), "Path:audio.metadata\r\n\r\n{\"Metadata\":[{\"Type\":\"WordBoundary\",\"Data\":{\"Offset\":1000000,\"text\":{\"Text\":\"anh\"}}}]}" );
+        assertEquals(6, events.words.get(0).getCharIndex());
     }
 }

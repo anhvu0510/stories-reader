@@ -112,6 +112,9 @@ public class EdgeTTSNativePlugin extends Plugin {
 
     @PluginMethod
     public void clearCache(PluginCall call) {
+        new com.vula.stories.player.media3.EdgeTimelineCache(
+                new java.io.File(getContext().getCacheDir(), com.vula.stories.player.media3.EdgeTimelineCache.DIRECTORY),
+                com.vula.stories.player.media3.EdgeTimelineCache.DEFAULT_BUDGET_BYTES).clear();
         if (coordinator != null) {
             coordinator.clearCache();
         }

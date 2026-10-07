@@ -2,6 +2,7 @@ import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import type { EdgeBufferMode } from '@/shared/types';
 import type { ReadAloudUtterance } from './readAloudUtterancePlan';
 import { EdgeTTSNative } from './edgeTtsService';
+import { EdgePlaybackTimeline, type EdgeTimelineSnapshot } from './edgePlaybackTimeline';
 
 export interface StartPlaybackOptions {
 	chunks: string[];
@@ -50,7 +51,15 @@ export interface PlaybackSnapshot {
 	errorCode?: string;
 }
 
-export type ChunkStartListener = (chunkIndex: number) => void;
+export interface NativeChunkStartEvent {
+	sessionId?: string;
+	chunkIndex: number;
+	utteranceIndex?: number;
+	paragraphIndex?: number;
+	sourceStart?: number;
+	sourceLength?: number;
+}
+export type ChunkStartListener = (chunkIndex: number, event?: NativeChunkStartEvent) => void;
 export type WordBoundaryListener = (data: WordBoundaryEvent) => void;
 export type PlaybackStateListener = (state: PlaybackStateEvent) => void;
 export type PlaybackCompleteListener = () => void;
@@ -70,8 +79,32 @@ class EdgeTTSNativeStreamServiceClass {
 	private listenersInitialization: Promise<void> | null = null;
 	private activeSessionId: string | null = null;
 	private latestSnapshot: PlaybackSnapshot | null = null;
+	private timelineSession: string | null = null;
+	private timelineFrame: number | null = null;
+	private timelineIndex = -1;
+	private timelineOwnerSession: string | null = null;
+	private timelineAllowed = true;
+	private readonly timeline = new EdgePlaybackTimeline((word) => this.wordBoundaryListeners.forEach((cb) => cb(word)));
+
+	private stopTimeline(): void {
+		if (this.timelineFrame !== null) cancelAnimationFrame(this.timelineFrame);
+		this.timelineFrame = null;
+		this.timelineSession = null;
+		this.timelineIndex = -1;
+		this.timeline.reset();
+	}
+
+	private renderTimeline = (): void => {
+		this.timelineFrame = null;
+		if (!this.timelineSession || this.latestSnapshot?.state !== 'PLAYING') return;
+		if (this.latestSnapshot.utteranceIndex !== this.timelineIndex) return;
+		this.timeline.render();
+		this.timelineFrame = requestAnimationFrame(this.renderTimeline);
+	};
 
 	public resetForTesting(): void {
+		this.stopTimeline();
+		this.timelineOwnerSession = null;
 		this.chunkStartListeners.clear();
 		this.wordBoundaryListeners.clear();
 		this.playbackStateListeners.clear();
@@ -83,6 +116,7 @@ class EdgeTTSNativeStreamServiceClass {
 		this.listenersInitialization = null;
 		this.activeSessionId = null;
 		this.latestSnapshot = null;
+		this.timelineAllowed = true;
 	}
 
 	public isAvailable(): boolean {
@@ -108,12 +142,13 @@ class EdgeTTSNativeStreamServiceClass {
 	private async initializeListeners(): Promise<void> {
 		try {
 			if (typeof EdgeTTSNative.addListener === 'function') {
-				const handle1 = await EdgeTTSNative.addListener('onChunkStart', (data: { sessionId?: string; chunkIndex: number }) => {
+				const handle1 = await EdgeTTSNative.addListener('onChunkStart', (data: NativeChunkStartEvent) => {
 					if (!this.isActiveSession(data.sessionId)) return;
-					this.chunkStartListeners.forEach((cb) => cb(data.chunkIndex));
+					this.chunkStartListeners.forEach((cb) => (data.utteranceIndex === undefined ? cb(data.chunkIndex) : cb(data.chunkIndex, data)));
 				});
 				const handle2 = await EdgeTTSNative.addListener('onWordBoundary', (data: WordBoundaryEvent) => {
 					if (!this.isActiveSession(data.sessionId)) return;
+					if (data.sessionId && data.sessionId === this.timelineOwnerSession) return;
 					this.wordBoundaryListeners.forEach((cb) => cb(data));
 				});
 				const handle3 = await EdgeTTSNative.addListener('onPlaybackStateChange', (data: PlaybackStateEvent) => {
@@ -133,8 +168,16 @@ class EdgeTTSNativeStreamServiceClass {
 					this.latestSnapshot = data;
 					this.snapshotListeners.forEach((cb) => cb(data));
 				});
+				const handle7 = await EdgeTTSNative.addListener('onPlaybackTimeline', (data: EdgeTimelineSnapshot) => {
+					if (!this.timelineAllowed || !this.isActiveSession(data.sessionId)) return;
+					this.timelineSession = data.sessionId;
+					this.timelineOwnerSession = data.sessionId;
+					this.timelineIndex = data.utteranceIndex;
+					this.timeline.update(data);
+					if (this.timelineFrame === null) this.renderTimeline();
+				});
 
-				this.listenerHandles.push(handle1, handle2, handle3, handle4, handle5, handle6);
+				this.listenerHandles.push(handle1, handle2, handle3, handle4, handle5, handle6, handle7);
 				this.isListenersInitialized = true;
 				const plugin = EdgeTTSNative as unknown as { getPlaybackSnapshot?: () => Promise<PlaybackSnapshot | null> };
 				const snapshot = await plugin.getPlaybackSnapshot?.();
@@ -154,7 +197,10 @@ class EdgeTTSNativeStreamServiceClass {
 			throw new Error('EdgeTTSNativeStream is only available on native Android');
 		}
 		await this.initListeners();
+		this.stopTimeline();
 		this.activeSessionId = options.sessionId ?? null;
+		this.timelineOwnerSession = null;
+		this.timelineAllowed = true;
 		this.latestSnapshot = null;
 		const plugin = EdgeTTSNative as unknown as {
 			playChapter?: (opts: StartPlaybackOptions) => Promise<void>;
@@ -170,6 +216,8 @@ class EdgeTTSNativeStreamServiceClass {
 	}
 
 	public async pause(): Promise<void> {
+		this.timelineAllowed = false;
+		this.stopTimeline();
 		if (!this.isAvailable()) return;
 		const plugin = EdgeTTSNative as unknown as { pausePlayback?: () => Promise<void> };
 		if (typeof plugin.pausePlayback === 'function') {
@@ -178,6 +226,7 @@ class EdgeTTSNativeStreamServiceClass {
 	}
 
 	public async resume(): Promise<void> {
+		this.timelineAllowed = true;
 		if (!this.isAvailable()) return;
 		const plugin = EdgeTTSNative as unknown as { resumePlayback?: () => Promise<void> };
 		if (typeof plugin.resumePlayback === 'function') {
@@ -186,6 +235,8 @@ class EdgeTTSNativeStreamServiceClass {
 	}
 
 	public async stop(): Promise<void> {
+		this.timelineAllowed = false;
+		this.stopTimeline();
 		if (!this.isAvailable()) return;
 		const plugin = EdgeTTSNative as unknown as { stopPlayback?: () => Promise<void> };
 		if (typeof plugin.stopPlayback === 'function') {

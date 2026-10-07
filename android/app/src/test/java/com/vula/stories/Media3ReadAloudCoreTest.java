@@ -55,6 +55,16 @@ public class Media3ReadAloudCoreTest {
                 policy.planIndices(0, 8, Arrays.asList(25000L, 4000L, 4000L, 4000L, 4000L)));
     }
 
+    @Test public void increasesLookaheadForSlowSynthesisWithoutExceedingTheWindow() {
+        AdaptiveBufferPolicy policy = new AdaptiveBufferPolicy(4000L, 11000L);
+        List<Long> durations = Collections.nCopies(100, 4000L);
+        assertEquals(4, policy.planIndices(0, 100, durations).size());
+        policy.observeSynthesis(6000L);
+        assertEquals(5, policy.planIndices(0, 100, durations).size());
+        policy.observeSynthesis(60000L);
+        assertTrue(policy.planIndices(0, 100, durations).size() <= 9);
+    }
+
     @Test
     public void lookaheadIsBoundedEvenWhenDurationsAreMissingOrZero() {
         AdaptiveBufferPolicy policy = new AdaptiveBufferPolicy(4000L, 11000L);

@@ -17,6 +17,36 @@ beforeEach(() => {
 	vi.spyOn(EdgeTTSNativeStreamService, 'stop').mockResolvedValue();
 	vi.spyOn(EdgeTTSNativeStreamService, 'initListeners').mockResolvedValue();
 });
+
+it('resumes at the next Media3 utterance when stopped before its first word arrives', () => {
+	useReaderConfigStore.setState({ ttsEngine: 'edge', edgeBufferMode: 'media3' });
+	vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+	const start = vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue();
+	const sentence = `Đây là câu thử ${'nội dung '.repeat(12)}.`;
+	const paragraphs = [`${sentence} ${sentence} ${sentence}`];
+	const context = { chapterId: 'between-utterances' };
+	const first = renderHook(() => useReadAloud(paragraphs, context));
+	act(() => first.result.current.startReading());
+	const utterance = start.mock.calls[0][0].utterances![1];
+	act(() =>
+		EdgeTTSNativeStreamService['chunkStartListeners'].forEach((cb) =>
+			cb(0, {
+				chunkIndex: 0,
+				utteranceIndex: 1,
+				paragraphIndex: 0,
+				sourceStart: utterance.sourceStart,
+				sourceLength: utterance.sourceLength
+			})
+		)
+	);
+	act(() => first.result.current.stopReading());
+	expect(JSON.parse(localStorage.getItem('stories_tts_pos_between-utterances')!)).toMatchObject({ version: 2, sourceOffset: utterance.sourceStart });
+	first.unmount();
+	const second = renderHook(() => useReadAloud(paragraphs, context));
+	act(() => second.result.current.startReading());
+	expect(start.mock.calls.at(-1)?.[0]).toMatchObject({ startIndex: 1 });
+	second.unmount();
+});
 afterEach(() => {
 	vi.restoreAllMocks();
 	vi.unstubAllGlobals();
@@ -32,9 +62,9 @@ it.each(['edge', 'browser'] as const)('does not revive stopped %s playback from 
 	const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
 	act(() => result.current.startReading());
 	act(() => result.current.stopReading());
-	act(() => stream['playbackStateListeners'].forEach(cb => cb({ isPlaying: false, isPaused: false, isBuffering: true })));
+	act(() => stream['playbackStateListeners'].forEach((cb) => cb({ isPlaying: false, isPaused: false, isBuffering: true })));
 	expect(result.current.isTTSActive).toBe(false);
-	act(() => stream['playbackStateListeners'].forEach(cb => cb({ isPlaying: true, isPaused: false, isBuffering: false })));
+	act(() => stream['playbackStateListeners'].forEach((cb) => cb({ isPlaying: true, isPaused: false, isBuffering: false })));
 	expect(result.current.isPlaying).toBe(false);
 	unmount();
 });
@@ -47,7 +77,7 @@ it('saves the final device chunk when paused before it has finished', () => {
 	const paragraphs = ['Câu cuối đang đọc.'];
 	const { result, unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId: 'final-device' }));
 	act(() => result.current.startReading());
-	act(() => NativeTTSStreamService['wordBoundaryListeners'].forEach(cb => cb({ chunkIndex: 0, charIndex: 4, charLength: 4, text: 'cuối' })));
+	act(() => NativeTTSStreamService['wordBoundaryListeners'].forEach((cb) => cb({ chunkIndex: 0, charIndex: 4, charLength: 4, text: 'cuối' })));
 	act(() => result.current.pauseReading());
 	expect(JSON.parse(localStorage.getItem('stories_tts_pos_final-device')!)).toMatchObject({ charOffset: 4, sourceOffset: 4 });
 	unmount();
@@ -79,8 +109,8 @@ it('restores device narration within a later chunk of the same paragraph', () =>
 	const text = start.mock.calls[0][0].chunks[1];
 	expect(paragraph.indexOf(text)).toBeGreaterThan(0);
 	const offset = text.indexOf(' ') + 1;
-	act(() => NativeTTSStreamService['chunkStartListeners'].forEach(cb => cb(1)));
-	act(() => NativeTTSStreamService['wordBoundaryListeners'].forEach(cb => cb({ chunkIndex: 1, charIndex: offset, charLength: 3, text: text.slice(offset, offset + 3) })));
+	act(() => NativeTTSStreamService['chunkStartListeners'].forEach((cb) => cb(1)));
+	act(() => NativeTTSStreamService['wordBoundaryListeners'].forEach((cb) => cb({ chunkIndex: 1, charIndex: offset, charLength: 3, text: text.slice(offset, offset + 3) })));
 	act(() => first.result.current.pauseReading());
 	const saved = JSON.parse(localStorage.getItem('stories_tts_pos_restore-device')!);
 	expect(saved.sourceOffset).toBe(paragraph.indexOf(text) + offset);
@@ -135,7 +165,7 @@ it.each(['edge', 'browser'] as const)('keeps the %s reading line while clearing 
 	const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
 	act(() => result.current.startReading());
 	clear.mockClear();
-	act(() => stream['playbackStateListeners'].forEach(cb => cb({ isPlaying: false, isPaused: false, isBuffering: true })));
+	act(() => stream['playbackStateListeners'].forEach((cb) => cb({ isPlaying: false, isPaused: false, isBuffering: true })));
 	expect(clearWord).toHaveBeenCalled();
 	expect(clear).not.toHaveBeenCalled();
 	expect(result.current.isLoading).toBe(true);
@@ -278,10 +308,16 @@ it('Media3 Next uses the player utterance cursor and ignores stale snapshots dur
 	const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
 	act(() => result.current.startReading());
 	const snapshot = (utteranceIndex: number) => {
-		EdgeTTSNativeStreamService['snapshotListeners'].forEach((cb) => cb({
-			sessionId: 'test', state: 'PLAYING', utteranceIndex,
-			positionMs: 100, bufferedDurationMs: 1000, rebufferCount: 0
-		}));
+		EdgeTTSNativeStreamService['snapshotListeners'].forEach((cb) =>
+			cb({
+				sessionId: 'test',
+				state: 'PLAYING',
+				utteranceIndex,
+				positionMs: 100,
+				bufferedDurationMs: 1000,
+				rebufferCount: 0
+			})
+		);
 	};
 	act(() => snapshot(1));
 	act(() => result.current.nextSection());

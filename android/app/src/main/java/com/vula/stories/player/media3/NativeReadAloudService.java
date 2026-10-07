@@ -45,7 +45,7 @@ public final class NativeReadAloudService extends MediaSessionService {
     private static final String TAG = "NativeReadAloudService";
     private static final int LOW_WATERMARK_MS = 4_000;
     private static final int TARGET_WATERMARK_MS = 11_000;
-    private static final long SNAPSHOT_INTERVAL_MS = 250L;
+    private static final long SNAPSHOT_INTERVAL_MS = 100L;
     private static final int MAX_CONCURRENT_SYNTHESIS = 2;
 
     public static final String ACTION_START = "com.vula.stories.media3.START";
@@ -64,6 +64,8 @@ public final class NativeReadAloudService extends MediaSessionService {
     private final Map<Integer, List<WordBoundary>> boundaries = new ConcurrentHashMap<>();
     private final Map<Integer, WebSocket> sockets = new ConcurrentHashMap<>();
     private final Map<Integer, Integer> retryCounts = new ConcurrentHashMap<>();
+    private final Map<Integer, Long> observedDurations = new ConcurrentHashMap<>();
+    private final Set<Integer> cachedIndices = ConcurrentHashMap.newKeySet();
     private final Set<Integer> scheduledIndices = Collections.synchronizedSet(new HashSet<>());
     private final Set<Integer> inFlightIndices = ConcurrentHashMap.newKeySet();
     private final Set<Integer> fallbackIndices = Collections.synchronizedSet(new HashSet<>());
@@ -86,6 +88,7 @@ public final class NativeReadAloudService extends MediaSessionService {
     };
     private MediaSession mediaSession;
     private EdgeStreamingSynthesizer synthesizer;
+    private EdgeTimelineCache timelineCache;
     private volatile ReadAloudSessionRequest request;
     private final PlaybackWordBoundaryTracker wordBoundaryTracker = new PlaybackWordBoundaryTracker();
     private long lastSnapshotAt;
@@ -118,6 +121,7 @@ public final class NativeReadAloudService extends MediaSessionService {
                 .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
                 .build();
         player = new ExoPlayer.Builder(this).setLoadControl(loadControl).build();
+        player.setPreloadConfiguration(new ExoPlayer.PreloadConfiguration(3_000_000L));
         player.setAudioAttributes(audioAttributes, true);
         player.addListener(createPlayerListener());
         mediaSession = new MediaSession.Builder(this, player).build();
@@ -125,6 +129,7 @@ public final class NativeReadAloudService extends MediaSessionService {
         // Register here so Media3 observes buffering and starts its foreground notification.
         addSession(mediaSession);
         synthesizer = new EdgeStreamingSynthesizer();
+        timelineCache = new EdgeTimelineCache(new File(getCacheDir(), EdgeTimelineCache.DIRECTORY), EdgeTimelineCache.DEFAULT_BUDGET_BYTES);
     }
 
     @Override
@@ -200,6 +205,8 @@ public final class NativeReadAloudService extends MediaSessionService {
         inFlightIndices.clear();
         fallbackIndices.clear();
         retryCounts.clear();
+        observedDurations.clear();
+        cachedIndices.clear();
         request = pendingRequest;
         sessionStartedAt = System.currentTimeMillis();
         bufferingStartedAt = sessionStartedAt;
@@ -254,7 +261,7 @@ public final class NativeReadAloudService extends MediaSessionService {
                 AdaptiveBufferPolicy.MAX_LOOKAHEAD_UTTERANCES + 1);
         List<Long> estimates = new ArrayList<>();
         for (int index = currentIndex; index < currentIndex + windowSize; index++) {
-            estimates.add(estimateDurationMs(request.getUtterances().get(index)));
+            estimates.add(observedDurations.getOrDefault(index, estimateDurationMs(request.getUtterances().get(index))));
         }
         List<Integer> planned = bufferPolicy.planIndices(currentIndex, request.getUtterances().size(), estimates);
         for (Integer index : planned) {
@@ -274,6 +281,21 @@ public final class NativeReadAloudService extends MediaSessionService {
 
         synthesisExecutor.submit(() -> {
             if (!isActiveSource(activeRequest, index, source)) return;
+            String cacheKey = EdgeTimelineCache.key(utterance.getText(), activeRequest.getVoice(),
+                    activeRequest.getRate(), activeRequest.getPitch());
+            EdgeTimelineCache.Entry cached = timelineCache == null ? null : timelineCache.get(cacheKey);
+            if (!isActiveSource(activeRequest, index, source)) return;
+            if (cached != null) {
+                boundaries.put(index, Collections.synchronizedList(new ArrayList<>(cached.words())));
+                source.append(cached.audio());
+                source.complete();
+                cachedIndices.add(index);
+                observedDurations.put(index, Math.max(700L, source.size() * 1000L / 6000L));
+                inFlightIndices.remove(index);
+                mainHandler.post(() -> { if (isActive(activeRequest)) scheduleBuffer(player.getCurrentMediaItemIndex()); });
+                return;
+            }
+            long synthesisStartedAt = android.os.SystemClock.elapsedRealtime();
             WebSocket socket = synthesizer.synthesize(
                     utterance,
                     activeRequest.getVoice(),
@@ -296,10 +318,13 @@ public final class NativeReadAloudService extends MediaSessionService {
                         public void onComplete() {
                             if (!isActiveSource(activeRequest, index, source)) return;
                             source.complete();
+                            observedDurations.put(index, Math.max(700L, source.size() * 1000L / 6000L));
+                            cacheCompletedSource(activeRequest, cacheKey, index, source);
                             sockets.remove(index);
                             inFlightIndices.remove(index);
                             mainHandler.post(() -> {
                                 if (!isActiveSource(activeRequest, index, source)) return;
+                                bufferPolicy.observeSynthesis(android.os.SystemClock.elapsedRealtime() - synthesisStartedAt);
                                 scheduleBuffer(player.getCurrentMediaItemIndex());
                             });
                         }
@@ -321,6 +346,40 @@ public final class NativeReadAloudService extends MediaSessionService {
             }
             sockets.put(index, socket);
         });
+    }
+
+    private void cacheCompletedSource(ReadAloudSessionRequest activeRequest, String key, int index, AppendableAudioSource source) {
+        if (timelineCache == null) return;
+        List<WordBoundary> words = boundaries.get(index);
+        if (words == null) return;
+        List<WordBoundary> copy;
+        synchronized (words) { copy = new ArrayList<>(words); }
+        byte[] audio = source.snapshot();
+        synthesisExecutor.submit(() -> {
+            try {
+                timelineCache.put(key, audio, copy);
+                mainHandler.post(() -> {
+                    if (!isActiveSource(activeRequest, index, source)) return;
+                    cachedIndices.add(index);
+                    releaseRetiredAudio(player.getCurrentMediaItemIndex());
+                });
+            } catch (IOException error) {
+                Log.w(TAG, "Completed audio cache write failed", error);
+            }
+        });
+    }
+
+    private void releaseRetiredAudio(int currentIndex) {
+        for (Integer index : new ArrayList<>(cachedIndices)) releaseRetiredSource(index, currentIndex);
+    }
+
+    private void releaseRetiredSource(int index, int currentIndex) {
+        if (index >= currentIndex - 2 && index <= currentIndex + AdaptiveBufferPolicy.MAX_LOOKAHEAD_UTTERANCES) return;
+        AppendableAudioSource source = sources.get(index);
+        if (source == null || !source.releaseCompletedBuffer()) return;
+        cachedIndices.remove(index);
+        scheduledIndices.remove(index);
+        boundaries.remove(index);
     }
 
     private void handleSynthesisFailure(
@@ -398,6 +457,7 @@ public final class NativeReadAloudService extends MediaSessionService {
                 wordBoundaryTracker.reset();
                 ReadAloudUtterance utterance = request.getUtterances().get(index);
                 Media3ReadAloudBridge.publishUtteranceStart(request.getSessionId(), index, utterance);
+                releaseRetiredAudio(index);
                 scheduleBuffer(index);
             }
 
@@ -509,6 +569,12 @@ public final class NativeReadAloudService extends MediaSessionService {
                 bufferedDurationMs()
         );
         publishSnapshot();
+        List<WordBoundary> words = boundaries.get(player.getCurrentMediaItemIndex());
+        if (words == null) return;
+        List<WordBoundary> copy;
+        synchronized (words) { copy = new ArrayList<>(words); }
+        Media3ReadAloudBridge.publishTimeline(stateMachine.snapshot(),
+                request.getUtterances().get(player.getCurrentMediaItemIndex()), copy);
     }
 
     private void publishSnapshot() {

@@ -17,6 +17,7 @@ import java.util.UUID;
  * Đóng gói toàn bộ logic lắng nghe snapshot, utterance events, word boundary và parse DTO.
  */
 public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
+    private long timelineSequence;
 
     public interface EventDispatcher {
         void sendEvent(String eventName, JSObject data);
@@ -212,6 +213,30 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
         JSObject event = new JSObject();
         event.put("sessionId", sessionId);
         eventDispatcher.sendEvent("onPlaybackComplete", event);
+    }
+
+    @Override
+    public void onTimeline(PlaybackSnapshot snapshot, ReadAloudUtterance utterance, java.util.List<WordBoundary> words) {
+        if (!matchesSession(snapshot.getSessionId())) return;
+        JSObject event = snapshotToJs(snapshot);
+        event.put("sentAtMs", System.currentTimeMillis());
+        event.put("sequence", ++timelineSequence);
+        event.put("chunkIndex", utterance.getSourceChunkIndex());
+        event.put("paragraphIndex", utterance.getParagraphIndex());
+        event.put("sourceStart", utterance.getSourceStart());
+        event.put("sourceLength", utterance.getSourceLength());
+        org.json.JSONArray timeline = new org.json.JSONArray();
+        for (WordBoundary word : words) {
+            JSObject cue = new JSObject();
+            cue.put("charIndex", word.getCharIndex());
+            cue.put("charLength", word.getCharLength());
+            cue.put("text", word.getText());
+            cue.put("startTimeMs", word.getStartTimeMs());
+            cue.put("durationMs", word.getDurationMs());
+            timeline.put(cue);
+        }
+        event.put("words", timeline);
+        eventDispatcher.sendEvent("onPlaybackTimeline", event);
     }
 
     @Override

@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
-import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -47,8 +46,7 @@ public final class EdgeStreamingSynthesizer {
 
     public WebSocket synthesize(ReadAloudUtterance utterance, String voice, String rate, String pitch, Listener listener) {
         String sourceText = Normalizer.normalize(utterance.getText(), Normalizer.Form.NFC);
-        String foldedText = sourceText.toLowerCase(Locale.ROOT);
-        int[] searchOffset = {0};
+        SpeechTextMap textMap = new SpeechTextMap(utterance.getText());
         AtomicBoolean finished = new AtomicBoolean(false);
         String requestId = UUID.randomUUID().toString().replace("-", "");
         Request request = EdgeAuth.buildWebSocketRequest(EdgeAuth.buildWebSocketUrl());
@@ -81,7 +79,7 @@ public final class EdgeStreamingSynthesizer {
                 if (finished.get()) return;
                 try {
                     if (payload.contains("Path:audio.metadata")) {
-                        emitMetadata(payload, foldedText, searchOffset, listener);
+                        emitMetadata(payload, textMap, listener);
                     }
                     if (!payload.contains("Path:turn.end")) return;
                     if (!finished.compareAndSet(false, true)) return;
@@ -120,8 +118,7 @@ public final class EdgeStreamingSynthesizer {
 
     private static void emitMetadata(
             String payload,
-            String foldedText,
-            int[] searchOffset,
+            SpeechTextMap textMap,
             Listener listener
     ) throws Exception {
         int bodyStart = payload.indexOf("\r\n\r\n");
@@ -138,13 +135,9 @@ public final class EdgeStreamingSynthesizer {
             JSONObject textData = data.optJSONObject("text");
             String rawWord = textData == null ? "" : textData.optString("Text", "").trim();
             if (rawWord.isEmpty()) continue;
-            String foldedWord = Normalizer.normalize(rawWord, Normalizer.Form.NFC).toLowerCase(Locale.ROOT);
-            int charIndex = foldedText.indexOf(foldedWord, searchOffset[0]);
-            if (charIndex < 0) charIndex = foldedText.indexOf(foldedWord);
-            if (charIndex < 0) continue;
-            searchOffset[0] = charIndex + foldedWord.length();
             long startTimeMs = data.optLong("Offset", 0L) / 10_000L;
-            listener.onWordBoundary(new WordBoundary(charIndex, rawWord.length(), rawWord, startTimeMs));
+            WordBoundary word = textMap.find(rawWord, startTimeMs, data.optLong("Duration", 0L) / 10_000L);
+            if (word != null) listener.onWordBoundary(word);
         }
     }
 

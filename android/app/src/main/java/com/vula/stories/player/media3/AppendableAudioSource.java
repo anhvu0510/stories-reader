@@ -23,7 +23,17 @@ public final class AppendableAudioSource {
         }
     }
 
-    private final AudioBuffer buffer = new AudioBuffer();
+    private AudioBuffer buffer = new AudioBuffer();
+
+    /** Call only for retired playlist items after their complete audio has been cached. */
+    public boolean releaseCompletedBuffer() {
+        synchronized (lock) {
+            if (!completed || failure != null) return false;
+            buffer = new AudioBuffer();
+            completed = false;
+            return true;
+        }
+    }
     private boolean completed;
     private IOException failure;
 
