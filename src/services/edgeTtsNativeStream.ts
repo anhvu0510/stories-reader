@@ -9,6 +9,7 @@ export interface StartPlaybackOptions {
 	utterances?: ReadAloudUtterance[];
 	sessionId?: string;
 	startIndex?: number;
+	startCharIndex?: number;
 	voice?: string;
 	rate?: number;
 	pitch?: string;
@@ -52,6 +53,7 @@ export interface PlaybackSnapshot {
 }
 
 export interface NativeChunkStartEvent {
+	startCharIndex?: number;
 	sessionId?: string;
 	chunkIndex: number;
 	utteranceIndex?: number;

@@ -379,11 +379,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		const nativeStartIndex = isMedia3Mode ? getMedia3UtteranceIndex(targetIdx, sourceOffset) : targetIdx;
 		media3UtteranceIndexRef.current = nativeStartIndex;
 		pendingMedia3UtteranceRef.current = null;
-		const playbackUtterances = media3Utterances.map((utterance, index) => {
-			if (index !== nativeStartIndex || sourceOffset <= utterance.sourceStart) return utterance;
-			const offset = sourceOffset - utterance.sourceStart;
-			return { ...utterance, id: `${utterance.id}-from-${sourceOffset}`, text: utterance.text.slice(offset), sourceStart: sourceOffset, sourceLength: utterance.sourceLength - offset };
-		});
+		const startCharIndex = Math.max(0, sourceOffset - (media3Utterances[nativeStartIndex]?.sourceStart ?? 0));
 		const targetVoice = ttsEngine === 'edge' ? edgeVoiceUri || 'vi-VN-HoaiMyNeural' : voiceUri;
 
 		const bookTitle = chapterContext.bookName || (chapterContext.bookId ? `Truyện #${chapterContext.bookId}` : 'Stories Reader');
@@ -398,7 +394,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 						...common,
 						pitch: '+0Hz',
 						bufferMode: edgeBufferMode,
-						...(isMedia3Mode ? { utterances: playbackUtterances, sessionId: `edge-media3-${crypto.randomUUID()}` } : {})
+						...(isMedia3Mode ? { utterances: media3Utterances, startCharIndex, sessionId: `edge-media3-${crypto.randomUUID()}` } : {})
 					})
 				: NativeTTSStreamService.startPlayback({ ...common, pitch: 1.0, startCharIndex: targetOff });
 		void playback;

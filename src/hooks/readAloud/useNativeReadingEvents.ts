@@ -42,15 +42,16 @@ export function useNativeReadingEvents(options: NativeReadingOptions) {
 			if (current.current.cursor.pendingUtterance.current !== null && event?.utteranceIndex !== current.current.cursor.pendingUtterance.current) return;
 			if (current.current.cursor.pendingChunk.current !== null && idx !== current.current.cursor.pendingChunk.current) return;
 			current.current.cursor.pendingChunk.current = null;
-			current.current.cursor.charIndex.current = event?.sourceStart ?? -1;
+			const sourceOffset = event?.sourceStart === undefined ? -1 : event.sourceStart + (event.startCharIndex ?? 0);
+			current.current.cursor.charIndex.current = sourceOffset;
 			current.current.cursor.charLength.current = 0;
 			current.current.cursor.chunk.current = idx;
 			current.current.state.chunk(idx);
 			current.current.state.loading(false);
 			if (event?.sourceStart !== undefined && event.paragraphIndex !== undefined) {
-				current.current.cursor.sourceOffset.current = event.sourceStart;
+				current.current.cursor.sourceOffset.current = sourceOffset;
 				current.current.cursor.paragraph.current = event.paragraphIndex;
-				current.current.resume.saveResumePosition(idx, 0, event.paragraphIndex, event.sourceStart);
+				current.current.resume.saveResumePosition(idx, 0, event.paragraphIndex, sourceOffset);
 			} else current.current.resume.saveResumePosition(idx, 0);
 		});
 

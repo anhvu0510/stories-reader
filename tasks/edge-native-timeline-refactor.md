@@ -39,3 +39,15 @@ The bridge measurements do not measure audible word-to-highlight alignment. Brow
 Removed word clearing from silent gaps, buffering, and native chunk-start events after feedback about flashing. Word tint is now translucent amber, line tint is lighter, and both inherit the reader text color. The DOM fallback no longer changes font weight, spacing, or glow. Playback/resume offsets still advance independently of the retained visual anchor.
 
 Regression tests observed four failures before the change and passed afterward. Full web suite: 72 files, 467 passed and 3 expected failures. TypeScript/lint passed with the same 103 existing warnings. Debug APK rebuilt and installed on the emulator.
+
+## Stop / Play cache follow-up
+
+The old restart path sliced the initial utterance at the saved text offset. This changed its text and cache key on every restart, forcing fresh synthesis even when the full sentence was cached. A focused regression observed this exact change before the fix.
+
+Media3 requests now keep canonical utterances and pass a separate `startCharIndex`. Native playback resolves that cursor against the original word timeline and seeks to its audio timestamp before playing. A cold partial restart waits for the requested word boundary, preserving pause/stop intent and source coordinates before the first word. An uncached sentence still requires synthesis.
+
+Full web suite after this change: 72 files, 468 passed and 3 expected failures. Android JVM tests and Checkstyle passed; debug APK rebuilt. The live emulator also exposed an MP3 input-format error before this follow-up; that error is separate evidence and should not be treated as fixed solely by the cache-key regression.
+
+The real Media3 cache instrumentation passed after adding immediate Stop → Start at character 4. With an invalid network voice, playback still resumed from the original cached MP3 at or after 800 ms, without playing its prefix. Android JVM suite now contains 106 passing tests per build type.
+
+Live Edge UI verification on the final APK also passed: initial playback reported 948 ms first-audio latency; Stop → Play reported 747 ms, active word highlighting, and no rebuffer during the observed interval. No playback-source error appeared in that process log. These are single emulator samples, not a general latency guarantee; the earlier input-format failure has not been independently reproduced and isolated.

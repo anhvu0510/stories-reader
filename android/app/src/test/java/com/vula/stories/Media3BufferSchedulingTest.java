@@ -138,6 +138,32 @@ public class Media3BufferSchedulingTest {
         return field.get(target);
     }
 
+    @Test
+    public void resumeWaitsForTheCorrectWordAndSeeksOriginalCachedAudioOnlyOnce() throws Exception {
+        ConcurrentHashMap<Integer, AppendableAudioSource> sources = new ConcurrentHashMap<>();
+        NativeReadAloudService service = service(new HoldingExecutor(), new HashSet<>(), sources);
+        ReadAloudSessionRequest original = (ReadAloudSessionRequest) get(service, "request");
+        set(service, "request", new ReadAloudSessionRequest("resume", original.getUtterances(), 0,
+                "voice", "+0%", "+0Hz", "Book", "Chapter", 4));
+        set(service, "pendingResumeIndex", 0);
+        List<String> calls = new ArrayList<>();
+        set(service, "playbackControl", player(0, 0L, calls));
+        List<com.vula.stories.player.media3.WordBoundary> words = new ArrayList<>();
+        words.add(new com.vula.stories.player.media3.WordBoundary(0, 3, "Một", 100, 250));
+        java.util.Map<Integer, List<com.vula.stories.player.media3.WordBoundary>> timelines = new java.util.HashMap<>();
+        timelines.put(0, words);
+        set(service, "boundaries", timelines);
+        Method resume = NativeReadAloudService.class.getDeclaredMethod("tryResumeAtWord", int.class);
+        resume.setAccessible(true);
+        resume.invoke(service, 0);
+        assertTrue("Waiting must never play the already-read prefix", calls.isEmpty());
+        words.add(new com.vula.stories.player.media3.WordBoundary(4, 3, "hai", 800, 250));
+        sources.get(0).complete();
+        resume.invoke(service, 0);
+        resume.invoke(service, 0);
+        assertEquals(Arrays.asList("seek:0:800", "play"), calls);
+    }
+
     private static void fail(NativeReadAloudService service, int index, int attempt,
             AppendableAudioSource source) throws Exception {
         Method method = NativeReadAloudService.class.getDeclaredMethod("handleSynthesisFailure",

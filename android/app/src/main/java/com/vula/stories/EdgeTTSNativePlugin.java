@@ -226,7 +226,7 @@ public class EdgeTTSNativePlugin extends Plugin {
         String sessionId = call.getString("sessionId", UUID.randomUUID().toString());
         boolean ok = media3Adapter.startPlayback(
                 getContext(), chunksArray, call.getArray("utterances"), startIndex,
-                voice, rate, pitch, bookTitle, chapterTitle, sessionId
+                voice, rate, pitch, bookTitle, chapterTitle, sessionId, call.getInt("startCharIndex", 0)
         );
         if (!ok) {
             call.reject("Utterances array cannot be empty", "INVALID_INPUT");

@@ -31,6 +31,10 @@ it('reuses the original Edge utterance after Stop and Play instead of synthesizi
 	act(() => result.current.startReading());
 	expect(start.mock.calls.at(-1)?.[0].utterances).toEqual(original);
 	expect(start.mock.calls.at(-1)?.[0]).toMatchObject({ startIndex: 0, startCharIndex: 8 });
+	act(() => EdgeTTSNativeStreamService['chunkStartListeners'].forEach(cb => cb(0, { chunkIndex: 0, utteranceIndex: 0, paragraphIndex: 0, sourceStart: 0, startCharIndex: 8 })));
+	act(() => result.current.stopReading());
+	act(() => result.current.startReading());
+	expect(start.mock.calls.at(-1)?.[0]).toMatchObject({ startCharIndex: 8 });
 	unmount();
 });
 

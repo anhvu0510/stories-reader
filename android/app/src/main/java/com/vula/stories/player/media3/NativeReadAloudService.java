@@ -96,6 +96,8 @@ public final class NativeReadAloudService extends MediaSessionService {
     private long bufferingStartedAt;
     private long firstAudioLatencyMs = -1L;
     private long lastBufferingDurationMs = -1L;
+    private int pendingResumeIndex = -1;
+    private boolean resumePlayRequested = true;
 
     private final Runnable progressTicker = new Runnable() {
         @Override
@@ -208,6 +210,8 @@ public final class NativeReadAloudService extends MediaSessionService {
         observedDurations.clear();
         cachedIndices.clear();
         request = pendingRequest;
+        pendingResumeIndex = request.getStartCharIndex() > 0 ? request.getStartIndex() : -1;
+        resumePlayRequested = true;
         sessionStartedAt = System.currentTimeMillis();
         bufferingStartedAt = sessionStartedAt;
         firstAudioLatencyMs = -1L;
@@ -223,8 +227,8 @@ public final class NativeReadAloudService extends MediaSessionService {
             playlistSources.add(createProgressiveMediaSource(index, source));
         }
         player.setMediaSources(playlistSources, request.getStartIndex(), 0L);
+        player.setPlayWhenReady(pendingResumeIndex < 0);
         player.prepare();
-        player.play();
         triggerNotificationUpdate();
         scheduleBuffer(request.getStartIndex());
         mainHandler.removeCallbacks(progressTicker);
@@ -292,7 +296,11 @@ public final class NativeReadAloudService extends MediaSessionService {
                 cachedIndices.add(index);
                 observedDurations.put(index, Math.max(700L, source.size() * 1000L / 6000L));
                 inFlightIndices.remove(index);
-                mainHandler.post(() -> { if (isActive(activeRequest)) scheduleBuffer(player.getCurrentMediaItemIndex()); });
+                mainHandler.post(() -> {
+                    if (!isActive(activeRequest)) return;
+                    tryResumeAtWord(index);
+                    scheduleBuffer(player.getCurrentMediaItemIndex());
+                });
                 return;
             }
             long synthesisStartedAt = android.os.SystemClock.elapsedRealtime();
@@ -312,6 +320,9 @@ public final class NativeReadAloudService extends MediaSessionService {
                         public void onWordBoundary(WordBoundary boundary) {
                             if (!isActiveSource(activeRequest, index, source)) return;
                             boundaries.computeIfAbsent(index, ignored -> Collections.synchronizedList(new ArrayList<>())).add(boundary);
+                            mainHandler.post(() -> {
+                                if (isActiveSource(activeRequest, index, source)) tryResumeAtWord(index);
+                            });
                         }
 
                         @Override
@@ -324,6 +335,7 @@ public final class NativeReadAloudService extends MediaSessionService {
                             inFlightIndices.remove(index);
                             mainHandler.post(() -> {
                                 if (!isActiveSource(activeRequest, index, source)) return;
+                                tryResumeAtWord(index);
                                 bufferPolicy.observeSynthesis(android.os.SystemClock.elapsedRealtime() - synthesisStartedAt);
                                 scheduleBuffer(player.getCurrentMediaItemIndex());
                             });
@@ -367,6 +379,20 @@ public final class NativeReadAloudService extends MediaSessionService {
                 Log.w(TAG, "Completed audio cache write failed", error);
             }
         });
+    }
+
+    private void tryResumeAtWord(int index) {
+        if (request == null || index != pendingResumeIndex) return;
+        List<WordBoundary> words = boundaries.get(index);
+        AppendableAudioSource source = sources.get(index);
+        if (words == null || source == null) return;
+        long position;
+        synchronized (words) { position = PlaybackResumePosition.find(words, request.getStartCharIndex(), source.isCompleted()); }
+        if (position < 0L) return;
+        pendingResumeIndex = -1;
+        wordBoundaryTracker.reset();
+        playbackControl.seek(index, position);
+        if (resumePlayRequested) playbackControl.play();
     }
 
     private void releaseRetiredAudio(int currentIndex) {
@@ -482,6 +508,7 @@ public final class NativeReadAloudService extends MediaSessionService {
         if (playbackState == Player.STATE_BUFFERING) state = PlaybackSnapshot.State.BUFFERING;
         if (playbackState == Player.STATE_READY && player.getPlayWhenReady()) state = PlaybackSnapshot.State.PLAYING;
         if (playbackState == Player.STATE_READY && !player.getPlayWhenReady()) state = PlaybackSnapshot.State.PAUSED;
+        if (pendingResumeIndex >= 0 && resumePlayRequested) state = PlaybackSnapshot.State.BUFFERING;
         if (playbackState == Player.STATE_ENDED) state = PlaybackSnapshot.State.COMPLETED;
         long now = System.currentTimeMillis();
         if (state == PlaybackSnapshot.State.BUFFERING && bufferingStartedAt <= 0L) bufferingStartedAt = now;
@@ -602,21 +629,25 @@ public final class NativeReadAloudService extends MediaSessionService {
 
     private void pausePlayback() {
         if (request == null) return;
+        resumePlayRequested = false;
         player.pause();
         publishPlayerState(Player.STATE_READY);
     }
 
     private void resumePlayback() {
         if (request == null) return;
+        resumePlayRequested = true;
         int index = playbackControl.currentIndex();
         recoverFailedSynthesis(index);
         scheduleBuffer(index);
+        if (pendingResumeIndex >= 0) return;
         player.play();
         publishPlayerState(player.getPlaybackState());
     }
 
     private void seekTo(int index) {
         if (request == null || index < 0 || index >= request.getUtterances().size()) return;
+        pendingResumeIndex = -1;
         wordBoundaryTracker.reset();
         stateMachine.transition(request.getSessionId(), PlaybackSnapshot.State.SEEKING, index, 0L, 0L);
         publishSnapshot();
@@ -637,6 +668,7 @@ public final class NativeReadAloudService extends MediaSessionService {
     }
 
     private void stopSession() {
+        pendingResumeIndex = -1;
         mainHandler.removeCallbacks(progressTicker);
         cancelSynthesis();
         if (player != null) {

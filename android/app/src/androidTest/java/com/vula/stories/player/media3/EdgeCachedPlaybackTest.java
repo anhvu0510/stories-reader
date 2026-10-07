@@ -30,12 +30,16 @@ public class EdgeCachedPlaybackTest {
         for (ReadAloudUtterance utterance : utterances) {
             String word = utterance.getText().split(" ")[0];
             cache.put(EdgeTimelineCache.key(utterance.getText(), "cache-only-test", "+0%", "+0Hz"), audio,
-                    List.of(new WordBoundary(0, word.length(), word, 100, 500)));
+                    List.of(new WordBoundary(0, word.length(), word, 100, 500),
+                            new WordBoundary(word.length() + 1, utterance.getText().length() - word.length() - 1,
+                                    utterance.getText().substring(word.length() + 1), 800, 300)));
         }
         CountDownLatch first = new CountDownLatch(1);
         CountDownLatch next = new CountDownLatch(1);
         CountDownLatch automaticNext = new CountDownLatch(1);
         CountDownLatch replayed = new CountDownLatch(1);
+        CountDownLatch resumed = new CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicLong resumedPosition = new java.util.concurrent.atomic.AtomicLong(-1L);
         AtomicInteger stage = new AtomicInteger();
         AtomicInteger initialBuffers = new AtomicInteger();
         AtomicInteger nextBuffers = new AtomicInteger();
@@ -45,6 +49,11 @@ public class EdgeCachedPlaybackTest {
             @Override public void onUtteranceStart(String id, int index, ReadAloudUtterance utterance) {}
             @Override public void onWordBoundary(String id, int index, ReadAloudUtterance utterance, WordBoundary word) {}
             @Override public void onTimeline(PlaybackSnapshot snapshot, ReadAloudUtterance utterance, List<WordBoundary> words) {
+                if ("cache-resume".equals(snapshot.getSessionId()) && snapshot.getState() == PlaybackSnapshot.State.PLAYING) {
+                    resumedPosition.compareAndSet(-1L, snapshot.getPositionMs());
+                    resumed.countDown();
+                    return;
+                }
                 if (!"cache-playback".equals(snapshot.getSessionId()) || snapshot.getState() != PlaybackSnapshot.State.PLAYING || words.isEmpty()) return;
                 if (snapshot.getUtteranceIndex() == 0 && snapshot.getPositionMs() >= 100 && first.getCount() > 0) {
                     initialBuffers.set(snapshot.getRebufferCount());
@@ -73,6 +82,11 @@ public class EdgeCachedPlaybackTest {
             stage.set(2);
             Media3ReadAloudBridge.seek(context, 0);
             assertTrue("Retired audio must reload from disk after RAM eviction: " + error.get(), replayed.await(10, TimeUnit.SECONDS));
+            Media3ReadAloudBridge.stop(context);
+            Media3ReadAloudBridge.start(context, new ReadAloudSessionRequest("cache-resume", utterances,
+                    0, "cache-only-test", "+0%", "+0Hz", "Test", "Test", 4));
+            assertTrue("Stop/Play must reuse cached audio without a network request: " + error.get(), resumed.await(10, TimeUnit.SECONDS));
+            assertTrue("Restart must not play the read prefix: " + resumedPosition.get(), resumedPosition.get() >= 800L);
             assertNull(error.get());
         } finally {
             Media3ReadAloudBridge.stop(context);

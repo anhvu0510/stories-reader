@@ -41,6 +41,7 @@ export interface EdgeTTSNativePluginInterface {
 		utterances?: import('./readAloudUtterancePlan').ReadAloudUtterance[];
 		sessionId?: string;
 		startIndex?: number;
+		startCharIndex?: number;
 		voice?: string;
 		rate?: number;
 		pitch?: string;

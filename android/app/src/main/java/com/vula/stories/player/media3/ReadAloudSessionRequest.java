@@ -12,6 +12,7 @@ public final class ReadAloudSessionRequest {
     private final String pitch;
     private final String bookTitle;
     private final String chapterTitle;
+    private final int startCharIndex;
 
     public ReadAloudSessionRequest(
             String sessionId,
@@ -23,6 +24,11 @@ public final class ReadAloudSessionRequest {
             String bookTitle,
             String chapterTitle
     ) {
+        this(sessionId, utterances, startIndex, voice, rate, pitch, bookTitle, chapterTitle, 0);
+    }
+
+    public ReadAloudSessionRequest(String sessionId, List<ReadAloudUtterance> utterances, int startIndex,
+            String voice, String rate, String pitch, String bookTitle, String chapterTitle, int startCharIndex) {
         this.sessionId = sessionId;
         this.utterances = Collections.unmodifiableList(utterances);
         this.startIndex = startIndex;
@@ -31,11 +37,13 @@ public final class ReadAloudSessionRequest {
         this.pitch = pitch;
         this.bookTitle = bookTitle;
         this.chapterTitle = chapterTitle;
+        this.startCharIndex = Math.max(0, startCharIndex);
     }
 
     public String getSessionId() { return sessionId; }
     public List<ReadAloudUtterance> getUtterances() { return utterances; }
     public int getStartIndex() { return startIndex; }
+    public int getStartCharIndex() { return startCharIndex; }
     public String getVoice() { return voice; }
     public String getRate() { return rate; }
     public String getPitch() { return pitch; }

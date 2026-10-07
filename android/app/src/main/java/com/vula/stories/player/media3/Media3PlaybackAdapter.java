@@ -27,6 +27,8 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
     private boolean isMedia3Active = false;
     private int currentPlayIndex = 0;
     private String activeSessionId;
+    private int initialCharIndex;
+    private int initialUtteranceIndex;
 
     public Media3PlaybackAdapter(EventDispatcher eventDispatcher) {
         this.eventDispatcher = eventDispatcher;
@@ -83,6 +85,13 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
             String chapterTitle,
             String requestedSessionId
     ) {
+        return startPlayback(context, chunksArray, utterancesArray, startIndex, voice, rate, pitch,
+                bookTitle, chapterTitle, requestedSessionId, 0);
+    }
+
+    public boolean startPlayback(Context context, JSArray chunksArray, JSArray utterancesArray, int startIndex,
+            String voice, String rate, String pitch, String bookTitle, String chapterTitle,
+            String requestedSessionId, int startCharIndex) {
         List<String> legacyChunks = parseChunks(chunksArray);
         List<ReadAloudUtterance> utterances = parseUtterances(utterancesArray);
         if (utterances.isEmpty()) {
@@ -98,6 +107,8 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
                 : UUID.randomUUID().toString();
 
         currentPlayIndex = safeStartIndex;
+        initialUtteranceIndex = safeStartIndex;
+        initialCharIndex = Math.max(0, Math.min(startCharIndex, utterances.get(safeStartIndex).getText().length()));
         activeSessionId = sessionId;
         isMedia3Active = true;
         Media3ReadAloudBridge.registerListener(this);
@@ -111,7 +122,8 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
                         rate,
                         pitch,
                         bookTitle,
-                        chapterTitle
+                        chapterTitle,
+                        initialCharIndex
                 )
         );
         return true;
@@ -187,6 +199,8 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
         event.put("paragraphIndex", utterance.getParagraphIndex());
         event.put("sourceStart", utterance.getSourceStart());
         event.put("sourceLength", utterance.getSourceLength());
+        if (utteranceIndex == initialUtteranceIndex) event.put("startCharIndex", initialCharIndex);
+        initialUtteranceIndex = -1;
         eventDispatcher.sendEvent("onChunkStart", event);
     }
 

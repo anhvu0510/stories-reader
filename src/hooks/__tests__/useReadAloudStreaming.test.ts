@@ -608,7 +608,8 @@ describe('useReadAloud Edge word boundaries', () => {
 		const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
 		act(() => result.current.jumpToContent(1, 5));
 		expect(start).toHaveBeenCalledWith(expect.objectContaining({ bufferMode: 'media3', startIndex: 1, utterances: expect.any(Array) }));
-		expect(start.mock.calls[0][0].utterances?.[1]).toMatchObject({ paragraphIndex: 1, sourceStart: 5, text: 'được chọn để đọc.' });
+		expect(start.mock.calls[0][0].utterances?.[1]).toMatchObject({ paragraphIndex: 1, sourceStart: 0, text: 'Đoạn được chọn để đọc.' });
+		expect(start.mock.calls[0][0]).toMatchObject({ startCharIndex: 5 });
 		expect(seek).not.toHaveBeenCalled();
 		unmount();
 	});
