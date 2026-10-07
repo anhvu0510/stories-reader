@@ -42,7 +42,6 @@ export function useNativeReadingEvents(options: NativeReadingOptions) {
 			if (current.current.cursor.pendingUtterance.current !== null && event?.utteranceIndex !== current.current.cursor.pendingUtterance.current) return;
 			if (current.current.cursor.pendingChunk.current !== null && idx !== current.current.cursor.pendingChunk.current) return;
 			current.current.cursor.pendingChunk.current = null;
-			current.current.visual.wordHighlighterRef.current?.clearActiveWord();
 			current.current.cursor.charIndex.current = event?.sourceStart ?? -1;
 			current.current.cursor.charLength.current = 0;
 			current.current.cursor.chunk.current = idx;
@@ -71,7 +70,6 @@ export function useNativeReadingEvents(options: NativeReadingOptions) {
 		const unsubState = activeNativeStream.onPlaybackStateChange(({ isPlaying: p, isPaused: pa, isBuffering: b }) => {
 			if (!current.current.cursor.active.current) return;
 			if (pa) current.current.visual.scrollFollowerRef.current?.pauseFollowing();
-			if (b) current.current.visual.wordHighlighterRef.current?.clearActiveWord();
 			if (b) current.current.cursor.charLength.current = 0;
 			current.current.state.playing(p);
 			current.current.cursor.playing.current = p || b;

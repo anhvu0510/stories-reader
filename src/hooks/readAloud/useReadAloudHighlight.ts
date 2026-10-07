@@ -38,7 +38,7 @@ export function useReadAloudHighlight(chunks: SentenceChunk[], cursor: Highlight
 			return;
 		}
 		if (nextCharIndex < 0 || nextCharLength <= 0) {
-			highlighter.clearActiveWord();
+			// Keep the visual anchor until the next spoken word replaces it.
 			charIndexRef.current = Math.max(0, nextCharIndex);
 			sourceOffsetRef.current = chunk.startOffset + Math.max(0, nextCharIndex);
 			charLengthRef.current = 0;
@@ -76,7 +76,7 @@ export function useReadAloudHighlight(chunks: SentenceChunk[], cursor: Highlight
 		const highlighter = wordHighlighterRef.current;
 		if (!highlighter || wordCharIndex < 0) return;
 		if (wordCharLength <= 0) {
-			highlighter.clearActiveWord();
+			// Keep the visual anchor until the next spoken word replaces it.
 			charIndexRef.current = sourceStart + wordCharIndex;
 			sourceOffsetRef.current = sourceStart + wordCharIndex;
 			charLengthRef.current = 0;

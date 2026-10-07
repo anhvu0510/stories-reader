@@ -43,16 +43,16 @@ function ensureHighlightStyleSheet(): void {
 	style.id = HIGHLIGHT_STYLE_ID;
 	style.textContent = `
 ::highlight(stories-tts-line) {
-	background-color: rgba(147, 197, 253, 0.28);
+		background-color: rgba(147, 197, 253, 0.16);
 	color: inherit;
 }
 ::highlight(stories-tts-utterance) {
-	background-color: rgba(147, 197, 253, 0.28);
+		background-color: rgba(147, 197, 253, 0.16);
 	color: inherit;
 }
 ::highlight(stories-tts-word) {
-	background-color: #fde047;
-	color: #000000;
+		background-color: rgba(234, 179, 8, 0.32);
+		color: inherit;
 }
 `;
 	document.head.appendChild(style);

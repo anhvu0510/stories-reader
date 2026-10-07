@@ -6,7 +6,7 @@ Implemented locally on 2026-10-07. No commit, push, or deployment.
 
 - Map Edge word metadata forwards onto original reader text, preserving Unicode offsets and rejecting duplicate timestamps and partial Latin-word matches.
 - Send native audio position and word cues to the WebView. Render the current word from that clock on animation frames, without replaying delayed word events. Reject stale sessions, utterances, and sequence numbers.
-- Clear completed word highlights during silence while retaining the active line. Preserve source coordinates when the next utterance starts before its first word, so stop/resume does not return to the beginning of the grouped paragraph.
+- Retain the last word and line during silence, buffering, and utterance transitions; replace the word directly when the next boundary arrives. Use a soft translucent word tint and inherit the reader text color. Resume coordinates still advance independently when a word ends. Preserve source coordinates when the next utterance starts before its first word, so stop/resume does not return to the beginning of the grouped paragraph.
 - Preload three seconds of upcoming Media3 playlist samples. Adapt synthesis lookahead to recent request latency, within existing bounded limits.
 - Cache completed audio and word cues atomically in one versioned disk entry, with a 32 MiB budget. Cache keys include original text, voice, rate, pitch, format, and alignment version. Discard incomplete/corrupt entries. Release retired cached audio buffers from RAM and restore them from disk when seeking back.
 - Preserve manual scrolling and text-selection ownership; playback continues while the reader inspects another position.
@@ -33,3 +33,9 @@ On the final installed APK, live Edge playback, Next, pause, and resume were exe
 ## Practical limits
 
 The bridge measurements do not measure audible word-to-highlight alignment. Browser parity and physical-device alignment require audio/frame capture on a real device. A cold network request or resuming from an uncached partial utterance can still require synthesis; cache and preload reduce waiting but cannot eliminate network latency.
+
+## Highlight comfort follow-up
+
+Removed word clearing from silent gaps, buffering, and native chunk-start events after feedback about flashing. Word tint is now translucent amber, line tint is lighter, and both inherit the reader text color. The DOM fallback no longer changes font weight, spacing, or glow. Playback/resume offsets still advance independently of the retained visual anchor.
+
+Regression tests observed four failures before the change and passed afterward. Full web suite: 72 files, 467 passed and 3 expected failures. TypeScript/lint passed with the same 103 existing warnings. Debug APK rebuilt and installed on the emulator.

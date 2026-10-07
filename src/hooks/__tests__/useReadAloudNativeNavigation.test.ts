@@ -18,6 +18,22 @@ beforeEach(() => {
 	vi.spyOn(EdgeTTSNativeStreamService, 'initListeners').mockResolvedValue();
 });
 
+it('reuses the original Edge utterance after Stop and Play instead of synthesizing a new suffix', () => {
+	useReaderConfigStore.setState({ ttsEngine: 'edge', edgeBufferMode: 'media3' });
+	vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+	const start = vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue();
+	const paragraphs = ['Câu đầu đang đọc tiếp.'];
+	const { result, unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId: 'warm-edge-resume' }));
+	act(() => result.current.startReading());
+	const original = start.mock.calls[0][0].utterances!;
+	act(() => EdgeTTSNativeStreamService['wordBoundaryListeners'].forEach(cb => cb({ chunkIndex: 0, utteranceIndex: 0, paragraphIndex: 0, sourceStart: 0, sourceLength: paragraphs[0].length, charIndex: 8, charLength: 4, text: 'đang' })));
+	act(() => result.current.stopReading());
+	act(() => result.current.startReading());
+	expect(start.mock.calls.at(-1)?.[0].utterances).toEqual(original);
+	expect(start.mock.calls.at(-1)?.[0]).toMatchObject({ startIndex: 0, startCharIndex: 8 });
+	unmount();
+});
+
 it('resumes at the next Media3 utterance when stopped before its first word arrives', () => {
 	useReaderConfigStore.setState({ ttsEngine: 'edge', edgeBufferMode: 'media3' });
 	vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
@@ -154,7 +170,7 @@ it.each(['edge', 'browser'] as const)('does not restart %s narration for a repea
 	unmount();
 });
 
-it.each(['edge', 'browser'] as const)('keeps the %s reading line while clearing the word during buffering', (ttsEngine) => {
+it.each(['edge', 'browser'] as const)('keeps the %s word and line steady during buffering', (ttsEngine) => {
 	useReaderConfigStore.setState({ ttsEngine, edgeBufferMode: 'media3' });
 	const stream = ttsEngine === 'edge' ? EdgeTTSNativeStreamService : NativeTTSStreamService;
 	vi.spyOn(stream, 'isAvailable').mockReturnValue(true);
@@ -165,10 +181,13 @@ it.each(['edge', 'browser'] as const)('keeps the %s reading line while clearing 
 	const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
 	act(() => result.current.startReading());
 	clear.mockClear();
+	clearWord.mockClear();
 	act(() => stream['playbackStateListeners'].forEach((cb) => cb({ isPlaying: false, isPaused: false, isBuffering: true })));
-	expect(clearWord).toHaveBeenCalled();
-	expect(clear).not.toHaveBeenCalled();
 	expect(result.current.isLoading).toBe(true);
+	act(() => stream['chunkStartListeners'].forEach((cb) => cb(0)));
+	expect(clearWord).not.toHaveBeenCalled();
+	expect(clear).not.toHaveBeenCalled();
+	expect(result.current.isLoading).toBe(false);
 	unmount();
 });
 
