@@ -1,7 +1,7 @@
 {
-  "version": "1.0.354",
+  "version": "1.0.355",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "201e256315e6607057be739441d06f86bf1dbe6370e64080a806310ec9f95828",
-  "releaseNotes": "refactor: optimize edge streaming playback and buffer management in media3 player",
-  "updatedAt": "2026-10-07T04:08:33Z"
+  "checksum": "f187a5981be879b85956bf3d94dd2302899dad5d8fc82789b5f03a1ced8428dc",
+  "releaseNotes": "fix: handle error states in playback adapter and improve native text-to-speech resume logic",
+  "updatedAt": "2026-10-07T05:25:37Z"
 }
