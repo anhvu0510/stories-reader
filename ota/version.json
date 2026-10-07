@@ -1,7 +1,7 @@
 {
-  "version": "1.0.356",
+  "version": "1.0.357",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "35e5b1ac9e565bfdc6bdb07e8383cbd614cd4b5bad1635b51a80849e6b3a447c",
-  "releaseNotes": "refactor: modularize read-aloud hooks and enhance media3 playback and speech configuration",
-  "updatedAt": "2026-10-07T06:35:01Z"
+  "checksum": "b8c72532bb894214bf3d1bbd1ba73fe7a4eb06b890c12711f3682aefaa5c9bdd",
+  "releaseNotes": "fix: retain word and line highlights during silent gaps and buffering transitions",
+  "updatedAt": "2026-10-07T06:45:04Z"
 }
