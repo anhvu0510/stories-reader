@@ -1,5 +1,3 @@
-import { Capacitor } from '@capacitor/core';
-
 interface ScrollFollowerEnvironment {
 	getScrollY: () => number;
 	getViewportHeight: () => number;
@@ -15,7 +13,7 @@ interface ScrollFollowerEnvironment {
 const READING_ANCHOR_RATIO = 0.4;
 
 const createBrowserEnvironment = (): ScrollFollowerEnvironment => ({
-	autoReclaim: Capacitor.getPlatform() !== 'android',
+	autoReclaim: true,
 	getScrollY: () => window.scrollY,
 	getViewportHeight: () => window.innerHeight,
 	getMaxScrollY: () => Math.max(0, document.documentElement.scrollHeight - window.innerHeight),
@@ -32,12 +30,13 @@ const createBrowserEnvironment = (): ScrollFollowerEnvironment => ({
  * - Khi dòng highlight đang có mặt trên màn hình: tự động cuộn nhẹ theo dòng highlight.
  * - Khi người dùng vuốt/cuộn màn hình (user scrolling): tạm ngưng auto-scroll để người dùng thao tác.
  * - Web: tiếp quản lại khi thao tác dừng và dòng đang đọc nằm trong viewport.
- * - Android: chỉ tiếp quản khi người dùng yêu cầu locate/play/navigation.
+ * - Giữ/chọn chữ: nhường quyền cho đến khi người dùng thả tay/bỏ chọn.
  */
 export class ReadAloudScrollFollower {
 	private targetY: number | null = null;
 	private animationFrame: number | null = null;
 	private following = true;
+	private paused = false;
 	private latestLine: DOMRect | null = null;
 	private userHolding = false;
 	private resumeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -81,7 +80,7 @@ export class ReadAloudScrollFollower {
 
 	private scheduleReclaim(): void {
 		this.clearResumeTimer();
-		if (this.environment.autoReclaim === false) return;
+		if (this.paused || this.environment.autoReclaim === false) return;
 		this.resumeTimer = setTimeout(this.reclaimIfVisible, 250);
 	}
 
@@ -92,7 +91,7 @@ export class ReadAloudScrollFollower {
 		const bottom = this.latestLine.bottom - this.environment.getScrollY();
 		if (top < 0 || bottom > this.environment.getViewportHeight()) return;
 		this.following = true;
-		this.follow(this.latestLine, true);
+		this.follow(this.latestLine);
 	};
 
 	private clearResumeTimer(): void {
@@ -102,15 +101,26 @@ export class ReadAloudScrollFollower {
 
 	/** Only an explicit playback/navigation action restores following. */
 	public resumeFollowing(): void {
-		this.cancel();
+		this.clearResumeTimer();
+		this.stopAnimation();
 		this.userHolding = false;
+		this.paused = false;
 		this.following = true;
+	}
+
+	public pauseFollowing(): void {
+		this.paused = true;
+		this.following = false;
+		this.clearResumeTimer();
+		this.stopAnimation();
 	}
 
 	public locateCurrentLine(): void {
 		const line = this.latestLine;
+		const paused = this.paused;
 		this.resumeFollowing();
 		if (line) this.follow(line, true);
+		this.paused = paused;
 	}
 
 	public follow(line: DOMRect, recenter = false): void {
@@ -163,6 +173,7 @@ export class ReadAloudScrollFollower {
 	}
 
 	public cancel(): void {
+		this.paused = false;
 		this.clearResumeTimer();
 		this.latestLine = null;
 		this.stopAnimation();

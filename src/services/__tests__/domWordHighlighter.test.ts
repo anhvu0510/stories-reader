@@ -20,6 +20,26 @@ afterEach(() => {
 });
 
 describe('DomWordHighlighter', () => {
+	it('clears only the spoken word while waiting and preserves the current line', () => {
+		const root = document.createElement('div');
+		root.textContent = 'Một hai ba';
+		document.body.appendChild(root);
+		const highlights = { set: vi.fn(), delete: vi.fn() };
+		Object.defineProperty(globalThis, 'Highlight', { configurable: true, value: vi.fn() });
+		Object.defineProperty(globalThis, 'CSS', { configurable: true, value: { highlights } });
+		const createRange = document.createRange.bind(document);
+		vi.spyOn(document, 'createRange').mockImplementation(() => {
+			const range = createRange();
+			Object.defineProperty(range, 'getClientRects', { value: () => [new DOMRect(20, 40, 260, 30)] });
+			return range;
+		});
+		const highlighter = new DomWordHighlighter('active-word');
+		highlighter.highlight(root, 0, 3);
+		highlighter.clearActiveWord();
+		expect(highlights.delete).toHaveBeenCalledWith('stories-tts-word');
+		expect(highlights.delete).not.toHaveBeenCalledWith('stories-tts-line');
+		expect(highlighter.highlight(root, 4, 3)?.lineChanged).toBe(false);
+	});
 	it('moves the blue utterance range to a different paragraph with identical offsets', () => {
 		const first = document.createElement('div');
 		const second = document.createElement('div');

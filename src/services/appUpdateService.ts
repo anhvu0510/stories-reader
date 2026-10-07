@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { useAppStore } from '@/stores/useAppStore';
 import { getEncryptedDefaultGatewayUrl } from './secretServerService';
+import { isNativeDebugBuild } from './debugRuntime';
 
 export interface UpdateManifest {
 	version: string;
@@ -101,6 +102,7 @@ export class AppUpdateService {
 		endpoint = DEFAULT_UPDATE_ENDPOINT,
 		currentVer?: string
 	): Promise<UpdateManifest | null> {
+		if (isNativeDebugBuild()) return null;
 		if (Capacitor.getPlatform() !== 'android') {
 			return null;
 		}
@@ -163,6 +165,7 @@ export class AppUpdateService {
 		manifest: UpdateManifest,
 		onProgress?: (percent: number) => void
 	): Promise<boolean> {
+		if (isNativeDebugBuild()) return false;
 		try {
 			let listenerHandle: { remove: () => void } | null = null;
 			if (onProgress) {

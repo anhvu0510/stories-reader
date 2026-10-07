@@ -4,6 +4,49 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
 
 describe('ReadAloudScrollFollower', () => {
+	it('keeps a paused line locatable without reclaiming scrolling while paused', () => {
+		vi.useFakeTimers();
+		const scrollTo = vi.fn();
+		const follower = new ReadAloudScrollFollower({
+			getScrollY: () => 0, getViewportHeight: () => 800, scrollTo,
+			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
+		});
+		follower.follow(new DOMRect(0, 700, 300, 30));
+		scrollTo.mockClear();
+		follower.pauseFollowing();
+		follower.notifyUserInteraction();
+		vi.advanceTimersByTime(1000);
+		expect(scrollTo).not.toHaveBeenCalled();
+		follower.locateCurrentLine();
+		expect(scrollTo).toHaveBeenCalledWith(395);
+	});
+	it('rejoins without recentering a line the user has left comfortably visible', () => {
+		vi.useFakeTimers();
+		const scrollTo = vi.fn();
+		const follower = new ReadAloudScrollFollower({
+			getScrollY: () => 0, getViewportHeight: () => 800, scrollTo,
+			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
+		});
+		follower.beginUserInteraction();
+		follower.follow(new DOMRect(0, 400, 300, 30));
+		follower.endUserInteraction();
+		vi.advanceTimersByTime(300);
+		expect(scrollTo).not.toHaveBeenCalled();
+		follower.follow(new DOMRect(0, 650, 300, 30));
+		expect(scrollTo).toHaveBeenCalledWith(345);
+	});
+	it('preserves the last line when following is resumed before another word arrives', () => {
+		const scrollTo = vi.fn();
+		const follower = new ReadAloudScrollFollower({
+			getScrollY: () => 1500, getViewportHeight: () => 800, scrollTo,
+			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
+		});
+		follower.notifyUserInteraction();
+		follower.follow(new DOMRect(0, 500, 300, 30));
+		follower.resumeFollowing();
+		follower.locateCurrentLine();
+		expect(scrollTo).toHaveBeenCalledWith(195);
+	});
 	afterEach(() => vi.useRealTimers());
 	it('locates the active line explicitly from far away without seeking or restarting narration', () => {
 		const scrollTo = vi.fn();
@@ -52,7 +95,9 @@ describe('ReadAloudScrollFollower', () => {
 		selected = false;
 		follower.notifySelectionChange();
 		vi.advanceTimersByTime(300);
-		expect(scrollTo).toHaveBeenCalledWith(195);
+		expect(scrollTo).not.toHaveBeenCalled();
+		follower.follow(new DOMRect(0, 650, 300, 30));
+		expect(scrollTo).toHaveBeenCalledWith(345);
 	});
 	it('clamps centering to the page boundary so the animation can finish', () => {
 		const scrollTo = vi.fn();
@@ -97,7 +142,9 @@ describe('ReadAloudScrollFollower', () => {
 		vi.advanceTimersByTime(100);
 		expect(scrollTo).not.toHaveBeenCalled();
 		vi.advanceTimersByTime(200);
-		expect(scrollTo).toHaveBeenCalledWith(595);
+		expect(scrollTo).not.toHaveBeenCalled();
+		follower.follow(new DOMRect(0, 1300, 300, 30));
+		expect(scrollTo).toHaveBeenCalledWith(995);
 	});
 
 	it('cancels pending reacquisition when reading is paused or stopped', () => {
@@ -130,7 +177,9 @@ describe('ReadAloudScrollFollower', () => {
 		expect(scrollTo).not.toHaveBeenCalled();
 		follower.endUserInteraction();
 		vi.advanceTimersByTime(300);
-		expect(scrollTo).toHaveBeenCalledWith(215);
+		expect(scrollTo).not.toHaveBeenCalled();
+		follower.follow(new DOMRect(0, 650, 300, 30));
+		expect(scrollTo).toHaveBeenCalledWith(345);
 	});
 	it('coalesces changing line targets into one interruptible animation', () => {
 		let scrollY = 0;

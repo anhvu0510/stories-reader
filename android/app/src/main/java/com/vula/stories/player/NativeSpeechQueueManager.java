@@ -42,6 +42,9 @@ public class NativeSpeechQueueManager {
     private volatile boolean isPaused = false;
     private long generation = 0;
     private int lastQueuedIndex = -1;
+    private int spokenOffset;
+    private int resumedChunkIndex = -1;
+    private int resumedOffset;
 
     public NativeSpeechQueueManager() {}
 
@@ -59,6 +62,7 @@ public class NativeSpeechQueueManager {
             this.chunks.addAll(newChunks);
         }
         this.currentChunkIndex = Math.max(0, Math.min(startIndex, Math.max(0, this.chunks.size() - 1)));
+        spokenOffset = 0;
     }
 
     /**
@@ -98,16 +102,32 @@ public class NativeSpeechQueueManager {
      * - Các câu tiếp theo trong phạm vi lookahead sử dụng QUEUE_ADD để gối đầu gapless.
      */
     public synchronized void startSpeaking(TextToSpeech tts, int startIndex, Bundle params) {
+        startSpeakingFrom(tts, startIndex, 0, params);
+    }
+
+    public synchronized void startSpeaking(TextToSpeech tts, int startIndex, int offset, Bundle params) {
+        startSpeakingFrom(tts, startIndex, offset, params);
+    }
+
+    public synchronized void resumeSpeaking(TextToSpeech tts, Bundle params) {
+        if (!isPaused) return;
+        startSpeakingFrom(tts, currentChunkIndex, spokenOffset, params);
+    }
+
+    private void startSpeakingFrom(TextToSpeech tts, int startIndex, int offset, Bundle params) {
         if (tts == null || chunks.isEmpty()) return;
 
         int validStart = Math.max(0, Math.min(startIndex, chunks.size() - 1));
         generation += 1;
         currentChunkIndex = validStart;
+        spokenOffset = Math.max(0, Math.min(offset, chunks.get(validStart).length()));
+        resumedChunkIndex = validStart;
+        resumedOffset = spokenOffset;
         isPlaying = true;
         isPaused = false;
 
         // Phát câu khởi đầu (QUEUE_FLUSH)
-        String firstText = chunks.get(validStart);
+        String firstText = chunks.get(validStart).substring(spokenOffset);
         lastQueuedIndex = validStart;
         int result = tts.speak(firstText, TextToSpeech.QUEUE_FLUSH, params, activeUtteranceId(validStart));
         if (result != TextToSpeech.SUCCESS) {
@@ -146,6 +166,7 @@ public class NativeSpeechQueueManager {
     public synchronized void handleChunkStart(String utteranceId) {
         int index = activeChunkIndex(utteranceId);
         if (index < currentChunkIndex || index < 0) return;
+        if (index != currentChunkIndex) spokenOffset = 0;
         currentChunkIndex = index;
         if (listener != null) {
             listener.onChunkStart(index);
@@ -162,9 +183,13 @@ public class NativeSpeechQueueManager {
             return;
         }
         String text = chunks.get(index);
+        int baseOffset = index == resumedChunkIndex ? resumedOffset : 0;
+        start += baseOffset;
+        end += baseOffset;
         if (start < 0 || end > text.length() || start >= end) {
             return;
         }
+        spokenOffset = start;
         if (listener != null) {
             listener.onWordBoundary(index, start, end - start, text.substring(start, end));
         }
@@ -179,11 +204,14 @@ public class NativeSpeechQueueManager {
             return;
         }
         if (listener != null) {
+            listener.onWordBoundary(index, chunks.get(index).length(), 0, "");
             listener.onChunkCompleted(index);
         }
 
         // Kiểm tra xem đã đọc hết toàn bộ chương sách chưa
         if (index < chunks.size() - 1) {
+            currentChunkIndex = index + 1;
+            spokenOffset = 0;
             return;
         }
         isPlaying = false;

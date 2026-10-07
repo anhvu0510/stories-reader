@@ -2,13 +2,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import React from 'react';
+import { Capacitor } from '@capacitor/core';
 
 import { SelectionSpeakerTooltip } from '../SelectionSpeakerTooltip';
+
+vi.mock('@capacitor/core', () => ({ Capacitor: { getPlatform: vi.fn(() => 'android') } }));
 
 describe('SelectionSpeakerTooltip Component', () => {
 	let containerDiv: HTMLElement;
 
 	beforeEach(() => {
+		vi.mocked(Capacitor.getPlatform).mockReturnValue('android');
 		containerDiv = document.createElement('main');
 		containerDiv.id = 'main-story-content';
 		document.body.appendChild(containerDiv);
@@ -24,6 +28,28 @@ describe('SelectionSpeakerTooltip Component', () => {
 		containerDiv.remove();
 		vi.restoreAllMocks();
 		vi.unstubAllGlobals();
+		window.getSelection()?.removeAllRanges();
+	});
+
+	it.each([false, true])('preserves the web selection menu without a speaker with reading active = %s', (isTTSActive) => {
+		vi.mocked(Capacitor.getPlatform).mockReturnValue('web');
+		const paragraph = document.createElement('p');
+		paragraph.dataset.paragraphIndex = '0';
+		paragraph.textContent = 'Văn bản được chọn trên web.';
+		containerDiv.appendChild(paragraph);
+		const range = document.createRange();
+		range.selectNodeContents(paragraph);
+		range.getBoundingClientRect = () => new DOMRect(50, 100, 150, 20);
+		window.getSelection()?.addRange(range);
+		const onSpeak = vi.fn();
+		render(<SelectionSpeakerTooltip onSpeak={onSpeak} isTTSActive={isTTSActive} />);
+		fireEvent(document, new Event('selectionchange'));
+		const contextmenu = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+		fireEvent(paragraph, contextmenu);
+		expect(contextmenu.defaultPrevented).toBe(false);
+		expect(screen.queryByTestId('selection-speaker-tooltip')).toBeNull();
+		expect(window.getSelection()?.toString()).toBe(paragraph.textContent);
+		expect(onSpeak).not.toHaveBeenCalled();
 	});
 
 	it('does not render when there is no text selection', () => {
@@ -111,7 +137,7 @@ describe('SelectionSpeakerTooltip Component', () => {
 		outsideP.remove();
 	});
 
-	it('hides the speaker and jumps once after selection settles while reading', async () => {
+	it('keeps selection while reading and only jumps when the speaker is pressed', async () => {
 		vi.useFakeTimers();
 		const p = document.createElement('div');
 		p.setAttribute('data-paragraph-index', '2');
@@ -150,15 +176,15 @@ describe('SelectionSpeakerTooltip Component', () => {
 			document.dispatchEvent(new Event('selectionchange'));
 		});
 
-		// Tooltip must NOT render when in TTS active mode
-		expect(screen.queryByTestId('selection-speaker-tooltip')).toBeNull();
-
 		// Trigger mouseup (or touchend) after text selection in TTS active mode
 		act(() => {
 			window.dispatchEvent(new MouseEvent('mouseup'));
 		});
 
 		act(() => vi.advanceTimersByTime(200));
+		expect(onSpeak).not.toHaveBeenCalled();
+		expect(removeAllRanges).not.toHaveBeenCalled();
+		fireEvent.click(screen.getByTestId('selection-speaker-tooltip'));
 		expect(onSpeak).toHaveBeenCalledWith(2, 5);
 		expect(onSpeak).toHaveBeenCalledTimes(1);
 		expect(removeAllRanges).toHaveBeenCalled();
@@ -223,7 +249,7 @@ describe('SelectionSpeakerTooltip Component', () => {
 		outside.remove();
 	});
 
-	it('automatically jumps when the selection stabilizes', async () => {
+	it('does not seek or clear selected text while the user is still holding', async () => {
 		vi.useFakeTimers();
 		try {
 			const p = document.createElement('div');
@@ -268,8 +294,8 @@ describe('SelectionSpeakerTooltip Component', () => {
 				vi.advanceTimersByTime(300);
 			});
 
-			expect(onSpeak).toHaveBeenCalledWith(9, 11);
-			expect(removeAllRanges).toHaveBeenCalled();
+			expect(onSpeak).not.toHaveBeenCalled();
+			expect(removeAllRanges).not.toHaveBeenCalled();
 		} finally {
 			vi.useRealTimers();
 		}

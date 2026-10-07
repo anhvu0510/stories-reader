@@ -38,6 +38,7 @@ public class ReaderWebView extends CapacitorWebView {
 
     public ReaderWebView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        addJavascriptInterface(new DebugRuntime(), "StoriesRuntime");
     }
 
     @Override

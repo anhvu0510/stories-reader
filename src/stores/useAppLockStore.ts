@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Capacitor } from '@capacitor/core';
 import { biometricService } from '@/services/biometricService';
 import { isValidTimePasscode } from '@/services/secretServerService';
+import { isNativeDebugBuild } from '@/services/debugRuntime';
 
 /**
  * Kiểm tra xem ứng dụng có đang chạy trên môi trường di động Android hay không
@@ -47,7 +48,7 @@ function setSessionUnlocked(unlocked: boolean) {
 }
 
 export const useAppLockStore = create<AppLockStore>((set, get) => {
-	const initialLockEnabled = isAndroidApp() && biometricService.isBiometricLockEnabled();
+	const initialLockEnabled = isAndroidApp() && !isNativeDebugBuild() && biometricService.isBiometricLockEnabled();
 	const initialUnlocked = isSessionUnlocked();
 
 	return {
@@ -59,7 +60,7 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 
 		lock: () => {
 			// Tuyệt đối không khóa trên nền tảng web hoặc khi chưa bật bảo mật
-			if (!isAndroidApp() || !get().isLockEnabled) return;
+			if (!isAndroidApp() || isNativeDebugBuild() || !get().isLockEnabled) return;
 			setSessionUnlocked(false);
 			void biometricService.cancel();
 			set({
@@ -80,7 +81,7 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 
 		enableLockAfterPasscode: () => {
 			// Chỉ áp dụng kích hoạt khóa bảo mật trên mobile Android, không áp dụng cho web
-			if (!isAndroidApp()) return;
+			if (!isAndroidApp() || isNativeDebugBuild()) return;
 			biometricService.setBiometricLockEnabled(true);
 			setSessionUnlocked(true);
 			set({
@@ -108,7 +109,7 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 
 		triggerBiometricPrompt: async () => {
 			// Không chạy trên web
-			if (!isAndroidApp()) return false;
+			if (!isAndroidApp() || isNativeDebugBuild()) return false;
 
 			// TUYỆT ĐỐI không gọi khi app đang ở background / ẩn màn hình
 			if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {

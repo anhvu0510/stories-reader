@@ -18,6 +18,9 @@ task checkstyle(type: Checkstyle) {
 }
 
 android {
+    buildFeatures {
+        buildConfig true
+    }
     namespace "com.vula.stories"
     compileSdk rootProject.ext.compileSdkVersion
     signingConfigs {

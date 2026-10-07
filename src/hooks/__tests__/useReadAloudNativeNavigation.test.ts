@@ -7,6 +7,7 @@ import { EdgeTTSNativeStreamService } from '@/services/edgeTtsNativeStream';
 import { DomWordHighlighter } from '@/services/domWordHighlighter';
 import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+import { INVISIBLE_SENTENCE_DELIMITER } from '@/services/gaplessTtsPlayer';
 
 beforeEach(() => {
 	localStorage.clear();
@@ -18,7 +19,127 @@ beforeEach(() => {
 });
 afterEach(() => {
 	vi.restoreAllMocks();
+	vi.unstubAllGlobals();
 	document.body.innerHTML = '';
+});
+
+it.each(['edge', 'browser'] as const)('does not revive stopped %s playback from a late native state event', (ttsEngine) => {
+	useReaderConfigStore.setState({ ttsEngine, edgeBufferMode: 'media3' });
+	const stream = ttsEngine === 'edge' ? EdgeTTSNativeStreamService : NativeTTSStreamService;
+	vi.spyOn(stream, 'isAvailable').mockReturnValue(true);
+	vi.spyOn(stream, 'startPlayback').mockResolvedValue();
+	const paragraphs = ['Câu đầu.'];
+	const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
+	act(() => result.current.startReading());
+	act(() => result.current.stopReading());
+	act(() => stream['playbackStateListeners'].forEach(cb => cb({ isPlaying: false, isPaused: false, isBuffering: true })));
+	expect(result.current.isTTSActive).toBe(false);
+	act(() => stream['playbackStateListeners'].forEach(cb => cb({ isPlaying: true, isPaused: false, isBuffering: false })));
+	expect(result.current.isPlaying).toBe(false);
+	unmount();
+});
+
+it('saves the final device chunk when paused before it has finished', () => {
+	useReaderConfigStore.setState({ ttsEngine: 'browser' });
+	vi.spyOn(NativeTTSStreamService, 'isAvailable').mockReturnValue(true);
+	vi.spyOn(NativeTTSStreamService, 'startPlayback').mockResolvedValue();
+	vi.spyOn(NativeTTSStreamService, 'pause').mockResolvedValue();
+	const paragraphs = ['Câu cuối đang đọc.'];
+	const { result, unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId: 'final-device' }));
+	act(() => result.current.startReading());
+	act(() => NativeTTSStreamService['wordBoundaryListeners'].forEach(cb => cb({ chunkIndex: 0, charIndex: 4, charLength: 4, text: 'cuối' })));
+	act(() => result.current.pauseReading());
+	expect(JSON.parse(localStorage.getItem('stories_tts_pos_final-device')!)).toMatchObject({ charOffset: 4, sourceOffset: 4 });
+	unmount();
+});
+
+it('restores the next database chunk when the saved source offset is exactly at a completed boundary', () => {
+	useReaderConfigStore.setState({ ttsEngine: 'browser' });
+	vi.spyOn(NativeTTSStreamService, 'isAvailable').mockReturnValue(true);
+	const start = vi.spyOn(NativeTTSStreamService, 'startPlayback').mockResolvedValue();
+	const first = 'Câu đã đọc.';
+	const paragraphs = [`${first} ${INVISIBLE_SENTENCE_DELIMITER} Câu chưa đọc.`];
+	localStorage.setItem('stories_tts_pos_boundary-device', JSON.stringify({ version: 2, chunkIndex: 0, charOffset: first.length, paragraphIndex: 0, sourceOffset: first.length }));
+	const { result, unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId: 'boundary-device' }));
+	act(() => result.current.startReading());
+	expect(start.mock.calls[0][0]).toMatchObject({ startIndex: 1, startCharIndex: 0 });
+	unmount();
+});
+
+it('restores device narration within a later chunk of the same paragraph', () => {
+	useReaderConfigStore.setState({ ttsEngine: 'browser' });
+	vi.spyOn(NativeTTSStreamService, 'isAvailable').mockReturnValue(true);
+	vi.spyOn(NativeTTSStreamService, 'pause').mockResolvedValue();
+	const start = vi.spyOn(NativeTTSStreamService, 'startPlayback').mockResolvedValue();
+	const paragraph = ['Câu đầu đã đọc.', 'Câu sau đang được đọc.', 'Câu tiếp theo.'].join(` ${INVISIBLE_SENTENCE_DELIMITER} `);
+	const paragraphs = [paragraph, 'Câu cuối.'];
+	const context = { chapterId: 'restore-device' };
+	const first = renderHook(() => useReadAloud(paragraphs, context));
+	act(() => first.result.current.startReading());
+	const text = start.mock.calls[0][0].chunks[1];
+	expect(paragraph.indexOf(text)).toBeGreaterThan(0);
+	const offset = text.indexOf(' ') + 1;
+	act(() => NativeTTSStreamService['chunkStartListeners'].forEach(cb => cb(1)));
+	act(() => NativeTTSStreamService['wordBoundaryListeners'].forEach(cb => cb({ chunkIndex: 1, charIndex: offset, charLength: 3, text: text.slice(offset, offset + 3) })));
+	act(() => first.result.current.pauseReading());
+	const saved = JSON.parse(localStorage.getItem('stories_tts_pos_restore-device')!);
+	expect(saved.sourceOffset).toBe(paragraph.indexOf(text) + offset);
+	first.unmount();
+	const second = renderHook(() => useReadAloud(paragraphs, context));
+	act(() => second.result.current.startReading());
+	expect(start.mock.calls.at(-1)?.[0]).toMatchObject({ startIndex: 1, startCharIndex: offset });
+	second.unmount();
+});
+
+it('lets the native player own transport controls without a competing WebView Media Session', () => {
+	const original = Object.getOwnPropertyDescriptor(navigator, 'mediaSession');
+	const setActionHandler = vi.fn();
+	Object.defineProperty(navigator, 'mediaSession', { configurable: true, value: { setActionHandler } });
+	vi.stubGlobal('MediaMetadata', vi.fn());
+	useReaderConfigStore.setState({ ttsEngine: 'edge', edgeBufferMode: 'media3' });
+	vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+	vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue();
+	const paragraphs = ['Câu đầu.'];
+	const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
+	try {
+		act(() => result.current.startReading());
+		expect(setActionHandler).not.toHaveBeenCalled();
+	} finally {
+		unmount();
+		if (original) Object.defineProperty(navigator, 'mediaSession', original);
+		if (!original) Reflect.deleteProperty(navigator, 'mediaSession');
+	}
+});
+
+it.each(['edge', 'browser'] as const)('does not restart %s narration for a repeated Play command while already playing or buffering', (ttsEngine) => {
+	useReaderConfigStore.setState({ ttsEngine, edgeBufferMode: 'media3' });
+	const stream = ttsEngine === 'edge' ? EdgeTTSNativeStreamService : NativeTTSStreamService;
+	vi.spyOn(stream, 'isAvailable').mockReturnValue(true);
+	const start = vi.spyOn(stream, 'startPlayback').mockResolvedValue();
+	const paragraphs = ['Câu đầu.'];
+	const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
+	act(() => result.current.startReading());
+	act(() => result.current.startReading());
+	expect(start).toHaveBeenCalledTimes(1);
+	unmount();
+});
+
+it.each(['edge', 'browser'] as const)('keeps the %s reading line while clearing the word during buffering', (ttsEngine) => {
+	useReaderConfigStore.setState({ ttsEngine, edgeBufferMode: 'media3' });
+	const stream = ttsEngine === 'edge' ? EdgeTTSNativeStreamService : NativeTTSStreamService;
+	vi.spyOn(stream, 'isAvailable').mockReturnValue(true);
+	vi.spyOn(stream, 'startPlayback').mockResolvedValue();
+	const clear = vi.spyOn(DomWordHighlighter.prototype, 'clear');
+	const clearWord = vi.spyOn(DomWordHighlighter.prototype, 'clearActiveWord');
+	const paragraphs = ['Câu đầu.'];
+	const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
+	act(() => result.current.startReading());
+	clear.mockClear();
+	act(() => stream['playbackStateListeners'].forEach(cb => cb({ isPlaying: false, isPaused: false, isBuffering: true })));
+	expect(clearWord).toHaveBeenCalled();
+	expect(clear).not.toHaveBeenCalled();
+	expect(result.current.isLoading).toBe(true);
+	unmount();
 });
 
 it('new reader mounts never reuse a Media3 session id from a previous player', () => {

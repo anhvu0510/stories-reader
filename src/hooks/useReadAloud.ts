@@ -205,10 +205,12 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	}, []);
 
 	const currentChunkIdxRef = useRef<number>(0);
+	const sourceOffsetRef = useRef(0);
 	const pendingNativeChunkRef = useRef<number | null>(null);
 	const media3UtteranceIndexRef = useRef(0);
 	const pendingMedia3UtteranceRef = useRef<number | null>(null);
 	const isPlayingRef = useRef(false);
+	const nativePlaybackActiveRef = useRef(false);
 	const isPausedRef = useRef(false);
 	const playSessionIdRef = useRef<number>(0);
 	const charIndexRef = useRef(-1);
@@ -576,16 +578,17 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	};
 
 	const stopReading = (clearSaved = false) => {
+		nativePlaybackActiveRef.current = false;
 		// Kiểm tra xem luồng đọc trước đó có đang thực sự chạy hoặc tạm dừng không
 		const wasActive = isPlayingRef.current || isPausedRef.current || isLoading;
 		const ownsBrowserSpeechQueue = ownsBrowserSpeechQueueRef.current;
 
-		if (!clearSaved && wasActive && currentChunkIdxRef.current < chunks.length - 1) {
+		if (!clearSaved && wasActive && currentChunkIdxRef.current < chunks.length) {
 			saveResumePosition(
 				currentChunkIdxRef.current,
 				charIndexRef.current > 0 ? charIndexRef.current : 0,
 				currentParagraphIndexRef.current >= 0 ? currentParagraphIndexRef.current : undefined,
-				charIndexRef.current > 0 ? charIndexRef.current : undefined
+				charIndexRef.current >= 0 ? sourceOffsetRef.current : undefined
 			);
 		} else if (clearSaved) {
 			clearResumePosition();
@@ -648,7 +651,10 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			return;
 		}
 		if (nextCharIndex < 0 || nextCharLength <= 0) {
-			highlighter.clear();
+			highlighter.clearActiveWord();
+			charIndexRef.current = Math.max(0, nextCharIndex);
+			sourceOffsetRef.current = chunk.startOffset + Math.max(0, nextCharIndex);
+			charLengthRef.current = 0;
 			return;
 		}
 
@@ -667,6 +673,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		}
 
 		charIndexRef.current = nextCharIndex;
+		sourceOffsetRef.current = chunk.startOffset + nextCharIndex;
 		charLengthRef.current = nextCharLength;
 		useTTSStore.setState({
 			currentParagraphIndex: chunk.pIdx,
@@ -699,6 +706,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 		currentParagraphIndexRef.current = paragraphIndex;
 		charIndexRef.current = sourceStart + wordCharIndex;
+		sourceOffsetRef.current = sourceStart + wordCharIndex;
 		charLengthRef.current = wordCharLength;
 		useTTSStore.setState({
 			currentParagraphIndex: paragraphIndex,
@@ -727,6 +735,9 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			if (!isPlayingRef.current) return;
 			if (pendingNativeChunkRef.current !== null && idx !== pendingNativeChunkRef.current) return;
 			pendingNativeChunkRef.current = null;
+			wordHighlighterRef.current?.clearActiveWord();
+			charIndexRef.current = -1;
+			charLengthRef.current = 0;
 			currentChunkIdxRef.current = idx;
 			setCurrentChunkIndex(idx);
 			setIsLoading(false);
@@ -747,6 +758,10 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		});
 
 		const unsubState = activeNativeStream.onPlaybackStateChange(({ isPlaying: p, isPaused: pa, isBuffering: b }) => {
+			if (!nativePlaybackActiveRef.current) return;
+			if (pa) scrollFollowerRef.current?.pauseFollowing();
+			if (b) wordHighlighterRef.current?.clearActiveWord();
+			if (b) charLengthRef.current = 0;
 			setIsPlaying(p);
 			isPlayingRef.current = p || b;
 			setIsPaused(pa);
@@ -866,6 +881,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	}, [ttsEngine, synth]);
 
 	useEffect(() => {
+		if (activeNativeStream) return;
 		if (!isPlaying && !isPaused && !isLoading) return;
 		if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
 
@@ -893,7 +909,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 				}
 			});
 		};
-	}, [chunks.length, isLoading, isPaused, isPlaying]);
+	}, [activeNativeStream, chunks.length, isLoading, isPaused, isPlaying]);
 
 	useEffect(() => {
 		return () => {
@@ -1157,6 +1173,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	};
 
 	const startReading = (targetIndex?: number, targetOffset?: number) => {
+		if (targetIndex === undefined && isPlayingRef.current && !isPausedRef.current) return;
 		scrollFollowerRef.current?.resumeFollowing();
 		void requestWakeLock();
 		if (isPaused && targetIndex === undefined) {
@@ -1212,7 +1229,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 				const saved = getResumePosition();
 				if (saved?.version === 2 && saved.paragraphIndex !== undefined && saved.sourceOffset !== undefined) {
 					const migratedIndex = chunks.findIndex(
-						(chunk) => chunk.pIdx === saved.paragraphIndex && saved.sourceOffset! >= chunk.startOffset && saved.sourceOffset! < chunk.startOffset + chunk.length
+						(chunk) => chunk.pIdx === saved.paragraphIndex && saved.sourceOffset! < chunk.startOffset + chunk.length
 					);
 					if (migratedIndex >= 0) {
 						targetIdx = migratedIndex;
@@ -1242,6 +1259,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		}
 
 		if (activeNativeStream) {
+			nativePlaybackActiveRef.current = true;
 			setIsPlaying(true);
 			setIsLoading(true);
 			isPlayingRef.current = true;
@@ -1274,6 +1292,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 					chunks: textChunks,
 					...(isMedia3Mode ? { utterances: playbackUtterances, sessionId: `edge-media3-${crypto.randomUUID()}` } : {}),
 					startIndex: nativeStartIndex,
+					...(ttsEngine === 'browser' ? { startCharIndex: targetOff } : {}),
 				voice: targetVoice,
 				rate: currentSpeechRate,
 				pitch: ttsEngine === 'edge' ? ('+0Hz' as any) : 1.0,
@@ -1289,14 +1308,14 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	};
 
 	const pauseReading = () => {
-		scrollFollowerRef.current?.cancel();
+		scrollFollowerRef.current?.pauseFollowing();
 		releaseWakeLock();
-		if (currentChunkIdxRef.current < chunks.length - 1) {
+		if (currentChunkIdxRef.current < chunks.length) {
 			saveResumePosition(
 				currentChunkIdxRef.current,
 				charIndexRef.current > 0 ? charIndexRef.current : 0,
 				currentParagraphIndexRef.current >= 0 ? currentParagraphIndexRef.current : undefined,
-				charIndexRef.current > 0 ? charIndexRef.current : undefined
+				charIndexRef.current >= 0 ? sourceOffsetRef.current : undefined
 			);
 		}
 		setIsPlaying(false);
@@ -1417,7 +1436,10 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		const chunkOffset = Math.max(0, textOffset - chunks[targetIndex].startOffset);
 		startReading(targetIndex, chunkOffset);
 	};
-	const locateReadingLine = () => scrollFollowerRef.current?.locateCurrentLine();
+	const locateReadingLine = () => {
+		window.getSelection()?.removeAllRanges();
+		scrollFollowerRef.current?.locateCurrentLine();
+	};
 
 	return {
 		isPlaying,

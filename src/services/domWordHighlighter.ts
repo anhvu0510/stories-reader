@@ -219,6 +219,12 @@ export class DomWordHighlighter {
 		this.removeLineHighlight();
 	}
 
+	/** Keep the reading line in place while the next audio is buffering. */
+	public clearActiveWord(): void {
+		this.getHighlightRegistry()?.delete(CSS_WORD_HIGHLIGHT_NAME);
+		this.clearFallbackMarks();
+	}
+
 	public dispose(): void {
 		this.clear();
 		if (this.resizeObserver && this.observedRoot) {

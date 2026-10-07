@@ -186,6 +186,7 @@ public class NativeTTSPlugin extends Plugin {
         }
 
         int startIndex = call.getInt("startIndex", 0);
+        int startCharIndex = call.getInt("startCharIndex", 0);
         String voice = call.getString("voice", null);
         Float rate = call.getFloat("rate", 1.0f);
         Float pitch = call.getFloat("pitch", 1.0f);
@@ -198,7 +199,7 @@ public class NativeTTSPlugin extends Plugin {
         }
 
         speechEngine.runWhenReady(() -> {
-            coordinator.playChapter(chunkList, startIndex, voice, rate, pitch, bookTitle, chapterTitle);
+            coordinator.playChapter(chunkList, startIndex, startCharIndex, voice, rate, pitch, bookTitle, chapterTitle);
             call.resolve();
         });
     }

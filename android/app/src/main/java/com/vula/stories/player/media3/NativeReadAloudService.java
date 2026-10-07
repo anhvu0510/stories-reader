@@ -106,7 +106,8 @@ public final class NativeReadAloudService extends MediaSessionService {
     @Override
     public void onCreate() {
         super.onCreate();
-        DefaultMediaNotificationProvider notificationProvider = new DefaultMediaNotificationProvider.Builder(this).build();
+        DefaultMediaNotificationProvider notificationProvider = new DefaultMediaNotificationProvider.Builder(this)
+                .setNotificationId(EDGE_NOTIFICATION_ID).build();
         notificationProvider.setSmallIcon(R.drawable.ic_stat_read_aloud);
         setMediaNotificationProvider(notificationProvider);
         DefaultLoadControl loadControl = new DefaultLoadControl.Builder()
@@ -130,12 +131,41 @@ public final class NativeReadAloudService extends MediaSessionService {
     public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
         if (intent == null || intent.getAction() == null) return super.onStartCommand(intent, flags, startId);
         String action = intent.getAction();
-        if (ACTION_START.equals(action)) startPendingRequest();
+        if (ACTION_START.equals(action)) {
+            promoteConnectingPlayback();
+            startPendingRequest();
+        }
         if (ACTION_PAUSE.equals(action)) pausePlayback();
         if (ACTION_RESUME.equals(action)) resumePlayback();
-        if (ACTION_STOP.equals(action)) stopSession();
+        if (ACTION_STOP.equals(action)) {
+            stopSession();
+            stopSelf(startId);
+        }
         if (ACTION_SEEK.equals(action)) seekTo(intent.getIntExtra(EXTRA_UTTERANCE_INDEX, 0));
         return super.onStartCommand(intent, flags, startId);
+    }
+
+    private static final int EDGE_NOTIFICATION_ID = 2001;
+
+    /** Satisfy startForegroundService before waiting on player events or the Edge socket. */
+    private void promoteConnectingPlayback() {
+        String channel = DefaultMediaNotificationProvider.DEFAULT_CHANNEL_ID;
+        androidx.core.app.NotificationManagerCompat.from(this).createNotificationChannel(
+                new androidx.core.app.NotificationChannelCompat.Builder(channel,
+                        androidx.core.app.NotificationManagerCompat.IMPORTANCE_LOW)
+                        .setName("Đọc thành tiếng").build());
+        android.app.PendingIntent activity = android.app.PendingIntent.getActivity(this, 0,
+                new Intent(this, com.vula.stories.MainActivity.class),
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
+        android.app.Notification notification = new androidx.core.app.NotificationCompat.Builder(this, channel)
+                .setSmallIcon(R.drawable.ic_stat_read_aloud)
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText("Đang chuẩn bị giọng đọc")
+                .setContentIntent(activity)
+                .setStyle(new androidx.media3.session.MediaStyleNotificationHelper.MediaStyle(mediaSession))
+                .setOnlyAlertOnce(true).setOngoing(true).build();
+        androidx.core.app.ServiceCompat.startForeground(this, EDGE_NOTIFICATION_ID, notification,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
     }
 
     @Nullable
@@ -156,6 +186,7 @@ public final class NativeReadAloudService extends MediaSessionService {
 
     private void startPendingRequest() {
         ReadAloudSessionRequest pendingRequest = Media3ReadAloudBridge.consumePendingRequest();
+        if (pendingRequest == null && request != null) return;
         if (pendingRequest == null || pendingRequest.getUtterances().isEmpty()) {
             stopSelf();
             return;
@@ -208,7 +239,12 @@ public final class NativeReadAloudService extends MediaSessionService {
                 .setMimeType("audio/mpeg")
                 .setMediaMetadata(metadata)
                 .build();
-        return new ProgressiveMediaSource.Factory(source.factory()).createMediaSource(item);
+        // Edge uses CBR MP3. Retries must seek even before turn.end reveals its length.
+        return new ProgressiveMediaSource.Factory(source.factory(), edgeExtractors()).createMediaSource(item);
+    }
+
+    static androidx.media3.extractor.DefaultExtractorsFactory edgeExtractors() {
+        return new androidx.media3.extractor.DefaultExtractorsFactory().setConstantBitrateSeekingAlwaysEnabled(true);
     }
 
     private void scheduleBuffer(int currentIndex) {
@@ -354,7 +390,9 @@ public final class NativeReadAloudService extends MediaSessionService {
         return new Player.Listener() {
             @Override
             public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
-                if (request == null) return;
+                if (request == null || mediaItem == null) return;
+                MediaItem currentItem = player.getCurrentMediaItem();
+                if (currentItem == null || !mediaItem.mediaId.equals(currentItem.mediaId)) return;
                 int index = player.getCurrentMediaItemIndex();
                 if (index < 0 || index >= request.getUtterances().size()) return;
                 wordBoundaryTracker.reset();
@@ -377,6 +415,7 @@ public final class NativeReadAloudService extends MediaSessionService {
 
     private void publishPlayerState(int playbackState) {
         if (request == null) return;
+        if (playbackState != player.getPlaybackState()) return;
         if (playbackState == Player.STATE_IDLE && stateMachine.snapshot().getState() == PlaybackSnapshot.State.ERROR) return;
         int index = Math.max(0, player.getCurrentMediaItemIndex());
         PlaybackSnapshot.State state = PlaybackSnapshot.State.IDLE;
@@ -539,7 +578,7 @@ public final class NativeReadAloudService extends MediaSessionService {
             player.clearMediaItems();
         }
         request = null;
-        stopSelf();
+        stopForeground(STOP_FOREGROUND_REMOVE);
     }
 
     private void cancelSynthesis() {

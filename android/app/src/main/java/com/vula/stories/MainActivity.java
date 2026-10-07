@@ -46,11 +46,13 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        pinDebugBundle();
         registerPlugin(NativeTTSPlugin.class);
         registerPlugin(EdgeTTSNativePlugin.class);
         registerPlugin(BiometricPlugin.class);
         registerPlugin(ReaderGesturesPlugin.class);
         super.onCreate(savedInstanceState);
+        if (BuildConfig.DEBUG) getBridge().setServerAssetPath("public");
 
         // Completely disable native Android WebView scrollbars and overscroll indicators
         if (getBridge() != null && getBridge().getWebView() != null) {
@@ -69,6 +71,16 @@ public class MainActivity extends BridgeActivity {
                 handleIntelligentBack();
             }
         });
+    }
+
+    private void pinDebugBundle() {
+        if (!BuildConfig.DEBUG) return;
+        config = new DebugCapConfig(this);
+        // Clear the updater's active/pending pointers before Capacitor loads a page.
+        // Keep downloaded bundles and all user data intact.
+        getSharedPreferences(com.getcapacitor.plugin.WebView.WEBVIEW_PREFS_NAME, MODE_PRIVATE)
+                .edit().remove(com.getcapacitor.plugin.WebView.CAP_SERVER_PATH)
+                .remove("nextVersion").apply();
     }
 
     private void handleIntelligentBack() {

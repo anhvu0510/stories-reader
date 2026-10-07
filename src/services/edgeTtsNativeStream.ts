@@ -268,7 +268,7 @@ class EdgeTTSNativeStreamServiceClass {
 		return {
 			sessionId: snapshot.sessionId,
 			isPlaying: snapshot.state === 'PLAYING',
-			isPaused: snapshot.state === 'PAUSED',
+			isPaused: snapshot.state === 'PAUSED' || snapshot.state === 'ERROR',
 			isBuffering: snapshot.state === 'CONNECTING' || snapshot.state === 'BUFFERING' || snapshot.state === 'SEEKING'
 		};
 	}

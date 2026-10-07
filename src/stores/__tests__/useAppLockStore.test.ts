@@ -18,6 +18,7 @@ describe('useAppLockStore', () => {
 	});
 
 	afterEach(() => {
+		Reflect.deleteProperty(globalThis, 'StoriesRuntime');
 		vi.restoreAllMocks();
 	});
 
@@ -45,6 +46,12 @@ describe('useAppLockStore', () => {
 	});
 
 	describe('Nền tảng Mobile Android', () => {
+		it('does not lock or change saved protection preferences in native debug mode', () => {
+			Reflect.set(globalThis, 'StoriesRuntime', { isDebugBuild: () => true });
+			useAppLockStore.setState({ isLockEnabled: true, isLocked: false });
+			useAppLockStore.getState().lock();
+			expect(useAppLockStore.getState().isLocked).toBe(false);
+		});
 		beforeEach(() => {
 			vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('android');
 			vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);

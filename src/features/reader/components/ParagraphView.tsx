@@ -16,4 +16,4 @@ export const ParagraphView = memo(function ParagraphView({ content, index }: Par
 			dangerouslySetInnerHTML={{ __html: content }}
 		/>
 	);
-});
+}, (previous, next) => previous.content === next.content && previous.index === next.index);

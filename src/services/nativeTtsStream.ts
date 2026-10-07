@@ -4,6 +4,7 @@ import { NativeTTS } from './nativeTtsService';
 export interface StartNativePlaybackOptions {
 	chunks: string[];
 	startIndex?: number;
+	startCharIndex?: number;
 	voice?: string;
 	rate?: number;
 	pitch?: number;

@@ -31,6 +31,14 @@ vi.mock('@capacitor/core', async () => {
 import { EdgeTTSNativeStreamService } from '@/services/edgeTtsNativeStream';
 
 describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
+	it('keeps a failed Media3 session paused so resume can recover its existing cursor', async () => {
+		mockEdgeTTSNative.getPlaybackSnapshot.mockResolvedValue({ sessionId: 'failed-session', state: 'ERROR', utteranceIndex: 0,
+			positionMs: 1200, bufferedDurationMs: 0, rebufferCount: 1, errorCode: 'SYNTHESIS_FAILED' });
+		const state = vi.fn();
+		EdgeTTSNativeStreamService.onPlaybackStateChange(state);
+		await EdgeTTSNativeStreamService.initListeners();
+		expect(state).toHaveBeenLastCalledWith(expect.objectContaining({ isPlaying: false, isPaused: true, isBuffering: false }));
+	});
 	beforeEach(() => {
 		vi.restoreAllMocks();
 		vi.clearAllMocks();

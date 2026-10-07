@@ -57,6 +57,12 @@ public final class AppendableAudioSource {
         }
     }
 
+    public long remainingLength(long position) {
+        synchronized (lock) {
+            return completed ? Math.max(0L, buffer.size() - position) : C.LENGTH_UNSET;
+        }
+    }
+
     public boolean isCompleted() {
         synchronized (lock) {
             return completed;
@@ -92,7 +98,7 @@ public final class AppendableAudioSource {
             position = dataSpec.position;
             opened = true;
             transferStarted(dataSpec);
-            return C.LENGTH_UNSET;
+            return remainingLength(position);
         }
 
         @Override

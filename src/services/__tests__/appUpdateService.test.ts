@@ -27,6 +27,20 @@ vi.mock('@capgo/capacitor-updater', () => ({
 describe('AppUpdateService Unit Tests (TDD)', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		Reflect.deleteProperty(globalThis, 'StoriesRuntime');
+	});
+
+	it('does not fetch or apply OTA in a native debug build', async () => {
+		Reflect.set(globalThis, 'StoriesRuntime', { isDebugBuild: () => true });
+		const { Capacitor } = await import('@capacitor/core');
+		const { CapacitorUpdater } = await import('@capgo/capacitor-updater');
+		vi.mocked(Capacitor.getPlatform).mockReturnValue('android');
+		globalThis.fetch = vi.fn();
+		expect(await AppUpdateService.checkForUpdate()).toBeNull();
+		expect(await AppUpdateService.downloadAndApplyUpdate({ version: '9', bundleUrl: 'https://mock.api/bundle' })).toBe(false);
+		expect(fetch).not.toHaveBeenCalled();
+		expect(CapacitorUpdater.download).not.toHaveBeenCalled();
+		Reflect.deleteProperty(globalThis, 'StoriesRuntime');
 	});
 
 	describe('isNewerVersion helper', () => {

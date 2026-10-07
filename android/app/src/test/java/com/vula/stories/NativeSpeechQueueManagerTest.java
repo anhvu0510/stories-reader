@@ -27,12 +27,48 @@ public class NativeSpeechQueueManagerTest {
 
     private static final class RecordingTts extends TextToSpeech {
         final List<String> ids = new ArrayList<>();
+        final List<String> texts = new ArrayList<>();
         RecordingTts() { super(null, null); }
         @Override
         public int speak(CharSequence text, int mode, Bundle params, String id) {
             ids.add(id);
+            texts.add(text.toString());
             return SUCCESS;
         }
+    }
+
+    @Test
+    public void restoredReadingPositionStartsAtSavedWord() {
+        RecordingTts tts = new RecordingTts();
+        queueManager.setChunks(Arrays.asList("Một hai ba bốn"), 0);
+        queueManager.startSpeaking(tts, 0, 8, null);
+        assertEquals("ba bốn", tts.texts.get(0));
+    }
+
+    @Test
+    public void resumeContinuesAtActiveWordAndKeepsOriginalBoundaryOffsets() {
+        RecordingTts tts = new RecordingTts();
+        queueManager.setChunks(Arrays.asList("Một hai ba bốn"), 0);
+        queueManager.startSpeaking(tts, 0, null);
+        queueManager.handleRangeStart(tts.ids.get(0), 8, 10);
+        queueManager.notifyPaused();
+        queueManager.resumeSpeaking(tts, null);
+        assertEquals("ba bốn", tts.texts.get(1));
+        queueManager.handleRangeStart(tts.ids.get(1), 3, 6);
+        queueManager.notifyPaused();
+        queueManager.resumeSpeaking(tts, null);
+        assertEquals("bốn", tts.texts.get(2));
+    }
+
+    @Test
+    public void pauseBetweenSentencesDoesNotReplayCompletedSentence() {
+        RecordingTts tts = new RecordingTts();
+        queueManager.setChunks(Arrays.asList("Một", "Hai"), 0);
+        queueManager.startSpeaking(tts, 0, null);
+        queueManager.handleChunkDone(tts.ids.get(0));
+        queueManager.notifyPaused();
+        queueManager.resumeSpeaking(tts, null);
+        assertEquals("Hai", tts.texts.get(2));
     }
 
     @Test

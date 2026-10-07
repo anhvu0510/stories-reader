@@ -158,8 +158,7 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
         if (activeSessionId == null) activeSessionId = snapshot.getSessionId();
         if (!matchesSession(snapshot.getSessionId())) return;
         boolean isTerminal = snapshot.getState() == PlaybackSnapshot.State.IDLE
-                || snapshot.getState() == PlaybackSnapshot.State.COMPLETED
-                || snapshot.getState() == PlaybackSnapshot.State.ERROR;
+                || snapshot.getState() == PlaybackSnapshot.State.COMPLETED;
         isMedia3Active = !isTerminal;
 
         JSObject event = snapshotToJs(snapshot);
@@ -168,7 +167,8 @@ public class Media3PlaybackAdapter implements Media3ReadAloudBridge.Listener {
         JSObject legacyState = new JSObject();
         legacyState.put("sessionId", snapshot.getSessionId());
         legacyState.put("isPlaying", snapshot.getState() == PlaybackSnapshot.State.PLAYING);
-        legacyState.put("isPaused", snapshot.getState() == PlaybackSnapshot.State.PAUSED);
+        legacyState.put("isPaused", snapshot.getState() == PlaybackSnapshot.State.PAUSED
+                || snapshot.getState() == PlaybackSnapshot.State.ERROR);
         legacyState.put("isBuffering", snapshot.getState() == PlaybackSnapshot.State.CONNECTING
                 || snapshot.getState() == PlaybackSnapshot.State.BUFFERING
                 || snapshot.getState() == PlaybackSnapshot.State.SEEKING);

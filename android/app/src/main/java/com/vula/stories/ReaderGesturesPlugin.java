@@ -71,7 +71,7 @@ public class ReaderGesturesPlugin extends Plugin implements ReaderWebView.Gestur
         getActivity().runOnUiThread(() -> {
             if (webView == null) { call.reject("ReaderWebView unavailable"); return; }
             boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
-            if (!enabled) { handle.setEmpty(); cancelGesture(); call.resolve(); return; }
+            if (!enabled) { handle.setEmpty(); resetGestureOwnership(); call.resolve(); return; }
             float width = number(call, "viewportWidth", 0);
             if (width <= 0) { call.reject("Invalid viewport width"); return; }
             controlScale = webView.getWidth() / width;
@@ -96,7 +96,7 @@ public class ReaderGesturesPlugin extends Plugin implements ReaderWebView.Gestur
             String owner = call.getString("owner", "");
             boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
             if (!enabled && !refreshOwner.equals(owner)) { call.resolve(); return; }
-            cancelGesture();
+            resetGestureOwnership();
             refreshOwner = owner;
             refreshEnabled = enabled;
             requestId = "";
@@ -129,7 +129,7 @@ public class ReaderGesturesPlugin extends Plugin implements ReaderWebView.Gestur
             String owner = call.getString("owner", "");
             boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
             if (!enabled && !swipeOwner.equals(owner)) { call.resolve(); return; }
-            cancelGesture();
+            resetGestureOwnership();
             swipeOwner = owner;
             swipeEnabled = enabled;
             swipeThreshold = number(call, "threshold", 120);
@@ -146,7 +146,7 @@ public class ReaderGesturesPlugin extends Plugin implements ReaderWebView.Gestur
             if (session == null) { call.reject("ReaderWebView unavailable"); return; }
             String owner = call.getString("owner", "");
             boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
-            cancelGesture();
+            resetGestureOwnership();
             sheetOwners.remove(owner);
             if (enabled) sheetOwners.put(owner, true);
             sheetEnabled = !sheetOwners.isEmpty();
@@ -161,13 +161,13 @@ public class ReaderGesturesPlugin extends Plugin implements ReaderWebView.Gestur
         int action = event.getActionMasked();
         if (action == MotionEvent.ACTION_DOWN) return begin(event);
         if (action == MotionEvent.ACTION_MOVE) return move(event);
-        if (action == MotionEvent.ACTION_POINTER_DOWN) { cancelGesture(); return false; }
+        if (action == MotionEvent.ACTION_POINTER_DOWN) { resetGestureOwnership(); return false; }
         if (action != MotionEvent.ACTION_UP && action != MotionEvent.ACTION_CANCEL) return false;
         boolean owned = session.isOwned();
         settleSurface(event.getEventTime() - event.getDownTime(), action == MotionEvent.ACTION_CANCEL);
         boolean refresh = session.finish(action == MotionEvent.ACTION_CANCEL);
+        if (touching) emit("interaction-end", new JSObject());
         touching = false;
-        emit("interaction-end", new JSObject());
         if (refresh) commitRefresh();
         if (!session.isRefreshing()) showIndicator(0);
         return owned;
@@ -281,11 +281,16 @@ public class ReaderGesturesPlugin extends Plugin implements ReaderWebView.Gestur
     }
 
     private void cancelGesture() {
+        resetGestureOwnership();
+        if (touching) emit("interaction-end", new JSObject());
+        touching = false;
+    }
+
+    /** Configuration changes cancel recognition, not the physical DOWN → UP stream. */
+    private void resetGestureOwnership() {
         if (session == null) return;
         settleSurface(0, true);
         session.finish(true);
-        if (touching) emit("interaction-end", new JSObject());
-        touching = false;
         if (!session.isRefreshing()) showIndicator(0);
     }
 

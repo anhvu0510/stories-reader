@@ -36,6 +36,16 @@ public class Media3PlaybackAdapterTest {
     }
 
     @Test
+    public void failedMedia3SessionRemainsResumableInsteadOfRoutingToLegacyPlayer() {
+        List<JSObject> events = new ArrayList<>();
+        Media3PlaybackAdapter adapter = start(events);
+        adapter.onSnapshot(new PlaybackSnapshot("new", PlaybackSnapshot.State.ERROR, 0, 1200L, 0L, 0, "SYNTHESIS_FAILED"));
+        assertTrue(adapter.isMedia3Active());
+        assertTrue(events.get(events.size() - 1).optBoolean("isPaused"));
+        adapter.unregister();
+    }
+
+    @Test
     public void seekingReportsBufferingUntilTargetAudioIsReady() {
         List<JSObject> events = new ArrayList<>();
         Media3PlaybackAdapter adapter = start(events);

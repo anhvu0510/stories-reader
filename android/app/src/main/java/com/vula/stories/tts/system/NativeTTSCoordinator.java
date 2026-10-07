@@ -216,6 +216,7 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
     public void playChapter(
             List<String> chunks,
             int startIndex,
+            int startCharIndex,
             String voice,
             Float rate,
             Float pitch,
@@ -237,7 +238,7 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
         acquireWakeLock();
 
         queueManager.setChunks(chunks, startIndex);
-        queueManager.startSpeaking(speechEngine.getRawTts(), startIndex, buildSpeechParams());
+        queueManager.startSpeaking(speechEngine.getRawTts(), startIndex, startCharIndex, buildSpeechParams());
     }
 
     private void handleChunkStart(int chunkIndex) {
@@ -320,7 +321,7 @@ public class NativeTTSCoordinator implements StoriesAudioBridge.AudioControlList
 
     public void resume() {
         speechEngine.applyVoiceSettings(currentVoice, currentRate, currentPitch);
-        queueManager.startSpeaking(speechEngine.getRawTts(), queueManager.getCurrentChunkIndex(), buildSpeechParams());
+        queueManager.resumeSpeaking(speechEngine.getRawTts(), buildSpeechParams());
     }
 
     public void stop(boolean emitEvent) {
