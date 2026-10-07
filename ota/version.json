@@ -1,7 +1,7 @@
 {
-  "version": "1.0.355",
+  "version": "1.0.356",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "f187a5981be879b85956bf3d94dd2302899dad5d8fc82789b5f03a1ced8428dc",
-  "releaseNotes": "fix: handle error states in playback adapter and improve native text-to-speech resume logic",
-  "updatedAt": "2026-10-07T05:25:37Z"
+  "checksum": "35e5b1ac9e565bfdc6bdb07e8383cbd614cd4b5bad1635b51a80849e6b3a447c",
+  "releaseNotes": "refactor: modularize read-aloud hooks and enhance media3 playback and speech configuration",
+  "updatedAt": "2026-10-07T06:35:01Z"
 }
