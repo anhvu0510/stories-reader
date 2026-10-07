@@ -15,6 +15,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Collections;
 
 public class Media3ReadAloudCoreTest {
     @Test
@@ -45,6 +46,20 @@ public class Media3ReadAloudCoreTest {
         assertTrue(policy.shouldBuffer(3500L));
         assertFalse(policy.shouldBuffer(11000L));
         assertEquals(Arrays.asList(4, 5, 6), policy.planIndices(4, 7, Arrays.asList(0L, 3000L, 4200L)));
+    }
+
+    @Test
+    public void lookaheadBudgetDoesNotCountTheCurrentlyPlayingSentence() {
+        AdaptiveBufferPolicy policy = new AdaptiveBufferPolicy(4000L, 11000L);
+        assertEquals(Arrays.asList(0, 1, 2, 3),
+                policy.planIndices(0, 8, Arrays.asList(25000L, 4000L, 4000L, 4000L, 4000L)));
+    }
+
+    @Test
+    public void lookaheadIsBoundedEvenWhenDurationsAreMissingOrZero() {
+        AdaptiveBufferPolicy policy = new AdaptiveBufferPolicy(4000L, 11000L);
+        assertTrue(policy.planIndices(0, 1000, Collections.nCopies(1000, 0L)).size() <= 17);
+        assertEquals(Arrays.asList(9), policy.planIndices(9, 10, Arrays.asList(18000L)));
     }
 
     @Test

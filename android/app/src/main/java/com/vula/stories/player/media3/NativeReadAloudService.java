@@ -195,8 +195,11 @@ public final class NativeReadAloudService extends MediaSessionService {
 
     private void scheduleBuffer(int currentIndex) {
         if (request == null) return;
+        if (currentIndex < 0 || currentIndex >= request.getUtterances().size()) return;
+        int windowSize = Math.min(request.getUtterances().size() - currentIndex,
+                AdaptiveBufferPolicy.MAX_LOOKAHEAD_UTTERANCES + 1);
         List<Long> estimates = new ArrayList<>();
-        for (int index = currentIndex; index < request.getUtterances().size(); index++) {
+        for (int index = currentIndex; index < currentIndex + windowSize; index++) {
             estimates.add(estimateDurationMs(request.getUtterances().get(index)));
         }
         List<Integer> planned = bufferPolicy.planIndices(currentIndex, request.getUtterances().size(), estimates);

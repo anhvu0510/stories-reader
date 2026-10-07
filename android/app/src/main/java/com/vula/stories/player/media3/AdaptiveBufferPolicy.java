@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.List;
 
 public final class AdaptiveBufferPolicy {
+    // Sixteen 700 ms utterances cover the service's 11 s target without scanning a whole chapter.
+    public static final int MAX_LOOKAHEAD_UTTERANCES = 16;
     private final long lowWatermarkMs;
     private final long targetWatermarkMs;
 
@@ -28,9 +30,12 @@ public final class AdaptiveBufferPolicy {
         if (currentIndex < 0 || currentIndex >= totalUtterances) return Collections.emptyList();
 
         List<Integer> indices = new ArrayList<>();
+        indices.add(currentIndex);
         long plannedDurationMs = 0L;
-        for (int offset = 0; currentIndex + offset < totalUtterances; offset++) {
-            if (plannedDurationMs >= targetWatermarkMs) break;
+        // Current playback is not lookahead. Always prepare at least the next utterance,
+        // even when the current sentence alone exceeds the target watermark.
+        for (int offset = 1; currentIndex + offset < totalUtterances && offset <= MAX_LOOKAHEAD_UTTERANCES; offset++) {
+            if (offset > 1 && plannedDurationMs >= targetWatermarkMs) break;
             indices.add(currentIndex + offset);
             plannedDurationMs += durationAt(estimatedDurationsMs, offset);
         }
