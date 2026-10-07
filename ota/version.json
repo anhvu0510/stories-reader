@@ -1,7 +1,7 @@
 {
-  "version": "1.0.350",
+  "version": "1.0.351",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "c45da776a7244407b5c40603d59ecbaecc1947d88ee513395bc26caa501611cc",
-  "releaseNotes": "feat: add native Android reader gesture plugin and associated hooks for pull-to-refresh, swipes, and sheets",
-  "updatedAt": "2026-10-06T17:53:10Z"
+  "checksum": "8136816ec8050ba8217daaaad43018fcaea8f8299cc8559f800b4088bae06552",
+  "releaseNotes": "fix: improve text-to-speech native playback stability, seeking, and queue management",
+  "updatedAt": "2026-10-07T03:03:47Z"
 }
