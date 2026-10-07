@@ -1,7 +1,7 @@
 {
-  "version": "1.0.353",
+  "version": "1.0.354",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "f8752c9b5f60c37273d2aae39c8c81434f6513560f712740f59275b52d4607f8",
-  "releaseNotes": "feat: implement precise Media3 utterance navigation in read-aloud hook",
-  "updatedAt": "2026-10-07T03:42:01Z"
+  "checksum": "201e256315e6607057be739441d06f86bf1dbe6370e64080a806310ec9f95828",
+  "releaseNotes": "refactor: optimize edge streaming playback and buffer management in media3 player",
+  "updatedAt": "2026-10-07T04:08:33Z"
 }
