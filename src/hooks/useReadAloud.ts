@@ -206,6 +206,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 	const currentChunkIdxRef = useRef<number>(0);
 	const pendingNativeChunkRef = useRef<number | null>(null);
+	const media3UtteranceIndexRef = useRef(0);
+	const pendingMedia3UtteranceRef = useRef<number | null>(null);
 	const isPlayingRef = useRef(false);
 	const isPausedRef = useRef(false);
 	const playSessionIdRef = useRef<number>(0);
@@ -733,6 +735,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 
 		const unsubWord = activeNativeStream.onWordBoundary((event) => {
 			if (!isPlayingRef.current) return;
+			if (pendingMedia3UtteranceRef.current !== null && event.utteranceIndex !== pendingMedia3UtteranceRef.current) return;
 			const { chunkIndex, charIndex, charLength, paragraphIndex, sourceStart, sourceLength } = event;
 			if (pendingNativeChunkRef.current !== null && chunkIndex !== pendingNativeChunkRef.current) return;
 			if (chunkIndex !== currentChunkIdxRef.current) return;
@@ -757,12 +760,20 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			clearResumePosition();
 			stopReading(true);
 		});
+		const unsubSnapshot = ttsEngine === 'edge' ? EdgeTTSNativeStreamService.onSnapshot((snapshot) => {
+			if (useReaderConfigStore.getState().edgeBufferMode !== 'media3') return;
+			if (!isPlayingRef.current && !isPausedRef.current) return;
+			if (pendingMedia3UtteranceRef.current !== null && snapshot.utteranceIndex !== pendingMedia3UtteranceRef.current) return;
+			media3UtteranceIndexRef.current = snapshot.utteranceIndex;
+			pendingMedia3UtteranceRef.current = null;
+		}) : undefined;
 
 		return () => {
 			unsubChunk();
 			unsubWord();
 			unsubState();
 			unsubDone();
+			unsubSnapshot?.();
 		};
 	}, [activeNativeStream, chunks, saveResumePosition, clearResumePosition]);
 
@@ -1242,6 +1253,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 				const isMedia3Mode = ttsEngine === 'edge' && edgeBufferMode === 'media3';
 				const sourceOffset = (chunks[targetIdx]?.startOffset ?? 0) + targetOff;
 				const nativeStartIndex = isMedia3Mode ? getMedia3UtteranceIndex(targetIdx, sourceOffset) : targetIdx;
+				media3UtteranceIndexRef.current = nativeStartIndex;
+				pendingMedia3UtteranceRef.current = null;
 				const playbackUtterances = media3Utterances.map((utterance, index) => {
 					if (index !== nativeStartIndex || sourceOffset <= utterance.sourceStart) return utterance;
 					const offset = sourceOffset - utterance.sourceStart;
@@ -1309,9 +1322,34 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		}
 	};
 
+	const navigateMedia3Utterance = (direction: -1 | 1): boolean => {
+		if (ttsEngine !== 'edge' || !activeNativeStream || useReaderConfigStore.getState().edgeBufferMode !== 'media3') return false;
+		const nativeIndex = media3UtteranceIndexRef.current + direction;
+		const utterance = media3Utterances[nativeIndex];
+		if (nativeIndex >= media3Utterances.length) clearResumePosition();
+		if (!utterance || utterance.sourceChunkIndex === undefined) {
+			stopReading(direction === 1);
+			return true;
+		}
+		playSessionIdRef.current += 1;
+		stopAudioPlayer();
+		media3UtteranceIndexRef.current = nativeIndex;
+		pendingMedia3UtteranceRef.current = nativeIndex;
+		pendingNativeChunkRef.current = utterance.sourceChunkIndex;
+		currentChunkIdxRef.current = utterance.sourceChunkIndex;
+		setIsLoading(true);
+		setIsPlaying(false);
+		setIsPaused(false);
+		isPlayingRef.current = true;
+		isPausedRef.current = false;
+		void activeNativeStream.seekToChunk(nativeIndex);
+		return true;
+	};
+
 	const nextSection = () => {
 		scrollFollowerRef.current?.resumeFollowing();
 		lastInteractionTime.current = 0;
+		if (navigateMedia3Utterance(1)) return;
 		if (currentChunkIdxRef.current < chunks.length - 1) {
 			const nextIdx = currentChunkIdxRef.current + 1;
 			playSessionIdRef.current += 1;
@@ -1342,6 +1380,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	const prevSection = () => {
 		scrollFollowerRef.current?.resumeFollowing();
 		lastInteractionTime.current = 0;
+		if (navigateMedia3Utterance(-1)) return;
 		if (currentChunkIdxRef.current > 0) {
 			const prevIdx = currentChunkIdxRef.current - 1;
 			playSessionIdRef.current += 1;

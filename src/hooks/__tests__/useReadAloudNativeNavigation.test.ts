@@ -130,3 +130,42 @@ it('late word callbacks after Next cannot move the navigation cursor back to the
 	expect(seek.mock.calls.map(([index]) => index)).toEqual([1, 2]);
 	unmount();
 });
+
+it('Media3 Next and Previous move one utterance inside a merged text chunk', () => {
+	useReaderConfigStore.setState({ ttsEngine: 'edge', edgeBufferMode: 'media3' });
+	vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+	vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue();
+	const seek = vi.spyOn(EdgeTTSNativeStreamService, 'seekToChunk').mockResolvedValue();
+	const sentence = `Đây là câu thử ${'nội dung '.repeat(12)}.`;
+	const paragraphs = [`${sentence} ${sentence} ${sentence}`, 'Câu cuối.'];
+	const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
+	act(() => result.current.startReading());
+	act(() => result.current.nextSection());
+	act(() => result.current.nextSection());
+	act(() => result.current.prevSection());
+	expect(seek.mock.calls.map(([index]) => index)).toEqual([1, 2, 1]);
+	unmount();
+});
+
+it('Media3 Next uses the player utterance cursor and ignores stale snapshots during seek', () => {
+	useReaderConfigStore.setState({ ttsEngine: 'edge', edgeBufferMode: 'media3' });
+	vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
+	vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue();
+	const seek = vi.spyOn(EdgeTTSNativeStreamService, 'seekToChunk').mockResolvedValue();
+	const sentence = `Đây là câu thử ${'nội dung '.repeat(12)}.`;
+	const paragraphs = [`${sentence} ${sentence} ${sentence}`, 'Câu cuối.'];
+	const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
+	act(() => result.current.startReading());
+	const snapshot = (utteranceIndex: number) => {
+		EdgeTTSNativeStreamService['snapshotListeners'].forEach((cb) => cb({
+			sessionId: 'test', state: 'PLAYING', utteranceIndex,
+			positionMs: 100, bufferedDurationMs: 1000, rebufferCount: 0
+		}));
+	};
+	act(() => snapshot(1));
+	act(() => result.current.nextSection());
+	act(() => snapshot(1));
+	act(() => result.current.nextSection());
+	expect(seek.mock.calls.map(([index]) => index)).toEqual([2, 3]);
+	unmount();
+});
