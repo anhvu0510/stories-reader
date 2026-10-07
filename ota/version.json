@@ -1,7 +1,7 @@
 {
-  "version": "1.0.352",
+  "version": "1.0.353",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "764c6916dd25a746e0eba26401733b963109fd461b4ca95f83aceb0518af68a5",
-  "releaseNotes": "fix: fix Media3 buffer prefetch regression by always scheduling next utterance and bounding lookahead window",
-  "updatedAt": "2026-10-07T03:26:40Z"
+  "checksum": "f8752c9b5f60c37273d2aae39c8c81434f6513560f712740f59275b52d4607f8",
+  "releaseNotes": "feat: implement precise Media3 utterance navigation in read-aloud hook",
+  "updatedAt": "2026-10-07T03:42:01Z"
 }
