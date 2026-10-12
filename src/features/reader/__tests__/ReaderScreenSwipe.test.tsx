@@ -7,6 +7,7 @@ import { ReaderScreen } from '@/features/reader/ReaderScreen';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
 import { BookRepository } from '@/repositories/BookRepository';
 import * as openChapterUtils from '@/shared/utils/openChapter';
+import { Capacitor } from '@capacitor/core';
 
 vi.mock('../../../repositories/ChapterRepository', () => ({
 	ChapterRepository: {
@@ -52,7 +53,12 @@ describe('ReaderScreen - Swipe Gesture Chapter Navigation', () => {
 		cleanup();
 	});
 
-	it('swiping left navigates to the next chapter when available', async () => {
+	describe('on native app (Capacitor.isNativePlatform() === true)', () => {
+		beforeEach(() => {
+			vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+		});
+
+		it('swiping left navigates to the next chapter when available', async () => {
 		const openNextSpy = vi.spyOn(openChapterUtils, 'openNextChapter').mockImplementation(() => {});
 
 		vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
@@ -198,5 +204,106 @@ describe('ReaderScreen - Swipe Gesture Chapter Navigation', () => {
 		// Không được kích hoạt chuyển chương
 		expect(openNextSpy).not.toHaveBeenCalled();
 		expect(openPrevSpy).not.toHaveBeenCalled();
+	});
+	});
+
+	describe('on website (Capacitor.isNativePlatform() === false)', () => {
+		beforeEach(() => {
+			vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(false);
+		});
+
+		it('disables swipe gestures so swiping left does not navigate to next chapter', async () => {
+			const openNextSpy = vi.spyOn(openChapterUtils, 'openNextChapter').mockImplementation(() => {});
+
+			vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
+				chapter: {
+					chapterId: 'chap-1',
+					chapterNumber: 1,
+					title: 'Chương 1',
+					bookName: 'Test Book',
+					content: ['<p>Nội dung chương 1</p>']
+				},
+				navigation: {
+					prev: null,
+					next: { chapterId: 'chap-2', chapterNumber: 2, title: 'Chương 2' }
+				}
+			} as any);
+
+			render(
+				<MemoryRouter initialEntries={['/book/b1/chapter/chap-1']}>
+					<Routes>
+						<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+					</Routes>
+				</MemoryRouter>
+			);
+
+			await waitFor(() => {
+				expect(screen.getByText('Nội dung chương 1')).toBeDefined();
+			});
+			await new Promise((resolve) => setTimeout(resolve, 250));
+
+			// Simulate swipe left with large distance
+			act(() => {
+				window.dispatchEvent(
+					new TouchEvent('touchstart', {
+						touches: [{ clientX: 250, clientY: 200 } as any]
+					})
+				);
+				window.dispatchEvent(
+					new TouchEvent('touchend', {
+						changedTouches: [{ clientX: 100, clientY: 205 } as any]
+					})
+				);
+			});
+
+			expect(openNextSpy).not.toHaveBeenCalled();
+		});
+
+		it('disables swipe gestures so swiping right does not navigate to previous chapter', async () => {
+			const openPrevSpy = vi.spyOn(openChapterUtils, 'openPrevChapter').mockImplementation(() => {});
+
+			vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
+				chapter: {
+					chapterId: 'chap-2',
+					chapterNumber: 2,
+					title: 'Chương 2',
+					bookName: 'Test Book',
+					content: ['<p>Nội dung chương 2</p>']
+				},
+				navigation: {
+					prev: { chapterId: 'chap-1', chapterNumber: 1, title: 'Chương 1' },
+					next: null
+				}
+			} as any);
+
+			render(
+				<MemoryRouter initialEntries={['/book/b1/chapter/chap-2']}>
+					<Routes>
+						<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+					</Routes>
+				</MemoryRouter>
+			);
+
+			await waitFor(() => {
+				expect(screen.getByText('Nội dung chương 2')).toBeDefined();
+			});
+			await new Promise((resolve) => setTimeout(resolve, 250));
+
+			// Simulate swipe right with large distance
+			act(() => {
+				window.dispatchEvent(
+					new TouchEvent('touchstart', {
+						touches: [{ clientX: 80, clientY: 200 } as any]
+					})
+				);
+				window.dispatchEvent(
+					new TouchEvent('touchend', {
+						changedTouches: [{ clientX: 220, clientY: 205 } as any]
+					})
+				);
+			});
+
+			expect(openPrevSpy).not.toHaveBeenCalled();
+		});
 	});
 });

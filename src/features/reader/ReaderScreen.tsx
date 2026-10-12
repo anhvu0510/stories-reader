@@ -18,6 +18,7 @@ import { offlineDb } from '@/lib/offlineDb';
 import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
 import { clearAllCaches } from '@/shared/utils/cacheUtils';
+import { Capacitor } from '@capacitor/core';
 import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
 import { openNextChapter, openPrevChapter } from '@/shared/utils/openChapter';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
@@ -716,6 +717,7 @@ export function ReaderScreen() {
 
 	const contentWidth = typeof window !== 'undefined' ? Math.min(window.innerWidth || 390, 448) : 390;
 	const commitThreshold = Math.max(90, Math.round(contentWidth * 0.3));
+	const isNative = Capacitor.isNativePlatform();
 	useSwipeGesture({
 		onSwipeLeft: handleSwipeNext,
 		onSwipeRight: handleSwipePrev,
@@ -724,7 +726,7 @@ export function ReaderScreen() {
 		onDragEnd: handleDragEnd,
 		threshold: commitThreshold,
 		minVelocity: 0.45,
-		disabled: loading || isRefreshingLatest
+		disabled: !isNative || loading || isRefreshingLatest
 	});
 
 	const fontClass =
