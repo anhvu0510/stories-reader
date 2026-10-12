@@ -1,7 +1,7 @@
 {
-  "version": "1.0.358",
+  "version": "1.0.359",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "2cee3ab55222b2465931971f22fbc0b9856c9848b0db0264bb77aedcd4816240",
-  "releaseNotes": "refactor: support native playback resume via startCharIndex to preserve cached utterance keys",
-  "updatedAt": "2026-10-07T06:53:45Z"
+  "checksum": "edf8a78ce53e9915b695997a83b8e3e200b4a94d7dc123a2c5aed1b2c9e3ae0b",
+  "releaseNotes": "fix: disable reader swipe gestures on non-native web platforms",
+  "updatedAt": "2026-10-12T10:35:46Z"
 }
