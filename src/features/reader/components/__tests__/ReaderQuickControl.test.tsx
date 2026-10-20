@@ -89,7 +89,18 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 		expect(screen.queryByTitle('Bật đọc thành tiếng (VieNeu AI TTS)')).toBeNull();
 	});
 
-	it('navigates to next chapter using openNextChapter with scroll reset when clicking next button', () => {
+	it('navigates to next chapter using openNextChapter with scroll reset and page reload when clicking next button', () => {
+		const originalLocation = window.location;
+		const reloadSpy = vi.fn();
+		Object.defineProperty(window, 'location', {
+			writable: true,
+			value: {
+				...originalLocation,
+				hash: '',
+				reload: reloadSpy
+			}
+		});
+
 		window.scrollTo = vi.fn();
 		localStorage.setItem('reading_progress_b1_c551', JSON.stringify({ chapterId: 'c551', scrollY: 3000 }));
 		localStorage.setItem('reading_progress_b1_c552', JSON.stringify({ chapterId: 'c552', scrollY: 1000 }));
@@ -106,5 +117,12 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 		expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
 		expect(localStorage.getItem('reading_progress_b1_c551')).toBeNull();
 		expect(localStorage.getItem('reading_progress_b1_c552')).toBeNull();
+		expect(window.location.hash).toBe('#/book/b1/chapter/c552');
+		expect(reloadSpy).toHaveBeenCalledTimes(1);
+
+		Object.defineProperty(window, 'location', {
+			writable: true,
+			value: originalLocation
+		});
 	});
 });
