@@ -1,7 +1,7 @@
 {
-  "version": "1.0.360",
+  "version": "1.0.361",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "9c09798047cb1814534d0ff111f02162fb49f491f0093976841838338a52a22f",
-  "releaseNotes": "refactor: change paragraph wrapper from div to p tag in ParagraphView",
-  "updatedAt": "2026-10-20T07:40:57Z"
+  "checksum": "26647d8b0e504a44e4fe9d707c05eca91e42f974eee917d5412c0f694acf55c4",
+  "releaseNotes": "feat: add chapter navigation utilities and corresponding unit tests",
+  "updatedAt": "2026-10-20T11:23:11Z"
 }
