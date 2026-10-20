@@ -1,7 +1,7 @@
 {
-  "version": "1.0.359",
+  "version": "1.0.360",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "edf8a78ce53e9915b695997a83b8e3e200b4a94d7dc123a2c5aed1b2c9e3ae0b",
-  "releaseNotes": "fix: disable reader swipe gestures on non-native web platforms",
-  "updatedAt": "2026-10-12T10:35:46Z"
+  "checksum": "9c09798047cb1814534d0ff111f02162fb49f491f0093976841838338a52a22f",
+  "releaseNotes": "refactor: change paragraph wrapper from div to p tag in ParagraphView",
+  "updatedAt": "2026-10-20T07:40:57Z"
 }
