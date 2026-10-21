@@ -1,7 +1,7 @@
 {
-  "version": "1.0.361",
+  "version": "1.0.362",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "26647d8b0e504a44e4fe9d707c05eca91e42f974eee917d5412c0f694acf55c4",
-  "releaseNotes": "feat: add chapter navigation utilities and corresponding unit tests",
-  "updatedAt": "2026-10-20T11:23:11Z"
+  "checksum": "b215260a1753252e28826bcd6a98666b5e8c11be8a2d0f72b743e1d98976255a",
+  "releaseNotes": "refactor: implement app store configuration management and remove page transition animations",
+  "updatedAt": "2026-10-21T06:59:18Z"
 }
