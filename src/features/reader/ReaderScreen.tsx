@@ -2,8 +2,6 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from '
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertCircle, Home, RotateCcw } from 'lucide-react';
 
-import { motion } from 'motion/react';
-
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { TranslationSheet } from '@/components/TranslationSheet';
 import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
@@ -201,8 +199,8 @@ export function ReaderScreen() {
 		[jumpToContent]
 	);
 
-	// Keep single global LoadingOverlay active until chapter data is rendered in React state
-	useGlobalLoading(loading || isRefreshingLatest);
+	// Only show global LoadingOverlay during explicit latest-chapter lookup, keep normal chapter load clean with Skeleton only
+	useGlobalLoading(isRefreshingLatest);
 
 	// Sync document.title with the current reading story name
 	useDocumentTitle(contentData?.chapter?.bookName);
@@ -750,11 +748,13 @@ export function ReaderScreen() {
 				{/* Top Ambient Lighting Glow */}
 				<div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-96 bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent blur-3xl" />
 
-				{/* Header Skeleton */}
-				<div className="px-4 py-3.5 border-b border-outline-variant/20 flex items-center justify-between opacity-70">
-					<div className="h-4 w-36 skeleton-shimmer rounded-md" />
-					<div className="h-6 w-6 skeleton-shimmer rounded-full" />
-				</div>
+				{/* Sticky Header - Giữ cố định từ đầu để tránh nhảy layout khi tải xong */}
+				<ReaderHeader
+					bookId={bookId || ''}
+					progress={0}
+					isVisible={true}
+					onOpenHistory={handleOpenHistory}
+				/>
 
 				{/* Multi-layer Chapter Skeleton Body */}
 				<ReaderChapterSkeleton />
@@ -856,30 +856,14 @@ export function ReaderScreen() {
 					</div>
 				)}
 
-				{/* Khung nội dung chính với chuyển động trượt mượt mà */}
+				{/* Khung nội dung chính hiển thị trực tiếp không qua hiệu ứng fade/slide chồng chéo */}
 				<div ref={readerContentRef} className="w-full will-change-transform relative z-10 bg-background">
 					{isChapterLoading ? (
-						<motion.div
-							key={`loading-skeleton-${chapterId}`}
-							initial={{ opacity: 0.6 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							transition={{ duration: 0.12 }}
-							className="w-full bg-background"
-						>
+						<div key={`loading-skeleton-${chapterId}`} className="w-full bg-background">
 							<ReaderChapterSkeleton titleHint={pendingTitleHint} />
-						</motion.div>
+						</div>
 					) : (
-						<motion.div
-							key={`${chapter.chapterId}-${domResetKey}`}
-							initial={{
-								opacity: swipeDirection ? 0.4 : 0.9,
-								x: swipeDirection === 'left' ? 24 : swipeDirection === 'right' ? -24 : 0
-							}}
-							animate={{ opacity: 1, x: 0 }}
-							transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
-							className="w-full"
-						>
+						<div key={`${chapter.chapterId}-${domResetKey}`} className="w-full">
 							<ChapterContentSection
 								chapters={displayChapters}
 								fontSize={fontSize}
@@ -891,7 +875,7 @@ export function ReaderScreen() {
 								onTouchStart={handleTouchStart}
 								onTouchEnd={handleTouchEnd}
 							/>
-						</motion.div>
+						</div>
 					)}
 				</div>
 			</div>

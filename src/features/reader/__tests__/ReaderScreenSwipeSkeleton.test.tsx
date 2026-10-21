@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReaderScreen } from '@/features/reader/ReaderScreen';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
 import { BookRepository } from '@/repositories/BookRepository';
+import { useAppStore } from '@/stores/useAppStore';
 
 vi.mock('../../../repositories/ChapterRepository', () => ({
 	ChapterRepository: {
@@ -62,8 +63,9 @@ describe('ReaderScreen - Swipe Skeleton Loading Integration', () => {
 			</MemoryRouter>
 		);
 
-		// Trong khi đang loading, Skeleton Screen phải xuất hiện
+		// Trong khi đang loading, Skeleton Screen phải xuất hiện và không được bật vòng xoay GlobalApiLoading chồng lên
 		expect(screen.getByTestId('reader-chapter-skeleton')).toBeDefined();
+		expect(useAppStore.getState().apiLoadingCount).toBe(0);
 
 		// Khi dữ liệu tải xong
 		act(() => {

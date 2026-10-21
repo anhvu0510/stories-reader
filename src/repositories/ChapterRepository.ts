@@ -326,7 +326,7 @@ export const ChapterRepository = {
 			const hasOffline = !options?.forceFresh && (await offlineDb.getChapterContent(chapterId));
 			const timeout = hasOffline ? 1200 : 6000;
 			let url = `/api/chapters/${chapterId}?groupLines=${groupLines}&isEnabledReplace=${isEnabledReplace}&rootTab=${rootTab}&batchSize=${batchSize}`;
-			const requestOptions: any = { timeout, retries: 0 };
+			const requestOptions: any = { timeout, retries: 0, silent: true };
 
 			if (options?.forceFresh) {
 				url += `&_t=${Date.now()}`;

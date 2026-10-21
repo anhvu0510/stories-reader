@@ -38,11 +38,19 @@ function getInitialDomains(): ApiDomain[] {
 	return [];
 }
 
+function resolveActiveDomain(domains: ApiDomain[], activeId: string | null): ApiDomain | null {
+	if (domains.length === 0) return null;
+	return domains.find((d) => d.id === activeId) || domains[0] || null;
+}
+
+const initialDomains = getInitialDomains();
+const initialActiveDomainId = localStorage.getItem(STORAGE_KEY_ACTIVE) || (initialDomains[0]?.id ?? null);
+
 export const useAppStore = create<AppStore>((set, get) => ({
 	isOfflineMode: localStorage.getItem(STORAGE_KEY_OFFLINE) === 'true',
-	domains: getInitialDomains(),
-	activeDomainId: localStorage.getItem(STORAGE_KEY_ACTIVE) || (getInitialDomains()[0]?.id ?? null),
-	activeDomain: null,
+	domains: initialDomains,
+	activeDomainId: initialActiveDomainId,
+	activeDomain: resolveActiveDomain(initialDomains, initialActiveDomainId),
 
 	apiLoadingCount: 0,
 

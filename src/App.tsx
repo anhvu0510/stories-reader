@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'motion/react';
 import { BookOpen, KeyRound } from 'lucide-react';
 
 import { GlobalApiLoading } from './components/GlobalApiLoading';
@@ -44,29 +43,23 @@ function AppContent() {
 
 	return (
 		<div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-on-background flex flex-col box-border hide-scrollbar no-scrollbar">
-			<AnimatePresence mode="wait">
-				<motion.div
-					key={location.pathname}
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 1 }}
-					exit={{ opacity: 0 }}
-					transition={{ duration: 0.18, ease: 'easeOut' }}
-					className="flex-1 flex flex-col w-full"
-				>
-					<Routes location={location}>
-						<Route path="/" element={<LibraryScreen />} />
-						<Route path="/book/:bookId" element={<ChapterListScreen />} />
-						<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
-					</Routes>
-				</motion.div>
-			</AnimatePresence>
+			<div className="flex-1 flex flex-col w-full">
+				<Routes location={location}>
+					<Route path="/" element={<LibraryScreen />} />
+					<Route path="/book/:bookId" element={<ChapterListScreen />} />
+					<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+				</Routes>
+			</div>
 		</div>
 	);
 }
 
 function ApplicationGate({ children }: { children: React.ReactNode }) {
-	const [isInitializing, setIsInitializing] = useState(true);
-	const [showSettings, setShowSettings] = useState(false);
+	const [showSettings, setShowSettings] = useState(() => {
+		useAppStore.getState().loadAppConfig();
+		const { isOfflineMode, activeDomain } = useAppStore.getState();
+		return !isOfflineMode && (!activeDomain || !activeDomain.url);
+	});
 	const [showPasscodeModal, setShowPasscodeModal] = useState(false);
 	const [domainInput, setDomainInput] = useState('');
 	const [nameInput, setNameInput] = useState('');
@@ -86,91 +79,41 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 		useAppStore.getState().loadAppConfig();
 		useReaderConfigStore.getState().fetchServerConfig();
 
-		const checkConnection = async () => {
-			const isOffline = useAppStore.getState().isOfflineMode;
-			const domain = useAppStore.getState().activeDomain;
-
-			if (isOffline) {
-				setIsInitializing(false);
-				return;
-			}
-
-			if (!domain || !domain.url) {
-				setShowSettings(true);
-				setIsInitializing(false);
-				return;
-			}
-
-			try {
-				const controller = new AbortController();
-				const timeoutId = setTimeout(() => controller.abort(), 2000);
-				await fetch(domain.url, {
-					signal: controller.signal,
-					headers: { 'ngrok-skip-browser-warning': 'true' }
-				}).catch(() => null);
-				clearTimeout(timeoutId);
-			} catch {
-				// Safe fallback without intrusive modal popup
-			} finally {
-				setIsInitializing(false);
-			}
-		};
-
-		checkConnection();
+		const { isOfflineMode, activeDomain } = useAppStore.getState();
+		if (isOfflineMode) return;
+		if (!activeDomain || !activeDomain.url) {
+			setShowSettings(true);
+		}
 	}, []);
 
 	const handleSave = async () => {
-		if (domainInput.trim()) {
-			setIsTesting(true);
-			try {
-				const res = await fetch(domainInput.trim(), {
-					headers: { 'ngrok-skip-browser-warning': 'true' }
-				}).catch(() => null);
+		const trimmedDomain = domainInput.trim();
+		if (!trimmedDomain) return;
 
-				if (!res || !res.ok) {
-					useToastStore.getState().showToast('Máy chủ không phản hồi hoặc URL không hợp lệ.', 'error');
-					setIsTesting(false);
-					return;
-				}
+		setIsTesting(true);
+		try {
+			const res = await fetch(trimmedDomain, {
+				headers: { 'ngrok-skip-browser-warning': 'true' }
+			}).catch(() => null);
 
-				useAppStore.getState().addDomain({
-					id: Date.now().toString(),
-					name: nameInput.trim() || 'Server Mặc định',
-					url: domainInput.trim()
-				});
-				setShowSettings(false);
-				window.location.reload();
-			} catch {
-				useToastStore.getState().showToast('Có lỗi xảy ra khi lưu máy chủ.', 'error');
-			} finally {
-				setIsTesting(false);
+			if (!res || !res.ok) {
+				useToastStore.getState().showToast('Máy chủ không phản hồi hoặc URL không hợp lệ.', 'error');
+				return;
 			}
+
+			useAppStore.getState().addDomain({
+				id: Date.now().toString(),
+				name: nameInput.trim() || 'Server Mặc định',
+				url: trimmedDomain
+			});
+			setShowSettings(false);
+			window.location.reload();
+		} catch {
+			useToastStore.getState().showToast('Có lỗi xảy ra khi lưu máy chủ.', 'error');
+		} finally {
+			setIsTesting(false);
 		}
 	};
-
-	if (isInitializing) {
-		return (
-			<div className="min-h-screen bg-background flex flex-col items-center justify-center font-sans gap-6">
-				<div className="flex flex-col items-center justify-center">
-					<div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center mb-6 shadow-sm ring-1 ring-primary/20 relative">
-						<BookOpen size={24} className="animate-pulse" />
-						<div className="absolute inset-0 border-2 border-primary/30 rounded-3xl animate-ping opacity-50" />
-					</div>
-					<div className="text-on-surface-variant font-medium text-[15px] animate-pulse">Đang kết nối máy chủ...</div>
-				</div>
-
-				<button
-					onClick={() => {
-						useAppStore.getState().setOfflineMode(true);
-						window.location.reload();
-					}}
-					className="mt-8 px-5 py-2.5 rounded-full bg-surface-container border border-outline-variant/30 text-[14px] font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all"
-				>
-					Vào chế độ Ngoại tuyến
-				</button>
-			</div>
-		);
-	}
 
 	if (showSettings) {
 		return (
