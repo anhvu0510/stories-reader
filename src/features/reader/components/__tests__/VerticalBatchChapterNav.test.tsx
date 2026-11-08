@@ -15,6 +15,8 @@ describe('VerticalBatchChapterNav Component', () => {
 	beforeEach(() => {
 		cleanup();
 		vi.restoreAllMocks();
+		document.documentElement.requestFullscreen = vi.fn().mockResolvedValue(undefined);
+		document.exitFullscreen = vi.fn().mockResolvedValue(undefined);
 	});
 
 	it('QC-1 [Inactive State]: Displays Speaker icon when TTS is not active', () => {
@@ -162,24 +164,15 @@ describe('VerticalBatchChapterNav Component', () => {
 		expect(mockOnToggleTTS).toHaveBeenCalledTimes(1);
 	});
 
-	it('QC-10 [Vertical Menu BGM Toggle]: Shows BGM toggle button ONLY when Edge Read Aloud highlight is present in DOM', async () => {
-		const mockOnToggleBgm = vi.fn();
-
-		// 1. Without highlight class in DOM -> BGM button must NOT render
+	it('QC-10 [Vertical Menu Fullscreen Toggle]: Shows Fullscreen toggle button ONLY when Edge Read Aloud highlight is present in DOM', async () => {
+		// 1. Without highlight class in DOM -> Fullscreen button must NOT render in inactive state
 		const { rerender } = render(
-			<VerticalBatchChapterNav
-				chapters={mockChapters}
-				activeChapterId="c1"
-				isVisible={true}
-				isTTSActive={false}
-				isBgmActive={false}
-				onToggleBgm={mockOnToggleBgm}
-			/>
+			<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={false} />
 		);
 
-		expect(screen.queryByTitle('Bật nhạc nền thư giãn')).toBeNull();
+		expect(screen.queryByTitle('Toàn màn hình')).toBeNull();
 
-		// 2. Add Edge Read Aloud highlight class to DOM -> BGM button must render in vertical menu
+		// 2. Add Edge Read Aloud highlight class to DOM -> Fullscreen button must render in vertical menu
 		const span = document.createElement('span');
 		span.className = 'msreadout-line-highlight';
 
@@ -188,22 +181,13 @@ describe('VerticalBatchChapterNav Component', () => {
 			await Promise.resolve();
 		});
 
-		rerender(
-			<VerticalBatchChapterNav
-				chapters={mockChapters}
-				activeChapterId="c1"
-				isVisible={true}
-				isTTSActive={false}
-				isBgmActive={false}
-				onToggleBgm={mockOnToggleBgm}
-			/>
-		);
+		rerender(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={false} />);
 
-		const bgmBtn = screen.getByTitle('Bật nhạc nền thư giãn');
-		expect(bgmBtn).toBeDefined();
+		const fullscreenBtn = screen.getByTitle('Toàn màn hình');
+		expect(fullscreenBtn).toBeDefined();
 
-		fireEvent.click(bgmBtn);
-		expect(mockOnToggleBgm).toHaveBeenCalledTimes(1);
+		fireEvent.click(fullscreenBtn);
+		expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(1);
 
 		document.body.removeChild(span);
 	});
@@ -216,24 +200,14 @@ describe('VerticalBatchChapterNav Component', () => {
 		expect(screen.queryByLabelText('Bật đọc thành tiếng')).toBeNull();
 	});
 
-	it('QC-12 [Active Vertical Menu]: Always shows BGM toggle button when isTTSActive is true (speaker button pressed to open vertical menu)', () => {
-		const mockOnToggleBgm = vi.fn();
-		render(
-			<VerticalBatchChapterNav
-				chapters={mockChapters}
-				activeChapterId="c1"
-				isVisible={true}
-				isTTSActive={true}
-				isBgmActive={false}
-				onToggleBgm={mockOnToggleBgm}
-			/>
-		);
+	it('QC-12 [Active Vertical Menu]: Always shows Fullscreen toggle button when isTTSActive is true (speaker button pressed to open vertical menu)', () => {
+		render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={true} />);
 
-		const bgmBtn = screen.getByTitle('Bật nhạc nền thư giãn');
-		expect(bgmBtn).toBeDefined();
+		const fullscreenBtn = screen.getByTitle('Toàn màn hình');
+		expect(fullscreenBtn).toBeDefined();
 
-		fireEvent.click(bgmBtn);
-		expect(mockOnToggleBgm).toHaveBeenCalledTimes(1);
+		fireEvent.click(fullscreenBtn);
+		expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(1);
 	});
 
 	it('encloses active controls in a transparent frame without changing button styles', () => {

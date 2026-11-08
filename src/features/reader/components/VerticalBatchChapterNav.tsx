@@ -1,8 +1,9 @@
-import { Loader2, LocateFixed, Music, Pause, Play, SkipForward, Square, Volume2 } from 'lucide-react';
+import { Loader2, LocateFixed, Maximize2, Minimize2, Pause, Play, SkipForward, Square, Volume2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 
 import { isEdgeReadAloudActive } from '@/hooks/useEdgeReadAloudBgm';
+import { useFullscreen } from '@/hooks/useFullscreen';
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
 
@@ -92,8 +93,12 @@ function LocateButton({ onClick }: { onClick: () => void }) {
 	);
 }
 
-function BgmButton({ isBgmActive, onToggleBgm }: { isBgmActive: boolean; onToggleBgm: () => void }) {
-	const activeStyle = isBgmActive
+function FullscreenButton() {
+	const { isFullscreen, isSupported, toggleFullscreen } = useFullscreen();
+
+	if (!isSupported) return null;
+
+	const activeStyle = isFullscreen
 		? 'bg-primary/25 text-primary border border-primary/60 shadow-[0_3px_12px_rgba(59,130,246,0.45)]'
 		: 'bg-black/20 dark:bg-black/40 border border-primary/50 text-on-surface hover:text-primary';
 
@@ -103,13 +108,13 @@ function BgmButton({ isBgmActive, onToggleBgm }: { isBgmActive: boolean; onToggl
 			onClick={(e) => {
 				e.stopPropagation();
 				triggerHaptic('light');
-				onToggleBgm();
+				toggleFullscreen();
 			}}
 			className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 cursor-pointer backdrop-blur-[2px] shadow-[0_3px_12px_rgba(0,0,0,0.4),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 ${activeStyle}`}
-			title={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
-			aria-label={isBgmActive ? 'Tắt nhạc nền (Đang phát)' : 'Bật nhạc nền thư giãn'}
+			title={isFullscreen ? 'Thu nhỏ màn hình' : 'Toàn màn hình'}
+			aria-label={isFullscreen ? 'Thu nhỏ màn hình' : 'Toàn màn hình'}
 		>
-			<Music size={16} className={isBgmActive ? 'animate-pulse text-primary' : ''} />
+			{isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
 		</motion.button>
 	);
 }
@@ -181,8 +186,6 @@ function PlayPauseButton({
 interface TTSActiveControlsProps {
 	canLocate: boolean;
 	onLocate: () => void;
-	isBgmActive: boolean;
-	onToggleBgm?: () => void;
 	isTTSPlaying: boolean;
 	isTTSLoading: boolean;
 	onTTSPlay?: () => void;
@@ -195,8 +198,6 @@ interface TTSActiveControlsProps {
 function TTSActiveControls({
 	canLocate,
 	onLocate,
-	isBgmActive,
-	onToggleBgm,
 	isTTSPlaying,
 	isTTSLoading,
 	onTTSPlay,
@@ -224,7 +225,7 @@ function TTSActiveControls({
 	return (
 		<div className="flex flex-col items-center gap-2.5 animate-in fade-in zoom-in-90 duration-300 ease-out">
 			{canLocate && <LocateButton onClick={onLocate} />}
-			{onToggleBgm && <BgmButton isBgmActive={isBgmActive} onToggleBgm={onToggleBgm} />}
+			<FullscreenButton />
 			<PlayPauseButton isTTSPlaying={isTTSPlaying} isTTSLoading={isTTSLoading} onTTSPlay={onTTSPlay} onTTSPause={onTTSPause} />
 			<motion.button
 				whileTap={{ scale: 0.88 }}
@@ -251,8 +252,6 @@ function TTSActiveControls({
 interface TTSInactiveControlsProps {
 	hasBrowserReadAloudHighlight: boolean;
 	onLocate: () => void;
-	isBgmActive: boolean;
-	onToggleBgm?: () => void;
 	showTTSControl: boolean;
 	isTTSLoading: boolean;
 	onToggleTTS?: () => void;
@@ -262,8 +261,6 @@ interface TTSInactiveControlsProps {
 function TTSInactiveControls({
 	hasBrowserReadAloudHighlight,
 	onLocate,
-	isBgmActive,
-	onToggleBgm,
 	showTTSControl,
 	isTTSLoading,
 	onToggleTTS,
@@ -286,7 +283,7 @@ function TTSInactiveControls({
 	return (
 		<div className="flex flex-col items-center gap-2.5">
 			{hasBrowserReadAloudHighlight && <LocateButton onClick={onLocate} />}
-			{hasBrowserReadAloudHighlight && onToggleBgm && <BgmButton isBgmActive={isBgmActive} onToggleBgm={onToggleBgm} />}
+			{hasBrowserReadAloudHighlight && <FullscreenButton />}
 			{showSpeaker && (
 				<motion.button
 					whileTap={{ scale: 0.88 }}
@@ -326,9 +323,7 @@ export function VerticalBatchChapterNav(props: VerticalBatchChapterNavProps) {
 		isTTSActive,
 		isTTSLoading,
 		isTTSPlaying,
-		isBgmActive,
 		showTTSControl,
-		onToggleBgm,
 		onToggleTTS,
 		onTTSPlay,
 		onTTSPause,
@@ -358,8 +353,6 @@ export function VerticalBatchChapterNav(props: VerticalBatchChapterNavProps) {
 					<TTSActiveControls
 						canLocate={canLocateInActive}
 						onLocate={handleJump}
-						isBgmActive={isBgmActive}
-						onToggleBgm={onToggleBgm}
 						isTTSPlaying={isTTSPlaying}
 						isTTSLoading={isTTSLoading}
 						onTTSPlay={onTTSPlay}
@@ -372,8 +365,6 @@ export function VerticalBatchChapterNav(props: VerticalBatchChapterNavProps) {
 					<TTSInactiveControls
 						hasBrowserReadAloudHighlight={hasBrowserReadAloudHighlight}
 						onLocate={handleJump}
-						isBgmActive={isBgmActive}
-						onToggleBgm={onToggleBgm}
 						showTTSControl={showTTSControl}
 						isTTSLoading={isTTSLoading}
 						onToggleTTS={onToggleTTS}
