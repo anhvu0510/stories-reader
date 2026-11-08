@@ -1,7 +1,7 @@
 {
-  "version": "1.0.369",
+  "version": "1.0.370",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "6b18a07b8f942c6167d1d4a1bef8ba9d90c6cb578198b4b3caf8cf414edf1f16",
-  "releaseNotes": "docs: update verification gate commands and guidelines in AGENTS.md",
-  "updatedAt": "2026-11-08T17:20:49Z"
+  "checksum": "3c3f7f6474fe613a482909eb08d196233349a9d70c96b3c096a962fdc836e105",
+  "releaseNotes": "fix: support cross-browser fullscreen detection and edge read-aloud navigation visibility",
+  "updatedAt": "2026-11-08T17:27:42Z"
 }
