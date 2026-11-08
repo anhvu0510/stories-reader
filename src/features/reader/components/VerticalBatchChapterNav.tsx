@@ -17,6 +17,7 @@ export interface VerticalBatchChapterNavProps {
 	chapters?: ChapterDetailItem[];
 	activeChapterId?: string;
 	isVisible?: boolean;
+	hasEdgeReadAloud?: boolean;
 	isTTSActive?: boolean;
 	isTTSLoading?: boolean;
 	isTTSPlaying?: boolean;
@@ -51,7 +52,6 @@ function useBrowserReadAloudHighlight(): boolean {
 				childList: true,
 				subtree: true,
 				attributes: true,
-				attributeFilter: ['class'],
 			});
 			return () => observer.disconnect();
 		}
@@ -94,9 +94,7 @@ function LocateButton({ onClick }: { onClick: () => void }) {
 }
 
 function FullscreenButton() {
-	const { isFullscreen, isSupported, toggleFullscreen } = useFullscreen();
-
-	if (!isSupported) return null;
+	const { isFullscreen, toggleFullscreen } = useFullscreen();
 
 	const activeStyle = isFullscreen
 		? 'bg-primary/25 text-primary border border-primary/60 shadow-[0_3px_12px_rgba(59,130,246,0.45)]'
@@ -302,6 +300,7 @@ function TTSInactiveControls({
 function resolveNavProps(props: VerticalBatchChapterNavProps) {
 	return {
 		isVisible: props.isVisible ?? true,
+		hasEdgeReadAloud: Boolean(props.hasEdgeReadAloud),
 		isTTSActive: Boolean(props.isTTSActive),
 		isTTSLoading: Boolean(props.isTTSLoading),
 		isTTSPlaying: Boolean(props.isTTSPlaying),
@@ -320,6 +319,7 @@ function resolveNavProps(props: VerticalBatchChapterNavProps) {
 export function VerticalBatchChapterNav(props: VerticalBatchChapterNavProps) {
 	const {
 		isVisible,
+		hasEdgeReadAloud,
 		isTTSActive,
 		isTTSLoading,
 		isTTSPlaying,
@@ -333,8 +333,9 @@ export function VerticalBatchChapterNav(props: VerticalBatchChapterNavProps) {
 	} = resolveNavProps(props);
 
 	const hasBrowserReadAloudHighlight = useBrowserReadAloudHighlight();
+	const isEdgeHighlightPresent = hasEdgeReadAloud || hasBrowserReadAloudHighlight;
 	const hasNativeLocate = Boolean(hasNativeReaderGestures() && onLocateReadingLine);
-	const canLocateInActive = hasBrowserReadAloudHighlight || hasNativeLocate;
+	const canLocateInActive = isEdgeHighlightPresent || hasNativeLocate;
 
 	const handleJump = () => {
 		jumpToHighlight(isTTSActive, onLocateReadingLine);
@@ -363,7 +364,7 @@ export function VerticalBatchChapterNav(props: VerticalBatchChapterNavProps) {
 					/>
 				) : (
 					<TTSInactiveControls
-						hasBrowserReadAloudHighlight={hasBrowserReadAloudHighlight}
+						hasBrowserReadAloudHighlight={isEdgeHighlightPresent}
 						onLocate={handleJump}
 						showTTSControl={showTTSControl}
 						isTTSLoading={isTTSLoading}

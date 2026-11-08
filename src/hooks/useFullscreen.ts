@@ -9,10 +9,26 @@ export function useFullscreen() {
 
 	useEffect(() => {
 		const handler = () => {
-			setIsFullscreen(Boolean(document.fullscreenElement));
+			const doc = document as Document & {
+				webkitFullscreenElement?: Element | null;
+				mozFullScreenElement?: Element | null;
+				msFullscreenElement?: Element | null;
+			};
+			const isFull = Boolean(
+				document.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement
+			);
+			setIsFullscreen(isFull);
 		};
 		document.addEventListener('fullscreenchange', handler);
-		return () => document.removeEventListener('fullscreenchange', handler);
+		document.addEventListener('webkitfullscreenchange', handler);
+		document.addEventListener('mozfullscreenchange', handler);
+		document.addEventListener('MSFullscreenChange', handler);
+		return () => {
+			document.removeEventListener('fullscreenchange', handler);
+			document.removeEventListener('webkitfullscreenchange', handler);
+			document.removeEventListener('mozfullscreenchange', handler);
+			document.removeEventListener('MSFullscreenChange', handler);
+		};
 	}, []);
 
 	const enterFullscreen = useCallback(async () => {

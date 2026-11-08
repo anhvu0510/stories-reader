@@ -1108,8 +1108,9 @@ function resolveViewingMetadata(
 }
 
 function checkNavDockVisible(showZenControls: boolean, showTTSControl: boolean, isTTSActive: boolean, hasEdgeReadAloud: boolean): boolean {
+	if (isTTSActive || hasEdgeReadAloud) return true;
 	if (!showZenControls) return false;
-	return showTTSControl || isTTSActive || hasEdgeReadAloud;
+	return showTTSControl;
 }
 
 interface ReaderQuickControlDockProps {
@@ -1324,6 +1325,7 @@ function ReaderActiveView({
 				chapters={displayChapters}
 				activeChapterId={activeChapter?.chapterId}
 				isVisible={isNavDockVisible}
+				hasEdgeReadAloud={hasEdgeReadAloud}
 				isTTSActive={tts.isTTSActive}
 				isTTSLoading={tts.isLoading}
 				isTTSPlaying={tts.isPlaying}
