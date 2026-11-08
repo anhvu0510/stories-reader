@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { triggerHaptic, triggerSound, useHaptic, playFeedbackSound } from '@/hooks/useHaptic';
 
@@ -29,18 +29,18 @@ describe('useHaptic & sound feedback', () => {
 			type: 'sine',
 			frequency: {
 				setValueAtTime: vi.fn(),
-				exponentialRampToValueAtTime: vi.fn()
+				exponentialRampToValueAtTime: vi.fn(),
 			},
 			start: vi.fn(),
-			stop: vi.fn()
+			stop: vi.fn(),
 		};
 
 		const mockGain = {
 			connect: vi.fn(),
 			gain: {
 				setValueAtTime: vi.fn(),
-				exponentialRampToValueAtTime: vi.fn()
-			}
+				exponentialRampToValueAtTime: vi.fn(),
+			},
 		};
 
 		const mockAudioContext = vi.fn().mockImplementation(function (this: any) {
@@ -67,18 +67,18 @@ describe('useHaptic & sound feedback', () => {
 			type: 'sine',
 			frequency: {
 				setValueAtTime: vi.fn(),
-				exponentialRampToValueAtTime: vi.fn()
+				exponentialRampToValueAtTime: vi.fn(),
 			},
 			start: vi.fn(),
-			stop: vi.fn()
+			stop: vi.fn(),
 		};
 
 		const mockGain = {
 			connect: vi.fn(),
 			gain: {
 				setValueAtTime: vi.fn(),
-				exponentialRampToValueAtTime: vi.fn()
-			}
+				exponentialRampToValueAtTime: vi.fn(),
+			},
 		};
 
 		const mockAudioContext = vi.fn().mockImplementation(function (this: any) {

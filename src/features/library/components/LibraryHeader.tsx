@@ -1,6 +1,6 @@
-import React from 'react';
-import { motion } from 'motion/react';
 import { Search, Wifi, WifiOff, Settings, BookOpenCheck, X, Tag, ArrowUpDown } from 'lucide-react';
+import { motion } from 'motion/react';
+import React from 'react';
 
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { useAppStore } from '@/stores/useAppStore';
@@ -16,7 +16,99 @@ interface LibraryHeaderProps {
 	isCustomSortActive?: boolean;
 }
 
-export function LibraryHeader({ searchQuery, onSearchChange, onOpenSettings, onSubmitSearch, onOpenTagFilter, activeTagsCount = 0, onOpenSort, isCustomSortActive = false }: LibraryHeaderProps) {
+function NetworkModeButton({ isOfflineMode, onToggle }: { isOfflineMode: boolean; onToggle: () => void }) {
+	const activeClass = isOfflineMode
+		? 'bg-primary/20 border-primary/50 text-primary'
+		: 'bg-white/5 dark:bg-white/5 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-white/10 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.25)]';
+	const title = isOfflineMode ? 'Đang ở chế độ Ngoại tuyến (Bấm để chuyển Online)' : 'Đang ở chế độ Trực tuyến (Bấm để chuyển Offline)';
+
+	return (
+		<motion.button
+			whileTap={{ scale: 0.88 }}
+			onClick={onToggle}
+			className={`w-9 h-9 rounded-full border transition-all shadow-sm flex items-center justify-center cursor-pointer ${activeClass}`}
+			title={title}
+		>
+			{isOfflineMode ? <WifiOff size={16} /> : <Wifi size={16} />}
+		</motion.button>
+	);
+}
+
+interface SortButtonProps {
+	onOpenSort?: () => void;
+	isCustomSortActive: boolean;
+}
+
+function SortButton({ onOpenSort, isCustomSortActive }: SortButtonProps) {
+	if (!onOpenSort) return null;
+	const activeClass = isCustomSortActive
+		? 'bg-primary/20 border-primary/50 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]'
+		: 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-on-surface hover:bg-white/10';
+
+	return (
+		<motion.button
+			type="button"
+			whileTap={{ scale: 0.9 }}
+			onClick={() => {
+				triggerHaptic('light');
+				onOpenSort();
+			}}
+			className={`relative w-9.5 h-9.5 rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-xs ${activeClass}`}
+			title="Sắp xếp danh sách"
+			aria-label="Sắp xếp danh sách"
+			data-testid="sort-trigger-btn"
+		>
+			<ArrowUpDown size={15} className={isCustomSortActive ? 'text-primary' : 'text-on-surface-variant/70'} />
+			{isCustomSortActive && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary border-2 border-surface" />}
+		</motion.button>
+	);
+}
+
+interface TagFilterButtonProps {
+	onOpenTagFilter?: () => void;
+	activeTagsCount: number;
+}
+
+function TagFilterButton({ onOpenTagFilter, activeTagsCount }: TagFilterButtonProps) {
+	if (!onOpenTagFilter) return null;
+	const hasActiveTags = activeTagsCount > 0;
+	const activeClass = hasActiveTags
+		? 'bg-primary border-primary text-on-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)]'
+		: 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-on-surface hover:bg-white/10';
+
+	return (
+		<motion.button
+			type="button"
+			whileTap={{ scale: 0.9 }}
+			onClick={() => {
+				triggerHaptic('light');
+				onOpenTagFilter();
+			}}
+			className={`relative w-9.5 h-9.5 rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-xs ${activeClass}`}
+			title="Lọc theo Thể loại & Tags"
+			aria-label="Lọc theo Thể loại & Tags"
+			data-testid="tag-filter-trigger-btn"
+		>
+			<Tag size={15} className={hasActiveTags ? 'text-on-primary' : 'text-on-surface-variant/70'} />
+			{hasActiveTags && (
+				<span className="absolute -top-1 -right-1 px-1 min-w-3.5 h-3.5 rounded-full bg-error text-on-error text-[8.5px] font-bold font-mono flex items-center justify-center border border-surface leading-none">
+					{activeTagsCount}
+				</span>
+			)}
+		</motion.button>
+	);
+}
+
+export function LibraryHeader({
+	searchQuery,
+	onSearchChange,
+	onOpenSettings,
+	onSubmitSearch,
+	onOpenTagFilter,
+	activeTagsCount = 0,
+	onOpenSort,
+	isCustomSortActive = false,
+}: LibraryHeaderProps) {
 	const { isOfflineMode, setOfflineMode } = useAppStore();
 
 	return (
@@ -37,18 +129,13 @@ export function LibraryHeader({ searchQuery, onSearchChange, onOpenSettings, onS
 
 				{/* Essential Action Buttons Row: Online/Offline & System Settings */}
 				<div className="flex items-center gap-1.5 flex-shrink-0">
-					{/* Online / Offline Mode Toggle Icon */}
-					<motion.button
-						whileTap={{ scale: 0.88 }}
-						onClick={() => {
+					<NetworkModeButton
+						isOfflineMode={isOfflineMode}
+						onToggle={() => {
 							triggerHaptic('selection');
 							setOfflineMode(!isOfflineMode);
 						}}
-						className={`w-9 h-9 rounded-full border transition-all shadow-sm flex items-center justify-center cursor-pointer ${isOfflineMode ? 'bg-primary/20 border-primary/50 text-primary' : 'bg-white/5 dark:bg-white/5 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-white/10 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.25)]'}`}
-						title={isOfflineMode ? 'Đang ở chế độ Ngoại tuyến (Bấm để chuyển Online)' : 'Đang ở chế độ Trực tuyến (Bấm để chuyển Offline)'}
-					>
-						{isOfflineMode ? <WifiOff size={16} /> : <Wifi size={16} />}
-					</motion.button>
+					/>
 
 					{/* Global System Settings Icon */}
 					<motion.button
@@ -107,47 +194,8 @@ export function LibraryHeader({ searchQuery, onSearchChange, onOpenSettings, onS
 					)}
 				</div>
 
-				{/* Sort Button (Shown when onOpenSort is provided) */}
-				{onOpenSort && (
-					<motion.button
-						type="button"
-						whileTap={{ scale: 0.9 }}
-						onClick={() => {
-							triggerHaptic('light');
-							onOpenSort();
-						}}
-						className={`relative w-9.5 h-9.5 rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-xs ${isCustomSortActive ? 'bg-primary/20 border-primary/50 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]' : 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-on-surface hover:bg-white/10'}`}
-						title="Sắp xếp danh sách"
-						aria-label="Sắp xếp danh sách"
-						data-testid="sort-trigger-btn"
-					>
-						<ArrowUpDown size={15} className={isCustomSortActive ? 'text-primary' : 'text-on-surface-variant/70'} />
-						{isCustomSortActive && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary border-2 border-surface" />}
-					</motion.button>
-				)}
-
-				{/* Tag Filter Button (Shown when onOpenTagFilter is provided) */}
-				{onOpenTagFilter && (
-					<motion.button
-						type="button"
-						whileTap={{ scale: 0.9 }}
-						onClick={() => {
-							triggerHaptic('light');
-							onOpenTagFilter();
-						}}
-						className={`relative w-9.5 h-9.5 rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-xs ${activeTagsCount > 0 ? 'bg-primary border-primary text-on-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.3)]' : 'bg-white/5 dark:bg-white/5 border-white/15 dark:border-white/15 text-on-surface-variant hover:text-on-surface hover:bg-white/10'}`}
-						title="Lọc theo Thể loại & Tags"
-						aria-label="Lọc theo Thể loại & Tags"
-						data-testid="tag-filter-trigger-btn"
-					>
-						<Tag size={15} className={activeTagsCount > 0 ? 'text-on-primary' : 'text-on-surface-variant/70'} />
-						{activeTagsCount > 0 && (
-							<span className="absolute -top-1 -right-1 px-1 min-w-3.5 h-3.5 rounded-full bg-error text-on-error text-[8.5px] font-bold font-mono flex items-center justify-center border border-surface leading-none">
-								{activeTagsCount}
-							</span>
-						)}
-					</motion.button>
-				)}
+				<SortButton onOpenSort={onOpenSort} isCustomSortActive={isCustomSortActive} />
+				<TagFilterButton onOpenTagFilter={onOpenTagFilter} activeTagsCount={activeTagsCount} />
 			</div>
 		</header>
 	);

@@ -41,7 +41,9 @@ export async function generateBgmBufferInWorker(ctx: AudioContext, duration = 4.
 			if (worker) {
 				try {
 					worker.terminate();
-				} catch {}
+				} catch {
+					// intentionally empty — worker may already be terminated
+				}
 				worker = null;
 			}
 		};

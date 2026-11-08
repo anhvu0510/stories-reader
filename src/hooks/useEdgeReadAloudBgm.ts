@@ -21,9 +21,11 @@ export interface EdgeReadAloudBgmReturn {
 	stopBgm: (immediate?: boolean) => void;
 }
 
-export const EDGE_READ_ALOUD_SELECTOR = '.msreadout-line-highlight, .msreadout-word-highlight, .msreadout-highlight, msreadoutspan, [class*="msreadout"], [data-readout-highlight]';
+export const EDGE_READ_ALOUD_SELECTOR =
+	'.msreadout-line-highlight, .msreadout-word-highlight, .msreadout-highlight, msreadoutspan, [class*="msreadout"], [data-readout-highlight]';
 
-export const EDGE_READ_ALOUD_INACTIVE_SELECTOR = '.msreadout-inactive-highlight, .msreadout-inactive-line-highlight, [class*="inactive-highlight"]';
+export const EDGE_READ_ALOUD_INACTIVE_SELECTOR =
+	'.msreadout-inactive-highlight, .msreadout-inactive-line-highlight, [class*="inactive-highlight"]';
 
 export function isEdgeReadAloudActive(root: ParentNode = document): boolean {
 	const hasInactive = Boolean(root.querySelector(EDGE_READ_ALOUD_INACTIVE_SELECTOR));
@@ -78,7 +80,7 @@ function safeDisconnect(node: AudioNode | null): void {
 	try {
 		node.disconnect();
 	} catch (err) {
-		console.debug('[EdgeBgm] Disconnect node ignored:', err);
+		console.warn('[EdgeBgm] Disconnect node ignored:', err);
 	}
 }
 
@@ -88,7 +90,7 @@ function safeStopAndDisconnectSource(source: AudioBufferSourceNode | null): void
 		source.stop();
 		source.disconnect();
 	} catch (err) {
-		console.debug('[EdgeBgm] Stop source ignored:', err);
+		console.warn('[EdgeBgm] Stop source ignored:', err);
 	}
 }
 
@@ -99,7 +101,7 @@ function safeMuteGain(gain: GainNode | null, ctx: AudioContext | null): void {
 		gain.gain.cancelScheduledValues?.(now);
 		gain.gain.setValueAtTime?.(0, now);
 	} catch (err) {
-		console.debug('[EdgeBgm] Mute gain ignored:', err);
+		console.warn('[EdgeBgm] Mute gain ignored:', err);
 	}
 }
 
@@ -111,7 +113,7 @@ export function useEdgeReadAloudBgm({
 	stopDelayMs = 1500,
 	enabled = true,
 	isBgmPreviewing = false,
-	isTTSActive = false
+	isTTSActive = false,
 }: EdgeReadAloudBgmOptions): EdgeReadAloudBgmReturn {
 	const [isPlayingState, setIsPlayingState] = useState(false);
 	const audioCtxRef = useRef<AudioContext | null>(null);
@@ -183,12 +185,7 @@ export function useEdgeReadAloudBgm({
 
 		try {
 			const compressor = ctx.createDynamicsCompressor();
-			const now = ctx.currentTime;
-			compressor.threshold?.setValueAtTime?.(-24, now);
-			compressor.knee?.setValueAtTime?.(30, now);
-			compressor.ratio?.setValueAtTime?.(12, now);
-			compressor.attack?.setValueAtTime?.(0.003, now);
-			compressor.release?.setValueAtTime?.(0.25, now);
+			initCompressorParams(compressor, ctx.currentTime);
 			compressor.connect(ctx.destination);
 			compressorNodeRef.current = compressor;
 			return compressor;
@@ -200,106 +197,34 @@ export function useEdgeReadAloudBgm({
 	const startBgm = useCallback(
 		async (manual = false) => {
 			if (isBgmPreviewingRef.current) return;
+			if (shouldAbortStart(manual, isUserMutedRef, isManualPlayingRef)) return;
 
-			if (manual) {
-				isUserMutedRef.current = false;
-				isManualPlayingRef.current = true;
-			} else if (isUserMutedRef.current) {
-				return;
-			}
-
-			if (stopTimerRef.current) {
-				clearTimeout(stopTimerRef.current);
-				stopTimerRef.current = null;
-			}
-			if (fadeOutTimerRef.current) {
-				clearTimeout(fadeOutTimerRef.current);
-				fadeOutTimerRef.current = null;
-			}
+			clearBgmTimers(stopTimerRef, fadeOutTimerRef);
 
 			const ctx = getOrCreateAudioContext();
 			if (!ctx) return;
 
-			if (ctx.state === 'suspended') {
-				try {
-					await ctx.resume();
-					if (ctx.state === 'running') {
-						setIsPlayingState(true);
-					}
-				} catch (err) {
-					console.warn('[EdgeBgm] Could not resume isolated AudioContext:', err);
-				}
-			}
+			await resumeAudioContext(ctx, () => setIsPlayingState(true));
 
-			// Offload synthesis to background Web Worker if buffer is not loaded yet
-			let buffer = audioBufferRef.current;
-			if (!buffer || buffer.duration < 0.1) {
-				buffer = await generateBgmBufferInWorker(ctx);
-				if (!buffer) {
-					buffer = createSynthesizedAmbientBuffer(ctx);
-				}
-				audioBufferRef.current = buffer;
-			}
+			const buffer = await getOrGenerateBgmBuffer(ctx, audioBufferRef.current);
+			audioBufferRef.current = buffer;
 
 			// Compute subtle volume scaled down strictly behind speech levels
 			const safeVolume = computeSubtleBgmVolume(volume);
 
 			if (isPlayingRef.current && gainNodeRef.current) {
 				const gain = gainNodeRef.current;
-				const now = ctx.currentTime;
-				if (typeof gain.gain.cancelScheduledValues === 'function') {
-					gain.gain.cancelScheduledValues(now);
-				}
-				if (typeof gain.gain.setValueAtTime === 'function') {
-					gain.gain.setValueAtTime(gain.gain.value, now);
-				}
-				if (typeof gain.gain.linearRampToValueAtTime === 'function') {
-					gain.gain.linearRampToValueAtTime(safeVolume, now + fadeInMs / 1000);
-				} else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
-					gain.gain.exponentialRampToValueAtTime(Math.max(safeVolume, 0.0001), now + fadeInMs / 1000);
-				}
+				rampGain(gain, safeVolume, ctx.currentTime, fadeInMs / 1000, gain.gain.value);
 				setIsPlayingState(true);
 				return;
 			}
 
-			if (sourceNodeRef.current && !isPlayingRef.current) {
-				safeStopAndDisconnectSource(sourceNodeRef.current);
-				sourceNodeRef.current = null;
-			}
+			cleanupStaleSource(sourceNodeRef, isPlayingRef.current);
 
 			try {
-				console.log('[EdgeBgm] Starting background music in isolated WebAudio graph...');
-				const source = ctx.createBufferSource();
-				source.buffer = buffer;
-				source.loop = true;
-
-				const gain = ctx.createGain();
-				const now = ctx.currentTime;
-				if (typeof gain.gain.cancelScheduledValues === 'function') {
-					gain.gain.cancelScheduledValues(now);
-				}
-				if (typeof gain.gain.setValueAtTime === 'function') {
-					gain.gain.setValueAtTime(0, now);
-				}
-				if (typeof gain.gain.linearRampToValueAtTime === 'function') {
-					gain.gain.linearRampToValueAtTime(safeVolume, now + fadeInMs / 1000);
-				} else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
-					gain.gain.exponentialRampToValueAtTime(Math.max(safeVolume, 0.0001), now + fadeInMs / 1000);
-				}
-
 				const lowPass = getOrCreateLowPassFilterNode(ctx);
 				const compressorOrDest = getOrCreateCompressorNode(ctx);
-
-				source.connect(gain);
-
-				if (lowPass !== ctx.destination) {
-					gain.connect(lowPass);
-					lowPass.connect(compressorOrDest);
-				} else {
-					gain.connect(compressorOrDest);
-				}
-
-				source.start(0);
+				const { source, gain } = createBgmSourceGraph(ctx, buffer, safeVolume, fadeInMs, lowPass, compressorOrDest);
 
 				sourceNodeRef.current = source;
 				gainNodeRef.current = gain;
@@ -351,7 +276,6 @@ export function useEdgeReadAloudBgm({
 					fadeOutTimerRef.current = null;
 				}
 
-				console.log('[EdgeBgm] Immediately stopping isolated background music...');
 				const ctx = audioCtxRef.current;
 				const gain = gainNodeRef.current;
 				const source = sourceNodeRef.current;
@@ -369,7 +293,6 @@ export function useEdgeReadAloudBgm({
 			}
 
 			const performFadeAndStop = () => {
-				console.log('[EdgeBgm] Stopping isolated background music...');
 				const ctx = audioCtxRef.current;
 				const gain = gainNodeRef.current;
 				const source = sourceNodeRef.current;
@@ -463,21 +386,23 @@ export function useEdgeReadAloudBgm({
 		const checkDomState = () => {
 			const hasInactive = Boolean(document.querySelector(EDGE_READ_ALOUD_INACTIVE_SELECTOR));
 			const isActive = isEdgeReadAloudActive();
+			const hasBgmActive = isBgmActive(isPlayingRef.current, sourceNodeRef.current);
 
 			if (hasInactive) {
-				if (isPlayingRef.current || sourceNodeRef.current) stopBgm(true);
+				if (hasBgmActive) stopBgm(true);
 				wasActive = isActive;
 				return;
 			}
 
 			if (isActive) {
-				const canResume = isManualPlayingRef.current && !isPlayingRef.current && !isUserMutedRef.current && !isBgmPreviewingRef.current;
-				if (canResume) void startBgmRef.current?.(false);
+				if (canResumeBgm(isManualPlayingRef.current, isPlayingRef.current, isUserMutedRef.current, isBgmPreviewingRef.current)) {
+					void startBgmRef.current?.(false);
+				}
 				wasActive = isActive;
 				return;
 			}
 
-			if (wasActive && (isPlayingRef.current || sourceNodeRef.current) && !isManualPlayingRef.current) {
+			if (wasActive && hasBgmActive && !isManualPlayingRef.current) {
 				stopBgm(true);
 			}
 			wasActive = isActive;
@@ -489,7 +414,7 @@ export function useEdgeReadAloudBgm({
 		observer.observe(document.body, {
 			childList: true,
 			subtree: true,
-			attributes: true
+			attributes: true,
 		});
 
 		return () => {
@@ -551,7 +476,7 @@ export function useEdgeReadAloudBgm({
 				node.connect(ctx.destination);
 				node.start(0);
 			} catch (err) {
-				console.debug('[EdgeBgm] Dummy audio buffer error ignored:', err);
+				console.warn('[EdgeBgm] Dummy audio buffer error ignored:', err);
 			}
 		};
 
@@ -579,48 +504,33 @@ export function useEdgeReadAloudBgm({
 
 		const loadAudio = async () => {
 			try {
-				const resolvedUrl = getAssetUrl(audioUrl);
-				const response = await fetch(resolvedUrl, { signal: controller.signal });
-				if (response.ok === false) throw new Error(`HTTP error ${response.status}`);
-				const contentType = response.headers?.get ? response.headers.get('content-type') || '' : '';
-				if (contentType.includes('text/html')) {
-					throw new Error('Received HTML instead of audio');
-				}
-				const arrayBuffer = await response.arrayBuffer();
-
+				const arrayBuffer = await fetchAudioArrayBuffer(audioUrl, controller.signal);
 				const ctx = getOrCreateAudioContext();
 				if (!ctx) return;
 
-				const decoded = await new Promise<AudioBuffer>((resolve, reject) => {
-					const promise = ctx.decodeAudioData(arrayBuffer, resolve, reject);
-					if (promise && typeof promise.then === 'function') {
-						promise.then(resolve).catch(reject);
-					}
-				});
+				const decoded = await decodeAudioDataSafe(ctx, arrayBuffer);
 
-				if (!isMounted && ctx.state !== 'closed') {
-					void ctx.close();
+				if (!isMounted) {
+					if (ctx.state !== 'closed') void ctx.close();
 					return;
 				}
-				if (!isMounted) return;
-
-				if (!decoded || decoded.duration <= 0.1) return;
 
 				audioBufferRef.current = decoded;
-				const shouldRestart = isPlayingRef.current && sourceNodeRef.current && audioCtxRef.current;
-				if (shouldRestart) {
-					safeStopAndDisconnectSource(sourceNodeRef.current);
-					sourceNodeRef.current = null;
-					isPlayingRef.current = false;
-					void startBgmRef.current?.(true);
-				}
-
-				if (!isUserMutedRef.current && isManualPlayingRef.current) {
-					void startBgm(true);
-				}
-				if (!isUserMutedRef.current && !isManualPlayingRef.current && isTTSActiveRef.current && !isPlayingRef.current) {
-					void startBgm(false);
-				}
+				handleAudioLoaded(
+					decoded,
+					isPlayingRef.current,
+					sourceNodeRef.current,
+					isUserMutedRef.current,
+					isManualPlayingRef.current,
+					isTTSActiveRef.current,
+					(manual) => void startBgm(manual),
+					() => {
+						safeStopAndDisconnectSource(sourceNodeRef.current);
+						sourceNodeRef.current = null;
+						isPlayingRef.current = false;
+						void startBgmRef.current?.(true);
+					}
+				);
 			} catch (err: unknown) {
 				const errorObj = err as { name?: string };
 				if (errorObj?.name === 'AbortError') return;
@@ -628,9 +538,8 @@ export function useEdgeReadAloudBgm({
 				if (!isMounted) return;
 
 				const ctx = getOrCreateAudioContext();
-				const fallbackBuffer = ctx ? createSynthesizedAmbientBuffer(ctx) : null;
-				if (fallbackBuffer) {
-					audioBufferRef.current = fallbackBuffer;
+				if (ctx) {
+					audioBufferRef.current = createSynthesizedAmbientBuffer(ctx);
 				}
 			}
 		};
@@ -669,6 +578,162 @@ export function useEdgeReadAloudBgm({
 		isPlaying: isPlayingState,
 		toggleBgm,
 		startBgm,
-		stopBgm
+		stopBgm,
 	};
+}
+
+function initCompressorParams(compressor: DynamicsCompressorNode, time: number): void {
+	try {
+		const c = compressor as unknown as Record<string, { setValueAtTime: (v: number, t: number) => void }>;
+		c.threshold.setValueAtTime(-24, time);
+		c.knee.setValueAtTime(30, time);
+		c.ratio.setValueAtTime(12, time);
+		c.attack.setValueAtTime(0.003, time);
+		c.release.setValueAtTime(0.25, time);
+	} catch {
+		// Mock environment fallback
+	}
+}
+
+function clearBgmTimers(stopTimer: { current: NodeJS.Timeout | null }, fadeOutTimer: { current: NodeJS.Timeout | null }): void {
+	if (stopTimer.current) {
+		clearTimeout(stopTimer.current);
+		stopTimer.current = null;
+	}
+	if (fadeOutTimer.current) {
+		clearTimeout(fadeOutTimer.current);
+		fadeOutTimer.current = null;
+	}
+}
+
+function cleanupStaleSource(sourceRef: { current: AudioBufferSourceNode | null }, isPlaying: boolean): void {
+	if (sourceRef.current && !isPlaying) {
+		safeStopAndDisconnectSource(sourceRef.current);
+		sourceRef.current = null;
+	}
+}
+
+function shouldAbortStart(manual: boolean, isUserMutedRef: { current: boolean }, isManualPlayingRef: { current: boolean }): boolean {
+	if (manual) {
+		isUserMutedRef.current = false;
+		isManualPlayingRef.current = true;
+		return false;
+	}
+	return isUserMutedRef.current;
+}
+
+async function resumeAudioContext(ctx: AudioContext, onRunning: () => void): Promise<void> {
+	if (ctx.state !== 'suspended') return;
+	try {
+		await ctx.resume();
+		if ((ctx.state as string) === 'running') {
+			onRunning();
+		}
+	} catch (err) {
+		console.warn('[EdgeBgm] Could not resume isolated AudioContext:', err);
+	}
+}
+
+async function getOrGenerateBgmBuffer(ctx: AudioContext, currentBuffer: AudioBuffer | null): Promise<AudioBuffer> {
+	if (currentBuffer && currentBuffer.duration >= 0.1) return currentBuffer;
+	const buffer = await generateBgmBufferInWorker(ctx);
+	return buffer || createSynthesizedAmbientBuffer(ctx);
+}
+
+function rampGain(gain: GainNode, targetVolume: number, startTime: number, durationSeconds: number, startVolume?: number): void {
+	if (typeof gain.gain.cancelScheduledValues === 'function') {
+		gain.gain.cancelScheduledValues(startTime);
+	}
+	if (startVolume !== undefined && typeof gain.gain.setValueAtTime === 'function') {
+		gain.gain.setValueAtTime(startVolume, startTime);
+	}
+	if (typeof gain.gain.linearRampToValueAtTime === 'function') {
+		gain.gain.linearRampToValueAtTime(targetVolume, startTime + durationSeconds);
+	} else if (typeof gain.gain.exponentialRampToValueAtTime === 'function') {
+		gain.gain.exponentialRampToValueAtTime(Math.max(targetVolume, 0.0001), startTime + durationSeconds);
+	}
+}
+
+function createBgmSourceGraph(
+	ctx: AudioContext,
+	buffer: AudioBuffer,
+	safeVolume: number,
+	fadeInMs: number,
+	lowPass: AudioNode,
+	compressorOrDest: AudioNode
+): { source: AudioBufferSourceNode; gain: GainNode } {
+	const source = ctx.createBufferSource();
+	source.buffer = buffer;
+	source.loop = true;
+
+	const gain = ctx.createGain();
+	rampGain(gain, safeVolume, ctx.currentTime, fadeInMs / 1000, 0);
+
+	source.connect(gain);
+	if (lowPass === ctx.destination) {
+		gain.connect(compressorOrDest);
+	} else {
+		gain.connect(lowPass);
+		lowPass.connect(compressorOrDest);
+	}
+
+	source.start(0);
+	return { source, gain };
+}
+
+function isBgmActive(isPlaying: boolean, source: AudioBufferSourceNode | null): boolean {
+	return isPlaying || Boolean(source);
+}
+
+function canResumeBgm(isManual: boolean, isPlaying: boolean, isMuted: boolean, isPreviewing: boolean): boolean {
+	return isManual && !isPlaying && !isMuted && !isPreviewing;
+}
+
+async function fetchAudioArrayBuffer(url: string, signal: AbortSignal): Promise<ArrayBuffer> {
+	const resolvedUrl = getAssetUrl(url);
+	const response = await fetch(resolvedUrl, { signal });
+	if (response.ok === false) throw new Error(`HTTP error ${response.status}`);
+	const contentType = response.headers?.get ? response.headers.get('content-type') || '' : '';
+	if (contentType.includes('text/html')) {
+		throw new Error('Received HTML instead of audio');
+	}
+	return response.arrayBuffer();
+}
+
+function decodeAudioDataSafe(ctx: AudioContext, arrayBuffer: ArrayBuffer): Promise<AudioBuffer> {
+	return new Promise<AudioBuffer>((resolve, reject) => {
+		const promise = ctx.decodeAudioData(arrayBuffer, resolve, reject);
+		if (promise && typeof promise.then === 'function') {
+			promise.then(resolve).catch(reject);
+		}
+	});
+}
+
+function handleAudioLoaded(
+	decoded: AudioBuffer,
+	isPlaying: boolean,
+	sourceNode: AudioBufferSourceNode | null,
+	isUserMuted: boolean,
+	isManualPlaying: boolean,
+	isTTSActive: boolean,
+	onStartBgm: (manual: boolean) => void,
+	onRestartPlaying: () => void
+): void {
+	if (decoded.duration <= 0.1) return;
+
+	if (isPlaying && sourceNode) {
+		onRestartPlaying();
+		return;
+	}
+
+	if (isUserMuted) return;
+
+	if (isManualPlaying) {
+		onStartBgm(true);
+		return;
+	}
+
+	if (isTTSActive && !isPlaying) {
+		onStartBgm(false);
+	}
 }

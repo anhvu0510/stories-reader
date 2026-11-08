@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { AppUpdateService, UpdateManifest, AppInfo, CURRENT_APP_VERSION } from '@/services/appUpdateService';
+
+import { AppUpdateService, type UpdateManifest, type AppInfo, CURRENT_APP_VERSION } from '@/services/appUpdateService';
 
 export interface UseAppUpdateOptions {
 	autoCheck?: boolean;
@@ -23,7 +24,7 @@ export function useAppUpdate(options: UseAppUpdateOptions = {}): UseAppUpdateRet
 	const [appInfo, setAppInfo] = useState<AppInfo>({
 		version: CURRENT_APP_VERSION,
 		isBuiltin: true,
-		native: CURRENT_APP_VERSION
+		native: CURRENT_APP_VERSION,
 	});
 	const [isChecking, setIsChecking] = useState(false);
 	const [isUpdating, setIsUpdating] = useState(false);
@@ -41,7 +42,7 @@ export function useAppUpdate(options: UseAppUpdateOptions = {}): UseAppUpdateRet
 			}
 			return info;
 		} catch (err) {
-			console.debug('[useAppUpdate] refreshAppInfo error:', err);
+			console.warn('[useAppUpdate] refreshAppInfo error:', err);
 			return null;
 		}
 	}, []);
@@ -130,7 +131,6 @@ export function useAppUpdate(options: UseAppUpdateOptions = {}): UseAppUpdateRet
 		statusMessage,
 		error,
 		checkForUpdate,
-		applyUpdate
+		applyUpdate,
 	};
 }
-

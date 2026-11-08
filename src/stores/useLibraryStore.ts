@@ -13,7 +13,15 @@ interface LibraryState {
 	savedSortOrder: SortOrderDirection;
 	savedScrollY: number;
 
-	setLibraryState: (page: number, tab: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI', search: string, tags?: string[], sortBy?: SortByField, sortOrder?: SortOrderDirection, scrollY?: number) => void;
+	setLibraryState: (
+		page: number,
+		tab: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI',
+		search: string,
+		tags?: string[],
+		sortBy?: SortByField,
+		sortOrder?: SortOrderDirection,
+		scrollY?: number
+	) => void;
 	setSort: (sortBy: SortByField, sortOrder: SortOrderDirection) => void;
 	setSavedScrollY: (scrollY: number) => void;
 	resetLibraryState: () => void;
@@ -35,17 +43,17 @@ export const useLibraryStore = create<LibraryState>()(
 					savedPage: page,
 					savedTab: tab,
 					savedSearch: search,
-					savedTags: tags !== undefined ? tags : state.savedTags,
-					savedSortBy: sortBy !== undefined ? sortBy : state.savedSortBy,
-					savedSortOrder: sortOrder !== undefined ? sortOrder : state.savedSortOrder,
-					savedScrollY: scrollY !== undefined ? scrollY : state.savedScrollY
+					savedTags: tags ?? state.savedTags,
+					savedSortBy: sortBy ?? state.savedSortBy,
+					savedSortOrder: sortOrder ?? state.savedSortOrder,
+					savedScrollY: scrollY ?? state.savedScrollY,
 				})),
 
 			setSort: (sortBy, sortOrder) =>
 				set({
 					savedSortBy: sortBy,
 					savedSortOrder: sortOrder,
-					savedPage: 1
+					savedPage: 1,
 				}),
 
 			setSavedScrollY: (scrollY) => set({ savedScrollY: scrollY }),
@@ -58,8 +66,8 @@ export const useLibraryStore = create<LibraryState>()(
 					savedTags: [],
 					savedSortBy: 'createdAt',
 					savedSortOrder: 'DESC',
-					savedScrollY: 0
-				})
+					savedScrollY: 0,
+				}),
 		}),
 		{
 			name: 'stories_library_state',
@@ -69,8 +77,8 @@ export const useLibraryStore = create<LibraryState>()(
 				savedSearch: state.savedSearch,
 				savedTags: state.savedTags,
 				savedSortBy: state.savedSortBy,
-				savedSortOrder: state.savedSortOrder
-			})
+				savedSortOrder: state.savedSortOrder,
+			}),
 		}
 	)
 );

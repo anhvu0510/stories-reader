@@ -1,11 +1,9 @@
-import React from 'react';
-import { motion, AnimatePresence, PanInfo } from 'motion/react';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { motion, AnimatePresence, type PanInfo } from 'motion/react';
+import React from 'react';
 
 import { cn } from '@/lib/utils';
-import { useToastStore, showToast as zustandShowToast } from '@/stores/useToastStore';
-
-export const showToast = zustandShowToast;
+import { useToastStore } from '@/stores/useToastStore';
 
 export function ToastContainer() {
 	const activeToast = useToastStore((state) => state.activeToast);
@@ -33,7 +31,7 @@ export function ToastContainer() {
 							damping: 26,
 							stiffness: 340,
 							mass: 0.75,
-							layout: { duration: 0.2, ease: 'easeOut' }
+							layout: { duration: 0.2, ease: 'easeOut' },
 						}}
 						drag="y"
 						dragConstraints={{ bottom: 0, top: -80 }}
@@ -43,9 +41,12 @@ export function ToastContainer() {
 						onClick={() => removeToast(activeToast.id)}
 						className={cn(
 							'relative px-4 py-2.5 rounded-2xl sm:rounded-full shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.25),0_16px_40px_rgba(0,0,0,0.5)] backdrop-blur-2xl backdrop-saturate-180 border-t border-t-white/35 border-x border-x-white/15 border-b border-b-white/10 max-w-[92vw] sm:max-w-lg w-max pointer-events-auto cursor-grab active:cursor-grabbing text-on-surface transform-gpu will-change-transform bg-[color-mix(in_srgb,var(--surface-dim)_55%,transparent)] select-none overflow-hidden',
-							activeToast.type === 'success' && 'shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.3),0_16px_40px_rgba(0,0,0,0.5),0_0_20px_rgba(16,185,129,0.15)]',
-							activeToast.type === 'error' && 'shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.3),0_16px_40px_rgba(0,0,0,0.5),0_0_20px_rgba(244,63,94,0.15)]',
-							activeToast.type === 'info' && 'shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.3),0_16px_40px_rgba(0,0,0,0.5),0_0_20px_rgba(245,158,11,0.15)]'
+							activeToast.type === 'success' &&
+								'shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.3),0_16px_40px_rgba(0,0,0,0.5),0_0_20px_rgba(16,185,129,0.15)]',
+							activeToast.type === 'error' &&
+								'shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.3),0_16px_40px_rgba(0,0,0,0.5),0_0_20px_rgba(244,63,94,0.15)]',
+							activeToast.type === 'info' &&
+								'shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.3),0_16px_40px_rgba(0,0,0,0.5),0_0_20px_rgba(245,158,11,0.15)]'
 						)}
 					>
 						<AnimatePresence mode="popLayout" initial={false}>
@@ -75,7 +76,9 @@ export function ToastContainer() {
 								)}
 
 								{/* Message Text */}
-								<span className="text-[13px] sm:text-sm font-bold leading-snug tracking-tight break-words text-left flex-1 text-on-surface drop-shadow-xs">{activeToast.message}</span>
+								<span className="text-[13px] sm:text-sm font-bold leading-snug tracking-tight break-words text-left flex-1 text-on-surface drop-shadow-xs">
+									{activeToast.message}
+								</span>
 							</motion.div>
 						</AnimatePresence>
 					</motion.div>

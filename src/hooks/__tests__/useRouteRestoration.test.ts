@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { useRouteRestoration, STORAGE_KEY_LAST_ROUTE } from '@/hooks/useRouteRestoration';
 
@@ -33,7 +33,7 @@ describe('useRouteRestoration hook', () => {
 			STORAGE_KEY_LAST_ROUTE,
 			JSON.stringify({
 				pathname: '/book/truyen-1/chapter/chap-10',
-				timestamp: now
+				timestamp: now,
 			})
 		);
 
@@ -51,7 +51,7 @@ describe('useRouteRestoration hook', () => {
 			STORAGE_KEY_LAST_ROUTE,
 			JSON.stringify({
 				pathname: '/book/old-book/chapter/c-1',
-				timestamp: eightDaysAgo
+				timestamp: eightDaysAgo,
 			})
 		);
 
@@ -69,7 +69,7 @@ describe('useRouteRestoration hook', () => {
 			STORAGE_KEY_LAST_ROUTE,
 			JSON.stringify({
 				pathname: '/book/b-1/chapter/c-1',
-				timestamp: now
+				timestamp: now,
 			})
 		);
 
@@ -86,10 +86,9 @@ describe('useRouteRestoration hook', () => {
 		const navigate = vi.fn();
 		let location = { pathname: '/book/b-1/chapter/c-1', search: '', hash: '' };
 
-		const { rerender } = renderHook(
-			({ loc }) => useRouteRestoration({ location: loc as any, navigate }),
-			{ initialProps: { loc: location } }
-		);
+		const { rerender } = renderHook(({ loc }) => useRouteRestoration({ location: loc as any, navigate }), {
+			initialProps: { loc: location },
+		});
 
 		// Người dùng chủ động back về thư viện
 		location = { pathname: '/', search: '', hash: '' };

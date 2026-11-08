@@ -9,8 +9,8 @@ import { useAppStore } from '@/stores/useAppStore';
 vi.mock('../../services/apiClient', () => ({
 	apiClient: {
 		get: vi.fn(),
-		post: vi.fn()
-	}
+		post: vi.fn(),
+	},
 }));
 
 vi.mock('../../lib/offlineDb', () => ({
@@ -20,8 +20,8 @@ vi.mock('../../lib/offlineDb', () => ({
 		getChapters: vi.fn(),
 		saveChapter: vi.fn().mockResolvedValue(undefined),
 		saveChapterContent: vi.fn().mockResolvedValue(undefined),
-		getReplacements: vi.fn().mockResolvedValue([])
-	}
+		getReplacements: vi.fn().mockResolvedValue([]),
+	},
 }));
 
 describe('ChapterRepository - Fresh API Fetching & No-Cache (TDD)', () => {
@@ -39,9 +39,9 @@ describe('ChapterRepository - Fresh API Fetching & No-Cache (TDD)', () => {
 						chapterNumber: 150,
 						title: 'Chương 150: Phi Thăng',
 						state: 'SUCCEEDED',
-						bookId: 'book-1'
-					}
-				]
+						bookId: 'book-1',
+					},
+				],
 			});
 
 			const result = await ChapterRepository.getLatestChapter('book-1', { forceFresh: true });
@@ -61,9 +61,9 @@ describe('ChapterRepository - Fresh API Fetching & No-Cache (TDD)', () => {
 			expect(calledOptions).toMatchObject({
 				headers: {
 					'Cache-Control': 'no-cache, no-store, must-revalidate',
-					Pragma: 'no-cache'
+					Pragma: 'no-cache',
 				},
-				cache: 'no-store'
+				cache: 'no-store',
 			});
 		});
 
@@ -85,22 +85,22 @@ describe('ChapterRepository - Fresh API Fetching & No-Cache (TDD)', () => {
 					chapterNumber: 10,
 					title: 'Chương 10',
 					bookId: 'book-1',
-					content: ['Nội dung mới nhất từ máy chủ']
+					content: ['Nội dung mới nhất từ máy chủ'],
 				},
 				chapters: [
 					{
 						chapterId: 'chap-10',
 						chapterNumber: 10,
 						title: 'Chương 10',
-						content: ['Nội dung mới nhất từ máy chủ']
-					}
-				]
+						content: ['Nội dung mới nhất từ máy chủ'],
+					},
+				],
 			};
 
 			vi.mocked(apiClient.get).mockResolvedValueOnce(mockApiContent);
 
 			const result = await ChapterRepository.getChapterContent('chap-10', 1, false, '', 1, {
-				forceFresh: true
+				forceFresh: true,
 			});
 
 			expect(result).toEqual(mockApiContent);
@@ -112,9 +112,9 @@ describe('ChapterRepository - Fresh API Fetching & No-Cache (TDD)', () => {
 			expect(calledOptions).toMatchObject({
 				headers: {
 					'Cache-Control': 'no-cache, no-store, must-revalidate',
-					Pragma: 'no-cache'
+					Pragma: 'no-cache',
 				},
-				cache: 'no-store'
+				cache: 'no-store',
 			});
 
 			// Synchronizes fresh content back to offlineDb
@@ -127,7 +127,7 @@ describe('ChapterRepository - Fresh API Fetching & No-Cache (TDD)', () => {
 
 			await expect(
 				ChapterRepository.getChapterContent('chap-10', 1, false, '', 1, {
-					forceFresh: true
+					forceFresh: true,
 				})
 			).rejects.toThrow('Server 500 error');
 		});

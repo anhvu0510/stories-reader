@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
 
 import { TranslationSheet } from '@/components/TranslationSheet';
 import { AIRepository } from '@/repositories/AIRepository';
@@ -13,27 +13,27 @@ vi.mock('../../repositories/ChapterRepository', () => ({
 		getChapters: vi.fn().mockResolvedValue({
 			chapters: [
 				{ chapterId: 'chap-10', chapterNumber: 10, title: 'Chương 10', state: 'SUCCEEDED' },
-				{ chapterId: 'chap-15', chapterNumber: 15, title: 'Chương 15', state: 'PENDING' }
-			]
+				{ chapterId: 'chap-15', chapterNumber: 15, title: 'Chương 15', state: 'PENDING' },
+			],
 		}),
 		getPoolStatus: vi.fn().mockResolvedValue(null),
-		translate: vi.fn().mockResolvedValue(true)
-	}
+		translate: vi.fn().mockResolvedValue(true),
+	},
 }));
 
 vi.mock('../../repositories/AIRepository', () => ({
 	AIRepository: {
 		getQuotas: vi.fn().mockResolvedValue({ quotas: [], currentConfig: {} }),
 		detectProperNouns: vi.fn().mockResolvedValue({ success: true }),
-		translateChineseTitles: vi.fn().mockResolvedValue({ success: true })
-	}
+		translateChineseTitles: vi.fn().mockResolvedValue({ success: true }),
+	},
 }));
 
 vi.mock('../../repositories/SettingsRepository', () => ({
 	SettingsRepository: {
 		getSettings: vi.fn().mockResolvedValue(null),
-		updateSettings: vi.fn().mockResolvedValue(null)
-	}
+		updateSettings: vi.fn().mockResolvedValue(null),
+	},
 }));
 
 describe('TranslationSheet Requirements', () => {
@@ -41,7 +41,7 @@ describe('TranslationSheet Requirements', () => {
 		onClose: vi.fn(),
 		currentBookId: 'book-123',
 		currentChapterId: 'chap-15',
-		currentChapterNumber: 15
+		currentChapterNumber: 15,
 	};
 
 	beforeEach(() => {
@@ -149,7 +149,9 @@ describe('TranslationSheet Requirements', () => {
 	it('triggers Sync translate with correct mode on click', async () => {
 		const { fireEvent } = await import('@testing-library/react');
 		const onSuccessMock = vi.fn();
-		render(<TranslationSheet {...defaultProps} initialSelectedChapters={['chap-15']} onSuccess={onSuccessMock} currentChapterNumber={15} />);
+		render(
+			<TranslationSheet {...defaultProps} initialSelectedChapters={['chap-15']} onSuccess={onSuccessMock} currentChapterNumber={15} />
+		);
 
 		const syncBtn = screen.getByRole('button', { name: /^Dịch \(/i });
 		expect(syncBtn).toBeDefined();
@@ -160,7 +162,7 @@ describe('TranslationSheet Requirements', () => {
 			expect(ChapterRepository.translate).toHaveBeenCalledWith(
 				expect.objectContaining({
 					mode: 'current',
-					bookId: 'book-123'
+					bookId: 'book-123',
 				})
 			);
 			expect(onSuccessMock).toHaveBeenCalled();
@@ -180,7 +182,7 @@ describe('TranslationSheet Requirements', () => {
 			expect(ChapterRepository.translate).toHaveBeenCalledWith(
 				expect.objectContaining({
 					mode: 'batch_chapter',
-					bookId: 'book-123'
+					bookId: 'book-123',
 				})
 			);
 		});
@@ -191,7 +193,7 @@ describe('TranslationSheet Requirements', () => {
 		render(<TranslationSheet {...defaultProps} />);
 
 		const detectBtn = screen.getByRole('button', {
-			name: /Phát hiện xưng hô \/ danh từ riêng/i
+			name: /Phát hiện xưng hô \/ danh từ riêng/i,
 		});
 		expect(detectBtn).toBeDefined();
 
@@ -200,7 +202,7 @@ describe('TranslationSheet Requirements', () => {
 		await waitFor(() => {
 			expect(AIRepository.detectProperNouns).toHaveBeenCalledWith(
 				expect.objectContaining({
-					bookId: 'book-123'
+					bookId: 'book-123',
 				})
 			);
 		});
@@ -211,7 +213,7 @@ describe('TranslationSheet Requirements', () => {
 		render(<TranslationSheet {...defaultProps} />);
 
 		const translateTitlesBtn = screen.getByRole('button', {
-			name: /Dịch tiêu đề tiếng Trung/i
+			name: /Dịch tiêu đề tiếng Trung/i,
 		});
 		expect(translateTitlesBtn).toBeDefined();
 
@@ -220,7 +222,7 @@ describe('TranslationSheet Requirements', () => {
 		await waitFor(() => {
 			expect(AIRepository.translateChineseTitles).toHaveBeenCalledWith(
 				expect.objectContaining({
-					bookId: 'book-123'
+					bookId: 'book-123',
 				})
 			);
 		});

@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { AppUpdateService, isNewerVersion } from '../appUpdateService';
 
 // Mock @capacitor/core
 vi.mock('@capacitor/core', () => ({
 	Capacitor: {
 		isNativePlatform: vi.fn(),
-		getPlatform: vi.fn()
-	}
+		getPlatform: vi.fn(),
+	},
 }));
 
 // Mock @capgo/capacitor-updater
@@ -18,10 +19,10 @@ vi.mock('@capgo/capacitor-updater', () => ({
 		set: vi.fn().mockResolvedValue(undefined),
 		addListener: vi.fn().mockImplementation((_event, callback) => {
 			return {
-				remove: vi.fn()
+				remove: vi.fn(),
 			};
-		})
-	}
+		}),
+	},
 }));
 
 describe('AppUpdateService Unit Tests (TDD)', () => {
@@ -73,12 +74,12 @@ describe('AppUpdateService Unit Tests (TDD)', () => {
 			const mockResponse = {
 				version: '1.0.1',
 				bundleUrl: 'https://mock.api/bundle.zip',
-				releaseNotes: 'Performance improvements'
+				releaseNotes: 'Performance improvements',
 			};
 
 			globalThis.fetch = vi.fn().mockResolvedValue({
 				ok: true,
-				json: () => Promise.resolve(mockResponse)
+				json: () => Promise.resolve(mockResponse),
 			} as unknown as Response);
 
 			const manifest = await AppUpdateService.checkForUpdate('https://mock.api/version', '1.0.0');
@@ -103,7 +104,7 @@ describe('AppUpdateService Unit Tests (TDD)', () => {
 			const manifest = {
 				version: '1.0.1',
 				bundleUrl: 'https://mock.api/bundle.zip',
-				checksum: 'mock-sha256'
+				checksum: 'mock-sha256',
 			};
 
 			const onProgress = vi.fn();
@@ -113,10 +114,10 @@ describe('AppUpdateService Unit Tests (TDD)', () => {
 			expect(CapacitorUpdater.download).toHaveBeenCalledWith({
 				url: 'https://mock.api/bundle.zip',
 				version: '1.0.1',
-				checksum: 'mock-sha256'
+				checksum: 'mock-sha256',
 			});
 			expect(CapacitorUpdater.set).toHaveBeenCalledWith({
-				version: '1.0.1'
+				version: '1.0.1',
 			});
 		});
 	});

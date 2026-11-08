@@ -20,27 +20,40 @@ interface SavedRouteState {
 	timestamp: number;
 }
 
+function canRestoreRoute(enabled: boolean, hasRestored: boolean): boolean {
+	if (!enabled || hasRestored) return false;
+	return typeof window !== 'undefined';
+}
+
+function readRestorableTarget(): string | null {
+	const raw = localStorage.getItem(STORAGE_KEY_LAST_ROUTE);
+	if (!raw) return null;
+
+	const saved: SavedRouteState = JSON.parse(raw);
+	const isNotExpired = saved.timestamp && Date.now() - saved.timestamp < ROUTE_MAX_AGE_MS;
+	const isValidRoute = saved.pathname && saved.pathname !== '/';
+	if (!isValidRoute || !isNotExpired) return null;
+
+	return `${saved.pathname}${saved.search || ''}${saved.hash || ''}`;
+}
+
 /**
  * Hook quản lý cơ chế khôi phục trạng thái điều hướng khi App bị Kill hoặc Sleep:
- * 
+ *
  * Nghiệp vụ cốt lõi:
  * 1. Tự động lưu vết route hoạt động gần nhất vào localStorage mỗi khi chuyển trang.
  * 2. Lắng nghe sự kiện visibilitychange và pagehide: snapshot ngay route khi app chuẩn bị vào background/sleep.
  * 3. Khi mở lại App (Cold Start): nếu người dùng mở từ gốc ('/'), tự động khôi phục về trang đọc truyện dang dở.
  * 4. Nếu người dùng chủ động bấm quay về Thư viện ('/'), hệ thống tôn trọng ý định và không tự ý nhảy lại vào truyện.
  */
-export function useRouteRestoration({
-	location,
-	navigate,
-	enabled = true
-}: UseRouteRestorationOptions) {
+export function useRouteRestoration({ location, navigate, enabled = true }: UseRouteRestorationOptions) {
 	const hasRestoredRef = useRef(false);
 	const currentLocationRef = useRef(location);
 	currentLocationRef.current = location;
 
 	// 1. Phục hồi route gần nhất lúc khởi động app (chỉ chạy 1 lần duy nhất)
 	useEffect(() => {
-		if (!enabled || hasRestoredRef.current || typeof window === 'undefined') return;
+		if (!canRestoreRoute(enabled, hasRestoredRef.current)) return;
 		hasRestoredRef.current = true;
 
 		// Chỉ khôi phục nếu app đang mở tại đường dẫn mặc định "/" (tránh ghi đè deep link của người dùng)
@@ -50,17 +63,8 @@ export function useRouteRestoration({
 		}
 
 		try {
-			const raw = localStorage.getItem(STORAGE_KEY_LAST_ROUTE);
-			if (!raw) return;
-
-			const saved: SavedRouteState = JSON.parse(raw);
-			const isNotExpired = saved.timestamp && (Date.now() - saved.timestamp < ROUTE_MAX_AGE_MS);
-			const isValidRoute = saved.pathname && saved.pathname !== '/';
-
-			if (isValidRoute && isNotExpired) {
-				const fullTarget = `${saved.pathname}${saved.search || ''}${saved.hash || ''}`;
-				navigate(fullTarget, { replace: true });
-			}
+			const target = readRestorableTarget();
+			if (target) navigate(target, { replace: true });
 		} catch (err) {
 			console.warn('[useRouteRestoration] Lỗi khi khôi phục trang gần nhất:', err);
 		}
@@ -75,7 +79,7 @@ export function useRouteRestoration({
 				pathname: location.pathname,
 				search: location.search || '',
 				hash: location.hash || '',
-				timestamp: Date.now()
+				timestamp: Date.now(),
 			};
 			localStorage.setItem(STORAGE_KEY_LAST_ROUTE, JSON.stringify(routeState));
 		} catch (err) {
@@ -95,7 +99,7 @@ export function useRouteRestoration({
 					pathname: loc.pathname,
 					search: loc.search || '',
 					hash: loc.hash || '',
-					timestamp: Date.now()
+					timestamp: Date.now(),
 				};
 				localStorage.setItem(STORAGE_KEY_LAST_ROUTE, JSON.stringify(routeState));
 			} catch (err) {

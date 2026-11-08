@@ -1,27 +1,27 @@
 // @vitest-environment jsdom
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ReaderScreen } from '@/features/reader/ReaderScreen';
-import { ChapterRepository } from '@/repositories/ChapterRepository';
 import { BookRepository } from '@/repositories/BookRepository';
+import { ChapterRepository } from '@/repositories/ChapterRepository';
 import { useAppStore } from '@/stores/useAppStore';
 
 vi.mock('../../../repositories/ChapterRepository', () => ({
 	ChapterRepository: {
 		getChapterContent: vi.fn(),
 		getChapters: vi.fn().mockResolvedValue({ chapters: [], pagination: {} }),
-		getLatestChapter: vi.fn().mockResolvedValue(null)
-	}
+		getLatestChapter: vi.fn().mockResolvedValue(null),
+	},
 }));
 
 vi.mock('../../../repositories/BookRepository', () => ({
 	BookRepository: {
 		getBookDetail: vi.fn().mockResolvedValue({ book: { title: 'Test Book' } }),
-		updateLastReadChapter: vi.fn().mockResolvedValue({})
-	}
+		updateLastReadChapter: vi.fn().mockResolvedValue({}),
+	},
 }));
 
 vi.mock('@/hooks/useEdgeReadAloudBgm', () => ({
@@ -30,8 +30,8 @@ vi.mock('@/hooks/useEdgeReadAloudBgm', () => ({
 		isBgmPlaying: false,
 		toggleBgm: vi.fn(),
 		setBgmVolume: vi.fn(),
-		bgmVolume: 0.3
-	})
+		bgmVolume: 0.3,
+	}),
 }));
 
 describe('ReaderScreen - Swipe Skeleton Loading Integration', () => {
@@ -75,12 +75,12 @@ describe('ReaderScreen - Swipe Skeleton Loading Integration', () => {
 					chapterNumber: 1,
 					title: 'Chương 1: Mở Đầu Hùng Tráng',
 					bookName: 'Test Book',
-					content: ['<p>Nội dung chương 1 đầy đủ</p>']
+					content: ['<p>Nội dung chương 1 đầy đủ</p>'],
 				},
 				navigation: {
 					prev: null,
-					next: { chapterId: 'chap-2', chapterNumber: 2, title: 'Chương 2' }
-				}
+					next: { chapterId: 'chap-2', chapterNumber: 2, title: 'Chương 2' },
+				},
 			});
 		});
 

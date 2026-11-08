@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { useReadingProgress, resetReadingProgressModuleState } from '@/hooks/useReadingProgress';
 
@@ -26,7 +26,7 @@ describe('useReadingProgress Hook', () => {
 		Object.defineProperty(window, 'scrollY', {
 			value: 1250,
 			writable: true,
-			configurable: true
+			configurable: true,
 		});
 
 		// Trigger visibilitychange hidden
@@ -34,7 +34,7 @@ describe('useReadingProgress Hook', () => {
 			Object.defineProperty(document, 'visibilityState', {
 				value: 'hidden',
 				writable: true,
-				configurable: true
+				configurable: true,
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 		});
@@ -53,7 +53,7 @@ describe('useReadingProgress Hook', () => {
 		localStorage.setItem(`reading_progress_${bookId}_chap_1`, JSON.stringify({ chapterId: 'chap_1', scrollY: 800, updatedAt: Date.now() }));
 
 		const { rerender } = renderHook(({ cId }) => useReadingProgress(bookId, cId, true), {
-			initialProps: { cId: 'chap_1' }
+			initialProps: { cId: 'chap_1' },
 		});
 
 		// Change chapter to chap_2
@@ -85,7 +85,7 @@ describe('useReadingProgress Hook', () => {
 				JSON.stringify({
 					chapterId: 'chap_1',
 					scrollY: 100,
-					updatedAt: Date.now() - (25 - i) * 1000
+					updatedAt: Date.now() - (25 - i) * 1000,
 				})
 			);
 		}
@@ -97,7 +97,7 @@ describe('useReadingProgress Hook', () => {
 			Object.defineProperty(document, 'visibilityState', {
 				value: 'hidden',
 				writable: true,
-				configurable: true
+				configurable: true,
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 		});
@@ -134,7 +134,7 @@ describe('useReadingProgress Hook', () => {
 				activeChapterId: 'chap_3',
 				paragraphIndex: 5,
 				scrollY: 2000,
-				updatedAt: Date.now()
+				updatedAt: Date.now(),
 			})
 		);
 
@@ -153,7 +153,7 @@ describe('useReadingProgress Hook', () => {
 		Object.defineProperty(window, 'scrollY', {
 			value: 3500,
 			writable: true,
-			configurable: true
+			configurable: true,
 		});
 		const hook1 = renderHook(() => useReadingProgress(bookId, 'chap_1', true));
 
@@ -162,7 +162,7 @@ describe('useReadingProgress Hook', () => {
 			Object.defineProperty(document, 'visibilityState', {
 				value: 'hidden',
 				writable: true,
-				configurable: true
+				configurable: true,
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 		});
@@ -182,7 +182,7 @@ describe('useReadingProgress Hook', () => {
 		Object.defineProperty(window, 'scrollY', {
 			value: 2400,
 			writable: true,
-			configurable: true
+			configurable: true,
 		});
 		(window.scrollTo as any).mockClear();
 
@@ -200,7 +200,7 @@ describe('useReadingProgress Hook', () => {
 				chapterId: 'chap_done',
 				scrollY: 4000,
 				isCompleted: true,
-				updatedAt: Date.now()
+				updatedAt: Date.now(),
 			})
 		);
 
@@ -232,7 +232,7 @@ describe('useReadingProgress Hook', () => {
 			Object.defineProperty(document, 'visibilityState', {
 				value: 'hidden',
 				writable: true,
-				configurable: true
+				configurable: true,
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 		});
@@ -272,7 +272,7 @@ describe('useReadingProgress Hook', () => {
 			Object.defineProperty(document, 'visibilityState', {
 				value: 'hidden',
 				writable: true,
-				configurable: true
+				configurable: true,
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 		});
@@ -295,7 +295,7 @@ describe('useReadingProgress Hook', () => {
 				chapterId: 'chap_2',
 				scrollY: 5000,
 				isCompleted: false,
-				updatedAt: Date.now()
+				updatedAt: Date.now(),
 			})
 		);
 
@@ -304,7 +304,7 @@ describe('useReadingProgress Hook', () => {
 		(window.scrollTo as any).mockClear();
 
 		const { rerender } = renderHook(({ cId }) => useReadingProgress(bookId, cId, true), {
-			initialProps: { cId: 'chap_1' }
+			initialProps: { cId: 'chap_1' },
 		});
 
 		// Người dùng chuyển sang chap_2

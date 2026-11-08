@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { useEdgeReadAloudBgm, isEdgeReadAloudActive } from '@/hooks/useEdgeReadAloudBgm';
 
@@ -21,10 +21,10 @@ describe('useEdgeReadAloudBgm Hook', () => {
 				setValueAtTime: vi.fn(),
 				exponentialRampToValueAtTime: vi.fn(),
 				linearRampToValueAtTime: vi.fn(),
-				cancelScheduledValues: vi.fn()
+				cancelScheduledValues: vi.fn(),
 			},
 			connect: vi.fn(),
-			disconnect: vi.fn()
+			disconnect: vi.fn(),
 		};
 		mockCompressorNode = {
 			threshold: { setValueAtTime: vi.fn() },
@@ -33,7 +33,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 			attack: { setValueAtTime: vi.fn() },
 			release: { setValueAtTime: vi.fn() },
 			connect: vi.fn(),
-			disconnect: vi.fn()
+			disconnect: vi.fn(),
 		};
 		mockSourceNode = {
 			buffer: null,
@@ -41,7 +41,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 			connect: vi.fn(),
 			start: vi.fn(),
 			stop: vi.fn(),
-			disconnect: vi.fn()
+			disconnect: vi.fn(),
 		};
 		mockAudioContext = {
 			state: 'running',
@@ -52,7 +52,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 			createBuffer: vi.fn(() => mockAudioBuffer),
 			decodeAudioData: vi.fn().mockResolvedValue(mockAudioBuffer),
 			resume: vi.fn().mockResolvedValue(undefined),
-			close: vi.fn().mockResolvedValue(undefined)
+			close: vi.fn().mockResolvedValue(undefined),
 		};
 
 		const MockAudioCtx = vi.fn().mockImplementation(function () {
@@ -61,7 +61,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 		(window as any).AudioContext = MockAudioCtx;
 
 		global.fetch = vi.fn().mockResolvedValue({
-			arrayBuffer: () => Promise.resolve(new ArrayBuffer(8))
+			arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
 		} as Response);
 
 		document.body.innerHTML = '';
@@ -93,7 +93,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 		renderHook(() =>
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
-				volume: 0.15
+				volume: 0.15,
 			})
 		);
 
@@ -110,7 +110,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 				audioUrl: '/audio/test.mp3',
 				volume: 0.15,
 				fadeInMs: 100,
-				stopDelayMs: 500
+				stopDelayMs: 500,
 			})
 		);
 
@@ -135,7 +135,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 				audioUrl: '/audio/test.mp3',
 				volume: 0.15,
 				fadeOutMs: 200,
-				stopDelayMs: 500
+				stopDelayMs: 500,
 			})
 		);
 
@@ -162,7 +162,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 	it('QC-5: Dọn dẹp resource và AudioContext khi component unmount', async () => {
 		const { unmount } = renderHook(() =>
 			useEdgeReadAloudBgm({
-				audioUrl: '/audio/test.mp3'
+				audioUrl: '/audio/test.mp3',
 			})
 		);
 
@@ -193,7 +193,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 		const { result } = renderHook(() =>
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
-				volume: 0.15
+				volume: 0.15,
 			})
 		);
 
@@ -217,7 +217,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
 				volume: 0.15,
-				fadeOutMs: 100
+				fadeOutMs: 100,
 			})
 		);
 
@@ -248,7 +248,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
 				volume: 0.15,
-				stopDelayMs: 200
+				stopDelayMs: 200,
 			})
 		);
 
@@ -288,7 +288,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 		const { result } = renderHook(() =>
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
-				volume: 0.15
+				volume: 0.15,
 			})
 		);
 
@@ -307,7 +307,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
 				volume: 0.15,
-				fadeOutMs: 100
+				fadeOutMs: 100,
 			})
 		);
 
@@ -353,7 +353,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 		const { result } = renderHook(() =>
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
-				volume: 0.15
+				volume: 0.15,
 			})
 		);
 
@@ -377,7 +377,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 			(props) =>
 				useEdgeReadAloudBgm({
 					audioUrl: '/audio/test.mp3',
-					volume: props.volume
+					volume: props.volume,
 				}),
 			{ initialProps: { volume: 0.1 } }
 		);
@@ -405,7 +405,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 					audioUrl: '/audio/test.mp3',
 					volume: 0.15,
 					enabled: props.enabled,
-					fadeOutMs: 50
+					fadeOutMs: 50,
 				}),
 			{ initialProps: { enabled: true } }
 		);
@@ -433,7 +433,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 		const { result } = renderHook(() =>
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/missing.mp3',
-				volume: 0.15
+				volume: 0.15,
 			})
 		);
 
@@ -452,7 +452,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
 				volume: 0.15,
-				fadeOutMs: 100
+				fadeOutMs: 100,
 			})
 		);
 
@@ -502,7 +502,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 		const { result } = renderHook(() =>
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
-				volume: 0.15
+				volume: 0.15,
 			})
 		);
 
@@ -522,7 +522,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 					audioUrl: '/audio/test.mp3',
 					volume: 0.15,
 					isBgmPreviewing: props.isBgmPreviewing,
-					fadeOutMs: 50
+					fadeOutMs: 50,
 				}),
 			{ initialProps: { isBgmPreviewing: false } }
 		);
@@ -562,7 +562,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 		const { result } = renderHook(() =>
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
-				volume: 0.15
+				volume: 0.15,
 			})
 		);
 
@@ -570,8 +570,10 @@ describe('useEdgeReadAloudBgm Hook', () => {
 			await Promise.resolve();
 		});
 
-		// Giả lập người dùng bấm nút toggleBgm thủ công LẦN ĐẦU TIÊN (click 1)
-		// Lúc này click handler kích hoạt resume() mở khóa AudioContext sang 'running'
+		/*
+		 * Giả lập người dùng bấm nút toggleBgm thủ công LẦN ĐẦU TIÊN (click 1)
+		 * Lúc này click handler kích hoạt resume() mở khóa AudioContext sang 'running'
+		 */
 		mockAudioContext.resume = vi.fn().mockImplementation(() => {
 			mockAudioContext.state = 'running';
 			return Promise.resolve();
@@ -593,7 +595,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 		renderHook(() =>
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
-				volume: 0.15
+				volume: 0.15,
 			})
 		);
 
@@ -613,7 +615,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 		renderHook(() =>
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
-				volume: 0.15
+				volume: 0.15,
 			})
 		);
 
@@ -639,7 +641,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 		const { result } = renderHook(() =>
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
-				volume: 0.15
+				volume: 0.15,
 			})
 		);
 
@@ -659,7 +661,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 		const { result } = renderHook(() =>
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
-				volume: 0.15
+				volume: 0.15,
 			})
 		);
 
@@ -693,7 +695,7 @@ describe('useEdgeReadAloudBgm Hook', () => {
 		const { result } = renderHook(() =>
 			useEdgeReadAloudBgm({
 				audioUrl: '/audio/test.mp3',
-				volume: 0.15
+				volume: 0.15,
 			})
 		);
 

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { clearAllCaches } from '../cacheUtils';
 
 describe('clearAllCaches', () => {
@@ -27,8 +28,8 @@ describe('clearAllCaches', () => {
 			configurable: true,
 			value: {
 				keys: keysMock,
-				delete: deleteMock
-			}
+				delete: deleteMock,
+			},
 		});
 
 		await clearAllCaches();

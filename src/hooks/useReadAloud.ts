@@ -1,24 +1,27 @@
-import { resolveReadAloudStart } from './readAloud/readAloudStartPosition';
-import { createBrowserSpeechPlayback } from './readAloud/browserSpeechPlayback';
-import { createVieNeuPlayback } from './readAloud/vieNeuPlayback';
-import { useNativeReadingEvents } from './readAloud/useNativeReadingEvents';
-import { useReadAloudHighlight } from './readAloud/useReadAloudHighlight';
-import { useVieNeuReadingConfig } from './readAloud/useVieNeuReadingConfig';
-import { useReadAloudResume } from './readAloud/useReadAloudResume';
-import { useReadingWakeLock } from './readAloud/useReadingWakeLock';
-import { useReadAloudPlan } from './readAloud/useReadAloudPlan';
-import { useBrowserEdgePlayback } from './readAloud/useBrowserEdgePlayback';
 import { useState, useEffect, useRef, useMemo } from 'react';
 
 import { useTTSStore } from '@/features/reader/stores/useTTSStore';
 import { BackgroundAudioKeepAlive } from '@/services/backgroundAudioKeepAlive';
 import { EdgeTTSNativeStreamService } from '@/services/edgeTtsNativeStream';
-import { NativeTTSStreamService } from '@/services/nativeTtsStream';
 import { getGatewayBaseUrl } from '@/services/edgeTtsService';
-import { type GaplessTtsPlayer } from '@/services/gaplessTtsPlayer';
+import { type GaplessTtsPlayer, type SentenceChunk } from '@/services/gaplessTtsPlayer';
 import { NativeTTSService } from '@/services/nativeTtsService';
+import { NativeTTSStreamService } from '@/services/nativeTtsStream';
+import { type ReadAloudUtterance } from '@/services/readAloudUtterancePlan';
+import { type EdgeBufferMode } from '@/shared/types';
 import { useAppStore } from '@/stores/useAppStore';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+
+import { createBrowserSpeechPlayback } from './readAloud/browserSpeechPlayback';
+import { resolveReadAloudStart } from './readAloud/readAloudStartPosition';
+import { useBrowserEdgePlayback } from './readAloud/useBrowserEdgePlayback';
+import { useNativeReadingEvents } from './readAloud/useNativeReadingEvents';
+import { useReadAloudHighlight } from './readAloud/useReadAloudHighlight';
+import { useReadAloudPlan } from './readAloud/useReadAloudPlan';
+import { useReadAloudResume, type ReadAloudResumePosition } from './readAloud/useReadAloudResume';
+import { useReadingWakeLock } from './readAloud/useReadingWakeLock';
+import { useVieNeuReadingConfig } from './readAloud/useVieNeuReadingConfig';
+import { createVieNeuPlayback } from './readAloud/vieNeuPlayback';
 
 export { splitParagraphIntoSentences } from '@/services/gaplessTtsPlayer';
 export { useReadAloud as useNativeReadAloud };
@@ -31,7 +34,11 @@ export interface ReadAloudChapterContext {
 	chapterTitle?: string;
 }
 
-export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChapterContext = {}, paragraphContexts: ReadAloudChapterContext[] = []) {
+export function useReadAloud(
+	paragraphs: string[],
+	chapterContext: ReadAloudChapterContext = {},
+	paragraphContexts: ReadAloudChapterContext[] = []
+) {
 	const activeDomain = useAppStore((state) => state.activeDomain);
 	const voiceUri = useReaderConfigStore((state) => state.voiceUri);
 	const edgeVoiceUri = useReaderConfigStore((state) => state.edgeVoiceUri || 'vi-VN-HoaiMyNeural');
@@ -46,11 +53,13 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	const [isLoading, setIsLoading] = useState(false);
 	const [currentChunkIndex, setCurrentChunkIndex] = useState(-1);
 	const gaplessPlayerRef = useRef<GaplessTtsPlayer | null>(null);
-	const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
+	const synth = typeof window === 'undefined' ? null : window.speechSynthesis;
 	const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-	// Edge can share its native SpeechSynthesis queue across same-site tabs.
-	// Track whether this hook instance has actually put an utterance on that
-	// queue so an idle tab cannot cancel another tab's narration.
+	/*
+	 * Edge can share its native SpeechSynthesis queue across same-site tabs.
+	 * Track whether this hook instance has actually put an utterance on that
+	 * queue so an idle tab cannot cancel another tab's narration.
+	 */
 	const ownsBrowserSpeechQueueRef = useRef(false);
 	const backgroundAudioRef = useRef<BackgroundAudioKeepAlive | null>(null);
 	if (!backgroundAudioRef.current) {
@@ -74,13 +83,17 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	const charLengthRef = useRef(0);
 	const currentParagraphIndexRef = useRef(-1);
 
-	const { chunks, media3Utterances, getMedia3UtteranceIndex, segmentMetadata } = useReadAloudPlan(paragraphs, chapterContext, paragraphContexts);
+	const { chunks, media3Utterances, getMedia3UtteranceIndex, segmentMetadata } = useReadAloudPlan(
+		paragraphs,
+		chapterContext,
+		paragraphContexts
+	);
 
 	const { wordHighlighterRef, scrollFollowerRef, updateWordHighlight, updateMedia3Highlight } = useReadAloudHighlight(chunks, {
 		charIndexRef,
 		charLengthRef,
 		sourceOffsetRef,
-		currentParagraphIndexRef
+		currentParagraphIndexRef,
 	});
 
 	const activeParagraphIndex = currentChunkIndex >= 0 && chunks[currentChunkIndex] ? chunks[currentChunkIndex].pIdx : -1;
@@ -93,7 +106,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			isLoading,
 			currentParagraphIndex: activeParagraphIndex,
 			currentCharIndex: charIndexRef.current,
-			currentCharLength: charLengthRef.current
+			currentCharLength: charLengthRef.current,
 		});
 	}, [isPlaying, isPaused, isLoading, activeParagraphIndex]);
 
@@ -111,7 +124,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		clearResumePosition,
 		stopReading: (clearSaved) => stopReading(clearSaved),
 		updateWordHighlight: (index, offset, length) => updateWordHighlight(index, offset, length),
-		playChunkViaBrowser: (index, offset, sessionId) => playChunkViaBrowser(index, offset, sessionId)
+		playChunkViaBrowser: (index, offset, sessionId) => playChunkViaBrowser(index, offset, sessionId),
 	});
 
 	const stopAudioPlayer = (clearPrefetch = false) => {
@@ -142,16 +155,17 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		const wasActive = isPlayingRef.current || isPausedRef.current || isLoading;
 		const ownsBrowserSpeechQueue = ownsBrowserSpeechQueueRef.current;
 
-		if (!clearSaved && wasActive && currentChunkIdxRef.current < chunks.length) {
-			saveResumePosition(
-				currentChunkIdxRef.current,
-				charIndexRef.current > 0 ? charIndexRef.current : 0,
-				currentParagraphIndexRef.current >= 0 ? currentParagraphIndexRef.current : undefined,
-				charIndexRef.current >= 0 ? sourceOffsetRef.current : undefined
-			);
-		} else if (clearSaved) {
-			clearResumePosition();
-		}
+		handleStopResumePosition(
+			clearSaved,
+			wasActive,
+			currentChunkIdxRef.current,
+			chunks.length,
+			charIndexRef.current,
+			currentParagraphIndexRef.current,
+			sourceOffsetRef.current,
+			saveResumePosition,
+			clearResumePosition
+		);
 
 		releaseWakeLock();
 		setIsPlaying(false);
@@ -166,13 +180,13 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		wordHighlighterRef.current?.clear();
 		scrollFollowerRef.current?.cancel();
 
-		// Chỉ kích hoạt lệnh stop xuống các dịch vụ Native khi TTS thực sự đang phát hoặc dở dang,
-		// ngăn chặn hoàn toàn việc spam IPC và gửi RemoteLogger vô nghĩa khi người dùng chỉ lướt trang
-		if (wasActive && NativeTTSService.isNative()) void NativeTTSService.stop();
-		if (wasActive && NativeTTSStreamService.isAvailable()) void NativeTTSStreamService.stop();
-		if (wasActive && EdgeTTSNativeStreamService.isAvailable()) void EdgeTTSNativeStreamService.stop();
+		/*
+		 * Chỉ kích hoạt lệnh stop xuống các dịch vụ Native khi TTS thực sự đang phát hoặc dở dang,
+		 * ngăn chặn hoàn toàn việc spam IPC và gửi RemoteLogger vô nghĩa khi người dùng chỉ lướt trang
+		 */
+		stopNativeServices(wasActive);
 
-		if (ownsBrowserSpeechQueue && synth) synth.cancel();
+		cancelBrowserSpeech(synth, ownsBrowserSpeechQueue);
 		ownsBrowserSpeechQueueRef.current = false;
 		utteranceRef.current = null;
 
@@ -182,6 +196,9 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		charLengthRef.current = 0;
 		useTTSStore.setState({ currentCharIndex: -1, currentCharLength: 0, isLoading: false });
 	};
+
+	const stopReadingRef = useRef(stopReading);
+	stopReadingRef.current = stopReading;
 
 	const activeNativeStream = useMemo(() => {
 		if (ttsEngine === 'edge' && EdgeTTSNativeStreamService.isAvailable()) {
@@ -207,31 +224,33 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			charIndex: charIndexRef,
 			charLength: charLengthRef,
 			sourceOffset: sourceOffsetRef,
-			paragraph: currentParagraphIndexRef
+			paragraph: currentParagraphIndexRef,
 		},
 		visual: { wordHighlighterRef, scrollFollowerRef, updateWordHighlight, updateMedia3Highlight },
 		resume: { saveResumePosition, clearResumePosition },
 		state: { playing: setIsPlaying, paused: setIsPaused, loading: setIsLoading, chunk: setCurrentChunkIndex },
-		stop: (clearSaved) => stopReading(clearSaved)
+		stop: (clearSaved) => stopReading(clearSaved),
 	});
 
 	useEffect(() => {
-		stopReading();
+		stopReadingRef.current();
 	}, [paragraphs]);
 
 	useEffect(() => {
 		if (ttsEngine === 'vieneu') {
-			stopReading();
+			stopReadingRef.current();
 		}
 	}, [vieneuModel, voiceUri, ttsEngine, vieneuOptions]);
 
 	useEffect(() => {
 		const onVisibilityChange = () => {
-			// A tab becoming hidden also fires this event. Calling play() while the
-			// Edge audio is already playing can make Edge re-negotiate its media
-			// session in the background, which presents as a skipped read-aloud
-			// segment when the reader is revisited. Only recover playback after the
-			// page is visible again, and only if the browser actually paused it.
+			/*
+			 * A tab becoming hidden also fires this event. Calling play() while the
+			 * Edge audio is already playing can make Edge re-negotiate its media
+			 * session in the background, which presents as a skipped read-aloud
+			 * segment when the reader is revisited. Only recover playback after the
+			 * page is visible again, and only if the browser actually paused it.
+			 */
 			if (document.visibilityState !== 'visible') return;
 			if (!isPlayingRef.current || isPausedRef.current) return;
 
@@ -253,6 +272,13 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		};
 	}, [ttsEngine, synth, edgePlayback]);
 
+	const mediaActionsRef = useRef<{
+		startReading?: (targetIndex?: number, targetOffset?: number) => void;
+		pauseReading?: () => void;
+		nextSection?: () => void;
+		prevSection?: () => void;
+	}>({});
+
 	useEffect(() => {
 		if (activeNativeStream) return;
 		if (!isPlaying && !isPaused && !isLoading) return;
@@ -261,10 +287,10 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		const mediaSession = navigator.mediaSession;
 		mediaSession.metadata = new MediaMetadata({ title: 'VietNeu Read Aloud' });
 		const handlers: Array<[MediaSessionAction, MediaSessionActionHandler]> = [
-			['play', () => startReading()],
-			['pause', () => pauseReading()],
-			['nexttrack', () => nextSection()],
-			['previoustrack', () => prevSection()]
+			['play', () => mediaActionsRef.current.startReading?.()],
+			['pause', () => mediaActionsRef.current.pauseReading?.()],
+			['nexttrack', () => mediaActionsRef.current.nextSection?.()],
+			['previoustrack', () => mediaActionsRef.current.prevSection?.()],
 		];
 		handlers.forEach(([action, handler]) => {
 			try {
@@ -285,12 +311,14 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	}, [activeNativeStream, chunks.length, isLoading, isPaused, isPlaying]);
 
 	useEffect(() => {
+		const highlighter = wordHighlighterRef.current;
+		const follower = scrollFollowerRef.current;
 		return () => {
-			wordHighlighterRef.current?.dispose();
-			scrollFollowerRef.current?.cancel();
-			stopReading();
+			highlighter?.dispose();
+			follower?.cancel();
+			stopReadingRef.current();
 		};
-	}, []);
+	}, [scrollFollowerRef, wordHighlighterRef]);
 
 	const playChunkViaBrowser = createBrowserSpeechPlayback({
 		chunks,
@@ -312,7 +340,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		clearResumePosition,
 		stopReading: (clear) => stopReading(clear),
 		updateWordHighlight: (index, offset, length) => updateWordHighlight(index, offset, length),
-		playChunk: (index, offset) => playChunk(index, offset)
+		playChunk: (index, offset) => playChunk(index, offset),
 	});
 
 	const playChunkViaVieNeu = createVieNeuPlayback({
@@ -336,7 +364,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		vieneuServerUrl,
 		vieneuModel,
 		vieneuOptions,
-		getVieneuOptionsForSegment
+		getVieneuOptionsForSegment,
 	});
 
 	const resumeTransport = () => {
@@ -371,33 +399,37 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		isPlayingRef.current = true;
 		isPausedRef.current = false;
 		pendingNativeChunkRef.current = null;
+
 		const textChunks = chunks.map((c) => c.text);
 		const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.8;
 		const edgeBufferMode = useReaderConfigStore.getState().edgeBufferMode || 'file';
 		const isMedia3Mode = ttsEngine === 'edge' && edgeBufferMode === 'media3';
-		const sourceOffset = (chunks[targetIdx]?.startOffset ?? 0) + targetOff;
-		const nativeStartIndex = isMedia3Mode ? getMedia3UtteranceIndex(targetIdx, sourceOffset) : targetIdx;
+
+		const { nativeStartIndex, startCharIndex } = calculateNativePlaybackIndices(
+			chunks,
+			targetIdx,
+			targetOff,
+			isMedia3Mode,
+			media3Utterances,
+			getMedia3UtteranceIndex
+		);
+
 		media3UtteranceIndexRef.current = nativeStartIndex;
 		pendingMedia3UtteranceRef.current = null;
-		const startCharIndex = Math.max(0, sourceOffset - (media3Utterances[nativeStartIndex]?.sourceStart ?? 0));
-		const targetVoice = ttsEngine === 'edge' ? edgeVoiceUri || 'vi-VN-HoaiMyNeural' : voiceUri;
+		const targetVoice = resolveTargetVoice(ttsEngine, edgeVoiceUri, voiceUri);
+		const { bookTitle, chapterTitle } = resolveChapterMetadata(chapterContext);
 
-		const bookTitle = chapterContext.bookName || (chapterContext.bookId ? `Truyện #${chapterContext.bookId}` : 'Stories Reader');
-		const chapterTitle =
-			chapterContext.chapterTitle ||
-			(chapterContext.chapterNumber ? `Chương ${chapterContext.chapterNumber}` : chapterContext.chapterId ? `Chương ${chapterContext.chapterId}` : 'Chương đang đọc');
+		const common = {
+			chunks: textChunks,
+			startIndex: nativeStartIndex,
+			voice: targetVoice,
+			rate: currentSpeechRate,
+			gatewayUrl: activeDomain?.url || getGatewayBaseUrl(),
+			bookTitle,
+			chapterTitle,
+		};
 
-		const common = { chunks: textChunks, startIndex: nativeStartIndex, voice: targetVoice, rate: currentSpeechRate, gatewayUrl: activeDomain?.url || getGatewayBaseUrl(), bookTitle, chapterTitle };
-		const playback =
-			ttsEngine === 'edge'
-				? EdgeTTSNativeStreamService.startPlayback({
-						...common,
-						pitch: '+0Hz',
-						bufferMode: edgeBufferMode,
-						...(isMedia3Mode ? { utterances: media3Utterances, startCharIndex, sessionId: `edge-media3-${crypto.randomUUID()}` } : {})
-					})
-				: NativeTTSStreamService.startPlayback({ ...common, pitch: 1.0, startCharIndex: targetOff });
-		void playback;
+		executeNativeStreamPlayback(ttsEngine, common, edgeBufferMode, isMedia3Mode, media3Utterances, startCharIndex, targetOff);
 		return true;
 	};
 
@@ -405,7 +437,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		if (targetIndex === undefined && isPlayingRef.current && !isPausedRef.current) return;
 		scrollFollowerRef.current?.resumeFollowing();
 		void requestWakeLock();
-		if (isPaused && targetIndex === undefined) {
+
+		if (canQuickResume(isPaused, targetIndex)) {
 			setIsPaused(false);
 			setIsPlaying(true);
 			setIsLoading(false);
@@ -416,13 +449,9 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 			return;
 		}
 
-		const newSessionId = playSessionIdRef.current + 1;
-		playSessionIdRef.current = newSessionId;
-
+		playSessionIdRef.current += 1;
 		stopAudioPlayer();
-		if (ownsBrowserSpeechQueueRef.current && synth) synth.cancel();
-		ownsBrowserSpeechQueueRef.current = false;
-		utteranceRef.current = null;
+		resetSpeechSession(ownsBrowserSpeechQueueRef, synth, utteranceRef);
 
 		setIsLoading(true);
 		setIsPlaying(false);
@@ -431,21 +460,18 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		isPausedRef.current = false;
 		backgroundAudioRef.current?.start();
 
-		const position = resolveReadAloudStart(chunks, currentChunkIdxRef.current, targetIndex === undefined ? getResumePosition() : null, targetIndex, targetOffset);
-		let targetIdx = position.index;
-		let targetOff = position.offset;
-
-		if (targetIdx >= chunks.length) {
-			targetIdx = 0;
-			targetOff = 0;
-			clearResumePosition();
-		}
+		const savedPos = targetIndex === undefined ? getResumePosition() : null;
+		const { index: targetIdx, offset: targetOff } = getBoundedStartPosition(
+			chunks,
+			currentChunkIdxRef.current,
+			savedPos,
+			targetIndex,
+			targetOffset,
+			clearResumePosition
+		);
 		currentChunkIdxRef.current = targetIdx;
 
-		const targetChunk = chunks[targetIdx];
-		const readerContent = document.querySelector('#main-story-content');
-		const pNode = targetChunk ? readerContent?.querySelector<HTMLElement>(`article > div[data-paragraph-index="${targetChunk.pIdx}"]`) : null;
-		if (typeof pNode?.scrollIntoView === 'function') pNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		scrollToChunkParagraph(chunks[targetIdx]);
 
 		if (startNativePlayback(targetIdx, targetOff)) return;
 
@@ -455,14 +481,14 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	const pauseReading = () => {
 		scrollFollowerRef.current?.pauseFollowing();
 		releaseWakeLock();
-		if (currentChunkIdxRef.current < chunks.length) {
-			saveResumePosition(
-				currentChunkIdxRef.current,
-				charIndexRef.current > 0 ? charIndexRef.current : 0,
-				currentParagraphIndexRef.current >= 0 ? currentParagraphIndexRef.current : undefined,
-				charIndexRef.current >= 0 ? sourceOffsetRef.current : undefined
-			);
-		}
+		saveCurrentReadingPosition(
+			currentChunkIdxRef.current,
+			chunks.length,
+			charIndexRef.current,
+			currentParagraphIndexRef.current,
+			sourceOffsetRef.current,
+			saveResumePosition
+		);
 		setIsPlaying(false);
 		setIsPaused(true);
 		setIsLoading(false);
@@ -470,22 +496,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		isPausedRef.current = true;
 		backgroundAudioRef.current?.stop();
 
-		if (gaplessPlayerRef.current) {
-			void gaplessPlayerRef.current.pause();
-		}
-		if (activeNativeStream) {
-			void activeNativeStream.pause();
-			return;
-		}
-		if (ttsEngine === 'browser' && NativeTTSService.isNative()) {
-			void NativeTTSService.stop();
-			return;
-		}
-		if (ttsEngine === 'browser' && ownsBrowserSpeechQueueRef.current) {
-			synth?.pause();
-			return;
-		}
-		if (ttsEngine === 'edge') edgePlayback.pause();
+		pauseEngineTransport(ttsEngine, activeNativeStream, gaplessPlayerRef.current, ownsBrowserSpeechQueueRef.current, synth, edgePlayback);
 	};
 
 	const navigateMedia3Utterance = (direction: -1 | 1): boolean => {
@@ -536,7 +547,8 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		currentChunkIdxRef.current = index;
 		if (activeNativeStream) {
 			pendingNativeChunkRef.current = index;
-			const nativeIndex = ttsEngine === 'edge' && useReaderConfigStore.getState().edgeBufferMode === 'media3' ? getMedia3UtteranceIndex(index) : index;
+			const nativeIndex =
+				ttsEngine === 'edge' && useReaderConfigStore.getState().edgeBufferMode === 'media3' ? getMedia3UtteranceIndex(index) : index;
 			void activeNativeStream.seekToChunk(nativeIndex);
 			return;
 		}
@@ -550,6 +562,7 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 	};
 	const nextSection = () => navigateReading(1);
 	const prevSection = () => navigateReading(-1);
+	mediaActionsRef.current = { startReading, pauseReading, nextSection, prevSection };
 
 	const jumpToContent = (pIdx: number, textOffset: number = 0) => {
 		let targetIndex = chunks.findIndex((c) => c.pIdx === pIdx && textOffset >= c.startOffset && textOffset < c.startOffset + c.length);
@@ -580,6 +593,195 @@ export function useReadAloud(paragraphs: string[], chapterContext: ReadAloudChap
 		prevSection,
 		jumpToContent,
 		locateReadingLine,
-		clearResumePosition
+		clearResumePosition,
 	};
+}
+
+function handleStopResumePosition(
+	clearSaved: boolean,
+	wasActive: boolean,
+	currentChunkIdx: number,
+	totalChunks: number,
+	charIndex: number,
+	paragraphIndex: number,
+	sourceOffset: number,
+	saveResume: (chunk: number, char: number, pIdx?: number, srcOff?: number) => void,
+	clearResume: () => void
+): void {
+	if (clearSaved) {
+		clearResume();
+		return;
+	}
+	if (!wasActive || currentChunkIdx >= totalChunks) return;
+
+	const safeChar = Math.max(0, charIndex);
+	const safePIdx = paragraphIndex >= 0 ? paragraphIndex : undefined;
+	const safeSrcOff = charIndex >= 0 ? sourceOffset : undefined;
+	saveResume(currentChunkIdx, safeChar, safePIdx, safeSrcOff);
+}
+
+function stopNativeServices(wasActive: boolean): void {
+	if (!wasActive) return;
+	if (NativeTTSService.isNative()) void NativeTTSService.stop();
+	if (NativeTTSStreamService.isAvailable()) void NativeTTSStreamService.stop();
+	if (EdgeTTSNativeStreamService.isAvailable()) void EdgeTTSNativeStreamService.stop();
+}
+
+function cancelBrowserSpeech(synth: SpeechSynthesis | null, ownsQueue: boolean): void {
+	if (ownsQueue && synth) {
+		synth.cancel();
+	}
+}
+
+function calculateNativePlaybackIndices(
+	chunks: SentenceChunk[],
+	targetIdx: number,
+	targetOff: number,
+	isMedia3Mode: boolean,
+	media3Utterances: ReadAloudUtterance[],
+	getMedia3UtteranceIndex: (targetIdx: number, sourceOffset?: number) => number
+): { sourceOffset: number; nativeStartIndex: number; startCharIndex: number } {
+	const chunkStart = chunks[targetIdx]?.startOffset ?? 0;
+	const sourceOffset = chunkStart + targetOff;
+	const nativeStartIndex = isMedia3Mode ? getMedia3UtteranceIndex(targetIdx, sourceOffset) : targetIdx;
+	const utteranceSourceStart = media3Utterances[nativeStartIndex]?.sourceStart ?? 0;
+	const startCharIndex = Math.max(0, sourceOffset - utteranceSourceStart);
+	return { sourceOffset, nativeStartIndex, startCharIndex };
+}
+
+function resolveTargetVoice(ttsEngine: string, edgeVoiceUri: string, voiceUri: string): string {
+	if (ttsEngine === 'edge') {
+		return edgeVoiceUri || 'vi-VN-HoaiMyNeural';
+	}
+	return voiceUri;
+}
+
+function resolveChapterMetadata(chapterContext: ReadAloudChapterContext): {
+	bookTitle: string;
+	chapterTitle: string;
+} {
+	const bookTitle = chapterContext.bookName || (chapterContext.bookId ? `Truyện #${chapterContext.bookId}` : 'Stories Reader');
+	if (chapterContext.chapterTitle) {
+		return { bookTitle, chapterTitle: chapterContext.chapterTitle };
+	}
+	if (chapterContext.chapterNumber) {
+		return { bookTitle, chapterTitle: `Chương ${chapterContext.chapterNumber}` };
+	}
+	if (chapterContext.chapterId) {
+		return { bookTitle, chapterTitle: `Chương ${chapterContext.chapterId}` };
+	}
+	return { bookTitle, chapterTitle: 'Chương đang đọc' };
+}
+
+function executeNativeStreamPlayback(
+	ttsEngine: string,
+	common: {
+		chunks: string[];
+		startIndex: number;
+		voice: string;
+		rate: number;
+		gatewayUrl: string;
+		bookTitle: string;
+		chapterTitle: string;
+	},
+	edgeBufferMode: EdgeBufferMode,
+	isMedia3Mode: boolean,
+	media3Utterances: ReadAloudUtterance[],
+	startCharIndex: number,
+	targetOff: number
+): void {
+	if (ttsEngine === 'edge') {
+		void EdgeTTSNativeStreamService.startPlayback({
+			...common,
+			pitch: '+0Hz',
+			bufferMode: edgeBufferMode,
+			...(isMedia3Mode ? { utterances: media3Utterances, startCharIndex, sessionId: `edge-media3-${crypto.randomUUID()}` } : {}),
+		});
+		return;
+	}
+	void NativeTTSStreamService.startPlayback({ ...common, pitch: 1.0, startCharIndex: targetOff });
+}
+
+function canQuickResume(isPaused: boolean, targetIndex?: number): boolean {
+	return isPaused && targetIndex === undefined;
+}
+
+function resetSpeechSession(
+	ownsQueueRef: { current: boolean },
+	synth: SpeechSynthesis | null,
+	utteranceRef: { current: SpeechSynthesisUtterance | null }
+): void {
+	if (ownsQueueRef.current && synth) {
+		synth.cancel();
+	}
+	ownsQueueRef.current = false;
+	utteranceRef.current = null;
+}
+
+function getBoundedStartPosition(
+	chunks: SentenceChunk[],
+	currentIdx: number,
+	savedPosition: ReadAloudResumePosition | null,
+	targetIndex?: number,
+	targetOffset?: number,
+	onOutOfRange?: () => void
+): { index: number; offset: number } {
+	const position = resolveReadAloudStart(chunks, currentIdx, savedPosition, targetIndex, targetOffset);
+	if (position.index >= chunks.length) {
+		onOutOfRange?.();
+		return { index: 0, offset: 0 };
+	}
+	return position;
+}
+
+function scrollToChunkParagraph(chunk: SentenceChunk | undefined): void {
+	if (!chunk) return;
+	const readerContent = document.querySelector('#main-story-content');
+	const pNode = readerContent?.querySelector<HTMLElement>(`article > div[data-paragraph-index="${chunk.pIdx}"]`);
+	if (typeof pNode?.scrollIntoView === 'function') {
+		pNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	}
+}
+
+function saveCurrentReadingPosition(
+	currentChunkIdx: number,
+	totalChunks: number,
+	charIndex: number,
+	paragraphIndex: number,
+	sourceOffset: number,
+	saveResume: (chunk: number, char: number, pIdx?: number, srcOff?: number) => void
+): void {
+	if (currentChunkIdx >= totalChunks) return;
+	const safeChar = Math.max(0, charIndex);
+	const safePIdx = paragraphIndex >= 0 ? paragraphIndex : undefined;
+	const safeSrcOff = charIndex >= 0 ? sourceOffset : undefined;
+	saveResume(currentChunkIdx, safeChar, safePIdx, safeSrcOff);
+}
+
+function pauseEngineTransport(
+	ttsEngine: string,
+	activeNativeStream: typeof EdgeTTSNativeStreamService | typeof NativeTTSStreamService | null,
+	gaplessPlayer: GaplessTtsPlayer | null,
+	ownsBrowserQueue: boolean,
+	synth: SpeechSynthesis | null,
+	edgePlayback: { pause: () => void }
+): void {
+	if (gaplessPlayer) {
+		void gaplessPlayer.pause();
+	}
+	if (activeNativeStream) {
+		void activeNativeStream.pause();
+		return;
+	}
+	if (ttsEngine === 'browser' && NativeTTSService.isNative()) {
+		void NativeTTSService.stop();
+		return;
+	}
+	if (ttsEngine === 'browser' && ownsBrowserQueue) {
+		synth?.pause();
+		return;
+	}
+	if (ttsEngine === 'edge') {
+		edgePlayback.pause();
+	}
 }

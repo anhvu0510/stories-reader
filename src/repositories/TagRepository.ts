@@ -1,5 +1,5 @@
 import { apiClient } from '@/services/apiClient';
-import { TagCategory } from '@/shared/constants/tags';
+import { type TagCategory } from '@/shared/constants/tags';
 import { useAppStore } from '@/stores/useAppStore';
 
 export interface GetTagsResult {
@@ -13,16 +13,16 @@ export const TagRepository = {
 		if (isOffline) {
 			return {
 				categories: [],
-				tags: []
+				tags: [],
 			};
 		}
 
 		try {
-			const res = await apiClient.get<any>('/api/tags');
+			const res = await apiClient.get<{ categories?: TagCategory[]; tags?: string[] }>('/api/tags');
 			if (res && Array.isArray(res.categories)) {
 				return {
 					categories: res.categories,
-					tags: res.tags || res.categories.flatMap((c: TagCategory) => c.tags)
+					tags: res.tags || res.categories.flatMap((c) => c.tags),
 				};
 			}
 		} catch (e) {
@@ -31,7 +31,7 @@ export const TagRepository = {
 
 		return {
 			categories: [],
-			tags: []
+			tags: [],
 		};
-	}
+	},
 };

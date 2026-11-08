@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
 import { X, Search, Check, Tag, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 import { BottomSheet } from '@/components/BottomSheet';
 import { TagRepository } from '@/repositories/TagRepository';
-import { TagCategory } from '@/shared/constants/tags';
+import { type TagCategory } from '@/shared/constants/tags';
 
 interface TagFilterSheetProps {
 	isOpen: boolean;
@@ -61,7 +61,7 @@ export function TagFilterSheet({ isOpen, selectedTags, onApply, onClose }: TagFi
 		return categories
 			.map((category) => ({
 				...category,
-				tags: category.tags.filter((t) => t.toLowerCase().includes(q))
+				tags: category.tags.filter((t) => t.toLowerCase().includes(q)),
 			}))
 			.filter((category) => category.tags.length > 0);
 	}, [categories, searchQuery]);
@@ -103,7 +103,10 @@ export function TagFilterSheet({ isOpen, selectedTags, onApply, onClose }: TagFi
 						data-testid="tag-search-input"
 					/>
 					{searchQuery && (
-						<button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-on-surface-variant/60 hover:text-on-surface">
+						<button
+							onClick={() => setSearchQuery('')}
+							className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-on-surface-variant/60 hover:text-on-surface"
+						>
 							<X size={12} />
 						</button>
 					)}
@@ -128,7 +131,10 @@ export function TagFilterSheet({ isOpen, selectedTags, onApply, onClose }: TagFi
 						))}
 					</div>
 
-					<button onClick={handleClearAll} className="text-[10.5px] font-bold text-rose-400 hover:underline shrink-0 flex items-center gap-0.5 ml-1">
+					<button
+						onClick={handleClearAll}
+						className="text-[10.5px] font-bold text-rose-400 hover:underline shrink-0 flex items-center gap-0.5 ml-1"
+					>
 						<RotateCcw size={10} />
 						Xóa hết
 					</button>
@@ -137,12 +143,22 @@ export function TagFilterSheet({ isOpen, selectedTags, onApply, onClose }: TagFi
 
 			{/* Categories and Tag List (Scrollable Area) */}
 			<div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 min-h-0 hide-scrollbar">
-				{isLoading && categories.length === 0 ? (
-					<div className="py-12 text-center text-xs text-on-surface-variant/60 animate-pulse">Đang tải danh mục tags từ hệ thống...</div>
-				) : filteredCategories.length === 0 ? (
-					<div className="py-8 text-center text-xs text-on-surface-variant/60">{searchQuery ? `Không tìm thấy tag phù hợp với từ khóa "${searchQuery}"` : 'Chưa có dữ liệu tags'}</div>
-				) : (
-					filteredCategories.map((category) => (
+				{(() => {
+					if (isLoading && categories.length === 0) {
+						return (
+							<div className="py-12 text-center text-xs text-on-surface-variant/60 animate-pulse">
+								Đang tải danh mục tags từ hệ thống...
+							</div>
+						);
+					}
+					if (filteredCategories.length === 0) {
+						return (
+							<div className="py-8 text-center text-xs text-on-surface-variant/60">
+								{searchQuery ? `Không tìm thấy tag phù hợp với từ khóa "${searchQuery}"` : 'Chưa có dữ liệu tags'}
+							</div>
+						);
+					}
+					return filteredCategories.map((category) => (
 						<div key={category.name} className="space-y-2">
 							<div className="flex items-center justify-between">
 								<h3 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{category.name}</h3>
@@ -167,8 +183,8 @@ export function TagFilterSheet({ isOpen, selectedTags, onApply, onClose }: TagFi
 								})}
 							</div>
 						</div>
-					))
-				)}
+					));
+				})()}
 			</div>
 
 			{/* Footer Actions */}
@@ -191,7 +207,9 @@ export function TagFilterSheet({ isOpen, selectedTags, onApply, onClose }: TagFi
 				>
 					<span>Áp dụng bộ lọc</span>
 					{draftTags.length > 0 && (
-						<span className="px-1.5 py-0.2 rounded-full bg-primary/40 text-primary font-mono text-[10px] font-black border border-primary/60">{draftTags.length}</span>
+						<span className="px-1.5 py-0.2 rounded-full bg-primary/40 text-primary font-mono text-[10px] font-black border border-primary/60">
+							{draftTags.length}
+						</span>
 					)}
 				</button>
 			</div>

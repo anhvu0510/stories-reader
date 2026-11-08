@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach } from 'vitest';
 
 import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator';
 
@@ -10,13 +10,7 @@ describe('PullToRefreshIndicator', () => {
 	});
 
 	it('renders hidden when pullDistance is 0 and not refreshing', () => {
-		render(
-			<PullToRefreshIndicator
-				pullDistance={0}
-				isRefreshing={false}
-				hasTriggeredThreshold={false}
-			/>
-		);
+		render(<PullToRefreshIndicator pullDistance={0} isRefreshing={false} hasTriggeredThreshold={false} />);
 
 		const indicator = screen.getByTestId('pull-to-refresh-indicator');
 		expect(indicator.getAttribute('aria-hidden')).toBe('true');
@@ -24,13 +18,7 @@ describe('PullToRefreshIndicator', () => {
 	});
 
 	it('renders pure icon with zero text content (native mobile style)', () => {
-		render(
-			<PullToRefreshIndicator
-				pullDistance={45}
-				isRefreshing={false}
-				hasTriggeredThreshold={false}
-			/>
-		);
+		render(<PullToRefreshIndicator pullDistance={45} isRefreshing={false} hasTriggeredThreshold={false} />);
 
 		const indicator = screen.getByTestId('pull-to-refresh-indicator');
 		expect(indicator.textContent?.trim()).toBe('');
@@ -40,13 +28,7 @@ describe('PullToRefreshIndicator', () => {
 	});
 
 	it('becomes visible when pulling (pullDistance > 0)', () => {
-		render(
-			<PullToRefreshIndicator
-				pullDistance={75}
-				isRefreshing={false}
-				hasTriggeredThreshold={true}
-			/>
-		);
+		render(<PullToRefreshIndicator pullDistance={75} isRefreshing={false} hasTriggeredThreshold={true} />);
 
 		const indicator = screen.getByTestId('pull-to-refresh-indicator');
 		expect(indicator.getAttribute('aria-hidden')).toBe('false');
@@ -54,13 +36,7 @@ describe('PullToRefreshIndicator', () => {
 	});
 
 	it('spins the icon when isRefreshing is true', () => {
-		render(
-			<PullToRefreshIndicator
-				pullDistance={0}
-				isRefreshing={true}
-				hasTriggeredThreshold={true}
-			/>
-		);
+		render(<PullToRefreshIndicator pullDistance={0} isRefreshing={true} hasTriggeredThreshold={true} />);
 
 		const indicator = screen.getByTestId('pull-to-refresh-indicator');
 		expect(indicator.getAttribute('aria-hidden')).toBe('false');

@@ -1,4 +1,4 @@
-import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 
 import type { Book, Chapter, ChapterContent, Replacement } from '@/shared/types';
 
@@ -44,7 +44,7 @@ export const initDB = () => {
 				if (!db.objectStoreNames.contains('replacements')) {
 					db.createObjectStore('replacements', { keyPath: 'id' });
 				}
-			}
+			},
 		});
 	}
 	return dbPromise;
@@ -217,5 +217,5 @@ export const offlineDb = {
 		}
 
 		return size;
-	}
+	},
 };

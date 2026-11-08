@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { Fingerprint, KeyRound } from 'lucide-react';
-import { useAppLockStore, isAndroidApp } from '@/stores/useAppLockStore';
+import { motion, AnimatePresence } from 'motion/react';
+import React, { useEffect } from 'react';
+
 import { PasscodeModal } from '@/components/PasscodeModal';
 import { useHaptic } from '@/hooks/useHaptic';
+import { useAppLockStore, isAndroidApp } from '@/stores/useAppLockStore';
 
 /**
  * Component màn hình khóa bảo mật toàn ứng dụng.

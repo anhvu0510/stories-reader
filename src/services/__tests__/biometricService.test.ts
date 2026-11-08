@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
 import { biometricService, STORAGE_KEY_BIOMETRIC_LOCK } from '../biometricService';
 
 describe('BiometricService', () => {

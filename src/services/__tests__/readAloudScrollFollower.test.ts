@@ -8,8 +8,12 @@ describe('ReadAloudScrollFollower', () => {
 		vi.useFakeTimers();
 		const scrollTo = vi.fn();
 		const follower = new ReadAloudScrollFollower({
-			getScrollY: () => 0, getViewportHeight: () => 800, scrollTo,
-			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
+			getScrollY: () => 0,
+			getViewportHeight: () => 800,
+			scrollTo,
+			requestFrame: vi.fn(),
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => true,
 		});
 		follower.follow(new DOMRect(0, 700, 300, 30));
 		scrollTo.mockClear();
@@ -24,8 +28,12 @@ describe('ReadAloudScrollFollower', () => {
 		vi.useFakeTimers();
 		const scrollTo = vi.fn();
 		const follower = new ReadAloudScrollFollower({
-			getScrollY: () => 0, getViewportHeight: () => 800, scrollTo,
-			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
+			getScrollY: () => 0,
+			getViewportHeight: () => 800,
+			scrollTo,
+			requestFrame: vi.fn(),
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => true,
 		});
 		follower.beginUserInteraction();
 		follower.follow(new DOMRect(0, 400, 300, 30));
@@ -38,8 +46,12 @@ describe('ReadAloudScrollFollower', () => {
 	it('preserves the last line when following is resumed before another word arrives', () => {
 		const scrollTo = vi.fn();
 		const follower = new ReadAloudScrollFollower({
-			getScrollY: () => 1500, getViewportHeight: () => 800, scrollTo,
-			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
+			getScrollY: () => 1500,
+			getViewportHeight: () => 800,
+			scrollTo,
+			requestFrame: vi.fn(),
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => true,
 		});
 		follower.notifyUserInteraction();
 		follower.follow(new DOMRect(0, 500, 300, 30));
@@ -51,8 +63,13 @@ describe('ReadAloudScrollFollower', () => {
 	it('locates the active line explicitly from far away without seeking or restarting narration', () => {
 		const scrollTo = vi.fn();
 		const follower = new ReadAloudScrollFollower({
-			getScrollY: () => 2000, getViewportHeight: () => 800, scrollTo,
-			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true, autoReclaim: false
+			getScrollY: () => 2000,
+			getViewportHeight: () => 800,
+			scrollTo,
+			requestFrame: vi.fn(),
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => true,
+			autoReclaim: false,
 		});
 		follower.notifyUserInteraction();
 		follower.follow(new DOMRect(0, 500, 300, 30));
@@ -63,9 +80,13 @@ describe('ReadAloudScrollFollower', () => {
 		vi.useFakeTimers();
 		const scrollTo = vi.fn();
 		const follower = new ReadAloudScrollFollower({
-			getScrollY: () => 0, getViewportHeight: () => 800, scrollTo,
-			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true,
-			autoReclaim: false
+			getScrollY: () => 0,
+			getViewportHeight: () => 800,
+			scrollTo,
+			requestFrame: vi.fn(),
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => true,
+			autoReclaim: false,
 		});
 		follower.follow(new DOMRect(0, 500, 300, 30));
 		follower.beginUserInteraction();
@@ -83,8 +104,13 @@ describe('ReadAloudScrollFollower', () => {
 		let selected = false;
 		const scrollTo = vi.fn();
 		const follower = new ReadAloudScrollFollower({
-			getScrollY: () => 0, getViewportHeight: () => 800, hasTextSelection: () => selected,
-			scrollTo, requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
+			getScrollY: () => 0,
+			getViewportHeight: () => 800,
+			hasTextSelection: () => selected,
+			scrollTo,
+			requestFrame: vi.fn(),
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => true,
 		});
 		follower.follow(new DOMRect(0, 500, 300, 30));
 		scrollTo.mockClear();
@@ -102,8 +128,13 @@ describe('ReadAloudScrollFollower', () => {
 	it('clamps centering to the page boundary so the animation can finish', () => {
 		const scrollTo = vi.fn();
 		const follower = new ReadAloudScrollFollower({
-			getScrollY: () => 0, getViewportHeight: () => 800, getMaxScrollY: () => 100,
-			scrollTo, requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
+			getScrollY: () => 0,
+			getViewportHeight: () => 800,
+			getMaxScrollY: () => 100,
+			scrollTo,
+			requestFrame: vi.fn(),
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => true,
 		});
 		follower.follow(new DOMRect(0, 700, 300, 30));
 		expect(scrollTo).toHaveBeenCalledWith(100);
@@ -111,8 +142,12 @@ describe('ReadAloudScrollFollower', () => {
 	it('keeps several spoken lines stationary until the reading line reaches three quarters of the screen', () => {
 		const scrollTo = vi.fn();
 		const follower = new ReadAloudScrollFollower({
-			getScrollY: () => 0, getViewportHeight: () => 800, scrollTo,
-			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
+			getScrollY: () => 0,
+			getViewportHeight: () => 800,
+			scrollTo,
+			requestFrame: vi.fn(),
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => true,
 		});
 		follower.follow(new DOMRect(0, 500, 300, 30));
 		follower.follow(new DOMRect(0, 540, 300, 30));
@@ -127,8 +162,12 @@ describe('ReadAloudScrollFollower', () => {
 		let scrollY = 0;
 		const scrollTo = vi.fn();
 		const follower = new ReadAloudScrollFollower({
-			getScrollY: () => scrollY, getViewportHeight: () => 800, scrollTo,
-			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
+			getScrollY: () => scrollY,
+			getViewportHeight: () => 800,
+			scrollTo,
+			requestFrame: vi.fn(),
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => true,
 		});
 		follower.follow(new DOMRect(0, 900, 300, 30));
 		scrollTo.mockClear();
@@ -151,8 +190,12 @@ describe('ReadAloudScrollFollower', () => {
 		vi.useFakeTimers();
 		const scrollTo = vi.fn();
 		const follower = new ReadAloudScrollFollower({
-			getScrollY: () => 0, getViewportHeight: () => 800, scrollTo,
-			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
+			getScrollY: () => 0,
+			getViewportHeight: () => 800,
+			scrollTo,
+			requestFrame: vi.fn(),
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => true,
 		});
 		follower.follow(new DOMRect(0, 500, 300, 30));
 		scrollTo.mockClear();
@@ -166,8 +209,12 @@ describe('ReadAloudScrollFollower', () => {
 		vi.useFakeTimers();
 		const scrollTo = vi.fn();
 		const follower = new ReadAloudScrollFollower({
-			getScrollY: () => 0, getViewportHeight: () => 800, scrollTo,
-			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true
+			getScrollY: () => 0,
+			getViewportHeight: () => 800,
+			scrollTo,
+			requestFrame: vi.fn(),
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => true,
 		});
 		follower.follow(new DOMRect(0, 500, 300, 30));
 		scrollTo.mockClear();
@@ -197,7 +244,7 @@ describe('ReadAloudScrollFollower', () => {
 			scrollTo,
 			requestFrame,
 			cancelFrame: vi.fn(),
-			prefersReducedMotion: () => false
+			prefersReducedMotion: () => false,
 		});
 
 		follower.follow(new DOMRect(0, 900, 300, 30));
@@ -223,7 +270,7 @@ describe('ReadAloudScrollFollower', () => {
 			scrollTo,
 			requestFrame,
 			cancelFrame: vi.fn(),
-			prefersReducedMotion: () => true
+			prefersReducedMotion: () => true,
 		});
 
 		follower.follow(new DOMRect(0, 900, 300, 30));
@@ -242,7 +289,7 @@ describe('ReadAloudScrollFollower', () => {
 			scrollTo,
 			requestFrame,
 			cancelFrame: vi.fn(),
-			prefersReducedMotion: () => false
+			prefersReducedMotion: () => false,
 		});
 
 		// Dòng highlight đang đọc ở vị trí 300 (đã trôi lên trên khỏi đỉnh màn hình)
@@ -262,7 +309,7 @@ describe('ReadAloudScrollFollower', () => {
 			scrollTo,
 			requestFrame,
 			cancelFrame: vi.fn(),
-			prefersReducedMotion: () => false
+			prefersReducedMotion: () => false,
 		});
 
 		// Người dùng vuốt màn hình
@@ -283,7 +330,7 @@ describe('ReadAloudScrollFollower', () => {
 			scrollTo: vi.fn(),
 			requestFrame,
 			cancelFrame: vi.fn(),
-			prefersReducedMotion: () => false
+			prefersReducedMotion: () => false,
 		});
 		follower.notifyUserInteraction();
 		now.mockReturnValue(4000);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import { downloadManager, DownloadTask } from '@/lib/DownloadManager';
+import { downloadManager, type DownloadTask } from '@/lib/DownloadManager';
 
 export function useOfflineSync() {
 	const [tasks, setTasks] = useState<DownloadTask[]>([]);
@@ -34,8 +34,10 @@ export function useOfflineSync() {
 		downloadManager.cancelBook(bookId);
 	};
 
-	// We keep backward compatibility properties as much as possible for generic use,
-	// but it's better if components read `tasks` or `getTask`.
+	/*
+	 * We keep backward compatibility properties as much as possible for generic use,
+	 * but it's better if components read `tasks` or `getTask`.
+	 */
 	const isSyncing = tasks.some((t) => t.status === 'downloading');
 
 	return {
@@ -44,6 +46,6 @@ export function useOfflineSync() {
 		getTask,
 		syncBook,
 		syncMultipleBooks,
-		cancelSync
+		cancelSync,
 	};
 }

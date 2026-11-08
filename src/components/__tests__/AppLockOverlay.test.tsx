@@ -1,23 +1,25 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { Capacitor } from '@capacitor/core';
-import { AppLockOverlay } from '../AppLockOverlay';
-import { useAppLockStore } from '@/stores/useAppLockStore';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
 import { biometricService } from '@/services/biometricService';
+import { useAppLockStore } from '@/stores/useAppLockStore';
+
+import { AppLockOverlay } from '../AppLockOverlay';
 
 describe('AppLockOverlay Component', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		Object.defineProperty(document, 'visibilityState', {
 			value: 'visible',
-			configurable: true
+			configurable: true,
 		});
 		useAppLockStore.setState({
 			isLockEnabled: false,
 			isLocked: false,
 			showPasscodeFallback: false,
-			isAuthenticating: false
+			isAuthenticating: false,
 		});
 	});
 
@@ -36,7 +38,7 @@ describe('AppLockOverlay Component', () => {
 			useAppLockStore.setState({
 				isLockEnabled: true,
 				isLocked: true,
-				showPasscodeFallback: false
+				showPasscodeFallback: false,
 			});
 
 			const { container } = render(<AppLockOverlay />);
@@ -54,7 +56,7 @@ describe('AppLockOverlay Component', () => {
 			useAppLockStore.setState({
 				isLockEnabled: true,
 				isLocked: false,
-				showPasscodeFallback: false
+				showPasscodeFallback: false,
 			});
 
 			const { container } = render(<AppLockOverlay />);
@@ -65,7 +67,7 @@ describe('AppLockOverlay Component', () => {
 			useAppLockStore.setState({
 				isLockEnabled: true,
 				isLocked: true,
-				showPasscodeFallback: false
+				showPasscodeFallback: false,
 			});
 
 			render(<AppLockOverlay />);
@@ -79,7 +81,7 @@ describe('AppLockOverlay Component', () => {
 			useAppLockStore.setState({
 				isLockEnabled: true,
 				isLocked: true,
-				showPasscodeFallback: false
+				showPasscodeFallback: false,
 			});
 
 			render(<AppLockOverlay />);
@@ -97,13 +99,13 @@ describe('AppLockOverlay Component', () => {
 
 		it('kích hoạt prompt sinh trắc học khi nhấn nút Quét Sinh trắc học', async () => {
 			const promptSpy = vi.spyOn(biometricService, 'authenticate').mockResolvedValue({
-				success: true
+				success: true,
 			});
 
 			useAppLockStore.setState({
 				isLockEnabled: true,
 				isLocked: true,
-				showPasscodeFallback: false
+				showPasscodeFallback: false,
 			});
 
 			render(<AppLockOverlay />);

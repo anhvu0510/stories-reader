@@ -1,6 +1,6 @@
-import React from 'react';
-import { motion } from 'motion/react';
 import { X, Type, Minus, Plus, Palette, AlignJustify, Layers, Sliders, Check } from 'lucide-react';
+import { motion } from 'motion/react';
+import React from 'react';
 
 import { BottomSheet } from '@/components/BottomSheet';
 import { triggerHaptic } from '@/hooks/useHaptic';
@@ -13,13 +13,26 @@ interface QuickTypographySheetProps {
 }
 
 export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
-	const { fontSize, setFontSize, lineHeight, setLineHeight, groupLines, setGroupLines, theme, setTheme, font, setFont, isEnabledReplace, setIsEnabledReplace } = useReaderConfigStore();
+	const {
+		fontSize,
+		setFontSize,
+		lineHeight,
+		setLineHeight,
+		groupLines,
+		setGroupLines,
+		theme,
+		setTheme,
+		font,
+		setFont,
+		isEnabledReplace,
+		setIsEnabledReplace,
+	} = useReaderConfigStore();
 
 	const themes: { id: ThemeType; name: string; bg: string; text: string }[] = [
 		{ id: 'royal-vn', name: 'Royal VN', bg: '#040e2b', text: '#e2e8f0' },
 		{ id: 'default', name: 'Amoled', bg: '#000000', text: '#f4f4f5' },
 		{ id: 'midnight', name: 'Midnight', bg: '#0f172a', text: '#f8fafc' },
-		{ id: 'obsidian', name: 'Obsidian', bg: '#0c0a14', text: '#f3e8ff' }
+		{ id: 'obsidian', name: 'Obsidian', bg: '#0c0a14', text: '#f3e8ff' },
 	];
 
 	const fonts: { id: FontType; name: string }[] = [
@@ -29,7 +42,7 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
 		{ id: 'charter', name: 'Charter' },
 		{ id: 'palatino', name: 'Palatino' },
 		{ id: 'default', name: 'Sans-Serif' },
-		{ id: 'font_viet_tay', name: 'Monospace' }
+		{ id: 'font_viet_tay', name: 'Monospace' },
 	];
 
 	const currentThemeObj = themes.find((t) => t.id === theme) || themes[0];
@@ -136,20 +149,15 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
 				<div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar py-0.5">
 					{fonts.map((f) => {
 						const isSelected = font === f.id;
-						const fontStyleClass =
-							f.id === 'bookerly'
-								? 'font-bookerly'
-								: f.id === 'merriweather'
-									? 'font-merriweather'
-									: f.id === 'lora'
-										? 'font-lora'
-										: f.id === 'charter'
-											? 'font-charter'
-											: f.id === 'palatino'
-												? 'font-palatino'
-												: f.id === 'font_viet_tay'
-													? 'font-viet-tay'
-													: 'font-default';
+						const fontStyleMap: Record<string, string> = {
+							bookerly: 'font-bookerly',
+							merriweather: 'font-merriweather',
+							lora: 'font-lora',
+							charter: 'font-charter',
+							palatino: 'font-palatino',
+							font_viet_tay: 'font-viet-tay',
+						};
+						const fontStyleClass = fontStyleMap[f.id] || 'font-default';
 						return (
 							<motion.button
 								key={f.id}
@@ -257,7 +265,9 @@ export function QuickTypographySheet({ onClose }: QuickTypographySheetProps) {
 						title="Bật/tắt bộ thay thế từ ngữ"
 						aria-label="Bật/tắt bộ thay thế từ ngữ"
 					>
-						<div className={`w-5 h-5 rounded-full bg-white transition-transform duration-200 ease-in-out shadow-xs ${isEnabledReplace ? 'translate-x-5' : 'translate-x-0'}`} />
+						<div
+							className={`w-5 h-5 rounded-full bg-white transition-transform duration-200 ease-in-out shadow-xs ${isEnabledReplace ? 'translate-x-5' : 'translate-x-0'}`}
+						/>
 					</motion.button>
 				</div>
 			</div>

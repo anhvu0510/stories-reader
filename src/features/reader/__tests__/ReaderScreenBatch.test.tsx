@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
 import { ReaderScreen } from '@/features/reader/ReaderScreen';
 import { BookRepository } from '@/repositories/BookRepository';
@@ -12,16 +12,16 @@ import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 vi.mock('../../../repositories/ChapterRepository', () => ({
 	ChapterRepository: {
 		getChapterContent: vi.fn(),
-		getChapters: vi.fn().mockResolvedValue({ chapters: [], pagination: {} })
-	}
+		getChapters: vi.fn().mockResolvedValue({ chapters: [], pagination: {} }),
+	},
 }));
 
 vi.mock('../../../repositories/BookRepository', () => ({
 	BookRepository: {
 		updateLastReadChapter: vi.fn().mockResolvedValue(undefined),
 		getLastReadChapter: vi.fn(),
-		getBook: vi.fn()
-	}
+		getBook: vi.fn(),
+	},
 }));
 
 vi.mock('../../../hooks/useReadAloud', () => ({
@@ -34,8 +34,8 @@ vi.mock('../../../hooks/useReadAloud', () => ({
 		pauseReading: vi.fn(),
 		stopReading: vi.fn(),
 		nextSection: vi.fn(),
-		prevSection: vi.fn()
-	})
+		prevSection: vi.fn(),
+	}),
 }));
 
 describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
@@ -45,7 +45,7 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 		useReaderConfigStore.setState({
 			batchChapterSize: 3,
 			groupLines: 1,
-			isEnabledReplace: false
+			isEnabledReplace: false,
 		});
 		useAppStore.setState({ isOfflineMode: false });
 	});
@@ -64,7 +64,7 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 				state: 'SUCCEEDED',
 				totalTokens: 100,
 				content: ['Đoạn văn 1 của chương 1'],
-				rootTab: ''
+				rootTab: '',
 			},
 			chapters: [
 				{
@@ -75,7 +75,7 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 					state: 'SUCCEEDED',
 					totalTokens: 100,
 					content: ['Đoạn văn 1 của chương 1'],
-					rootTab: ''
+					rootTab: '',
 				},
 				{
 					chapterId: 'c2',
@@ -85,7 +85,7 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 					state: 'SUCCEEDED',
 					totalTokens: 100,
 					content: ['Đoạn văn 1 của chương 2'],
-					rootTab: ''
+					rootTab: '',
 				},
 				{
 					chapterId: 'c3',
@@ -95,13 +95,13 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 					state: 'SUCCEEDED',
 					totalTokens: 100,
 					content: ['Đoạn văn 1 của chương 3'],
-					rootTab: ''
-				}
+					rootTab: '',
+				},
 			],
 			navigation: {
 				prev: null,
-				next: { chapterId: 'c4', chapterNumber: 4, title: 'Tiêu đề Chương 4' }
-			}
+				next: { chapterId: 'c4', chapterNumber: 4, title: 'Tiêu đề Chương 4' },
+			},
 		};
 
 		vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue(mockData as any);
@@ -133,7 +133,7 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 				chapterNumber: 1,
 				title: 'Một',
 				bookName: 'Truyện',
-				content: ['Đoạn 1', 'Đoạn 2']
+				content: ['Đoạn 1', 'Đoạn 2'],
 			},
 			chapters: [
 				{
@@ -141,17 +141,17 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 					chapterNumber: 1,
 					title: 'Một',
 					bookName: 'Truyện',
-					content: ['Đoạn 1', 'Đoạn 2']
+					content: ['Đoạn 1', 'Đoạn 2'],
 				},
 				{
 					chapterId: 'c2',
 					chapterNumber: 2,
 					title: 'Hai',
 					bookName: 'Truyện',
-					content: ['Đoạn 3', 'Đoạn 4']
-				}
+					content: ['Đoạn 3', 'Đoạn 4'],
+				},
 			],
-			navigation: { prev: null, next: null }
+			navigation: { prev: null, next: null },
 		} as never);
 
 		const { container } = render(
@@ -164,7 +164,9 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 
 		await waitFor(() => expect(container.querySelectorAll('[data-paragraph-index]')).toHaveLength(4));
 
-		expect(Array.from(container.querySelectorAll('[data-paragraph-index]')).map((element) => element.getAttribute('data-paragraph-index'))).toEqual(['0', '1', '2', '3']);
+		expect(
+			Array.from(container.querySelectorAll('[data-paragraph-index]')).map((element) => element.getAttribute('data-paragraph-index'))
+		).toEqual(['0', '1', '2', '3']);
 		expect(container.querySelectorAll('article > div.ring-2')).toHaveLength(0);
 	});
 
@@ -181,7 +183,7 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 				state: 'SUCCEEDED',
 				totalTokens: 100,
 				content: ['Nội dung offline ch1'],
-				rootTab: ''
+				rootTab: '',
 			},
 			chapters: [
 				{
@@ -192,13 +194,13 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 					state: 'SUCCEEDED',
 					totalTokens: 100,
 					content: ['Nội dung offline ch1'],
-					rootTab: ''
-				}
+					rootTab: '',
+				},
 			],
 			navigation: {
 				prev: null,
-				next: null
-			}
+				next: null,
+			},
 		};
 
 		vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue(mockBatchOfflineData as any);
@@ -231,7 +233,7 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 				state: 'SUCCEEDED',
 				totalTokens: 100,
 				content: ['Nội dung ch1'],
-				rootTab: ''
+				rootTab: '',
 			},
 			chapters: [
 				{
@@ -242,10 +244,10 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 					state: 'SUCCEEDED',
 					totalTokens: 100,
 					content: ['Nội dung ch1'],
-					rootTab: ''
-				}
+					rootTab: '',
+				},
 			],
-			navigation: { prev: null, next: null }
+			navigation: { prev: null, next: null },
 		};
 
 		vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue(mockBatchData as any);
@@ -264,7 +266,7 @@ describe('ReaderScreen - Multi-Chapter Batch Loading (Frontend Tests)', () => {
 					'b1',
 					expect.objectContaining({
 						chapterId: 'c1',
-						chapterNumber: 1
+						chapterNumber: 1,
 					})
 				);
 			},

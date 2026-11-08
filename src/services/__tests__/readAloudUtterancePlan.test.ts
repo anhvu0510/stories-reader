@@ -6,7 +6,7 @@ describe('buildReadAloudUtterancePlan', () => {
 	it('creates source-mapped Vietnamese utterances within the hard limit', () => {
 		const paragraphs = [
 			'Người đàn ông khẽ nói: “Chúng ta đi thôi.” Sau đó, họ bước qua cánh cửa lớn. '.repeat(5).trim(),
-			'Một đoạn ngắn khác.'
+			'Một đoạn ngắn khác.',
 		];
 
 		const utterances = buildReadAloudUtterancePlan(paragraphs);

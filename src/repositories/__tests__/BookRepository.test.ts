@@ -12,8 +12,8 @@ vi.mock('../../services/apiClient', () => ({
 	apiClient: {
 		get: vi.fn(),
 		post: vi.fn(),
-		delete: vi.fn()
-	}
+		delete: vi.fn(),
+	},
 }));
 
 describe('BookRepository Favorite Server Management', () => {
@@ -31,7 +31,7 @@ describe('BookRepository Favorite Server Management', () => {
 	it('QC-1 [Online]: toggleFavorite calls server API and syncs to useFavoriteStore and offlineDb', async () => {
 		vi.mocked(apiClient.post).mockResolvedValueOnce({
 			code: 1000,
-			data: { bookId: 'b-99', isFavorite: true }
+			data: { bookId: 'b-99', isFavorite: true },
 		});
 
 		const res = await BookRepository.toggleFavorite('b-99');
@@ -52,7 +52,7 @@ describe('BookRepository Favorite Server Management', () => {
 				totalPending: 0,
 				createdAt: '2024-01-01',
 				updatedAt: '2024-01-02',
-				lastReadChapter: null as any
+				lastReadChapter: null as any,
 			},
 			{
 				bookId: 'b-2',
@@ -63,13 +63,13 @@ describe('BookRepository Favorite Server Management', () => {
 				totalPending: 0,
 				createdAt: '2024-01-01',
 				updatedAt: '2024-01-02',
-				lastReadChapter: null as any
-			}
+				lastReadChapter: null as any,
+			},
 		];
 
 		vi.mocked(apiClient.get).mockResolvedValueOnce({
 			books: mockBooks,
-			pagination: { currentPage: 1, totalPages: 1, total: 2 }
+			pagination: { currentPage: 1, totalPages: 1, total: 2 },
 		});
 
 		const res = await BookRepository.getBooks(1, 20, '', 'FAVORITE');
@@ -104,7 +104,7 @@ describe('BookRepository Favorite Server Management', () => {
 				totalPending: 0,
 				createdAt: '',
 				updatedAt: '',
-				lastReadChapter: null as any
+				lastReadChapter: null as any,
 			},
 			{
 				bookId: 'b-other',
@@ -115,8 +115,8 @@ describe('BookRepository Favorite Server Management', () => {
 				totalPending: 0,
 				createdAt: '',
 				updatedAt: '',
-				lastReadChapter: null as any
-			}
+				lastReadChapter: null as any,
+			},
 		]);
 
 		const res = await BookRepository.getBooks(1, 20, '', 'FAVORITE');
@@ -128,12 +128,15 @@ describe('BookRepository Favorite Server Management', () => {
 	it('QC-5 [Online]: getBooks passes sortBy and sortOrder parameters to API', async () => {
 		vi.mocked(apiClient.get).mockResolvedValueOnce({
 			books: [],
-			pagination: { currentPage: 1, totalPages: 1, total: 0 }
+			pagination: { currentPage: 1, totalPages: 1, total: 0 },
 		});
 
 		await BookRepository.getBooks(1, 20, '', 'ALL', 'bookName', 'ASC');
 
-		expect(apiClient.get).toHaveBeenCalledWith(expect.stringMatching(/sortBy=bookName.*sortOrder=ASC|sortOrder=ASC.*sortBy=bookName/), expect.anything());
+		expect(apiClient.get).toHaveBeenCalledWith(
+			expect.stringMatching(/sortBy=bookName.*sortOrder=ASC|sortOrder=ASC.*sortBy=bookName/),
+			expect.anything()
+		);
 	});
 
 	it('QC-6 [Offline]: getBooks sorts offline books by Vietnamese alphabet (bookName ASC)', async () => {
@@ -149,7 +152,7 @@ describe('BookRepository Favorite Server Management', () => {
 				totalPending: 0,
 				createdAt: '',
 				updatedAt: '',
-				lastReadChapter: null as any
+				lastReadChapter: null as any,
 			},
 			{
 				bookId: 'b-1',
@@ -160,7 +163,7 @@ describe('BookRepository Favorite Server Management', () => {
 				totalPending: 0,
 				createdAt: '',
 				updatedAt: '',
-				lastReadChapter: null as any
+				lastReadChapter: null as any,
 			},
 			{
 				bookId: 'b-3',
@@ -171,8 +174,8 @@ describe('BookRepository Favorite Server Management', () => {
 				totalPending: 0,
 				createdAt: '',
 				updatedAt: '',
-				lastReadChapter: null as any
-			}
+				lastReadChapter: null as any,
+			},
 		]);
 
 		const res = await BookRepository.getBooks(1, 20, '', 'ALL', 'bookName', 'ASC');
@@ -189,10 +192,10 @@ describe('BookRepository Favorite Server Management', () => {
 					lastReadChapter: {
 						chapterId: 'c-20',
 						chapterNumber: 20,
-						title: 'Chương 20: Chiến Thắng'
-					}
-				}
-			]
+						title: 'Chương 20: Chiến Thắng',
+					},
+				},
+			],
 		});
 
 		const res = await BookRepository.getLastReadChapter('b-99', { forceFresh: true });
@@ -200,7 +203,7 @@ describe('BookRepository Favorite Server Management', () => {
 		expect(res).toEqual({
 			chapterId: 'c-20',
 			chapterNumber: 20,
-			title: 'Chương 20: Chiến Thắng'
+			title: 'Chương 20: Chiến Thắng',
 		});
 
 		const [calledUrl, calledOptions] = vi.mocked(apiClient.get).mock.calls[0];
@@ -209,9 +212,9 @@ describe('BookRepository Favorite Server Management', () => {
 		expect(calledOptions).toMatchObject({
 			headers: {
 				'Cache-Control': 'no-cache, no-store, must-revalidate',
-				Pragma: 'no-cache'
+				Pragma: 'no-cache',
 			},
-			cache: 'no-store'
+			cache: 'no-store',
 		});
 	});
 
@@ -220,9 +223,9 @@ describe('BookRepository Favorite Server Management', () => {
 			books: [
 				{
 					bookId: 'b-55',
-					bookName: 'Quyển 55'
-				}
-			]
+					bookName: 'Quyển 55',
+				},
+			],
 		});
 
 		const res = await BookRepository.getBook('b-55');
@@ -235,19 +238,19 @@ describe('BookRepository Favorite Server Management', () => {
 	it('QC-9 [Online]: updateLastReadChapter calls server API and saves to offlineDb', async () => {
 		const mockBook = {
 			bookId: 'b-99',
-			bookName: 'Đấu Phá Khung Thương'
+			bookName: 'Đấu Phá Khung Thương',
 		} as any;
 		await offlineDb.saveBook(mockBook);
 
 		vi.mocked(apiClient.post).mockResolvedValueOnce({
 			code: 1000,
-			data: { bookId: 'b-99', lastReadChapter: { chapterId: 'c-10', chapterNumber: 10, title: 'Chương 10' } }
+			data: { bookId: 'b-99', lastReadChapter: { chapterId: 'c-10', chapterNumber: 10, title: 'Chương 10' } },
 		});
 
 		await (BookRepository as any).updateLastReadChapter('b-99', {
 			chapterId: 'c-10',
 			chapterNumber: 10,
-			title: 'Chương 10'
+			title: 'Chương 10',
 		});
 
 		expect(apiClient.post).toHaveBeenCalledWith(
@@ -255,7 +258,7 @@ describe('BookRepository Favorite Server Management', () => {
 			{
 				chapterId: 'c-10',
 				chapterNumber: 10,
-				title: 'Chương 10'
+				title: 'Chương 10',
 			},
 			expect.objectContaining({ silent: true })
 		);
@@ -264,7 +267,7 @@ describe('BookRepository Favorite Server Management', () => {
 		expect(saved?.lastReadChapter).toEqual({
 			chapterId: 'c-10',
 			chapterNumber: 10,
-			title: 'Chương 10'
+			title: 'Chương 10',
 		});
 		expect(saved?.lastedReadAt).toBeDefined();
 	});
@@ -273,14 +276,14 @@ describe('BookRepository Favorite Server Management', () => {
 		useAppStore.getState().setOfflineMode(true);
 		const mockBook = {
 			bookId: 'b-99',
-			bookName: 'Đấu Phá Khung Thương'
+			bookName: 'Đấu Phá Khung Thương',
 		} as any;
 		await offlineDb.saveBook(mockBook);
 
 		await (BookRepository as any).updateLastReadChapter('b-99', {
 			chapterId: 'c-11',
 			chapterNumber: 11,
-			title: 'Chương 11'
+			title: 'Chương 11',
 		});
 
 		expect(apiClient.post).not.toHaveBeenCalled();
@@ -291,7 +294,7 @@ describe('BookRepository Favorite Server Management', () => {
 	it('QC-11 [Network Error]: updateLastReadChapter safely handles API rejection while keeping offlineDb updated', async () => {
 		const mockBook = {
 			bookId: 'b-99',
-			bookName: 'Đấu Phá Khung Thương'
+			bookName: 'Đấu Phá Khung Thương',
 		} as any;
 		await offlineDb.saveBook(mockBook);
 
@@ -301,7 +304,7 @@ describe('BookRepository Favorite Server Management', () => {
 			(BookRepository as any).updateLastReadChapter('b-99', {
 				chapterId: 'c-12',
 				chapterNumber: 12,
-				title: 'Chương 12'
+				title: 'Chương 12',
 			})
 		).resolves.not.toThrow();
 

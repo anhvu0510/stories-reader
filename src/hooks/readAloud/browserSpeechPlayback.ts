@@ -1,8 +1,9 @@
-import type { RefObject } from 'react';
-import type { SentenceChunk } from '@/services/gaplessTtsPlayer';
 import { NativeTTSService } from '@/services/nativeTtsService';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+
 import type { DomWordHighlighter } from '@/services/domWordHighlighter';
+import type { SentenceChunk } from '@/services/gaplessTtsPlayer';
+import type { RefObject } from 'react';
 
 interface BrowserSpeechOptions {
 	chunks: SentenceChunk[];
@@ -47,7 +48,7 @@ export function createBrowserSpeechPlayback(options: BrowserSpeechOptions) {
 		clearResumePosition,
 		stopReading,
 		updateWordHighlight,
-		playChunk
+		playChunk,
 	} = options;
 	const playNativeChunk = (index: number, startOffset: number, sessionId: number) => {
 		if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
@@ -102,7 +103,7 @@ export function createBrowserSpeechPlayback(options: BrowserSpeechOptions) {
 				if (isPlayingRef.current && !isPausedRef.current) {
 					playChunk(index + 1, 0);
 				}
-			}
+			},
 		}).catch((err) => {
 			if (playSessionIdRef.current !== sessionId) return;
 			console.warn('[NativeTTS] Speak exception:', err);
@@ -114,8 +115,7 @@ export function createBrowserSpeechPlayback(options: BrowserSpeechOptions) {
 
 	const playChunkViaBrowser = (index: number, startOffset: number = 0, sessionId: number) => {
 		if (NativeTTSService.isNative()) return playNativeChunk(index, startOffset, sessionId);
-
-		if (!synth || !isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
+		if (shouldAbortBrowserPlayback(synth, isPlayingRef.current, playSessionIdRef.current, sessionId)) return;
 		if (index >= chunks.length) {
 			stopReading();
 			return;
@@ -127,22 +127,13 @@ export function createBrowserSpeechPlayback(options: BrowserSpeechOptions) {
 		charLengthRef.current = 0;
 		wordHighlighterRef.current?.clear();
 
-		const chunk = chunks[index];
-		const textToSpeak = startOffset > 0 ? chunk.text.substring(startOffset) : chunk.text;
-
+		const textToSpeak = getChunkText(chunks[index], startOffset);
 		if (!textToSpeak.trim()) {
 			playChunkViaBrowser(index + 1, 0, sessionId);
 			return;
 		}
 
-		const utterance = new SpeechSynthesisUtterance(textToSpeak);
-		utterance.rate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.8;
-
-		const voices = synth.getVoices();
-		const selectedVoice = voices.find((v) => v.voiceURI === voiceUri || v.name === voiceUri);
-		if (selectedVoice) {
-			utterance.voice = selectedVoice;
-		}
+		const utterance = createBrowserUtterance(synth, textToSpeak, voiceUri, speechRateRef.current ?? 1.8);
 
 		utterance.onstart = () => {
 			if (playSessionIdRef.current === sessionId && isPlayingRef.current) {
@@ -193,4 +184,27 @@ function wordLength(text: string, offset: number, reportedLength: number): numbe
 	const remaining = text.slice(offset);
 	const delimiter = remaining.search(/[\s.,!?:;'"(){}[\]“”‘’\-–—]/);
 	return delimiter > 0 ? delimiter : Math.min(remaining.length, 6);
+}
+
+function shouldAbortBrowserPlayback(
+	synth: SpeechSynthesis | null,
+	isPlaying: boolean,
+	currentSessionId: number,
+	sessionId: number
+): boolean {
+	return !synth || !isPlaying || currentSessionId !== sessionId;
+}
+
+function getChunkText(chunk: SentenceChunk, startOffset: number): string {
+	return startOffset > 0 ? chunk.text.substring(startOffset) : chunk.text;
+}
+
+function createBrowserUtterance(synth: SpeechSynthesis, text: string, voiceUri: string, defaultRate: number): SpeechSynthesisUtterance {
+	const utterance = new SpeechSynthesisUtterance(text);
+	utterance.rate = useReaderConfigStore.getState().speechRate ?? defaultRate;
+	const selectedVoice = synth.getVoices().find((v) => v.voiceURI === voiceUri || v.name === voiceUri);
+	if (selectedVoice) {
+		utterance.voice = selectedVoice;
+	}
+	return utterance;
 }

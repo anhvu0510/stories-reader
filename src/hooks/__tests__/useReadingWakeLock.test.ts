@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, renderHook } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import { useReadingWakeLock } from '../readAloud/useReadingWakeLock';
 
 afterEach(() => {
@@ -10,7 +11,12 @@ afterEach(() => {
 
 function deferredLock() {
 	const release = vi.fn(async () => {});
-	const sentinel: WakeLockSentinel = Object.assign(new EventTarget(), { type: 'screen' as const, released: false, onrelease: null, release });
+	const sentinel: WakeLockSentinel = Object.assign(new EventTarget(), {
+		type: 'screen' as const,
+		released: false,
+		onrelease: null,
+		release,
+	});
 	let resolve: (lock: WakeLockSentinel) => void = () => {};
 	const promise = new Promise<WakeLockSentinel>((done) => {
 		resolve = done;

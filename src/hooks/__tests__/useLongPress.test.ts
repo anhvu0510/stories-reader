@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import React from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { useLongPress } from '@/hooks/useLongPress';
+
+import type React from 'react';
 
 describe('useLongPress hook', () => {
 	beforeEach(() => {
@@ -24,12 +25,12 @@ describe('useLongPress hook', () => {
 				threshold: 400,
 				onLongPress,
 				onClick,
-				haptic: false
+				haptic: false,
 			})
 		);
 
 		const mockTouchEvent = {
-			touches: [{ clientX: 100, clientY: 100 }]
+			touches: [{ clientX: 100, clientY: 100 }],
 		} as unknown as React.TouchEvent;
 
 		act(() => {
@@ -47,7 +48,7 @@ describe('useLongPress hook', () => {
 		// Simulated click afterwards should be suppressed
 		const mockClickEvent = {
 			preventDefault: vi.fn(),
-			stopPropagation: vi.fn()
+			stopPropagation: vi.fn(),
 		} as unknown as React.MouseEvent;
 
 		act(() => {
@@ -68,12 +69,12 @@ describe('useLongPress hook', () => {
 				threshold: 400,
 				onLongPress,
 				onClick,
-				haptic: false
+				haptic: false,
 			})
 		);
 
 		const mockTouchEvent = {
-			touches: [{ clientX: 100, clientY: 100 }]
+			touches: [{ clientX: 100, clientY: 100 }],
 		} as unknown as React.TouchEvent;
 
 		act(() => {
@@ -89,7 +90,7 @@ describe('useLongPress hook', () => {
 
 		const mockClickEvent = {
 			preventDefault: vi.fn(),
-			stopPropagation: vi.fn()
+			stopPropagation: vi.fn(),
 		} as unknown as React.MouseEvent;
 
 		act(() => {
@@ -107,16 +108,16 @@ describe('useLongPress hook', () => {
 				threshold: 400,
 				moveTolerance: 10,
 				onLongPress,
-				haptic: false
+				haptic: false,
 			})
 		);
 
 		const mockTouchStart = {
-			touches: [{ clientX: 100, clientY: 100 }]
+			touches: [{ clientX: 100, clientY: 100 }],
 		} as unknown as React.TouchEvent;
 
 		const mockTouchMove = {
-			touches: [{ clientX: 100, clientY: 125 }] // Moved 25px in Y
+			touches: [{ clientX: 100, clientY: 125 }], // Moved 25px in Y
 		} as unknown as React.TouchEvent;
 
 		act(() => {

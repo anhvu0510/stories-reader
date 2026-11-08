@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { useNativeReadAloud } from '@/hooks/useNativeReadAloud';
-import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { DomWordHighlighter } from '@/services/domWordHighlighter';
 import { NativeTTSStreamService } from '@/services/nativeTtsStream';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 
 describe('useNativeReadAloud Hook', () => {
 	beforeEach(() => {
@@ -38,7 +39,7 @@ describe('useNativeReadAloud Hook', () => {
 				startIndex: 0,
 				voice: 'vi-VN-HoaiMyNeural',
 				bookTitle: 'Truyện #b123',
-				chapterTitle: 'Chương 10'
+				chapterTitle: 'Chương 10',
 			})
 		);
 
@@ -58,7 +59,7 @@ describe('useNativeReadAloud Hook', () => {
 				bookName: 'Vạn Cổ Đệ Nhất Thần',
 				chapterId: 'c456',
 				chapterNumber: 1,
-				chapterTitle: 'Chương 1: Xuất Thế'
+				chapterTitle: 'Chương 1: Xuất Thế',
 			})
 		);
 
@@ -69,7 +70,7 @@ describe('useNativeReadAloud Hook', () => {
 		expect(startPlaybackSpy).toHaveBeenCalledWith(
 			expect.objectContaining({
 				bookTitle: 'Vạn Cổ Đệ Nhất Thần',
-				chapterTitle: 'Chương 1: Xuất Thế'
+				chapterTitle: 'Chương 1: Xuất Thế',
 			})
 		);
 
@@ -125,7 +126,7 @@ describe('useNativeReadAloud Hook', () => {
 				startIndex: 0,
 				voice: 'vi-vn-x-gda-network',
 				bookTitle: 'Truyện #b2',
-				chapterTitle: 'Chương 2'
+				chapterTitle: 'Chương 2',
 			})
 		);
 

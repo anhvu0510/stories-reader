@@ -1,10 +1,10 @@
-import { motion } from 'motion/react';
 import { X, Server, BookOpen, Volume2, Sparkles, RefreshCw, Music } from 'lucide-react';
+import { motion } from 'motion/react';
 
 import { BottomSheet } from '@/components/BottomSheet';
 import { useAppUpdate } from '@/hooks/useAppUpdate';
 import { triggerHaptic } from '@/hooks/useHaptic';
-import { useModalStore } from '@/stores/useModalStore';
+import { useModalStore, type SettingsTab } from '@/stores/useModalStore';
 
 import { AISettingsTab } from './components/AISettingsTab';
 import { BgmSettingsTab } from './components/BgmSettingsTab';
@@ -22,17 +22,23 @@ export function GlobalSettingsSheet({ currentBookId, currentChapterId }: GlobalS
 	const { isSettingsOpen, activeSettingsTab, closeSettings, setSettingsTab } = useModalStore();
 	const { appInfo } = useAppUpdate({ autoCheck: false });
 
-	const tabs = [
+	const tabs: readonly { id: SettingsTab; label: string; icon: typeof Server }[] = [
 		{ id: 'servers', label: 'Server API', icon: Server },
 		{ id: 'reader', label: 'Chế độ Đọc', icon: BookOpen },
 		{ id: 'voice', label: 'Giọng đọc TTS', icon: Volume2 },
 		{ id: 'bgm', label: 'Nhạc Nền', icon: Music },
 		{ id: 'translation', label: 'Dịch AI', icon: Sparkles },
-		{ id: 'replacements', label: 'Thay thế từ', icon: RefreshCw }
-	] as const;
+		{ id: 'replacements', label: 'Thay thế từ', icon: RefreshCw },
+	];
 
 	return (
-		<BottomSheet isOpen={isSettingsOpen} onClose={closeSettings} ariaLabel="Cấu hình Hệ thống" maxHeight="h-[680px] max-h-[88dvh]" showDragHandle={false}>
+		<BottomSheet
+			isOpen={isSettingsOpen}
+			onClose={closeSettings}
+			ariaLabel="Cấu hình Hệ thống"
+			maxHeight="h-[680px] max-h-[88dvh]"
+			showDragHandle={false}
+		>
 			{/* Top Header & Tab Capsule (100% unified theme header) */}
 			<div className="pt-2.5 px-3.5 pb-2 border-b border-outline-variant/30 space-y-2 flex-shrink-0 bg-transparent relative z-20">
 				{/* Drag Handle */}
@@ -74,14 +80,16 @@ export function GlobalSettingsSheet({ currentBookId, currentChapterId }: GlobalS
 								whileTap={{ scale: 0.93 }}
 								onClick={() => {
 									triggerHaptic('selection');
-									setSettingsTab(tab.id as any);
+									setSettingsTab(tab.id);
 								}}
 								title={tab.label}
 								aria-label={tab.label}
 								className={`min-h-[36px] transition-all duration-200 flex items-center justify-center cursor-pointer ${isActive ? 'px-3 py-1.5 rounded-xl bg-primary/20 hover:bg-primary/30 border border-primary/60 text-primary font-black shadow-xs gap-1.5 flex-1' : 'p-2 rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container min-w-[36px]'}`}
 							>
 								<Icon size={16} className={isActive ? 'text-primary' : 'text-primary/70'} />
-								{isActive && <span className="text-xs tracking-tight font-black whitespace-nowrap animate-in fade-in duration-200">{tab.label}</span>}
+								{isActive && (
+									<span className="text-xs tracking-tight font-black whitespace-nowrap animate-in fade-in duration-200">{tab.label}</span>
+								)}
 							</motion.button>
 						);
 					})}

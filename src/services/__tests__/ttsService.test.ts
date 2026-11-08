@@ -13,7 +13,7 @@ describe('TTSService.synthesizeSpeech', () => {
 			async () =>
 				new Response(new Blob(['audio']), {
 					status: 200,
-					headers: { 'Content-Type': 'audio/wav' }
+					headers: { 'Content-Type': 'audio/wav' },
 				})
 		);
 		vi.stubGlobal('fetch', fetchMock);
@@ -29,7 +29,7 @@ describe('TTSService.synthesizeSpeech', () => {
 			start(controller) {
 				controller.enqueue(new Uint8Array([1, 2, 3, 4]));
 				controller.close();
-			}
+			},
 		});
 		const fetchMock = vi.fn(
 			async () =>
@@ -39,8 +39,8 @@ describe('TTSService.synthesizeSpeech', () => {
 						'Content-Type': 'audio/pcm',
 						'X-Audio-Sample-Rate': '24000',
 						'X-Audio-Channels': '1',
-						'X-Audio-Sample-Format': 's16le'
-					}
+						'X-Audio-Sample-Format': 's16le',
+					},
 				})
 		);
 		vi.stubGlobal('fetch', fetchMock);
@@ -67,7 +67,7 @@ describe('TTSService.fetchVoices', () => {
 			async () =>
 				new Response(JSON.stringify({ voices }), {
 					status: 200,
-					headers: { 'Content-Type': 'application/json' }
+					headers: { 'Content-Type': 'application/json' },
 				})
 		);
 		vi.stubGlobal('fetch', fetchMock);

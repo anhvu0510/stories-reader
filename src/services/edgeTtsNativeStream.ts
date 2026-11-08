@@ -1,8 +1,10 @@
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
-import type { EdgeBufferMode } from '@/shared/types';
-import type { ReadAloudUtterance } from './readAloudUtterancePlan';
-import { EdgeTTSNative } from './edgeTtsService';
+
 import { EdgePlaybackTimeline, type EdgeTimelineSnapshot } from './edgePlaybackTimeline';
+import { EdgeTTSNative } from './edgeTtsService';
+
+import type { ReadAloudUtterance } from './readAloudUtterancePlan';
+import type { EdgeBufferMode } from '@/shared/types';
 
 export interface StartPlaybackOptions {
 	chunks: string[];
@@ -322,7 +324,7 @@ class EdgeTTSNativeStreamServiceClass {
 			sessionId: snapshot.sessionId,
 			isPlaying: snapshot.state === 'PLAYING',
 			isPaused: snapshot.state === 'PAUSED' || snapshot.state === 'ERROR',
-			isBuffering: snapshot.state === 'CONNECTING' || snapshot.state === 'BUFFERING' || snapshot.state === 'SEEKING'
+			isBuffering: snapshot.state === 'CONNECTING' || snapshot.state === 'BUFFERING' || snapshot.state === 'SEEKING',
 		};
 	}
 }

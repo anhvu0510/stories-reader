@@ -13,10 +13,7 @@ export interface ReaderChapterSkeletonProps {
  * Skeleton Screen mô phỏng chính xác layout trang đọc truyện
  * Khớp hoàn toàn cấu trúc, tỷ lệ và nhịp điệu typography của ChapterContentSection
  */
-export const ReaderChapterSkeleton = memo(function ReaderChapterSkeleton({
-	className = '',
-	titleHint
-}: ReaderChapterSkeletonProps) {
+export const ReaderChapterSkeleton = memo(function ReaderChapterSkeleton({ className = '', titleHint }: ReaderChapterSkeletonProps) {
 	return (
 		<div
 			data-testid="reader-chapter-skeleton"
@@ -79,4 +76,3 @@ export const ReaderChapterSkeleton = memo(function ReaderChapterSkeleton({
 		</div>
 	);
 });
-

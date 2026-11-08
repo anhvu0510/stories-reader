@@ -23,14 +23,20 @@ async function fetchWithTimeout(url: string, fetchOptions: RequestInit, headers:
 		return await fetch(url, {
 			...fetchOptions,
 			headers,
-			signal: controller.signal
+			signal: controller.signal,
 		});
 	} finally {
 		clearTimeout(id);
 	}
 }
 
-async function executeWithRetry(url: string, fetchOptions: RequestInit, headers: HeadersInit, timeout: number, retries: number): Promise<Response> {
+async function executeWithRetry(
+	url: string,
+	fetchOptions: RequestInit,
+	headers: HeadersInit,
+	timeout: number,
+	retries: number
+): Promise<Response> {
 	let attempts = 0;
 	let lastError: unknown;
 
@@ -49,29 +55,47 @@ async function executeWithRetry(url: string, fetchOptions: RequestInit, headers:
 	throw new ApiError(errorMsg);
 }
 
-export async function fetchWithRetry(path: string, options: RequestOptions = {}, customRetries?: number, customTimeout?: number): Promise<Response> {
+function resolveRequestUrl(baseUrl: string, path: string): string {
+	return `${baseUrl.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+async function performRetryRequest(
+	path: string,
+	options: RequestOptions,
+	customRetries?: number,
+	customTimeout?: number
+): Promise<Response> {
+	const { activeDomain } = useAppStore.getState();
+	if (!activeDomain || !activeDomain.url) {
+		throw new ApiError('API_DOMAIN_NOT_SET');
+	}
+
+	const { retries: optionRetries, timeout: optionTimeout, silent: _, ...fetchOptions } = options;
+	const retries = customRetries ?? optionRetries ?? 0;
+	const timeout = customTimeout ?? optionTimeout ?? 4000;
+
+	const headers = {
+		'ngrok-skip-browser-warning': 'true',
+		'Content-Type': 'application/json',
+		...fetchOptions.headers,
+	};
+
+	const url = resolveRequestUrl(activeDomain.url, path);
+	return await executeWithRetry(url, fetchOptions, headers, timeout, retries);
+}
+
+export async function fetchWithRetry(
+	path: string,
+	options: RequestOptions = {},
+	customRetries?: number,
+	customTimeout?: number
+): Promise<Response> {
 	const isSilent = options.silent ?? false;
 	if (!isSilent) {
 		useAppStore.getState().incrementApiLoading();
 	}
 	try {
-		const { activeDomain } = useAppStore.getState();
-		if (!activeDomain || !activeDomain.url) {
-			throw new ApiError('API_DOMAIN_NOT_SET');
-		}
-
-		const { retries: optionRetries, timeout: optionTimeout, silent: _, ...fetchOptions } = options;
-		const retries = customRetries ?? optionRetries ?? 0;
-		const timeout = customTimeout ?? optionTimeout ?? 4000;
-
-		const headers = {
-			'ngrok-skip-browser-warning': 'true',
-			'Content-Type': 'application/json',
-			...fetchOptions.headers
-		};
-
-		const url = `${activeDomain.url.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
-		return await executeWithRetry(url, fetchOptions, headers, timeout, retries);
+		return await performRetryRequest(path, options, customRetries, customTimeout);
 	} finally {
 		if (!isSilent) {
 			useAppStore.getState().decrementApiLoading();
@@ -86,13 +110,13 @@ export const apiClient = {
 		return await res.json();
 	},
 
-	async post<T>(path: string, body?: any, options?: RequestOptions): Promise<T> {
+	async post<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
 		const res = await fetchWithRetry(
 			path,
 			{
 				method: 'POST',
 				body: body ? JSON.stringify(body) : undefined,
-				...options
+				...options,
 			},
 			options?.retries,
 			options?.timeout
@@ -101,13 +125,13 @@ export const apiClient = {
 		return await res.json();
 	},
 
-	async put<T>(path: string, body?: any, options?: RequestOptions): Promise<T> {
+	async put<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
 		const res = await fetchWithRetry(
 			path,
 			{
 				method: 'PUT',
 				body: body ? JSON.stringify(body) : undefined,
-				...options
+				...options,
 			},
 			options?.retries,
 			options?.timeout
@@ -116,18 +140,18 @@ export const apiClient = {
 		return await res.json();
 	},
 
-	async delete<T>(path: string, body?: any, options?: RequestOptions): Promise<T> {
+	async delete<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T> {
 		const res = await fetchWithRetry(
 			path,
 			{
 				method: 'DELETE',
 				body: body ? JSON.stringify(body) : undefined,
-				...options
+				...options,
 			},
 			options?.retries,
 			options?.timeout
 		);
 		if (!res.ok) throw new ApiError(`HTTP Error ${res.status}`, res.status);
 		return await res.json();
-	}
+	},
 };

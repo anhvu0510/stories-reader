@@ -12,14 +12,14 @@ export interface ReadAloudUtterance {
 export function buildReadAloudUtterancePlanFromChunks(chunks: SentenceChunk[]): ReadAloudUtterance[] {
 	return chunks.flatMap((chunk, sourceChunkIndex) => {
 		const sentences = splitParagraphIntoSentences(chunk.text, chunk.pIdx, {
-			maxCharacters: MAX_UTTERANCE_CHARACTERS
+			maxCharacters: MAX_UTTERANCE_CHARACTERS,
 		}).map((sentence) => ({
 			...sentence,
-			startOffset: chunk.startOffset + sentence.startOffset
+			startOffset: chunk.startOffset + sentence.startOffset,
 		}));
 		const segments = buildSpeechSegments(sentences, {
 			targetCharacters: TARGET_UTTERANCE_CHARACTERS,
-			maxCharacters: MAX_UTTERANCE_CHARACTERS
+			maxCharacters: MAX_UTTERANCE_CHARACTERS,
 		});
 
 		return segments.map((segment, utteranceIndex) => ({
@@ -28,7 +28,7 @@ export function buildReadAloudUtterancePlanFromChunks(chunks: SentenceChunk[]): 
 			sourceStart: segment.startOffset,
 			sourceLength: segment.length,
 			text: segment.text,
-			sourceChunkIndex
+			sourceChunkIndex,
 		}));
 	});
 }
@@ -39,11 +39,11 @@ const MAX_UTTERANCE_CHARACTERS = 220;
 export function buildReadAloudUtterancePlan(paragraphs: string[]): ReadAloudUtterance[] {
 	return paragraphs.flatMap((paragraph, paragraphIndex) => {
 		const sentences = splitParagraphIntoSentences(paragraph, paragraphIndex, {
-			maxCharacters: MAX_UTTERANCE_CHARACTERS
+			maxCharacters: MAX_UTTERANCE_CHARACTERS,
 		});
 		const segments = buildSpeechSegments(sentences, {
 			targetCharacters: TARGET_UTTERANCE_CHARACTERS,
-			maxCharacters: MAX_UTTERANCE_CHARACTERS
+			maxCharacters: MAX_UTTERANCE_CHARACTERS,
 		});
 
 		return segments.map((segment, utteranceIndex) => ({
@@ -51,7 +51,7 @@ export function buildReadAloudUtterancePlan(paragraphs: string[]): ReadAloudUtte
 			paragraphIndex,
 			sourceStart: segment.startOffset,
 			sourceLength: segment.length,
-			text: segment.text
+			text: segment.text,
 		}));
 	});
 }

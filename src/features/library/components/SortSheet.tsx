@@ -1,36 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { X, Check, ArrowUpDown, RotateCcw, Clock, Calendar } from 'lucide-react';
+import { X, Check, ArrowUpDown, RotateCcw } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 import { BottomSheet } from '@/components/BottomSheet';
-import { SortByField, SortOrderDirection } from '@/stores/useLibraryStore';
+import { type SortByField, type SortOrderDirection } from '@/stores/useLibraryStore';
 
-export interface SortOption {
-	id: string;
-	sortBy: SortByField;
-	sortOrder: SortOrderDirection;
-	label: string;
-	description: string;
-	icon: React.ReactNode;
-}
-
-export const SORT_OPTIONS: SortOption[] = [
-	{
-		id: 'createdAt-DESC',
-		sortBy: 'createdAt',
-		sortOrder: 'DESC',
-		label: 'Mới thêm vào thư viện',
-		description: 'Truyện mới được tạo / thêm gần đây',
-		icon: <Calendar size={16} />
-	},
-	{
-		id: 'updatedAt-DESC',
-		sortBy: 'updatedAt',
-		sortOrder: 'DESC',
-		label: 'Mới cập nhật gần nhất',
-		description: 'Ưu tiên truyện có chương dịch mới cập nhật',
-		icon: <Clock size={16} />
-	}
-];
+import { SORT_OPTIONS } from './sortOptions';
 
 interface SortSheetProps {
 	isOpen: boolean;
@@ -42,7 +16,15 @@ interface SortSheetProps {
 	onClose: () => void;
 }
 
-export function SortSheet({ isOpen, currentSortBy, currentSortOrder, defaultSortBy = 'createdAt', defaultSortOrder = 'DESC', onApply, onClose }: SortSheetProps) {
+export function SortSheet({
+	isOpen,
+	currentSortBy,
+	currentSortOrder,
+	defaultSortBy = 'createdAt',
+	defaultSortOrder = 'DESC',
+	onApply,
+	onClose,
+}: SortSheetProps) {
 	const [draftSortBy, setDraftSortBy] = useState<SortByField>(currentSortBy);
 	const [draftSortOrder, setDraftSortOrder] = useState<SortOrderDirection>(currentSortOrder);
 
@@ -127,8 +109,12 @@ export function SortSheet({ isOpen, currentSortBy, currentSortOrder, defaultSort
 									{opt.icon}
 								</div>
 								<div>
-									<div className={`text-xs font-extrabold leading-snug ${isSelected ? 'text-primary' : 'text-on-surface'}`}>{opt.label}</div>
-									<div className={`text-[10px] mt-0.5 ${isSelected ? 'text-primary/90 font-medium' : 'text-on-surface-variant/70'}`}>{opt.description}</div>
+									<div className={`text-xs font-extrabold leading-snug ${isSelected ? 'text-primary' : 'text-on-surface'}`}>
+										{opt.label}
+									</div>
+									<div className={`text-[10px] mt-0.5 ${isSelected ? 'text-primary/90 font-medium' : 'text-on-surface-variant/70'}`}>
+										{opt.description}
+									</div>
 								</div>
 							</div>
 

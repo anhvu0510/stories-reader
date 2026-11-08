@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-
 import { Capacitor } from '@capacitor/core';
-import { useModalStore } from '@/stores/useModalStore';
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useModalStore } from '@/stores/useModalStore';
 
 describe('usePullToRefresh hook', () => {
 	beforeEach(() => {
@@ -34,12 +34,12 @@ describe('usePullToRefresh hook', () => {
 
 		act(() => {
 			const touchStartEvent = new TouchEvent('touchstart', {
-				touches: [{ clientX: 100, clientY: 100 } as any]
+				touches: [{ clientX: 100, clientY: 100 } as any],
 			});
 			window.dispatchEvent(touchStartEvent);
 
 			const touchMoveEvent = new TouchEvent('touchmove', {
-				touches: [{ clientX: 100, clientY: 180 } as any]
+				touches: [{ clientX: 100, clientY: 180 } as any],
 			});
 			window.dispatchEvent(touchMoveEvent);
 		});
@@ -55,13 +55,13 @@ describe('usePullToRefresh hook', () => {
 
 		act(() => {
 			const touchStartEvent = new TouchEvent('touchstart', {
-				touches: [{ clientX: 100, clientY: 100 } as any]
+				touches: [{ clientX: 100, clientY: 100 } as any],
 			});
 			window.dispatchEvent(touchStartEvent);
 
 			const touchMoveEvent = new TouchEvent('touchmove', {
 				touches: [{ clientX: 100, clientY: 180 } as any],
-				cancelable: true
+				cancelable: true,
 			});
 			window.dispatchEvent(touchMoveEvent);
 		});
@@ -78,13 +78,13 @@ describe('usePullToRefresh hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 100, clientY: 100 } as any]
+					touches: [{ clientX: 100, clientY: 100 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
 					touches: [{ clientX: 160, clientY: 110 } as any],
-					cancelable: true
+					cancelable: true,
 				})
 			);
 		});
@@ -101,13 +101,13 @@ describe('usePullToRefresh hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 10, clientY: 100 } as any]
+					touches: [{ clientX: 10, clientY: 100 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
 					touches: [{ clientX: 30, clientY: 160 } as any],
-					cancelable: true
+					cancelable: true,
 				})
 			);
 		});
@@ -115,7 +115,6 @@ describe('usePullToRefresh hook', () => {
 		expect(result.current.isPulling).toBe(false);
 		expect(result.current.pullDistance).toBe(0);
 	});
-
 
 	it('resets pull distance on touchend when under threshold', () => {
 		window.scrollY = 0;
@@ -125,13 +124,13 @@ describe('usePullToRefresh hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 100, clientY: 100 } as any]
+					touches: [{ clientX: 100, clientY: 100 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
 					touches: [{ clientX: 100, clientY: 130 } as any],
-					cancelable: true
+					cancelable: true,
 				})
 			);
 		});
@@ -160,13 +159,13 @@ describe('usePullToRefresh hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 100, clientY: 100 } as any]
+					touches: [{ clientX: 100, clientY: 100 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
 					touches: [{ clientX: 100, clientY: 260 } as any],
-					cancelable: true
+					cancelable: true,
 				})
 			);
 		});
@@ -200,12 +199,12 @@ describe('usePullToRefresh hook', () => {
 		act(() => {
 			div.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 50, clientY: 50 } as any]
+					touches: [{ clientX: 50, clientY: 50 } as any],
 				})
 			);
 			div.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 50, clientY: 150 } as any]
+					touches: [{ clientX: 50, clientY: 150 } as any],
 				})
 			);
 		});
@@ -222,12 +221,12 @@ describe('usePullToRefresh hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 50, clientY: 50 } as any]
+					touches: [{ clientX: 50, clientY: 50 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 50, clientY: 150 } as any]
+					touches: [{ clientX: 50, clientY: 150 } as any],
 				})
 			);
 		});
@@ -243,13 +242,13 @@ describe('usePullToRefresh hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 50, clientY: 50 } as any]
+					touches: [{ clientX: 50, clientY: 50 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
 					touches: [{ clientX: 50, clientY: 150 } as any],
-					cancelable: true
+					cancelable: true,
 				})
 			);
 		});
@@ -273,12 +272,12 @@ describe('usePullToRefresh hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 50, clientY: 50 } as any]
+					touches: [{ clientX: 50, clientY: 50 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 50, clientY: 150 } as any]
+					touches: [{ clientX: 50, clientY: 150 } as any],
 				})
 			);
 		});
@@ -295,13 +294,13 @@ describe('usePullToRefresh hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 50, clientY: 50 } as any]
+					touches: [{ clientX: 50, clientY: 50 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
 					touches: [{ clientX: 50, clientY: 150 } as any],
-					cancelable: true
+					cancelable: true,
 				})
 			);
 		});
@@ -318,12 +317,12 @@ describe('usePullToRefresh hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 50, clientY: 50 } as any]
+					touches: [{ clientX: 50, clientY: 50 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 50, clientY: 150 } as any]
+					touches: [{ clientX: 50, clientY: 150 } as any],
 				})
 			);
 		});
@@ -347,13 +346,13 @@ describe('usePullToRefresh hook', () => {
 			child.dispatchEvent(
 				new TouchEvent('touchstart', {
 					bubbles: true,
-					touches: [{ clientX: 50, clientY: 50 } as any]
+					touches: [{ clientX: 50, clientY: 50 } as any],
 				})
 			);
 			child.dispatchEvent(
 				new TouchEvent('touchmove', {
 					bubbles: true,
-					touches: [{ clientX: 50, clientY: 150 } as any]
+					touches: [{ clientX: 50, clientY: 150 } as any],
 				})
 			);
 		});
@@ -372,12 +371,12 @@ describe('usePullToRefresh hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 100, clientY: 50 } as any]
+					touches: [{ clientX: 100, clientY: 50 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 100, clientY: 150 } as any]
+					touches: [{ clientX: 100, clientY: 150 } as any],
 				})
 			);
 		});
@@ -396,13 +395,13 @@ describe('usePullToRefresh hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 100, clientY: 50 } as any]
+					touches: [{ clientX: 100, clientY: 50 } as any],
 				})
 			);
 			// Kéo nhẹ 8px (< 14px touch slop)
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 100, clientY: 58 } as any]
+					touches: [{ clientX: 100, clientY: 58 } as any],
 				})
 			);
 		});
@@ -422,12 +421,12 @@ describe('usePullToRefresh hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 100, clientY: 50 } as any]
+					touches: [{ clientX: 100, clientY: 50 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 100, clientY: 150 } as any]
+					touches: [{ clientX: 100, clientY: 150 } as any],
 				})
 			);
 		});

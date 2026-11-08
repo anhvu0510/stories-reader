@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { Delete, X, BookOpen, CheckCircle2, Fingerprint } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import React, { useState, useEffect, useRef } from 'react';
+
 import { useHaptic } from '@/hooks/useHaptic';
 import { unlockSecretServer, isValidTimePasscode, type SecretServerConfig } from '@/services/secretServerService';
 import { useAppLockStore } from '@/stores/useAppLockStore';
@@ -25,10 +26,19 @@ const KEYPAD_LETTERS: Record<string, string> = {
 	'6': 'MNO',
 	'7': 'PQRS',
 	'8': 'TUV',
-	'9': 'WXYZ'
+	'9': 'WXYZ',
 };
 
-export function PasscodeModal({ isOpen, onClose, onSuccess, mode = 'secret_server', title, subtitle, onUnlockSuccess, onRequestBiometric }: PasscodeModalProps) {
+export function PasscodeModal({
+	isOpen,
+	onClose,
+	onSuccess,
+	mode = 'secret_server',
+	title,
+	subtitle,
+	onUnlockSuccess,
+	onRequestBiometric,
+}: PasscodeModalProps) {
 	const [digits, setDigits] = useState<string[]>([]);
 	const [isShaking, setIsShaking] = useState(false);
 	const [isSuccess, setIsSuccess] = useState(false);
@@ -82,25 +92,28 @@ export function PasscodeModal({ isOpen, onClose, onSuccess, mode = 'secret_serve
 	};
 
 	// Hardware keyboard support for high responsiveness
+	const handleKeyDownRef = useRef<(e: KeyboardEvent) => void>(() => {});
+	handleKeyDownRef.current = (e: KeyboardEvent) => {
+		if (e.key >= '0' && e.key <= '9') {
+			e.preventDefault();
+			handleNumberPress(e.key);
+		} else if (e.key === 'Backspace' || e.key === 'Delete') {
+			e.preventDefault();
+			handleDelete();
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			onClose();
+		}
+	};
+
 	useEffect(() => {
 		if (!isOpen || isSubmitting) return;
 
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key >= '0' && e.key <= '9') {
-				e.preventDefault();
-				handleNumberPress(e.key);
-			} else if (e.key === 'Backspace' || e.key === 'Delete') {
-				e.preventDefault();
-				handleDelete();
-			} else if (e.key === 'Escape') {
-				e.preventDefault();
-				onClose();
-			}
-		};
+		const onKeyDown = (e: KeyboardEvent) => handleKeyDownRef.current(e);
 
-		window.addEventListener('keydown', handleKeyDown);
-		return () => window.removeEventListener('keydown', handleKeyDown);
-	}, [isOpen, digits, isSubmitting]);
+		window.addEventListener('keydown', onKeyDown);
+		return () => window.removeEventListener('keydown', onKeyDown);
+	}, [isOpen, isSubmitting]);
 
 	const submitPasscode = (code: string) => {
 		setIsSubmitting(true);
@@ -161,6 +174,25 @@ export function PasscodeModal({ isOpen, onClose, onSuccess, mode = 'secret_serve
 		}
 	};
 
+	const getMotionAnimate = () => {
+		if (isShaking) return { x: [-14, 14, -10, 10, -5, 5, 0] };
+		if (isSuccess) return { scale: [1, 1.04, 1] };
+		return {};
+	};
+
+	const getDigitBoxClass = (isFilled: boolean, isCurrent: boolean) => {
+		if (isSuccess) {
+			return 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.5),_inset_0_1px_1px_rgba(255,255,255,0.4)]';
+		}
+		if (isFilled) {
+			return 'bg-primary/20 border-2 border-primary text-primary shadow-[0_0_16px_rgba(var(--primary),0.35),_inset_0_1.5px_1px_rgba(255,255,255,0.4)] scale-105';
+		}
+		if (isCurrent) {
+			return 'bg-surface-container-high/60 border-2 border-primary/90 text-transparent shadow-[0_0_12px_rgba(var(--primary),0.25),_inset_0_1px_1px_rgba(255,255,255,0.3)] animate-pulse';
+		}
+		return 'bg-surface-container-high/40 border border-outline-variant/60 dark:border-white/15 text-transparent shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]';
+	};
+
 	return (
 		<AnimatePresence>
 			{isOpen && (
@@ -215,16 +247,19 @@ export function PasscodeModal({ isOpen, onClose, onSuccess, mode = 'secret_serve
 								)}
 							</motion.div>
 							<div>
-								<h1 className="text-2xl sm:text-3xl font-black text-on-surface tracking-tight mb-1">{title || (mode === 'app_unlock' ? 'Mở khóa Ứng dụng' : 'Stories Reader')}</h1>
+								<h1 className="text-2xl sm:text-3xl font-black text-on-surface tracking-tight mb-1">
+									{title || (mode === 'app_unlock' ? 'Mở khóa Ứng dụng' : 'Stories Reader')}
+								</h1>
 								<p className="text-[13px] sm:text-[14px] text-on-surface-variant max-w-[280px] mx-auto leading-relaxed">
-									{subtitle || (mode === 'app_unlock' ? 'Nhập mã Passcode' : 'Thiết lập máy chủ trích xuất và đọc truyện của bạn để bắt đầu.')}
+									{subtitle ||
+										(mode === 'app_unlock' ? 'Nhập mã Passcode' : 'Thiết lập máy chủ trích xuất và đọc truyện của bạn để bắt đầu.')}
 								</p>
 							</div>
 						</div>
 
 						{/* 8 Digit Boxes with 4 + 4 Layout */}
 						<motion.div
-							animate={isShaking ? { x: [-14, 14, -10, 10, -5, 5, 0] } : isSuccess ? { scale: [1, 1.04, 1] } : {}}
+							animate={getMotionAnimate()}
 							transition={{ duration: 0.4 }}
 							className="flex items-center justify-center gap-1.5 sm:gap-2 w-full px-1"
 						>
@@ -238,15 +273,7 @@ export function PasscodeModal({ isOpen, onClose, onSuccess, mode = 'secret_serve
 									return (
 										<div
 											key={idx}
-											className={`relative w-[36px] h-[50px] sm:w-[42px] sm:h-[56px] rounded-2xl flex items-center justify-center font-mono font-black text-xl sm:text-2xl transition-all duration-150 overflow-hidden backdrop-blur-xl ${
-												isSuccess
-													? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.5),_inset_0_1px_1px_rgba(255,255,255,0.4)]'
-													: isFilled
-														? 'bg-primary/20 border-2 border-primary text-primary shadow-[0_0_16px_rgba(var(--primary),0.35),_inset_0_1.5px_1px_rgba(255,255,255,0.4)] scale-105'
-														: isCurrent
-															? 'bg-surface-container-high/60 border-2 border-primary/90 text-transparent shadow-[0_0_12px_rgba(var(--primary),0.25),_inset_0_1px_1px_rgba(255,255,255,0.3)] animate-pulse'
-															: 'bg-surface-container-high/40 border border-outline-variant/60 dark:border-white/15 text-transparent shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
-											}`}
+											className={`relative w-[36px] h-[50px] sm:w-[42px] sm:h-[56px] rounded-2xl flex items-center justify-center font-mono font-black text-xl sm:text-2xl transition-all duration-150 overflow-hidden backdrop-blur-xl ${getDigitBoxClass(isFilled, isCurrent)}`}
 										>
 											<div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none rounded-t-2xl" />
 											<span className="relative z-10">{digit ?? ''}</span>
@@ -268,15 +295,7 @@ export function PasscodeModal({ isOpen, onClose, onSuccess, mode = 'secret_serve
 									return (
 										<div
 											key={idx}
-											className={`relative w-[36px] h-[50px] sm:w-[42px] sm:h-[56px] rounded-2xl flex items-center justify-center font-mono font-black text-xl sm:text-2xl transition-all duration-150 overflow-hidden backdrop-blur-xl ${
-												isSuccess
-													? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.5),_inset_0_1px_1px_rgba(255,255,255,0.4)]'
-													: isFilled
-														? 'bg-primary/20 border-2 border-primary text-primary shadow-[0_0_16px_rgba(var(--primary),0.35),_inset_0_1.5px_1px_rgba(255,255,255,0.4)] scale-105'
-														: isCurrent
-															? 'bg-surface-container-high/60 border-2 border-primary/90 text-transparent shadow-[0_0_12px_rgba(var(--primary),0.25),_inset_0_1px_1px_rgba(255,255,255,0.3)] animate-pulse'
-															: 'bg-surface-container-high/40 border border-outline-variant/60 dark:border-white/15 text-transparent shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]'
-											}`}
+											className={`relative w-[36px] h-[50px] sm:w-[42px] sm:h-[56px] rounded-2xl flex items-center justify-center font-mono font-black text-xl sm:text-2xl transition-all duration-150 overflow-hidden backdrop-blur-xl ${getDigitBoxClass(isFilled, isCurrent)}`}
 										>
 											<div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none rounded-t-2xl" />
 											<span className="relative z-10">{digit ?? ''}</span>
@@ -305,9 +324,13 @@ export function PasscodeModal({ isOpen, onClose, onSuccess, mode = 'secret_serve
 									className="relative h-14 sm:h-16 rounded-2xl bg-surface-container-high/55 hover:bg-surface-container-high/75 active:bg-primary/25 border-t border-t-white/25 border-x border-x-white/10 border-b border-b-black/40 text-on-surface flex flex-col items-center justify-center shadow-[0_3px_0_rgba(0,0,0,0.25),_inset_0_1px_1px_rgba(255,255,255,0.25)] active:shadow-none active:translate-y-[2px] active:scale-[0.93] transition-all duration-75 ease-out select-none cursor-pointer overflow-hidden touch-manipulation transform-gpu will-change-transform disabled:opacity-40"
 								>
 									<div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/15 to-transparent pointer-events-none rounded-t-2xl" />
-									<span className="font-black text-2xl sm:text-[26px] leading-none tracking-tight text-on-surface pointer-events-none">{num}</span>
+									<span className="font-black text-2xl sm:text-[26px] leading-none tracking-tight text-on-surface pointer-events-none">
+										{num}
+									</span>
 									{KEYPAD_LETTERS[num] && (
-										<span className="text-[10px] font-bold text-on-surface-variant/70 tracking-widest mt-0.5 leading-none pointer-events-none">{KEYPAD_LETTERS[num]}</span>
+										<span className="text-[10px] font-bold text-on-surface-variant/70 tracking-widest mt-0.5 leading-none pointer-events-none">
+											{KEYPAD_LETTERS[num]}
+										</span>
 									)}
 								</button>
 							))}
@@ -344,7 +367,9 @@ export function PasscodeModal({ isOpen, onClose, onSuccess, mode = 'secret_serve
 								className="relative h-14 sm:h-16 rounded-2xl bg-surface-container-high/55 hover:bg-surface-container-high/75 active:bg-primary/25 border-t border-t-white/25 border-x border-x-white/10 border-b border-b-black/40 text-on-surface flex flex-col items-center justify-center shadow-[0_3px_0_rgba(0,0,0,0.25),_inset_0_1px_1px_rgba(255,255,255,0.25)] active:shadow-none active:translate-y-[2px] active:scale-[0.93] transition-all duration-75 ease-out select-none cursor-pointer overflow-hidden touch-manipulation transform-gpu will-change-transform disabled:opacity-40"
 							>
 								<div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/15 to-transparent pointer-events-none rounded-t-2xl" />
-								<span className="font-black text-2xl sm:text-[26px] leading-none tracking-tight text-on-surface pointer-events-none">0</span>
+								<span className="font-black text-2xl sm:text-[26px] leading-none tracking-tight text-on-surface pointer-events-none">
+									0
+								</span>
 							</button>
 
 							<button

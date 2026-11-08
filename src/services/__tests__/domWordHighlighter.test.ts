@@ -9,11 +9,11 @@ const originalCss = globalThis.CSS;
 afterEach(() => {
 	Object.defineProperty(globalThis, 'Highlight', {
 		configurable: true,
-		value: originalHighlight
+		value: originalHighlight,
 	});
 	Object.defineProperty(globalThis, 'CSS', {
 		configurable: true,
-		value: originalCss
+		value: originalCss,
 	});
 	vi.restoreAllMocks();
 	document.body.innerHTML = '';
@@ -46,7 +46,9 @@ describe('DomWordHighlighter', () => {
 		first.textContent = 'Một hai ba';
 		second.textContent = 'Bốn năm sáu';
 		const highlights = { set: vi.fn(), delete: vi.fn() };
-		const FakeHighlight = vi.fn(function (this: { ranges: Range[] }, ...ranges: Range[]) { this.ranges = ranges; });
+		const FakeHighlight = vi.fn(function (this: { ranges: Range[] }, ...ranges: Range[]) {
+			this.ranges = ranges;
+		});
 		Object.defineProperty(globalThis, 'Highlight', { configurable: true, value: FakeHighlight });
 		Object.defineProperty(globalThis, 'CSS', { configurable: true, value: { highlights } });
 		const highlighter = new DomWordHighlighter('active-word');
@@ -113,7 +115,7 @@ describe('DomWordHighlighter', () => {
 		const createRange = vi.spyOn(document, 'createRange').mockImplementation(() => {
 			const range = originalCreateRange();
 			Object.defineProperty(range, 'getClientRects', {
-				value: () => [new DOMRect(24, 20, 210, 32), new DOMRect(24, 52, 178, 32)]
+				value: () => [new DOMRect(24, 20, 210, 32), new DOMRect(24, 52, 178, 32)],
 			});
 			return range;
 		});
@@ -154,11 +156,11 @@ describe('DomWordHighlighter', () => {
 		});
 		Object.defineProperty(globalThis, 'Highlight', {
 			configurable: true,
-			value: FakeHighlight
+			value: FakeHighlight,
 		});
 		Object.defineProperty(globalThis, 'CSS', {
 			configurable: true,
-			value: { ...originalCss, highlights }
+			value: { ...originalCss, highlights },
 		});
 
 		let paragraphLayoutReads = 0;
@@ -172,7 +174,7 @@ describe('DomWordHighlighter', () => {
 						return [new DOMRect(20, 40, 260, 30), new DOMRect(20, 70, 240, 30)];
 					}
 					return [new DOMRect(40, 40, 30, 30)];
-				}
+				},
 			});
 			return range;
 		});
@@ -208,7 +210,7 @@ describe('DomWordHighlighter', () => {
 		vi.spyOn(document, 'createRange').mockImplementation(() => {
 			const range = originalCreateRange();
 			Object.defineProperty(range, 'getClientRects', {
-				value: () => [new DOMRect(20, 40, 260, 30)]
+				value: () => [new DOMRect(20, 40, 260, 30)],
 			});
 			return range;
 		});
@@ -248,10 +250,12 @@ describe('DomWordHighlighter', () => {
 		const originalCreateRange = document.createRange.bind(document);
 		vi.spyOn(document, 'createRange').mockImplementation(() => {
 			const range = originalCreateRange();
-			Object.defineProperty(range, 'getClientRects', { value: () => {
-				if (range.toString() === root.textContent) utteranceLayoutReads += 1;
-				return [new DOMRect(20, 40, 260, 30)];
-			} });
+			Object.defineProperty(range, 'getClientRects', {
+				value: () => {
+					if (range.toString() === root.textContent) utteranceLayoutReads += 1;
+					return [new DOMRect(20, 40, 260, 30)];
+				},
+			});
 			return range;
 		});
 		const highlighter = new DomWordHighlighter('active-word');

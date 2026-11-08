@@ -8,12 +8,12 @@ const { mockEdgeTTSNative } = vi.hoisted(() => ({
 		seekToChunk: vi.fn(),
 		clearCache: vi.fn(),
 		getPlaybackSnapshot: vi.fn(),
-		addListener: vi.fn()
-	}
+		addListener: vi.fn(),
+	},
 }));
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Capacitor } from '@capacitor/core';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@capacitor/core', async () => {
 	const actual = await vi.importActual<any>('@capacitor/core');
@@ -24,7 +24,7 @@ vi.mock('@capacitor/core', async () => {
 				return mockEdgeTTSNative;
 			}
 			return actual.registerPlugin(name, options);
-		}
+		},
 	};
 });
 
@@ -47,7 +47,14 @@ describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
 		await EdgeTTSNativeStreamService.startPlayback({ chunks: ['Một hai'], sessionId: 'transition' });
 		const word = vi.fn();
 		EdgeTTSNativeStreamService.onWordBoundary(word);
-		handlers.get('onPlaybackSnapshot')?.({ sessionId: 'transition', state: 'PLAYING', utteranceIndex: 0, positionMs: 100, bufferedDurationMs: 1000, rebufferCount: 0 });
+		handlers.get('onPlaybackSnapshot')?.({
+			sessionId: 'transition',
+			state: 'PLAYING',
+			utteranceIndex: 0,
+			positionMs: 100,
+			bufferedDurationMs: 1000,
+			rebufferCount: 0,
+		});
 		handlers.get('onPlaybackTimeline')?.({
 			sessionId: 'transition',
 			state: 'PLAYING',
@@ -60,10 +67,17 @@ describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
 			sentAtMs: 1000,
 			words: [
 				{ charIndex: 0, charLength: 3, text: 'Một', startTimeMs: 100, durationMs: 100 },
-				{ charIndex: 4, charLength: 3, text: 'hai', startTimeMs: 200, durationMs: 100 }
-			]
+				{ charIndex: 4, charLength: 3, text: 'hai', startTimeMs: 200, durationMs: 100 },
+			],
 		});
-		handlers.get('onPlaybackSnapshot')?.({ sessionId: 'transition', state: 'PLAYING', utteranceIndex: 1, positionMs: 0, bufferedDurationMs: 1000, rebufferCount: 0 });
+		handlers.get('onPlaybackSnapshot')?.({
+			sessionId: 'transition',
+			state: 'PLAYING',
+			utteranceIndex: 1,
+			positionMs: 0,
+			bufferedDurationMs: 1000,
+			rebufferCount: 0,
+		});
 		expect(word).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'Một' }));
 		vi.spyOn(Date, 'now').mockReturnValue(1150);
 		frames[0](0);
@@ -101,7 +115,14 @@ describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
 		await EdgeTTSNativeStreamService.startPlayback({ chunks: ['Một hai'], sessionId: 'timeline' });
 		const word = vi.fn();
 		EdgeTTSNativeStreamService.onWordBoundary(word);
-		handlers.get('onPlaybackSnapshot')?.({ sessionId: 'timeline', state: 'PLAYING', utteranceIndex: 0, positionMs: 100, bufferedDurationMs: 1000, rebufferCount: 0 });
+		handlers.get('onPlaybackSnapshot')?.({
+			sessionId: 'timeline',
+			state: 'PLAYING',
+			utteranceIndex: 0,
+			positionMs: 100,
+			bufferedDurationMs: 1000,
+			rebufferCount: 0,
+		});
 		handlers.get('onPlaybackTimeline')?.({
 			sessionId: 'timeline',
 			state: 'PLAYING',
@@ -112,7 +133,7 @@ describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
 			sourceLength: 7,
 			positionMs: 100,
 			sentAtMs: Date.now(),
-			words: [{ charIndex: 0, charLength: 3, text: 'Một', startTimeMs: 100, durationMs: 200 }]
+			words: [{ charIndex: 0, charLength: 3, text: 'Một', startTimeMs: 100, durationMs: 200 }],
 		});
 		expect(word).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'Một' }));
 		handlers.get('onWordBoundary')?.({ sessionId: 'timeline', chunkIndex: 0, charIndex: 4, charLength: 3, text: 'hai' });
@@ -129,7 +150,7 @@ describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
 			positionMs: 1200,
 			bufferedDurationMs: 0,
 			rebufferCount: 1,
-			errorCode: 'SYNTHESIS_FAILED'
+			errorCode: 'SYNTHESIS_FAILED',
 		});
 		const state = vi.fn();
 		EdgeTTSNativeStreamService.onPlaybackStateChange(state);
@@ -168,7 +189,7 @@ describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
 			voice: 'vi-VN-HoaiMyNeural',
 			rate: 1.5,
 			pitch: '+0Hz',
-			gatewayUrl: 'https://gateway.example.com'
+			gatewayUrl: 'https://gateway.example.com',
 		});
 
 		expect(mockEdgeTTSNative.playChapter).toHaveBeenCalledWith({
@@ -177,7 +198,7 @@ describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
 			voice: 'vi-VN-HoaiMyNeural',
 			rate: 1.5,
 			pitch: '+0Hz',
-			gatewayUrl: 'https://gateway.example.com'
+			gatewayUrl: 'https://gateway.example.com',
 		});
 	});
 
@@ -249,7 +270,7 @@ describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
 			utteranceIndex: 0,
 			positionMs: 120,
 			bufferedDurationMs: 4800,
-			rebufferCount: 0
+			rebufferCount: 0,
 		});
 		EdgeTTSNativeStreamService.onSnapshot(onSnapshot);
 
@@ -264,7 +285,7 @@ describe('EdgeTTSNativeStreamService (Tracer Bullet - Behavior 1)', () => {
 			utteranceIndex: 4,
 			positionMs: 900,
 			bufferedDurationMs: 5000,
-			rebufferCount: 1
+			rebufferCount: 1,
 		});
 		const onSnapshot = vi.fn();
 

@@ -19,7 +19,7 @@ export function ChapterRangeSelector({ totalChapters, activeRange, onRangeSelect
 			label: `Chương ${start}-${end}`,
 			value: `${start}-${end}`,
 			start,
-			end
+			end,
 		};
 	});
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 import { useDocumentTitle, DEFAULT_APP_TITLE } from '@/hooks/useDocumentTitle';
 
@@ -17,7 +17,7 @@ describe('useDocumentTitle Hook', () => {
 
 	it('QC-1: Cập nhật title chính xác theo tên truyện', () => {
 		const { rerender } = renderHook(({ title }) => useDocumentTitle(title), {
-			initialProps: { title: 'Phàm Nhân Tu Tiên' }
+			initialProps: { title: 'Phàm Nhân Tu Tiên' },
 		});
 
 		expect(document.title).toBe('Phàm Nhân Tu Tiên');
@@ -25,7 +25,7 @@ describe('useDocumentTitle Hook', () => {
 
 	it('QC-2: Cập nhật title khi chuyển truyện hoặc chương có title mới', () => {
 		const { rerender } = renderHook(({ title }) => useDocumentTitle(title), {
-			initialProps: { title: 'Phàm Nhân Tu Tiên' }
+			initialProps: { title: 'Phàm Nhân Tu Tiên' },
 		});
 
 		expect(document.title).toBe('Phàm Nhân Tu Tiên');
@@ -41,7 +41,7 @@ describe('useDocumentTitle Hook', () => {
 
 	it('QC-4: Fallback về DEFAULT_APP_TITLE khi title là null, undefined hoặc rỗng', () => {
 		const { rerender } = renderHook(({ title }) => useDocumentTitle(title), {
-			initialProps: { title: undefined as string | undefined }
+			initialProps: { title: undefined as string | undefined },
 		});
 
 		expect(document.title).toBe(DEFAULT_APP_TITLE);

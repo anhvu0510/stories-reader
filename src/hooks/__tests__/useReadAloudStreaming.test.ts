@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useReadAloud } from '@/hooks/useReadAloud';
 import { DomWordHighlighter } from '@/services/domWordHighlighter';
-import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
 import { EdgeTTSService } from '@/services/edgeTtsService';
 import { splitParagraphIntoSentences } from '@/services/gaplessTtsPlayer';
 import { NativeTTSService } from '@/services/nativeTtsService';
+import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
 import { TTSService } from '@/services/ttsService';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 
@@ -29,7 +29,7 @@ class FakeAudioContext {
 	public createBuffer(_channels: number, frameCount: number, sampleRate: number) {
 		return {
 			duration: frameCount / sampleRate,
-			copyToChannel: vi.fn()
+			copyToChannel: vi.fn(),
 		};
 	}
 
@@ -40,7 +40,7 @@ class FakeAudioContext {
 			onended: null as (() => void) | null,
 			connect: vi.fn(),
 			start: vi.fn(),
-			stop: vi.fn()
+			stop: vi.fn(),
 		};
 		this.sources.push(source);
 		return source;
@@ -66,7 +66,7 @@ describe('splitParagraphIntoSentences', () => {
 			pIdx: 4,
 			text: 'Hai bóng người vô cùng cường đại.',
 			startOffset: 0,
-			length: 'Hai bóng người vô cùng cường đại.'.length
+			length: 'Hai bóng người vô cùng cường đại.'.length,
 		});
 		expect(sentences[1].startOffset).toBe(text.indexOf('Thời đại'));
 		expect(sentences[2].text).toBe('Nữ nhân lên tiếng!');
@@ -80,13 +80,16 @@ describe('splitParagraphIntoSentences', () => {
 				pIdx: 1,
 				text: 'Một câu văn dài và đầy đủ ý nghĩa ở đây. Ồ!',
 				startOffset: 0,
-				length: 'Một câu văn dài và đầy đủ ý nghĩa ở đây. Ồ!'.length
-			}
+				length: 'Một câu văn dài và đầy đủ ý nghĩa ở đây. Ồ!'.length,
+			},
 		]);
 	});
 
 	it('never merges sentences across paragraph boundaries', () => {
-		const sentences = [...splitParagraphIntoSentences('Chương một bắt đầu. Mọi thứ yên lặng.', 0), ...splitParagraphIntoSentences('Chương hai nối tiếp. Sấm sét đùng đùng!', 1)];
+		const sentences = [
+			...splitParagraphIntoSentences('Chương một bắt đầu. Mọi thứ yên lặng.', 0),
+			...splitParagraphIntoSentences('Chương hai nối tiếp. Sấm sét đùng đùng!', 1),
+		];
 
 		expect(sentences.map((sentence) => sentence.pIdx)).toEqual([0, 0, 1, 1]);
 	});
@@ -99,11 +102,11 @@ describe('useReadAloud VieNeu streaming speed', () => {
 			speechRate: 2,
 			ttsEngine: 'vieneu',
 			voiceUri: 'Minh Quân',
-			vieneuServerUrl: 'https://tts.example.test'
+			vieneuServerUrl: 'https://tts.example.test',
 		});
 		Object.defineProperty(window, 'AudioContext', {
 			configurable: true,
-			value: FakeAudioContext
+			value: FakeAudioContext,
 		});
 	});
 
@@ -111,7 +114,7 @@ describe('useReadAloud VieNeu streaming speed', () => {
 		vi.restoreAllMocks();
 		Object.defineProperty(window, 'AudioContext', {
 			configurable: true,
-			value: OriginalAudioContext
+			value: OriginalAudioContext,
 		});
 	});
 
@@ -121,11 +124,11 @@ describe('useReadAloud VieNeu streaming speed', () => {
 				start(controller) {
 					controller.enqueue(new Uint8Array([0, 0, 0, 0]));
 					controller.close();
-				}
+				},
 			}),
 			sampleRate: 24000,
 			channels: 1,
-			sampleFormat: 's16le'
+			sampleFormat: 's16le',
 		}));
 		const synthesizeSpeech = vi.spyOn(TTSService, 'synthesizeSpeech').mockResolvedValue(new Blob());
 
@@ -146,7 +149,7 @@ describe('useReadAloud VieNeu streaming speed', () => {
 			expect.objectContaining({
 				temperature: 0.8,
 				top_k: 25,
-				max_chars: 140
+				max_chars: 140,
 			})
 		);
 
@@ -163,11 +166,11 @@ describe('useReadAloud VieNeu streaming speed', () => {
 				start(controller) {
 					controller.enqueue(new Uint8Array([0, 0, 0, 0]));
 					controller.close();
-				}
+				},
 			}),
 			sampleRate: 24000,
 			channels: 1,
-			sampleFormat: 's16le'
+			sampleFormat: 's16le',
 		});
 		vi.spyOn(TTSService, 'synthesizeSpeech').mockResolvedValue(new Blob());
 
@@ -191,16 +194,17 @@ describe('useReadAloud VieNeu streaming speed', () => {
 			body: new ReadableStream<Uint8Array>({
 				start(controller) {
 					controller.enqueue(new Uint8Array([0, 0, 0, 0]));
-				}
+				},
 			}),
 			sampleRate: 24000,
 			channels: 1,
-			sampleFormat: 's16le'
+			sampleFormat: 's16le',
 		}));
 		vi.spyOn(TTSService, 'synthesizeSpeech').mockResolvedValue(new Blob());
-		const paragraph = ['Ngày hôm sau, Tần Thành lại tới, sau khi gửi thiệp cưới và bình tâm lại,', 'nhìn thấy mấy chục sợi tóc bạc bên thái dương Vương Huyên, hắn không khỏi lo lắng.'].join(
-			' \u2063 '
-		);
+		const paragraph = [
+			'Ngày hôm sau, Tần Thành lại tới, sau khi gửi thiệp cưới và bình tâm lại,',
+			'nhìn thấy mấy chục sợi tóc bạc bên thái dương Vương Huyên, hắn không khỏi lo lắng.',
+		].join(' \u2063 ');
 		const { result, unmount } = renderHook(() => useReadAloud([paragraph]));
 
 		act(() => result.current.startReading());
@@ -254,22 +258,26 @@ describe('useReadAloud Edge word boundaries', () => {
 		fakeAudios.length = 0;
 		Object.defineProperty(document, 'visibilityState', {
 			configurable: true,
-			value: 'visible'
+			value: 'visible',
 		});
-		document.body.innerHTML = ['<main id="main-story-content"><article>', '<div data-paragraph-index="0">"Xin chào", thế giới.</div>', '</article></main>'].join('');
+		document.body.innerHTML = [
+			'<main id="main-story-content"><article>',
+			'<div data-paragraph-index="0">"Xin chào", thế giới.</div>',
+			'</article></main>',
+		].join('');
 		useReaderConfigStore.setState({
 			speechRate: 1,
 			ttsEngine: 'edge',
-			edgeVoiceUri: 'vi-VN-HoaiMyNeural'
+			edgeVoiceUri: 'vi-VN-HoaiMyNeural',
 		});
 		vi.stubGlobal('Audio', FakeEdgeAudio);
 		Object.defineProperty(URL, 'createObjectURL', {
 			configurable: true,
-			value: vi.fn(() => 'blob:edge-audio')
+			value: vi.fn(() => 'blob:edge-audio'),
 		});
 		Object.defineProperty(URL, 'revokeObjectURL', {
 			configurable: true,
-			value: vi.fn()
+			value: vi.fn(),
 		});
 		vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 		vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
@@ -281,15 +289,15 @@ describe('useReadAloud Edge word boundaries', () => {
 		document.body.innerHTML = '';
 		Object.defineProperty(window, 'Audio', {
 			configurable: true,
-			value: OriginalAudio
+			value: OriginalAudio,
 		});
 		Object.defineProperty(URL, 'createObjectURL', {
 			configurable: true,
-			value: originalCreateObjectUrl
+			value: originalCreateObjectUrl,
 		});
 		Object.defineProperty(URL, 'revokeObjectURL', {
 			configurable: true,
-			value: originalRevokeObjectUrl
+			value: originalRevokeObjectUrl,
 		});
 	});
 
@@ -302,16 +310,16 @@ describe('useReadAloud Edge word boundaries', () => {
 					charIndex: 1,
 					charLength: 3,
 					startSeconds: 0.125,
-					endSeconds: 0.325
+					endSeconds: 0.325,
 				},
 				{
 					text: 'chào',
 					charIndex: 5,
 					charLength: 4,
 					startSeconds: 0.325,
-					endSeconds: 0.5875
-				}
-			]
+					endSeconds: 0.5875,
+				},
+			],
 		});
 		const highlight = vi.spyOn(DomWordHighlighter.prototype, 'highlight').mockReturnValue(null);
 		const paragraphs = ['"Xin chào", thế giới.'];
@@ -345,7 +353,7 @@ describe('useReadAloud Edge word boundaries', () => {
 	it('does not replay active Edge audio while its tab is hidden', async () => {
 		vi.spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries').mockResolvedValue({
 			audio: new Blob(['audio'], { type: 'audio/mpeg' }),
-			wordBoundaries: []
+			wordBoundaries: [],
 		});
 		const paragraphs = ['Đoạn đang đọc phải giữ nguyên khi chuyển tab.'];
 		const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
@@ -357,7 +365,7 @@ describe('useReadAloud Edge word boundaries', () => {
 		act(() => {
 			Object.defineProperty(document, 'visibilityState', {
 				configurable: true,
-				value: 'hidden'
+				value: 'hidden',
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 		});
@@ -368,7 +376,7 @@ describe('useReadAloud Edge word boundaries', () => {
 			fakeAudios[0].paused = true;
 			Object.defineProperty(document, 'visibilityState', {
 				configurable: true,
-				value: 'visible'
+				value: 'visible',
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 		});
@@ -380,9 +388,13 @@ describe('useReadAloud Edge word boundaries', () => {
 	it('queues the current segment before speculative Edge prefetches', async () => {
 		const synthesize = vi.spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries').mockResolvedValue({
 			audio: new Blob(['audio'], { type: 'audio/mpeg' }),
-			wordBoundaries: []
+			wordBoundaries: [],
 		});
-		const paragraphs = ['Đoạn hiện tại cần được phát ngay.', 'Đoạn kế tiếp chỉ dùng để tải trước.', 'Đoạn thứ ba cũng chỉ dùng để tải trước.'];
+		const paragraphs = [
+			'Đoạn hiện tại cần được phát ngay.',
+			'Đoạn kế tiếp chỉ dùng để tải trước.',
+			'Đoạn thứ ba cũng chỉ dùng để tải trước.',
+		];
 		const { result, unmount } = renderHook(() => useReadAloud(paragraphs));
 
 		act(() => result.current.startReading());
@@ -407,13 +419,11 @@ describe('useReadAloud Edge word boundaries', () => {
 				{ text: 'Mặt', charIndex: 0, charLength: 3, startSeconds: 0, endSeconds: 0.3 },
 				{ text: 'trời', charIndex: 4, charLength: 4, startSeconds: 0.35, endSeconds: 0.7 },
 				{ text: 'dần', charIndex: 9, charLength: 3, startSeconds: 0.75, endSeconds: 1.0 },
-				{ text: 'buông', charIndex: 13, charLength: 5, startSeconds: 1.25, endSeconds: 1.6 }
-			]
+				{ text: 'buông', charIndex: 13, charLength: 5, startSeconds: 1.25, endSeconds: 1.6 },
+			],
 		});
 
-		const { result, unmount } = renderHook(() =>
-			useReadAloud(paragraphs, { chapterId: 'c2', bookId: 'b1', chapterNumber: 1 })
-		);
+		const { result, unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId: 'c2', bookId: 'b1', chapterNumber: 1 }));
 
 		// First, start reading: chunk 0 is synthesized and cached
 		act(() => result.current.startReading());
@@ -442,13 +452,11 @@ describe('useReadAloud Edge word boundaries', () => {
 			audio: new Blob(['fake audio'], { type: 'audio/mp3' }),
 			wordBoundaries: [
 				{ text: 'Mặt', charIndex: 0, charLength: 3, startSeconds: 0, endSeconds: 0.3 },
-				{ text: 'buông', charIndex: 13, charLength: 5, startSeconds: 1.25, endSeconds: 1.6 }
-			]
+				{ text: 'buông', charIndex: 13, charLength: 5, startSeconds: 1.25, endSeconds: 1.6 },
+			],
 		});
 
-		const { result, unmount } = renderHook(() =>
-			useReadAloud(paragraphs, { chapterId: 'c3', bookId: 'b1', chapterNumber: 1 })
-		);
+		const { result, unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId: 'c3', bookId: 'b1', chapterNumber: 1 }));
 
 		// Direct jump without prior reading: synthesizes FULL chunk so future reads are cached
 		act(() => result.current.jumpToContent(0, 13));
@@ -478,12 +486,10 @@ describe('useReadAloud Edge word boundaries', () => {
 			useReaderConfigStore.setState({ ttsEngine: 'edge' });
 			const edgeSpy = vi.spyOn(EdgeTTSService, 'synthesizeSpeechWithBoundaries').mockResolvedValue({
 				audio: new Blob(['fake audio'], { type: 'audio/mp3' }),
-				wordBoundaries: []
+				wordBoundaries: [],
 			});
 
-			const { unmount } = renderHook(() =>
-				useReadAloud(paragraphs, { chapterId: 'c4', bookId: 'b1', chapterNumber: 1 })
-			);
+			const { unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId: 'c4', bookId: 'b1', chapterNumber: 1 }));
 
 			// Fast forward past idle debounce (500ms)
 			act(() => {
@@ -500,14 +506,7 @@ describe('useReadAloud Edge word boundaries', () => {
 	});
 
 	it('expanded sliding window prefetch buffers upcoming chunks with max 2 concurrent requests', async () => {
-		const paragraphs = [
-			'Đoạn một.',
-			'Đoạn hai.',
-			'Đoạn ba.',
-			'Đoạn bốn.',
-			'Đoạn năm.',
-			'Đoạn sáu.'
-		];
+		const paragraphs = ['Đoạn một.', 'Đoạn hai.', 'Đoạn ba.', 'Đoạn bốn.', 'Đoạn năm.', 'Đoạn sáu.'];
 		useReaderConfigStore.setState({ ttsEngine: 'edge' });
 		let concurrentCount = 0;
 		let maxConcurrentSeen = 0;
@@ -521,13 +520,11 @@ describe('useReadAloud Edge word boundaries', () => {
 			concurrentCount -= 1;
 			return {
 				audio: new Blob(['fake audio'], { type: 'audio/mp3' }),
-				wordBoundaries: []
+				wordBoundaries: [],
 			};
 		});
 
-		const { result, unmount } = renderHook(() =>
-			useReadAloud(paragraphs, { chapterId: 'c5', bookId: 'b1', chapterNumber: 1 })
-		);
+		const { result, unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId: 'c5', bookId: 'b1', chapterNumber: 1 }));
 
 		act(() => result.current.startReading());
 
@@ -551,9 +548,7 @@ describe('useReadAloud Edge word boundaries', () => {
 		const stopSpy = vi.spyOn(EdgeTTSNativeStreamService, 'stop').mockResolvedValue(undefined);
 
 		const paragraphs = ['Đoạn một trên native.', 'Đoạn hai trên native.'];
-		const { result, unmount } = renderHook(() =>
-			useReadAloud(paragraphs, { chapterId: 'c-native', bookId: 'b-native', chapterNumber: 1 })
-		);
+		const { result, unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId: 'c-native', bookId: 'b-native', chapterNumber: 1 }));
 
 		await act(async () => {
 			result.current.startReading();
@@ -563,7 +558,7 @@ describe('useReadAloud Edge word boundaries', () => {
 			expect.objectContaining({
 				chunks: expect.arrayContaining(['Đoạn một trên native.', 'Đoạn hai trên native.']),
 				startIndex: 0,
-				voice: 'vi-VN-HoaiMyNeural'
+				voice: 'vi-VN-HoaiMyNeural',
 			})
 		);
 
@@ -580,7 +575,7 @@ describe('useReadAloud Edge word boundaries', () => {
 		useReaderConfigStore.setState({
 			ttsEngine: 'edge',
 			edgeVoiceUri: 'vi-VN-HoaiMyNeural',
-			edgeBufferMode: 'media3'
+			edgeBufferMode: 'media3',
 		});
 		const { EdgeTTSNativeStreamService } = await import('@/services/edgeTtsNativeStream');
 		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
@@ -620,7 +615,8 @@ describe('useReadAloud Edge word boundaries', () => {
 		vi.spyOn(EdgeTTSNativeStreamService, 'isAvailable').mockReturnValue(true);
 		vi.spyOn(EdgeTTSNativeStreamService, 'startPlayback').mockResolvedValue(undefined);
 		const rect = new DOMRect(20, 700, 200, 30);
-		const highlightSpy = vi.spyOn(DomWordHighlighter.prototype, 'highlight')
+		const highlightSpy = vi
+			.spyOn(DomWordHighlighter.prototype, 'highlight')
 			.mockReturnValueOnce({ line: rect, word: rect, lineChanged: true })
 			.mockReturnValue({ line: rect, word: rect, lineChanged: false });
 		const followSpy = vi.spyOn(ReadAloudScrollFollower.prototype, 'follow');
@@ -648,7 +644,7 @@ describe('useReadAloud Edge word boundaries', () => {
 					sourceLength: 21,
 					charIndex: 5,
 					charLength: 3,
-					text: 'một'
+					text: 'một',
 				})
 			);
 		});
@@ -656,10 +652,18 @@ describe('useReadAloud Edge word boundaries', () => {
 		expect(highlightSpy).toHaveBeenCalledWith(expect.any(HTMLElement), 5, 3);
 		act(() => {
 			for (const charIndex of [5, 9]) {
-				EdgeTTSNativeStreamService['wordBoundaryListeners'].forEach((listener) => listener({
-					chunkIndex: 0, utteranceIndex: 0, paragraphIndex: 0, sourceStart: 0,
-					sourceLength: 21, charIndex, charLength: 3, text: 'từ'
-				}));
+				EdgeTTSNativeStreamService['wordBoundaryListeners'].forEach((listener) =>
+					listener({
+						chunkIndex: 0,
+						utteranceIndex: 0,
+						paragraphIndex: 0,
+						sourceStart: 0,
+						sourceLength: 21,
+						charIndex,
+						charLength: 3,
+						text: 'từ',
+					})
+				);
 			}
 		});
 		expect(followSpy).toHaveBeenCalledTimes(1);
@@ -677,7 +681,7 @@ describe('useReadAloud Edge word boundaries', () => {
 
 		const highlightSpy = vi.spyOn(DomWordHighlighter.prototype, 'highlight').mockReturnValue({
 			word: { left: 10, top: 20, width: 30, height: 15, right: 40, bottom: 35 },
-			line: { left: 0, top: 20, width: 200, height: 15, right: 200, bottom: 35 }
+			line: { left: 0, top: 20, width: 200, height: 15, right: 200, bottom: 35 },
 		} as any);
 
 		const container = document.createElement('div');
@@ -691,9 +695,7 @@ describe('useReadAloud Edge word boundaries', () => {
 		document.body.appendChild(container);
 
 		const paragraphs = ['Đoạn một trên native.'];
-		const { result, unmount } = renderHook(() =>
-			useReadAloud(paragraphs, { chapterId: 'c-native', bookId: 'b-native', chapterNumber: 1 })
-		);
+		const { result, unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId: 'c-native', bookId: 'b-native', chapterNumber: 1 }));
 
 		await act(async () => {
 			result.current.startReading();
@@ -701,9 +703,7 @@ describe('useReadAloud Edge word boundaries', () => {
 
 		// Trigger word boundary event for word 'một' at index 5
 		act(() => {
-			EdgeTTSNativeStreamService['wordBoundaryListeners'].forEach((cb) =>
-				cb({ chunkIndex: 0, charIndex: 5, charLength: 3, text: 'một' })
-			);
+			EdgeTTSNativeStreamService['wordBoundaryListeners'].forEach((cb) => cb({ chunkIndex: 0, charIndex: 5, charLength: 3, text: 'một' }));
 		});
 
 		expect(highlightSpy).toHaveBeenCalled();
@@ -770,7 +770,7 @@ describe('useReadAloud Edge word boundaries', () => {
 			expect.objectContaining({
 				chunks: expect.arrayContaining(['Đoạn một trên native device.', 'Đoạn hai trên native device.']),
 				startIndex: 0,
-				voice: 'vi-vn-x-gda-network'
+				voice: 'vi-vn-x-gda-network',
 			})
 		);
 
@@ -783,8 +783,12 @@ describe('useReadAloud Edge word boundaries', () => {
 
 		expect(clearSpy).not.toHaveBeenCalled();
 		act(() => {
-			NativeTTSStreamService['playbackStateListeners'].forEach((callback) => callback({ isPlaying: true, isPaused: false, isBuffering: false }));
-			NativeTTSStreamService['wordBoundaryListeners'].forEach((callback) => callback({ chunkIndex: 1, charIndex: 5, charLength: 3, text: 'hai' }));
+			NativeTTSStreamService['playbackStateListeners'].forEach((callback) =>
+				callback({ isPlaying: true, isPaused: false, isBuffering: false })
+			);
+			NativeTTSStreamService['wordBoundaryListeners'].forEach((callback) =>
+				callback({ chunkIndex: 1, charIndex: 5, charLength: 3, text: 'hai' })
+			);
 		});
 		expect(highlightSpy).toHaveBeenCalledWith(content.querySelector('[data-paragraph-index="1"]'), 5, 3);
 
@@ -803,9 +807,7 @@ describe('useReadAloud Edge word boundaries', () => {
 		localStorage.setItem(`stories_tts_pos_${chapterId}`, JSON.stringify({ chunkIndex: 3, charOffset: 10 }));
 
 		const paragraphs = ['Câu 0.', 'Câu 1.', 'Câu 2.', 'Câu 3.'];
-		const { result, unmount } = renderHook(() =>
-			useReadAloud(paragraphs, { chapterId, bookId: 'b1', chapterNumber: 1 })
-		);
+		const { result, unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId, bookId: 'b1', chapterNumber: 1 }));
 
 		act(() => {
 			result.current.clearResumePosition();
@@ -823,7 +825,7 @@ describe('useReadAloud browser speech ownership', () => {
 		pause: vi.fn(),
 		resume: vi.fn(),
 		speak: vi.fn(),
-		getVoices: vi.fn(() => [])
+		getVoices: vi.fn(() => []),
 	});
 
 	it('does not cancel browser speech when this tab has never started reading', () => {
@@ -832,14 +834,16 @@ describe('useReadAloud browser speech ownership', () => {
 		useReaderConfigStore.setState({ ttsEngine: 'browser' });
 
 		const { rerender, unmount } = renderHook(({ paragraphs }) => useReadAloud(paragraphs), {
-			initialProps: { paragraphs: ['Tab này chưa từng bắt đầu đọc.'] }
+			initialProps: { paragraphs: ['Tab này chưa từng bắt đầu đọc.'] },
 		});
 
 		rerender({ paragraphs: ['Trang khác vừa được tải lại.'] });
 		unmount();
 
-		// Edge can share a native SpeechSynthesis queue across same-site tabs.
-		// An idle tab must never cancel a queue it does not own.
+		/*
+		 * Edge can share a native SpeechSynthesis queue across same-site tabs.
+		 * An idle tab must never cancel a queue it does not own.
+		 */
 		expect(speechSynthesis.cancel).not.toHaveBeenCalled();
 	});
 
@@ -847,7 +851,7 @@ describe('useReadAloud browser speech ownership', () => {
 		const mediaSession = { setActionHandler: vi.fn() };
 		Object.defineProperty(navigator, 'mediaSession', {
 			configurable: true,
-			value: mediaSession
+			value: mediaSession,
 		});
 		vi.stubGlobal(
 			'MediaMetadata',
@@ -898,9 +902,7 @@ describe('useReadAloud browser speech ownership', () => {
 		const speakSpy = vi.spyOn(NativeTTSService, 'speak').mockImplementation(async () => {});
 		vi.spyOn(NativeTTSService, 'isNative').mockReturnValue(true);
 
-		const { result, unmount } = renderHook(() =>
-			useReadAloud(paragraphs, { chapterId, bookId: 'b1', chapterNumber: 1 })
-		);
+		const { result, unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId, bookId: 'b1', chapterNumber: 1 }));
 
 		// Start reading sentence 1
 		act(() => result.current.startReading());
@@ -938,16 +940,12 @@ describe('useReadAloud browser speech ownership', () => {
 		const speakSpy = vi.spyOn(NativeTTSService, 'speak').mockImplementation(async () => {});
 		vi.spyOn(NativeTTSService, 'isNative').mockReturnValue(true);
 
-		const { result, unmount } = renderHook(() =>
-			useReadAloud(paragraphs, { chapterId: 'c1', bookId: 'b1', chapterNumber: 1 })
-		);
+		const { result, unmount } = renderHook(() => useReadAloud(paragraphs, { chapterId: 'c1', bookId: 'b1', chapterNumber: 1 }));
 
 		// Offset 16 is "và có nhiều từ được chọn."
 		act(() => result.current.jumpToContent(0, 16));
 
-		expect(speakSpy).toHaveBeenCalledWith(
-			expect.objectContaining({ text: 'và có nhiều từ được chọn.' })
-		);
+		expect(speakSpy).toHaveBeenCalledWith(expect.objectContaining({ text: 'và có nhiều từ được chọn.' }));
 
 		unmount();
 	});

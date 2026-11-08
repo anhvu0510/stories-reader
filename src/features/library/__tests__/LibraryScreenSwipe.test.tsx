@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
+import { render, screen, act, waitFor, cleanup } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, waitFor, cleanup } from '@testing-library/react';
 import 'fake-indexeddb/auto';
 
 import { LibraryScreen } from '@/features/library/LibraryScreen';
@@ -13,9 +13,9 @@ vi.mock('../../../repositories/BookRepository', () => ({
 	BookRepository: {
 		getBooks: vi.fn().mockResolvedValue({
 			books: [],
-			pagination: { currentPage: 1, totalPages: 1, total: 0 }
-		})
-	}
+			pagination: { currentPage: 1, totalPages: 1, total: 0 },
+		}),
+	},
 }));
 
 describe('LibraryScreen - Swipe Gesture Tab Switching', () => {
@@ -44,12 +44,12 @@ describe('LibraryScreen - Swipe Gesture Tab Switching', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 240, clientY: 200 } as any]
+					touches: [{ clientX: 240, clientY: 200 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 100, clientY: 205 } as any]
+					changedTouches: [{ clientX: 100, clientY: 205 } as any],
 				})
 			);
 		});
@@ -76,12 +76,12 @@ describe('LibraryScreen - Swipe Gesture Tab Switching', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 80, clientY: 200 } as any]
+					touches: [{ clientX: 80, clientY: 200 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 220, clientY: 205 } as any]
+					changedTouches: [{ clientX: 220, clientY: 205 } as any],
 				})
 			);
 		});
@@ -108,7 +108,7 @@ describe('LibraryScreen - Swipe Gesture Tab Switching', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 240, clientY: 200 } as any]
+					touches: [{ clientX: 240, clientY: 200 } as any],
 				})
 			);
 		});
@@ -119,7 +119,7 @@ describe('LibraryScreen - Swipe Gesture Tab Switching', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 100, clientY: 205 } as any]
+					changedTouches: [{ clientX: 100, clientY: 205 } as any],
 				})
 			);
 		});

@@ -1,6 +1,6 @@
-import React from 'react';
-import { motion } from 'motion/react';
 import { Palette, Type, Sliders, Layers, Plus, Minus, BookOpen, Volume2, RefreshCw } from 'lucide-react';
+import { motion } from 'motion/react';
+import React from 'react';
 
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
@@ -11,14 +11,14 @@ const THEMES: { id: ThemeType; label: string; bg: string; color: string }[] = [
 	{ id: 'royal-vn', label: 'Royal VN', bg: '#040e2b', color: '#e2e8f0' },
 	{ id: 'default', label: 'Amoled', bg: '#000000', color: '#f4f4f5' },
 	{ id: 'midnight', label: 'Midnight', bg: '#0f172a', color: '#f8fafc' },
-	{ id: 'obsidian', label: 'Obsidian', bg: '#0c0a14', color: '#f3e8ff' }
+	{ id: 'obsidian', label: 'Obsidian', bg: '#0c0a14', color: '#f3e8ff' },
 ];
 
 const FONTS: { id: FontType; label: string }[] = [
 	{ id: 'default', label: 'Mặc định' },
 	{ id: 'palatino', label: 'Palatino' },
 	{ id: 'bookerly', label: 'Bookerly' },
-	{ id: 'font_viet_tay', label: 'Viết Tay' }
+	{ id: 'font_viet_tay', label: 'Viết Tay' },
 ];
 
 interface StepperProps {
@@ -33,8 +33,18 @@ interface StepperProps {
 	onChange: (val: number) => void;
 }
 
+function formatStepperDisplay(value: number, unit?: string, formatValue?: (v: number) => string): string {
+	if (formatValue) {
+		return formatValue(value);
+	}
+	if (unit) {
+		return `${value} ${unit}`;
+	}
+	return `${value}`;
+}
+
 function NumericStepper({ label, icon, value, min, max, step = 1, unit = '', formatValue, onChange }: StepperProps) {
-	const displayVal = formatValue ? formatValue(value) : `${value}${unit ? ` ${unit}` : ''}`;
+	const displayVal = formatStepperDisplay(value, unit, formatValue);
 	const canDecrease = value > min;
 	const canIncrease = value < max;
 
@@ -94,6 +104,129 @@ function NumericStepper({ label, icon, value, min, max, step = 1, unit = '', for
 	);
 }
 
+function ReaderTogglesSection({
+	showTTSControlOnReader,
+	setShowTTSControlOnReader,
+	isEnabledReplace,
+	setIsEnabledReplace,
+}: {
+	showTTSControlOnReader: boolean;
+	setShowTTSControlOnReader: (v: boolean) => void;
+	isEnabledReplace: boolean;
+	setIsEnabledReplace: (v: boolean) => void;
+}) {
+	return (
+		<div className="grid grid-cols-2 gap-2">
+			{/* Toggle Nút Đọc TTS */}
+			<div className="p-2.5 px-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-1.5 shadow-xs">
+				<span className="text-xs font-bold text-on-surface flex items-center gap-1.5 min-w-0">
+					<Volume2 size={14} className="text-primary shrink-0" />
+					<span className="truncate">Nút Đọc</span>
+				</span>
+				<motion.button
+					type="button"
+					whileTap={{ scale: 0.94 }}
+					onClick={() => {
+						triggerHaptic('selection');
+						setShowTTSControlOnReader(!showTTSControlOnReader);
+					}}
+					className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${showTTSControlOnReader ? 'bg-primary' : 'bg-white/20'}`}
+					title={showTTSControlOnReader ? 'Tắt nút Đọc ngoài màn hình' : 'Bật nút Đọc ngoài màn hình'}
+					aria-label="Chuyển đổi hiển thị nút Đọc ngoài màn hình"
+				>
+					<div
+						className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${showTTSControlOnReader ? 'translate-x-5' : 'translate-x-0'}`}
+					/>
+				</motion.button>
+			</div>
+
+			{/* Toggle Từ điển thay thế */}
+			<div className="p-2.5 px-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-1.5 shadow-xs">
+				<span className="text-xs font-bold text-on-surface flex items-center gap-1.5 min-w-0">
+					<RefreshCw size={14} className="text-primary shrink-0" />
+					<span className="truncate">Thay thế từ</span>
+				</span>
+				<motion.button
+					type="button"
+					whileTap={{ scale: 0.94 }}
+					onClick={() => {
+						triggerHaptic('selection');
+						setIsEnabledReplace(!isEnabledReplace);
+					}}
+					className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${isEnabledReplace ? 'bg-primary' : 'bg-white/20'}`}
+					title={isEnabledReplace ? 'Tắt thay thế từ' : 'Bật thay thế từ'}
+					aria-label="Chuyển đổi từ điển thay thế"
+				>
+					<div
+						className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${isEnabledReplace ? 'translate-x-5' : 'translate-x-0'}`}
+					/>
+				</motion.button>
+			</div>
+		</div>
+	);
+}
+
+function ReaderThemesSection({ theme, setTheme }: { theme: ThemeType; setTheme: (t: ThemeType) => void }) {
+	const currentThemeLabel = THEMES.find((t) => t.id === theme)?.label;
+
+	return (
+		<div>
+			<div className="flex items-center justify-between mb-1.5">
+				<span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+					<Palette size={13} className="text-primary" /> Theme
+				</span>
+				<span className="text-[10px] font-mono text-primary font-bold uppercase">{currentThemeLabel}</span>
+			</div>
+			<div className="grid grid-cols-2 gap-2">
+				{THEMES.map((item) => {
+					const isSelected = theme === item.id;
+					return (
+						<motion.button
+							key={item.id}
+							type="button"
+							whileTap={{ scale: 0.95 }}
+							onClick={() => {
+								triggerHaptic('selection');
+								setTheme(item.id);
+							}}
+							className={`py-2 px-3 rounded-xl border flex items-center gap-2 transition-all text-xs cursor-pointer ${isSelected ? 'bg-primary/20 hover:bg-primary/25 border-primary/50 text-primary font-black shadow-xs' : 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface'}`}
+						>
+							<div className="w-3.5 h-3.5 rounded-full border border-white/30 shrink-0 shadow-xs" style={{ backgroundColor: item.bg }} />
+							<span className="font-bold text-xs truncate">{item.label}</span>
+						</motion.button>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
+function ReaderFontsSection({ font, setFont }: { font: FontType; setFont: (f: FontType) => void }) {
+	return (
+		<div>
+			<div className="flex items-center gap-1.5 mb-1.5">
+				<Type size={13} className="text-primary" />
+				<span className="text-xs font-bold text-on-surface">Phông chữ</span>
+			</div>
+			<div className="grid grid-cols-2 gap-2">
+				{FONTS.map((item) => (
+					<motion.button
+						key={item.id}
+						whileTap={{ scale: 0.95 }}
+						onClick={() => {
+							triggerHaptic('selection');
+							setFont(item.id);
+						}}
+						className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all text-center truncate cursor-pointer ${font === item.id ? 'bg-primary/20 hover:bg-primary/25 border-primary/50 text-primary font-black shadow-xs' : 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface'}`}
+					>
+						{item.label}
+					</motion.button>
+				))}
+			</div>
+		</div>
+	);
+}
+
 export function ReaderSettingsTab() {
 	const {
 		theme,
@@ -115,107 +248,24 @@ export function ReaderSettingsTab() {
 		bookLimit,
 		setBookLimit,
 		chapterLimit,
-		setChapterLimit
+		setChapterLimit,
 	} = useReaderConfigStore();
 
 	return (
 		<div className="space-y-3 text-on-surface">
 			{/* Top Controls: Compact Toggle Chips with Icons */}
-			<div className="grid grid-cols-2 gap-2">
-				{/* Toggle Nút Đọc TTS */}
-				<div className="p-2.5 px-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-1.5 shadow-xs">
-					<span className="text-xs font-bold text-on-surface flex items-center gap-1.5 min-w-0">
-						<Volume2 size={14} className="text-primary shrink-0" />
-						<span className="truncate">Nút Đọc</span>
-					</span>
-					<motion.button
-						type="button"
-						whileTap={{ scale: 0.94 }}
-						onClick={() => {
-							triggerHaptic('selection');
-							setShowTTSControlOnReader(!showTTSControlOnReader);
-						}}
-						className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${showTTSControlOnReader ? 'bg-primary' : 'bg-white/20'}`}
-						title={showTTSControlOnReader ? 'Tắt nút Đọc ngoài màn hình' : 'Bật nút Đọc ngoài màn hình'}
-						aria-label="Chuyển đổi hiển thị nút Đọc ngoài màn hình"
-					>
-						<div className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${showTTSControlOnReader ? 'translate-x-5' : 'translate-x-0'}`} />
-					</motion.button>
-				</div>
+			<ReaderTogglesSection
+				showTTSControlOnReader={showTTSControlOnReader}
+				setShowTTSControlOnReader={setShowTTSControlOnReader}
+				isEnabledReplace={isEnabledReplace}
+				setIsEnabledReplace={setIsEnabledReplace}
+			/>
 
-				{/* Toggle Từ điển thay thế */}
-				<div className="p-2.5 px-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-1.5 shadow-xs">
-					<span className="text-xs font-bold text-on-surface flex items-center gap-1.5 min-w-0">
-						<RefreshCw size={14} className="text-primary shrink-0" />
-						<span className="truncate">Thay thế từ</span>
-					</span>
-					<motion.button
-						type="button"
-						whileTap={{ scale: 0.94 }}
-						onClick={() => {
-							triggerHaptic('selection');
-							setIsEnabledReplace(!isEnabledReplace);
-						}}
-						className={`w-11 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer shrink-0 ${isEnabledReplace ? 'bg-primary' : 'bg-white/20'}`}
-						title={isEnabledReplace ? 'Tắt thay thế từ' : 'Bật thay thế từ'}
-						aria-label="Chuyển đổi từ điển thay thế"
-					>
-						<div className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${isEnabledReplace ? 'translate-x-5' : 'translate-x-0'}`} />
-					</motion.button>
-				</div>
-			</div>
 			{/* Themes (2 cột) */}
-			<div>
-				<div className="flex items-center justify-between mb-1.5">
-					<span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-						<Palette size={13} className="text-primary" /> Theme
-					</span>
-					<span className="text-[10px] font-mono text-primary font-bold uppercase">{THEMES.find((t) => t.id === theme)?.label}</span>
-				</div>
-				<div className="grid grid-cols-2 gap-2">
-					{THEMES.map((item) => {
-						const isSelected = theme === item.id;
-						return (
-							<motion.button
-								key={item.id}
-								type="button"
-								whileTap={{ scale: 0.95 }}
-								onClick={() => {
-									triggerHaptic('selection');
-									setTheme(item.id);
-								}}
-								className={`py-2 px-3 rounded-xl border flex items-center gap-2 transition-all text-xs cursor-pointer ${isSelected ? 'bg-primary/20 hover:bg-primary/25 border-primary/50 text-primary font-black shadow-xs' : 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface'}`}
-							>
-								<div className="w-3.5 h-3.5 rounded-full border border-white/30 shrink-0 shadow-xs" style={{ backgroundColor: item.bg }} />
-								<span className="font-bold text-xs truncate">{item.label}</span>
-							</motion.button>
-						);
-					})}
-				</div>
-			</div>
+			<ReaderThemesSection theme={theme} setTheme={setTheme} />
 
 			{/* Fonts (2 cột) */}
-			<div>
-				<div className="flex items-center gap-1.5 mb-1.5">
-					<Type size={13} className="text-primary" />
-					<span className="text-xs font-bold text-on-surface">Phông chữ</span>
-				</div>
-				<div className="grid grid-cols-2 gap-2">
-					{FONTS.map((item) => (
-						<motion.button
-							key={item.id}
-							whileTap={{ scale: 0.95 }}
-							onClick={() => {
-								triggerHaptic('selection');
-								setFont(item.id);
-							}}
-							className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all text-center truncate cursor-pointer ${font === item.id ? 'bg-primary/20 hover:bg-primary/25 border-primary/50 text-primary font-black shadow-xs' : 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface'}`}
-						>
-							{item.label}
-						</motion.button>
-					))}
-				</div>
-			</div>
+			<ReaderFontsSection font={font} setFont={setFont} />
 
 			{/* Numeric Steppers (2 cột) */}
 			<div>
@@ -225,13 +275,39 @@ export function ReaderSettingsTab() {
 				</div>
 				<div className="grid grid-cols-2 gap-2">
 					{/* Cỡ chữ */}
-					<NumericStepper label="Cỡ chữ" icon={<Type size={12} className="text-primary" />} value={fontSize} min={12} max={36} step={1} unit="px" onChange={setFontSize} />
+					<NumericStepper
+						label="Cỡ chữ"
+						icon={<Type size={12} className="text-primary" />}
+						value={fontSize}
+						min={12}
+						max={36}
+						step={1}
+						unit="px"
+						onChange={setFontSize}
+					/>
 
 					{/* Khoảng cách dòng */}
-					<NumericStepper label="Giãn dòng" icon={<Sliders size={12} className="text-primary" />} value={lineHeight} min={1.0} max={2.4} step={0.1} onChange={setLineHeight} />
+					<NumericStepper
+						label="Giãn dòng"
+						icon={<Sliders size={12} className="text-primary" />}
+						value={lineHeight}
+						min={1.0}
+						max={2.4}
+						step={0.1}
+						onChange={setLineHeight}
+					/>
 
 					{/* Gộp dòng */}
-					<NumericStepper label="Gộp đoạn" icon={<Layers size={12} className="text-primary" />} value={groupLines} min={1} max={10} step={1} unit="dòng" onChange={setGroupLines} />
+					<NumericStepper
+						label="Gộp đoạn"
+						icon={<Layers size={12} className="text-primary" />}
+						value={groupLines}
+						min={1}
+						max={10}
+						step={1}
+						unit="dòng"
+						onChange={setGroupLines}
+					/>
 
 					{/* Số chương gộp */}
 					<NumericStepper

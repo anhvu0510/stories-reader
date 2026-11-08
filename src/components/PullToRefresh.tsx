@@ -19,14 +19,9 @@ export const PullToRefresh = memo(function PullToRefresh({
 	containerRef,
 	targetRef,
 	topOffset,
-	showIndicator = true
+	showIndicator = true,
 }: PullToRefreshProps) {
-	const {
-		pullDistance,
-		isRefreshing,
-		isPulling,
-		hasTriggeredThreshold
-	} = usePullToRefresh({
+	const { pullDistance, isRefreshing, isPulling, hasTriggeredThreshold } = usePullToRefresh({
 		onRefresh,
 		enabled,
 		disabled,
@@ -34,7 +29,7 @@ export const PullToRefresh = memo(function PullToRefresh({
 		maxPull,
 		minDisplayTime,
 		containerRef,
-		targetRef
+		targetRef,
 	});
 
 	if (!showIndicator) {

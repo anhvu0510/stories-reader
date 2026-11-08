@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, cleanup } from '@testing-library/react';
 import { Capacitor } from '@capacitor/core';
-import { useAppLockListener, APP_LOCK_GRACE_PERIOD_MS } from '../useAppLockListener';
+import { renderHook, cleanup } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
 import { useAppLockStore } from '@/stores/useAppLockStore';
+
+import { useAppLockListener, APP_LOCK_GRACE_PERIOD_MS } from '../useAppLockListener';
 
 describe('useAppLockListener Hook', () => {
 	beforeEach(() => {
@@ -13,7 +15,7 @@ describe('useAppLockListener Hook', () => {
 			isLockEnabled: false,
 			isLocked: false,
 			showPasscodeFallback: false,
-			isAuthenticating: false
+			isAuthenticating: false,
 		});
 	});
 
@@ -31,14 +33,14 @@ describe('useAppLockListener Hook', () => {
 		it('không khóa ứng dụng khi document ẩn trên nền tảng web', () => {
 			useAppLockStore.setState({
 				isLockEnabled: true,
-				isLocked: false
+				isLocked: false,
 			});
 
 			renderHook(() => useAppLockListener());
 
 			Object.defineProperty(document, 'visibilityState', {
 				configurable: true,
-				get: () => 'hidden'
+				get: () => 'hidden',
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 
@@ -56,7 +58,7 @@ describe('useAppLockListener Hook', () => {
 			vi.useFakeTimers();
 			useAppLockStore.setState({
 				isLockEnabled: true,
-				isLocked: false
+				isLocked: false,
 			});
 
 			renderHook(() => useAppLockListener());
@@ -64,7 +66,7 @@ describe('useAppLockListener Hook', () => {
 			// Người dùng đưa app xuống background
 			Object.defineProperty(document, 'visibilityState', {
 				configurable: true,
-				get: () => 'hidden'
+				get: () => 'hidden',
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 
@@ -77,7 +79,7 @@ describe('useAppLockListener Hook', () => {
 			// Người dùng vào lại app trong vòng 30s
 			Object.defineProperty(document, 'visibilityState', {
 				configurable: true,
-				get: () => 'visible'
+				get: () => 'visible',
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 
@@ -91,7 +93,7 @@ describe('useAppLockListener Hook', () => {
 			vi.useFakeTimers();
 			useAppLockStore.setState({
 				isLockEnabled: true,
-				isLocked: false
+				isLocked: false,
 			});
 
 			renderHook(() => useAppLockListener());
@@ -99,7 +101,7 @@ describe('useAppLockListener Hook', () => {
 			// Người dùng đưa app xuống background
 			Object.defineProperty(document, 'visibilityState', {
 				configurable: true,
-				get: () => 'hidden'
+				get: () => 'hidden',
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 
@@ -118,7 +120,7 @@ describe('useAppLockListener Hook', () => {
 			vi.useFakeTimers();
 			useAppLockStore.setState({
 				isLockEnabled: true,
-				isLocked: false
+				isLocked: false,
 			});
 
 			renderHook(() => useAppLockListener());
@@ -126,7 +128,7 @@ describe('useAppLockListener Hook', () => {
 			// Down app xuống background
 			Object.defineProperty(document, 'visibilityState', {
 				configurable: true,
-				get: () => 'hidden'
+				get: () => 'hidden',
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 
@@ -136,7 +138,7 @@ describe('useAppLockListener Hook', () => {
 			// Người dùng vào lại app sau 35s
 			Object.defineProperty(document, 'visibilityState', {
 				configurable: true,
-				get: () => 'visible'
+				get: () => 'visible',
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 
@@ -152,7 +154,7 @@ describe('useAppLockListener Hook', () => {
 
 			useAppLockStore.setState({
 				isLockEnabled: true,
-				isLocked: true
+				isLocked: true,
 			});
 
 			renderHook(() => useAppLockListener());
@@ -160,7 +162,7 @@ describe('useAppLockListener Hook', () => {
 			// Giả lập app mở lại / active
 			Object.defineProperty(document, 'visibilityState', {
 				configurable: true,
-				get: () => 'visible'
+				get: () => 'visible',
 			});
 			document.dispatchEvent(new Event('visibilitychange'));
 

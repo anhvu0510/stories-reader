@@ -1,5 +1,5 @@
-import { motion, AnimatePresence } from 'motion/react';
 import { BookOpen } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface LoadingOverlayProps {
 	isLoading?: boolean;
@@ -41,7 +41,17 @@ export function LoadingOverlay({ isLoading = true }: LoadingOverlayProps) {
 								{/* Background Track Ring */}
 								<circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="5" />
 								{/* Active Arc Ring */}
-								<circle cx="50" cy="50" r="42" fill="none" stroke="url(#spinner-grad)" strokeWidth="5.5" strokeLinecap="round" strokeDasharray="210" strokeDashoffset="65" />
+								<circle
+									cx="50"
+									cy="50"
+									r="42"
+									fill="none"
+									stroke="url(#spinner-grad)"
+									strokeWidth="5.5"
+									strokeLinecap="round"
+									strokeDasharray="210"
+									strokeDashoffset="65"
+								/>
 							</svg>
 						</motion.div>
 

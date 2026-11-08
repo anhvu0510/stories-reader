@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { BgmSettingsTab } from '@/features/settings/components/BgmSettingsTab';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
@@ -19,14 +19,14 @@ describe('BgmSettingsTab Component UI & Store Integration', () => {
 			bgmFadeInMs: 500,
 			bgmFadeOutMs: 800,
 			bgmStopDelayMs: 1500,
-			bgmOnlyOnEdgeReadAloud: true
+			bgmOnlyOnEdgeReadAloud: true,
 		});
 
 		mockAudioBuffer = { duration: 10 };
 		mockGainNode = {
 			gain: { value: 0.2, setValueAtTime: vi.fn() },
 			connect: vi.fn(),
-			disconnect: vi.fn()
+			disconnect: vi.fn(),
 		};
 		mockSourceNode = {
 			buffer: null,
@@ -34,7 +34,7 @@ describe('BgmSettingsTab Component UI & Store Integration', () => {
 			connect: vi.fn(),
 			start: vi.fn(),
 			stop: vi.fn(),
-			disconnect: vi.fn()
+			disconnect: vi.fn(),
 		};
 		mockAudioContext = {
 			state: 'running',
@@ -44,7 +44,7 @@ describe('BgmSettingsTab Component UI & Store Integration', () => {
 			createBuffer: vi.fn(() => mockAudioBuffer),
 			decodeAudioData: vi.fn().mockResolvedValue(mockAudioBuffer),
 			resume: vi.fn().mockResolvedValue(undefined),
-			close: vi.fn().mockResolvedValue(undefined)
+			close: vi.fn().mockResolvedValue(undefined),
 		};
 
 		const MockAudioCtx = vi.fn().mockImplementation(function () {
@@ -53,7 +53,7 @@ describe('BgmSettingsTab Component UI & Store Integration', () => {
 		(window as any).AudioContext = MockAudioCtx;
 
 		global.fetch = vi.fn().mockResolvedValue({
-			arrayBuffer: () => Promise.resolve(new ArrayBuffer(8))
+			arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
 		} as Response);
 	});
 

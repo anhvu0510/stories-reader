@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 
@@ -22,24 +22,24 @@ describe('useSwipeGesture hook', () => {
 			useSwipeGesture({
 				onSwipeLeft,
 				onSwipeRight,
-				threshold: 50
+				threshold: 50,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 200, clientY: 150 } as any]
+					touches: [{ clientX: 200, clientY: 150 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 120, clientY: 155 } as any]
+					touches: [{ clientX: 120, clientY: 155 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 120, clientY: 155 } as any]
+					changedTouches: [{ clientX: 120, clientY: 155 } as any],
 				})
 			);
 		});
@@ -56,24 +56,24 @@ describe('useSwipeGesture hook', () => {
 			useSwipeGesture({
 				onSwipeLeft,
 				onSwipeRight,
-				threshold: 50
+				threshold: 50,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 100, clientY: 150 } as any]
+					touches: [{ clientX: 100, clientY: 150 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 180, clientY: 155 } as any]
+					touches: [{ clientX: 180, clientY: 155 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 180, clientY: 155 } as any]
+					changedTouches: [{ clientX: 180, clientY: 155 } as any],
 				})
 			);
 		});
@@ -89,19 +89,19 @@ describe('useSwipeGesture hook', () => {
 			useSwipeGesture({
 				onSwipeRight,
 				threshold: 50,
-				edgeIgnoreWidth: 28
+				edgeIgnoreWidth: 28,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 15, clientY: 150 } as any]
+					touches: [{ clientX: 15, clientY: 150 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 100, clientY: 150 } as any]
+					changedTouches: [{ clientX: 100, clientY: 150 } as any],
 				})
 			);
 		});
@@ -115,19 +115,19 @@ describe('useSwipeGesture hook', () => {
 		renderHook(() =>
 			useSwipeGesture({
 				onSwipeLeft,
-				threshold: 50
+				threshold: 50,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 200, clientY: 100 } as any]
+					touches: [{ clientX: 200, clientY: 100 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 130, clientY: 250 } as any]
+					changedTouches: [{ clientX: 130, clientY: 250 } as any],
 				})
 			);
 		});
@@ -141,25 +141,25 @@ describe('useSwipeGesture hook', () => {
 		vi.spyOn(window, 'getSelection').mockReturnValue({
 			isCollapsed: false,
 			rangeCount: 1,
-			toString: () => 'Đoạn văn được chọn'
+			toString: () => 'Đoạn văn được chọn',
 		} as any);
 
 		renderHook(() =>
 			useSwipeGesture({
 				onSwipeLeft,
-				threshold: 50
+				threshold: 50,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 200, clientY: 150 } as any]
+					touches: [{ clientX: 200, clientY: 150 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 120, clientY: 155 } as any]
+					changedTouches: [{ clientX: 120, clientY: 155 } as any],
 				})
 			);
 		});
@@ -174,19 +174,19 @@ describe('useSwipeGesture hook', () => {
 			useSwipeGesture({
 				onSwipeLeft,
 				threshold: 50,
-				disabled: true
+				disabled: true,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 200, clientY: 150 } as any]
+					touches: [{ clientX: 200, clientY: 150 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 120, clientY: 155 } as any]
+					changedTouches: [{ clientX: 120, clientY: 155 } as any],
 				})
 			);
 		});
@@ -202,14 +202,14 @@ describe('useSwipeGesture hook', () => {
 		renderHook(() =>
 			useSwipeGesture({
 				onSwipeLeft,
-				threshold: 50
+				threshold: 50,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 200, clientY: 150 } as any]
+					touches: [{ clientX: 200, clientY: 150 } as any],
 				})
 			);
 		});
@@ -220,7 +220,7 @@ describe('useSwipeGesture hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 120, clientY: 155 } as any]
+					changedTouches: [{ clientX: 120, clientY: 155 } as any],
 				})
 			);
 		});
@@ -237,14 +237,14 @@ describe('useSwipeGesture hook', () => {
 			useSwipeGesture({
 				onSwipeLeft,
 				threshold: 60,
-				minVelocity: 0.3
+				minVelocity: 0.3,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 200, clientY: 150 } as any]
+					touches: [{ clientX: 200, clientY: 150 } as any],
 				})
 			);
 		});
@@ -255,7 +255,7 @@ describe('useSwipeGesture hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 160, clientY: 152 } as any]
+					changedTouches: [{ clientX: 160, clientY: 152 } as any],
 				})
 			);
 		});
@@ -275,24 +275,24 @@ describe('useSwipeGesture hook', () => {
 				onDragStart,
 				onDragMove,
 				onDragEnd,
-				threshold: 50
+				threshold: 50,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 200, clientY: 150 } as any]
+					touches: [{ clientX: 200, clientY: 150 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 180, clientY: 151 } as any]
+					touches: [{ clientX: 180, clientY: 151 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 140, clientY: 152 } as any]
+					touches: [{ clientX: 140, clientY: 152 } as any],
 				})
 			);
 		});
@@ -303,7 +303,7 @@ describe('useSwipeGesture hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 140, clientY: 152 } as any]
+					changedTouches: [{ clientX: 140, clientY: 152 } as any],
 				})
 			);
 		});
@@ -327,19 +327,19 @@ describe('useSwipeGesture hook', () => {
 				onDragMove,
 				onDragEnd,
 				threshold: 60,
-				minVelocity: 0.35
+				minVelocity: 0.35,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 200, clientY: 150 } as any]
+					touches: [{ clientX: 200, clientY: 150 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 185, clientY: 151 } as any]
+					touches: [{ clientX: 185, clientY: 151 } as any],
 				})
 			);
 		});
@@ -353,7 +353,7 @@ describe('useSwipeGesture hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 185, clientY: 151 } as any]
+					changedTouches: [{ clientX: 185, clientY: 151 } as any],
 				})
 			);
 		});
@@ -372,19 +372,19 @@ describe('useSwipeGesture hook', () => {
 				onDragStart,
 				onDragMove,
 				onDragEnd,
-				threshold: 60
+				threshold: 60,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 200, clientY: 150 } as any]
+					touches: [{ clientX: 200, clientY: 150 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 170, clientY: 151 } as any]
+					touches: [{ clientX: 170, clientY: 151 } as any],
 				})
 			);
 		});
@@ -410,31 +410,31 @@ describe('useSwipeGesture hook', () => {
 				onDragStart,
 				onDragMove,
 				onDragEnd,
-				threshold: 50
+				threshold: 50,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 200, clientY: 100 } as any]
+					touches: [{ clientX: 200, clientY: 100 } as any],
 				})
 			);
 			// Dominant vertical movement: deltaY = +30px, deltaX = -5px
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 195, clientY: 130 } as any]
+					touches: [{ clientX: 195, clientY: 130 } as any],
 				})
 			);
 			// Subsequent horizontal move after locked vertically
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 120, clientY: 140 } as any]
+					touches: [{ clientX: 120, clientY: 140 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 120, clientY: 140 } as any]
+					changedTouches: [{ clientX: 120, clientY: 140 } as any],
 				})
 			);
 		});
@@ -461,20 +461,20 @@ describe('useSwipeGesture hook', () => {
 				onDragMove,
 				onDragEnd,
 				threshold: 120, // Ngưỡng cam kết lớn
-				minVelocity: 0.8
+				minVelocity: 0.8,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 200, clientY: 100 } as any]
+					touches: [{ clientX: 200, clientY: 100 } as any],
 				})
 			);
 			// Kéo sang trái 50px (chưa đủ 120px)
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 150, clientY: 100 } as any]
+					touches: [{ clientX: 150, clientY: 100 } as any],
 				})
 			);
 		});
@@ -486,7 +486,7 @@ describe('useSwipeGesture hook', () => {
 			// Thả tay ra
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 150, clientY: 100 } as any]
+					changedTouches: [{ clientX: 150, clientY: 100 } as any],
 				})
 			);
 		});
@@ -499,4 +499,3 @@ describe('useSwipeGesture hook', () => {
 		expect(onDragEnd).toHaveBeenCalledWith('cancel');
 	});
 });
-

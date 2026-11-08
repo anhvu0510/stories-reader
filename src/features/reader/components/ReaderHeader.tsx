@@ -1,11 +1,9 @@
+import { Home, Clock, Loader2 } from 'lucide-react';
+import { motion } from 'motion/react';
 import React, { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { Home, Clock, Loader2, Maximize, Minimize } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
 
 import { triggerHaptic } from '@/hooks/useHaptic';
-import { useFullscreen } from '@/hooks/useFullscreen';
 
 interface ReaderHeaderProps {
 	bookId: string;
@@ -22,6 +20,85 @@ interface ReaderHeaderProps {
 	onTitleDoubleClick?: () => void;
 }
 
+function clearTapTimer(timerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>) {
+	if (timerRef.current) {
+		clearTimeout(timerRef.current);
+		timerRef.current = null;
+	}
+}
+
+function ReaderHeaderCenterTitle({
+	isRefreshingLatest,
+	bookName,
+	chapterTitle,
+	onTitleClick,
+	onTitleDoubleClick,
+}: {
+	isRefreshingLatest: boolean;
+	bookName?: string;
+	chapterTitle?: string;
+	onTitleClick?: () => void;
+	onTitleDoubleClick?: () => void;
+}) {
+	const tapCountRef = React.useRef<number>(0);
+	const resetTapTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	React.useEffect(() => {
+		return () => {
+			clearTapTimer(resetTapTimerRef);
+		};
+	}, []);
+
+	const handleCenterClick = (_e?: React.SyntheticEvent) => {
+		if (isRefreshingLatest) return;
+
+		tapCountRef.current += 1;
+
+		if (tapCountRef.current === 1) {
+			triggerHaptic('light');
+			onTitleClick?.();
+			clearTapTimer(resetTapTimerRef);
+			resetTapTimerRef.current = setTimeout(() => {
+				tapCountRef.current = 0;
+				resetTapTimerRef.current = null;
+			}, 700);
+			return;
+		}
+
+		if (tapCountRef.current >= 2) {
+			tapCountRef.current = 0;
+			clearTapTimer(resetTapTimerRef);
+			triggerHaptic('medium');
+			onTitleDoubleClick?.();
+		}
+	};
+
+	const titleLabel = chapterTitle || bookName || 'Tiêu đề';
+	const displayTitle = chapterTitle || bookName || undefined;
+
+	return (
+		<button
+			onClick={handleCenterClick}
+			disabled={isRefreshingLatest}
+			className="min-w-0 flex-1 text-center px-1.5 py-0.5 rounded-lg hover:bg-white/5 active:scale-[0.98] transition-transform transition-colors cursor-pointer disabled:cursor-wait touch-manipulation select-none"
+			title={displayTitle}
+			aria-label={titleLabel}
+		>
+			<div className="flex items-center justify-center gap-1.5 pointer-events-none select-none">
+				{isRefreshingLatest && <Loader2 size={12} className="animate-spin text-primary shrink-0" />}
+				<p className="text-[11px] sm:text-xs font-bold text-on-surface-variant/75 truncate tracking-tight text-center">
+					{bookName || 'Đang tải...'}
+				</p>
+			</div>
+			<div className="mt-0.5 overflow-hidden w-full mx-auto max-w-[200px] sm:max-w-md md:max-w-xl pointer-events-none select-none">
+				<h2 className="text-xs sm:text-sm font-extrabold text-on-surface truncate tracking-tight text-center" title={chapterTitle}>
+					{chapterTitle || ''}
+				</h2>
+			</div>
+		</button>
+	);
+}
+
 export const ReaderHeader = memo(function ReaderHeader({
 	bookId: _bookId,
 	bookName,
@@ -34,60 +111,14 @@ export const ReaderHeader = memo(function ReaderHeader({
 	onToggleTTS: _onToggleTTS,
 	onOpenHistory,
 	onTitleClick,
-	onTitleDoubleClick
+	onTitleDoubleClick,
 }: ReaderHeaderProps) {
 	const navigate = useNavigate();
-	const tapCountRef = React.useRef<number>(0);
-	const resetTapTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-	const { isFullscreen, isSupported: isFullscreenSupported, toggleFullscreen } = useFullscreen();
-	const isNative = Capacitor.isNativePlatform();
-	const showFullscreenBtn = !isNative && isFullscreenSupported;
-
-	React.useEffect(() => {
-		return () => {
-			if (resetTapTimerRef.current) {
-				clearTimeout(resetTapTimerRef.current);
-			}
-		};
-	}, []);
-
-	const handleCenterClick = (_e?: React.SyntheticEvent) => {
-		if (isRefreshingLatest) return;
-
-		tapCountRef.current += 1;
-
-		if (tapCountRef.current === 1) {
-			// Nhấn lần 1: Kích hoạt cuộn tới vị trí đọc thoại (nếu có)
-			triggerHaptic('light');
-			onTitleClick?.();
-
-			// Mở cửa sổ chờ lần nhấn 2 trong vòng 700ms
-			if (resetTapTimerRef.current) {
-				clearTimeout(resetTapTimerRef.current);
-			}
-			resetTapTimerRef.current = setTimeout(() => {
-				tapCountRef.current = 0;
-				resetTapTimerRef.current = null;
-			}, 700);
-			return;
-		}
-
-		if (tapCountRef.current >= 2) {
-			// Nhấn lần 2: Tải chương đọc gần nhất (last read) từ server DB
-			tapCountRef.current = 0;
-			if (resetTapTimerRef.current) {
-				clearTimeout(resetTapTimerRef.current);
-				resetTapTimerRef.current = null;
-			}
-			triggerHaptic('medium');
-			onTitleDoubleClick?.();
-			return;
-		}
-	};
+	const progressPercent = Math.min(100, Math.max(0, progress));
 
 	return (
-		<header className="fixed top-0 left-0 right-0 z-40 bg-black/5 dark:bg-black/10 backdrop-blur-[1.5px] border-b border-white/25 dark:border-white/25 shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1px_0_rgba(255,255,255,0.4)] px-3.5 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2 w-full max-w-md mx-auto overflow-x-hidden box-border transition-all duration-300">
-			<div className="flex items-center justify-between gap-2">
+		<header className="fixed top-0 left-0 right-0 z-40 bg-black/5 dark:bg-black/10 backdrop-blur-[1.5px] border-b border-white/25 dark:border-white/25 shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1px_0_rgba(255,255,255,0.4)] px-3.5 sm:px-6 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2 w-full overflow-x-hidden box-border transition-all duration-300">
+			<div className="w-full max-w-4xl lg:max-w-5xl mx-auto flex items-center justify-between gap-2">
 				{/* Left: Home Button (Mobile-Optimized 3D Glass Sphere) */}
 				<motion.button
 					whileTap={{ scale: 0.88 }}
@@ -103,40 +134,16 @@ export const ReaderHeader = memo(function ReaderHeader({
 				</motion.button>
 
 				{/* Center: Interactive Tap-to-read-aloud (single click) / Force Reload Current Chapter (double click) Title Bar */}
-				<button
-					onClick={handleCenterClick}
-					disabled={isRefreshingLatest}
-					className="min-w-0 flex-1 text-center px-1.5 py-0.5 rounded-lg hover:bg-white/5 active:scale-[0.98] transition-transform transition-colors cursor-pointer disabled:cursor-wait touch-manipulation select-none"
-					title={chapterTitle || bookName || undefined}
-					aria-label={chapterTitle || bookName || 'Tiêu đề'}
-				>
-					<div className="flex items-center justify-center gap-1.5 pointer-events-none select-none">
-						{isRefreshingLatest && <Loader2 size={12} className="animate-spin text-primary shrink-0" />}
-						<p className="text-[11px] font-bold text-on-surface-variant/75 truncate tracking-tight text-center">{bookName || 'Đang tải...'}</p>
-					</div>
-					<div className="mt-0.5 overflow-hidden w-full mx-auto max-w-[200px] sm:max-w-[250px] pointer-events-none select-none">
-						<h2 className="text-xs font-extrabold text-on-surface truncate tracking-tight text-center" title={chapterTitle}>
-							{chapterTitle || ''}
-						</h2>
-					</div>
-				</button>
+				<ReaderHeaderCenterTitle
+					bookName={bookName}
+					chapterTitle={chapterTitle}
+					isRefreshingLatest={isRefreshingLatest}
+					onTitleClick={onTitleClick}
+					onTitleDoubleClick={onTitleDoubleClick}
+				/>
 
 				{/* Right: Actions (Mobile-Optimized 3D Glass Sphere) */}
 				<div className="flex items-center gap-1.5 flex-shrink-0">
-					{showFullscreenBtn && (
-						<motion.button
-							whileTap={{ scale: 0.88 }}
-							onClick={() => {
-								triggerHaptic('light');
-								toggleFullscreen();
-							}}
-							className="w-9 h-9 rounded-full bg-gradient-to-b from-white/20 via-white/10 to-white/5 dark:from-white/15 dark:via-white/5 dark:to-black/25 border border-white/35 dark:border-white/25 text-on-surface hover:text-primary hover:from-white/25 hover:to-white/10 shadow-[0_3px_8px_rgba(0,0,0,0.35),_inset_0_1px_1px_0_rgba(255,255,255,0.45),_inset_0_-1px_1px_0_rgba(0,0,0,0.35)] transition-all flex items-center justify-center flex-shrink-0 cursor-pointer"
-							title={isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}
-							aria-label={isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}
-						>
-							{isFullscreen ? <Minimize size={15} strokeWidth={2.3} /> : <Maximize size={15} strokeWidth={2.3} />}
-						</motion.button>
-					)}
 					<motion.button
 						whileTap={{ scale: 0.88 }}
 						onClick={() => {
@@ -156,7 +163,7 @@ export const ReaderHeader = memo(function ReaderHeader({
 			<div className="absolute bottom-0 left-0 right-0 h-0.5 bg-outline-variant/15 overflow-hidden">
 				<div
 					className="h-full bg-gradient-to-r from-primary/60 via-primary to-primary shadow-[0_0_8px_rgba(59,130,246,0.8)] transition-all duration-150 ease-out"
-					style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+					style={{ width: `${progressPercent}%` }}
 				/>
 			</div>
 		</header>

@@ -13,9 +13,10 @@ export const ReplacementRepository = {
 		}
 
 		try {
-			const res = await apiClient.get<any>('/api/replacements');
-			return res?.data || (Array.isArray(res) ? res : []);
-		} catch (e) {
+			const res = await apiClient.get<Replacement[] | { data?: Replacement[] }>('/api/replacements');
+			if (Array.isArray(res)) return res;
+			return res?.data || [];
+		} catch (_e) {
 			const offline = await offlineDb.getReplacements();
 			return offline.length > 0 ? offline : MOCK_REPLACEMENTS;
 		}
@@ -25,12 +26,12 @@ export const ReplacementRepository = {
 		const isOffline = useAppStore.getState().isOfflineMode;
 		const newRep: Replacement = {
 			...rep,
-			id: Date.now().toString()
+			id: Date.now().toString(),
 		};
 
 		if (!isOffline) {
 			try {
-				const res = await apiClient.post<any>('/api/replacements', rep);
+				const res = await apiClient.post<{ id?: string }>('/api/replacements', rep);
 				if (res?.id) newRep.id = res.id;
 			} catch (e) {
 				console.warn('Failed to add replacement via API', e);
@@ -53,5 +54,5 @@ export const ReplacementRepository = {
 
 		await offlineDb.deleteReplacement(id);
 		return true;
-	}
+	},
 };

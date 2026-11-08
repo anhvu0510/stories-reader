@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import 'fake-indexeddb/auto';
 
 import { LibraryScreen } from '@/features/library/LibraryScreen';
@@ -12,8 +12,8 @@ import { useLibraryStore } from '@/stores/useLibraryStore';
 
 vi.mock('../../../repositories/BookRepository', () => ({
 	BookRepository: {
-		getBooks: vi.fn()
-	}
+		getBooks: vi.fn(),
+	},
 }));
 
 const mockBooks = [
@@ -25,7 +25,7 @@ const mockBooks = [
 		totalPending: 0,
 		createdAt: '2024-01-01',
 		updatedAt: '2024-01-02',
-		lastReadChapter: { chapterId: 'c1', chapterNumber: '1', title: 'Diệp Tu' }
+		lastReadChapter: { chapterId: 'c1', chapterNumber: '1', title: 'Diệp Tu' },
 	},
 	{
 		bookId: 'book-fav-2',
@@ -35,8 +35,8 @@ const mockBooks = [
 		totalPending: 0,
 		createdAt: '2024-01-01',
 		updatedAt: '2024-01-02',
-		lastReadChapter: { chapterId: 'c2', chapterNumber: '1', title: 'Thằng Hề' }
-	}
+		lastReadChapter: { chapterId: 'c2', chapterNumber: '1', title: 'Thằng Hề' },
+	},
 ];
 
 describe('LibraryScreen FAVORITE Tab Integration', () => {
@@ -54,7 +54,7 @@ describe('LibraryScreen FAVORITE Tab Integration', () => {
 	it('renders FAVORITE tab button and switches to TRUYỆN YÊU THÍCH', async () => {
 		vi.mocked(BookRepository.getBooks).mockResolvedValue({
 			books: mockBooks,
-			pagination: { currentPage: 1, totalPages: 1, total: 2 }
+			pagination: { currentPage: 1, totalPages: 1, total: 2 },
 		});
 
 		render(
@@ -79,7 +79,7 @@ describe('LibraryScreen FAVORITE Tab Integration', () => {
 	it('displays empty state message when FAVORITE tab has no books', async () => {
 		vi.mocked(BookRepository.getBooks).mockResolvedValue({
 			books: [],
-			pagination: { currentPage: 1, totalPages: 1, total: 0 }
+			pagination: { currentPage: 1, totalPages: 1, total: 0 },
 		});
 
 		render(

@@ -1,4 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react';
+
 import { useModalStore } from '@/stores/useModalStore';
 
 export interface CupertinoSwipeBackOptions {
@@ -38,7 +39,9 @@ const isModalOrSheetActive = (): boolean => {
 		if (state && (state.isSettingsOpen || state.isOfflineManagerOpen)) {
 			return true;
 		}
-	} catch {}
+	} catch {
+		// intentionally empty — useModalStore may not be available during SSR
+	}
 
 	if (typeof document === 'undefined') return false;
 	if (document.body.classList.contains('overflow-hidden') || document.body.style.overflow === 'hidden') {
@@ -48,6 +51,53 @@ const isModalOrSheetActive = (): boolean => {
 	return Boolean(
 		document.querySelector('[role="dialog"], [aria-modal="true"], [data-sheet-open="true"], [data-state="open"], .bottom-sheet')
 	);
+};
+
+/**
+ * Khóa hướng di chuyển ở những pixel đầu tiên (slop 10px).
+ * Trả về false nếu chưa đủ điều kiện hoặc cử chỉ không hợp lệ (dừng xử lý).
+ */
+const resolveLockDirection = (state: TouchState, deltaX: number, absX: number, absY: number): boolean => {
+	if (absX < 10 && absY < 10) return false;
+
+	if (absY > absX * 1.1) {
+		state.lockDirection = 'vertical';
+		return false;
+	}
+
+	// Chỉ chấp nhận kéo từ trái sang phải (deltaX > 0)
+	if (deltaX <= 0 || absX <= absY * 1.1) {
+		state.lockDirection = 'vertical';
+		return false;
+	}
+
+	state.lockDirection = 'horizontal';
+	state.isDragging = true;
+	return true;
+};
+
+/** Xác định có đủ khoảng cách hoặc vận tốc để xác nhận quay về hay không. */
+const shouldCommitBack = (deltaX: number, velocity: number, threshold: number | undefined, minVelocity: number | undefined): boolean => {
+	const defaultThreshold = typeof window === 'undefined' ? 90 : Math.max(90, Math.round(window.innerWidth * 0.3));
+	const effectiveThreshold = threshold ?? defaultThreshold;
+
+	const hasSufficientDistance = deltaX >= effectiveThreshold;
+	const minFlingDistance = Math.max(45, Math.round(effectiveThreshold * 0.5));
+	const hasSufficientVelocity = minVelocity !== undefined && velocity >= minVelocity && deltaX >= minFlingDistance;
+	return hasSufficientDistance || hasSufficientVelocity;
+};
+
+/** Chạy animation trượt ra khỏi màn hình (nếu có container) rồi gọi onBack. */
+const commitBack = (el: HTMLElement | null | undefined, onBack: () => void): void => {
+	if (!el) {
+		onBack();
+		return;
+	}
+	el.style.transition = 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1)';
+	el.style.transform = 'translate3d(100%, 0, 0)';
+	setTimeout(() => {
+		onBack();
+	}, 200);
 };
 
 /**
@@ -62,7 +112,7 @@ export function useCupertinoSwipeBack({
 	edgeWidth = 28,
 	threshold,
 	minVelocity = 0.4,
-	disabled = false
+	disabled = false,
 }: CupertinoSwipeBackOptions) {
 	const touchStateRef = useRef<TouchState | null>(null);
 	const callbacksRef = useRef({ onBack, onSwipeProgress, onSwipeCancel });
@@ -128,7 +178,7 @@ export function useCupertinoSwipeBack({
 				startY: touch.clientY,
 				startTime: Date.now(),
 				isDragging: false,
-				lockDirection: 'none'
+				lockDirection: 'none',
 			};
 		};
 
@@ -143,23 +193,7 @@ export function useCupertinoSwipeBack({
 			const absY = Math.abs(deltaY);
 
 			// Khóa hướng di chuyển ở những pixel đầu tiên (slop 10px)
-			if (state.lockDirection === 'none') {
-				if (absX < 10 && absY < 10) return;
-
-				if (absY > absX * 1.1) {
-					state.lockDirection = 'vertical';
-					return;
-				}
-
-				// Chỉ chấp nhận kéo từ trái sang phải (deltaX > 0)
-				if (deltaX > 0 && absX > absY * 1.1) {
-					state.lockDirection = 'horizontal';
-					state.isDragging = true;
-				} else {
-					state.lockDirection = 'vertical';
-					return;
-				}
-			}
+			if (state.lockDirection === 'none' && !resolveLockDirection(state, deltaX, absX, absY)) return;
 
 			if (state.lockDirection === 'horizontal' && state.isDragging && deltaX >= 0) {
 				applyTranslate(deltaX);
@@ -187,28 +221,8 @@ export function useCupertinoSwipeBack({
 			const duration = Math.max(1, Date.now() - state.startTime);
 			const velocity = deltaX / duration;
 
-			const effectiveThreshold =
-				threshold !== undefined
-					? threshold
-					: typeof window !== 'undefined'
-						? Math.max(90, Math.round(window.innerWidth * 0.3))
-						: 90;
-
-			const hasSufficientDistance = deltaX >= effectiveThreshold;
-			const minFlingDistance = Math.max(45, Math.round(effectiveThreshold * 0.5));
-			const hasSufficientVelocity = minVelocity !== undefined && velocity >= minVelocity && deltaX >= minFlingDistance;
-
-			if (hasSufficientDistance || hasSufficientVelocity) {
-				if (containerRef?.current) {
-					const el = containerRef.current;
-					el.style.transition = 'transform 0.22s cubic-bezier(0.32, 0.72, 0, 1)';
-					el.style.transform = 'translate3d(100%, 0, 0)';
-					setTimeout(() => {
-						callbacksRef.current.onBack();
-					}, 200);
-				} else {
-					callbacksRef.current.onBack();
-				}
+			if (shouldCommitBack(deltaX, velocity, threshold, minVelocity)) {
+				commitBack(containerRef?.current, callbacksRef.current.onBack);
 			} else {
 				resetTranslate(true);
 				callbacksRef.current.onSwipeCancel?.();

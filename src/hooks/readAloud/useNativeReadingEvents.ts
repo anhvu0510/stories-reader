@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
+
 import { EdgeTTSNativeStreamService, type NativeChunkStartEvent } from '@/services/edgeTtsNativeStream';
-import { NativeTTSStreamService } from '@/services/nativeTtsStream';
+import { type NativeTTSStreamService } from '@/services/nativeTtsStream';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+
 import type { useReadAloudHighlight } from './useReadAloudHighlight';
 import type { useReadAloudResume } from './useReadAloudResume';
 
@@ -23,7 +25,12 @@ interface NativeReadingOptions {
 	};
 	visual: ReturnType<typeof useReadAloudHighlight>;
 	resume: Pick<ReturnType<typeof useReadAloudResume>, 'saveResumePosition' | 'clearResumePosition'>;
-	state: { playing: (value: boolean) => void; paused: (value: boolean) => void; loading: (value: boolean) => void; chunk: (value: number) => void };
+	state: {
+		playing: (value: boolean) => void;
+		paused: (value: boolean) => void;
+		loading: (value: boolean) => void;
+		chunk: (value: number) => void;
+	};
 	stop: (clearSaved?: boolean) => void;
 }
 
@@ -38,26 +45,26 @@ export function useNativeReadingEvents(options: NativeReadingOptions) {
 		if (!activeNativeStream) return;
 
 		const unsubChunk = activeNativeStream.onChunkStart((idx: number, event?: NativeChunkStartEvent) => {
-			if (!current.current.cursor.playing.current) return;
-			if (current.current.cursor.pendingUtterance.current !== null && event?.utteranceIndex !== current.current.cursor.pendingUtterance.current) return;
-			if (current.current.cursor.pendingChunk.current !== null && idx !== current.current.cursor.pendingChunk.current) return;
-			current.current.cursor.pendingChunk.current = null;
-			const sourceOffset = event?.sourceStart === undefined ? -1 : event.sourceStart + (event.startCharIndex ?? 0);
-			current.current.cursor.charIndex.current = sourceOffset;
-			current.current.cursor.charLength.current = 0;
-			current.current.cursor.chunk.current = idx;
-			current.current.state.chunk(idx);
-			current.current.state.loading(false);
-			if (event?.sourceStart !== undefined && event.paragraphIndex !== undefined) {
-				current.current.cursor.sourceOffset.current = sourceOffset;
-				current.current.cursor.paragraph.current = event.paragraphIndex;
-				current.current.resume.saveResumePosition(idx, 0, event.paragraphIndex, sourceOffset);
-			} else current.current.resume.saveResumePosition(idx, 0);
+			const { cursor, state, resume } = current.current;
+			if (isChunkStartIgnored(cursor, idx, event)) return;
+
+			cursor.pendingChunk.current = null;
+			const sourceOffset = calculateSourceOffset(event);
+			cursor.charIndex.current = sourceOffset;
+			cursor.charLength.current = 0;
+			cursor.chunk.current = idx;
+			state.chunk(idx);
+			state.loading(false);
+			saveChunkPosition(cursor, resume, idx, sourceOffset, event);
 		});
 
 		const unsubWord = activeNativeStream.onWordBoundary((event) => {
 			if (!current.current.cursor.playing.current) return;
-			if (current.current.cursor.pendingUtterance.current !== null && event.utteranceIndex !== current.current.cursor.pendingUtterance.current) return;
+			if (
+				current.current.cursor.pendingUtterance.current !== null &&
+				event.utteranceIndex !== current.current.cursor.pendingUtterance.current
+			)
+				return;
 			const { chunkIndex, charIndex, charLength, paragraphIndex, sourceStart, sourceLength } = event;
 			if (current.current.cursor.pendingChunk.current !== null && chunkIndex !== current.current.cursor.pendingChunk.current) return;
 			if (chunkIndex !== current.current.cursor.chunk.current) return;
@@ -89,7 +96,11 @@ export function useNativeReadingEvents(options: NativeReadingOptions) {
 			? EdgeTTSNativeStreamService.onSnapshot((snapshot) => {
 					if (useReaderConfigStore.getState().edgeBufferMode !== 'media3') return;
 					if (!current.current.cursor.playing.current && !current.current.cursor.paused.current) return;
-					if (current.current.cursor.pendingUtterance.current !== null && snapshot.utteranceIndex !== current.current.cursor.pendingUtterance.current) return;
+					if (
+						current.current.cursor.pendingUtterance.current !== null &&
+						snapshot.utteranceIndex !== current.current.cursor.pendingUtterance.current
+					)
+						return;
 					current.current.cursor.utterance.current = snapshot.utteranceIndex;
 					current.current.cursor.pendingUtterance.current = null;
 				})
@@ -103,4 +114,33 @@ export function useNativeReadingEvents(options: NativeReadingOptions) {
 			unsubSnapshot?.();
 		};
 	}, [activeNativeStream]);
+}
+
+function isChunkStartIgnored(cursor: NativeReadingOptions['cursor'], idx: number, event?: NativeChunkStartEvent): boolean {
+	if (!cursor.playing.current) return true;
+	if (cursor.pendingUtterance.current !== null && event?.utteranceIndex !== cursor.pendingUtterance.current) {
+		return true;
+	}
+	return cursor.pendingChunk.current !== null && idx !== cursor.pendingChunk.current;
+}
+
+function calculateSourceOffset(event?: NativeChunkStartEvent): number {
+	if (event?.sourceStart === undefined) return -1;
+	return event.sourceStart + (event.startCharIndex ?? 0);
+}
+
+function saveChunkPosition(
+	cursor: NativeReadingOptions['cursor'],
+	resume: NativeReadingOptions['resume'],
+	idx: number,
+	sourceOffset: number,
+	event?: NativeChunkStartEvent
+): void {
+	if (event?.sourceStart !== undefined && event.paragraphIndex !== undefined) {
+		cursor.sourceOffset.current = sourceOffset;
+		cursor.paragraph.current = event.paragraphIndex;
+		resume.saveResumePosition(idx, 0, event.paragraphIndex, sourceOffset);
+		return;
+	}
+	resume.saveResumePosition(idx, 0);
 }

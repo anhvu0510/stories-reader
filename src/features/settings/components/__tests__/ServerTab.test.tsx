@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { ServerTab } from '../ServerTab';
 import { AppUpdateService } from '@/services/appUpdateService';
 import { useToastStore } from '@/stores/useToastStore';
+
+import { ServerTab } from '../ServerTab';
 
 describe('ServerTab Component (Sync and OTA Update Check UI)', () => {
 	beforeEach(() => {
@@ -20,7 +21,7 @@ describe('ServerTab Component (Sync and OTA Update Check UI)', () => {
 		vi.spyOn(AppUpdateService, 'getCurrentAppInfo').mockResolvedValue({
 			version: '1.0.3',
 			isBuiltin: true,
-			native: '1.0.3'
+			native: '1.0.3',
 		});
 
 		render(<ServerTab />);
@@ -35,7 +36,7 @@ describe('ServerTab Component (Sync and OTA Update Check UI)', () => {
 		vi.spyOn(AppUpdateService, 'getCurrentAppInfo').mockResolvedValue({
 			version: '1.0.3',
 			isBuiltin: true,
-			native: '1.0.3'
+			native: '1.0.3',
 		});
 
 		const checkSpy = vi.spyOn(AppUpdateService, 'checkForUpdate').mockResolvedValue(null);
@@ -55,13 +56,13 @@ describe('ServerTab Component (Sync and OTA Update Check UI)', () => {
 		vi.spyOn(AppUpdateService, 'getCurrentAppInfo').mockResolvedValue({
 			version: '1.0.3',
 			isBuiltin: true,
-			native: '1.0.3'
+			native: '1.0.3',
 		});
 
 		const checkSpy = vi.spyOn(AppUpdateService, 'checkForUpdate').mockResolvedValue({
 			version: '1.0.4',
 			bundleUrl: 'https://example.com/ota/bundle.zip',
-			checksum: 'dummy-checksum'
+			checksum: 'dummy-checksum',
 		});
 
 		const applySpy = vi.spyOn(AppUpdateService, 'downloadAndApplyUpdate').mockResolvedValue(true);
@@ -73,10 +74,7 @@ describe('ServerTab Component (Sync and OTA Update Check UI)', () => {
 
 		await waitFor(() => {
 			expect(checkSpy).toHaveBeenCalled();
-			expect(applySpy).toHaveBeenCalledWith(
-				expect.objectContaining({ version: '1.0.4' }),
-				expect.any(Function)
-			);
+			expect(applySpy).toHaveBeenCalledWith(expect.objectContaining({ version: '1.0.4' }), expect.any(Function));
 		});
 	});
 

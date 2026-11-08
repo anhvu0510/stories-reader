@@ -1,20 +1,20 @@
+import { BookOpen, KeyRound } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, KeyRound } from 'lucide-react';
 
+import { AppLockOverlay } from './components/AppLockOverlay';
+import { AppUpdateOverlay } from './components/AppUpdateOverlay';
 import { GlobalApiLoading } from './components/GlobalApiLoading';
 import { GlobalDownloadProgress } from './components/GlobalDownloadProgress';
-import { ToastContainer } from './components/Toast';
-import { AppUpdateOverlay } from './components/AppUpdateOverlay';
 import { PasscodeModal } from './components/PasscodeModal';
-import { AppLockOverlay } from './components/AppLockOverlay';
-import { type SecretServerConfig } from './services/secretServerService';
-import { useAppUpdate } from './hooks/useAppUpdate';
-import { useRouteRestoration } from './hooks/useRouteRestoration';
-import { useAppLockListener } from './hooks/useAppLockListener';
+import { ToastContainer } from './components/Toast';
 import { ChapterListScreen } from './features/chapter-list/ChapterListScreen';
 import { LibraryScreen } from './features/library/LibraryScreen';
 import { ReaderScreen } from './features/reader/ReaderScreen';
+import { useAppLockListener } from './hooks/useAppLockListener';
+import { useAppUpdate } from './hooks/useAppUpdate';
+import { useRouteRestoration } from './hooks/useRouteRestoration';
+import { type SecretServerConfig } from './services/secretServerService';
 import { useAppStore } from './stores/useAppStore';
 import { useReaderConfigStore } from './stores/useReaderConfigStore';
 import { useToastStore } from './stores/useToastStore';
@@ -69,7 +69,7 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 		useAppStore.getState().addDomain({
 			id: Date.now().toString(),
 			name: server.name,
-			url: server.url
+			url: server.url,
 		});
 		setShowSettings(false);
 		window.location.reload();
@@ -93,7 +93,7 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 		setIsTesting(true);
 		try {
 			const res = await fetch(trimmedDomain, {
-				headers: { 'ngrok-skip-browser-warning': 'true' }
+				headers: { 'ngrok-skip-browser-warning': 'true' },
 			}).catch(() => null);
 
 			if (!res || !res.ok) {
@@ -104,7 +104,7 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 			useAppStore.getState().addDomain({
 				id: Date.now().toString(),
 				name: nameInput.trim() || 'Server Mặc định',
-				url: trimmedDomain
+				url: trimmedDomain,
 			});
 			setShowSettings(false);
 			window.location.reload();
@@ -129,7 +129,9 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 						</div>
 						<div>
 							<h1 className="text-3xl sm:text-4xl font-black text-on-surface tracking-tight mb-2">Stories Reader</h1>
-							<p className="text-[14px] text-on-surface-variant max-w-[280px] mx-auto leading-relaxed">Thiết lập máy chủ trích xuất và đọc truyện của bạn để bắt đầu.</p>
+							<p className="text-[14px] text-on-surface-variant max-w-[280px] mx-auto leading-relaxed">
+								Thiết lập máy chủ trích xuất và đọc truyện của bạn để bắt đầu.
+							</p>
 						</div>
 					</div>
 
@@ -196,11 +198,7 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 						</button>
 					</div>
 
-					<PasscodeModal
-						isOpen={showPasscodeModal}
-						onClose={() => setShowPasscodeModal(false)}
-						onSuccess={handlePasscodeSuccess}
-					/>
+					<PasscodeModal isOpen={showPasscodeModal} onClose={() => setShowPasscodeModal(false)} onSuccess={handlePasscodeSuccess} />
 				</div>
 			</div>
 		);
@@ -212,13 +210,7 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 function AppUpdateManager() {
 	const { isUpdating, progress, statusMessage } = useAppUpdate();
 
-	return (
-		<AppUpdateOverlay
-			isUpdating={isUpdating}
-			progress={progress}
-			statusMessage={statusMessage}
-		/>
-	);
+	return <AppUpdateOverlay isUpdating={isUpdating} progress={progress} statusMessage={statusMessage} />;
 }
 
 export default function App() {

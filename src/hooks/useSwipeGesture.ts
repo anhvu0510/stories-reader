@@ -1,6 +1,12 @@
 import { useEffect, useId, useRef } from 'react';
-import { configureNativeSwipe, hasNativeReaderGestures, onNativeReaderGesture, registerNativeGestureHitTest } from '@/services/nativeReaderGestures';
+
 import { eligibleNativeTarget } from '@/services/nativeGestureEligibility';
+import {
+	configureNativeSwipe,
+	hasNativeReaderGestures,
+	onNativeReaderGesture,
+	registerNativeGestureHitTest,
+} from '@/services/nativeReaderGestures';
 
 export interface SwipeGestureOptions {
 	onSwipeLeft?: () => void;
@@ -33,7 +39,7 @@ export function useSwipeGesture({
 	minVelocity = 0.35,
 	maxDuration,
 	edgeIgnoreWidth = 28,
-	disabled = false
+	disabled = false,
 }: SwipeGestureOptions) {
 	const owner = useId();
 	const touchStateRef = useRef<TouchState | null>(null);
@@ -42,7 +48,7 @@ export function useSwipeGesture({
 		onSwipeRight,
 		onDragStart,
 		onDragMove,
-		onDragEnd
+		onDragEnd,
 	});
 
 	// Keep callbacks current without reattaching listeners
@@ -52,7 +58,7 @@ export function useSwipeGesture({
 			onSwipeRight,
 			onDragStart,
 			onDragMove,
-			onDragEnd
+			onDragEnd,
 		};
 	});
 
@@ -70,9 +76,7 @@ export function useSwipeGesture({
 				}
 				if (gesture.kind !== 'swipe-end') return;
 				dragging = false;
-				callbacksRef.current.onDragEnd?.(gesture.settled);
-				if (gesture.settled === 'left') callbacksRef.current.onSwipeLeft?.();
-				if (gesture.settled === 'right') callbacksRef.current.onSwipeRight?.();
+				dispatchSwipeEnd(callbacksRef.current, gesture.settled);
 			});
 			const effectiveThreshold = threshold ?? Math.max(120, Math.round(window.innerWidth * 0.35));
 			configureNativeSwipe({ enabled: true, owner, threshold: effectiveThreshold, minVelocity, maxDuration, edgeIgnoreWidth });
@@ -90,25 +94,8 @@ export function useSwipeGesture({
 				return;
 			}
 
-			// Do not trigger swipe gestures if touching inside an open dialog, modal, or bottom sheet
-			const target = e.target as Element | null;
-			if (target && typeof target.closest === 'function' && target.closest('[role="dialog"], [aria-modal="true"], .fixed.inset-0')) {
-				touchStateRef.current = null;
-				return;
-			}
-
-			// Do not trigger swipe gestures if body scroll is locked by any open modal
-			if (typeof document !== 'undefined' && document.body.style.overflow === 'hidden') {
-				touchStateRef.current = null;
-				return;
-			}
-
 			const touch = e.touches[0];
-			// Ignore touches starting near screen edges to preserve native OS back gestures
-			if (
-				touch.clientX < edgeIgnoreWidth ||
-				touch.clientX > window.innerWidth - edgeIgnoreWidth
-			) {
+			if (isSwipeTargetIgnored(e.target as Element | null, touch.clientX, edgeIgnoreWidth)) {
 				touchStateRef.current = null;
 				return;
 			}
@@ -118,48 +105,21 @@ export function useSwipeGesture({
 				startY: touch.clientY,
 				startTime: Date.now(),
 				isDragging: false,
-				lockDirection: 'none'
+				lockDirection: 'none',
 			};
 		};
 
 		const handleTouchMove = (e: TouchEvent) => {
 			const state = touchStateRef.current;
-			if (!state || !e.touches || e.touches.length === 0) return;
+			const touch = e.touches?.[0];
+			if (!state || !touch) return;
 
-			const touch = e.touches[0];
 			const deltaX = touch.clientX - state.startX;
 			const deltaY = touch.clientY - state.startY;
-			const absX = Math.abs(deltaX);
-			const absY = Math.abs(deltaY);
 
-			// If locked to vertical scrolling, ignore horizontal drag
-			if (state.lockDirection === 'vertical') {
-				return;
-			}
+			if (updateTouchLock(state, deltaX, deltaY)) return;
 
-			// Determine direction lock once touch has moved beyond touch slop (10px)
-			// Yêu cầu vertical chiếm ưu thế rõ ràng (absY > absX * 1.2) mới lock vertical
-			// Tránh false-positive horizontal lock khi scroll dọc hơi lệch ngang
-			if (state.lockDirection === 'none') {
-				if (absX >= 10 || absY >= 10) {
-					if (absY > absX * 1.2) {
-						state.lockDirection = 'vertical';
-						return;
-					}
-					state.lockDirection = 'horizontal';
-				} else {
-					return;
-				}
-			}
-
-			// Real-time horizontal drag tracking
-			if (state.lockDirection === 'horizontal') {
-				if (!state.isDragging) {
-					state.isDragging = true;
-					callbacksRef.current.onDragStart?.();
-				}
-				callbacksRef.current.onDragMove?.(deltaX);
-			}
+			trackDragMove(state, deltaX, callbacksRef.current.onDragStart, callbacksRef.current.onDragMove);
 		};
 
 		const handleTouchEnd = (e: TouchEvent) => {
@@ -167,61 +127,27 @@ export function useSwipeGesture({
 			if (!state) return;
 			touchStateRef.current = null;
 
-			// If touch was locked vertically, do not handle swipe
-			if (state.lockDirection === 'vertical') {
+			if (state.lockDirection === 'vertical') return;
+
+			const touch = e.changedTouches?.[0];
+			if (shouldCancelSwipe(state, touch, maxDuration)) {
+				cancelDragging(state.isDragging, callbacksRef.current.onDragEnd);
 				return;
 			}
 
-			if (!e.changedTouches || e.changedTouches.length === 0) {
-				if (state.isDragging) callbacksRef.current.onDragEnd?.('cancel');
-				return;
-			}
-
-			const touch = e.changedTouches[0];
-			const deltaX = touch.clientX - state.startX;
-			const deltaY = touch.clientY - state.startY;
+			const validTouch = touch as Touch;
+			const deltaX = validTouch.clientX - state.startX;
 			const absX = Math.abs(deltaX);
-			const absY = Math.abs(deltaY);
+			const absY = Math.abs(validTouch.clientY - state.startY);
 			const duration = Date.now() - state.startTime;
 
-			// Ignore touches that lasted longer than maxDuration (only when explicitly configured)
-			if (maxDuration !== undefined && duration > maxDuration) {
-				if (state.isDragging) callbacksRef.current.onDragEnd?.('cancel');
-				return;
-			}
-
-			// Do not trigger swipe if user has active text selection
-			const selection = window.getSelection();
-			if (selection && !selection.isCollapsed && selection.toString().trim()) {
-				if (state.isDragging) callbacksRef.current.onDragEnd?.('cancel');
-				return;
-			}
-
-			const velocity = duration > 0 ? absX / duration : 0;
-			// Ngưỡng commit chuẩn mobile: ưu tiên 35% chiều rộng màn hình (tối thiểu 120px) nếu caller không chỉ định cố định
-			const effectiveThreshold = threshold !== undefined
-				? threshold
-				: (typeof window !== 'undefined' ? Math.max(120, Math.round(window.innerWidth * 0.35)) : 120);
-			const minFlingDistance = Math.min(effectiveThreshold * 0.5, 30);
-			const hasSufficientDistance = absX >= effectiveThreshold;
-			const hasSufficientVelocity = minVelocity !== undefined && velocity >= minVelocity && absX >= minFlingDistance;
-
-			// Horizontal swipe must be dominant and meet distance or velocity requirements
-			if ((hasSufficientDistance || hasSufficientVelocity) && absX > absY * 1.3) {
-				if (deltaX < 0 && callbacksRef.current.onSwipeLeft) {
-					if (state.isDragging) callbacksRef.current.onDragEnd?.('left');
-					callbacksRef.current.onSwipeLeft();
-					return;
-				} if (deltaX > 0 && callbacksRef.current.onSwipeRight) {
-					if (state.isDragging) callbacksRef.current.onDragEnd?.('right');
-					callbacksRef.current.onSwipeRight();
+			if (isSwipeGestureCommit(absX, absY, duration, threshold, minVelocity)) {
+				if (dispatchSwipeCommit(deltaX, state.isDragging, callbacksRef.current)) {
 					return;
 				}
 			}
 
-			if (state.isDragging) {
-				callbacksRef.current.onDragEnd?.('cancel');
-			}
+			cancelDragging(state.isDragging, callbacksRef.current.onDragEnd);
 		};
 
 		const handleTouchCancel = () => {
@@ -245,5 +171,105 @@ export function useSwipeGesture({
 			window.removeEventListener('touchend', handleTouchEnd);
 			window.removeEventListener('touchcancel', handleTouchCancel);
 		};
-		}, [threshold, minVelocity, maxDuration, edgeIgnoreWidth, disabled, owner]);
+	}, [threshold, minVelocity, maxDuration, edgeIgnoreWidth, disabled, owner]);
+}
+
+function dispatchSwipeEnd(
+	callbacks: {
+		onDragEnd?: (settled: 'left' | 'right' | 'cancel') => void;
+		onSwipeLeft?: () => void;
+		onSwipeRight?: () => void;
+	},
+	settled: 'left' | 'right' | 'cancel'
+): void {
+	callbacks.onDragEnd?.(settled);
+	if (settled === 'left') {
+		callbacks.onSwipeLeft?.();
+	} else if (settled === 'right') {
+		callbacks.onSwipeRight?.();
+	}
+}
+
+function updateTouchLock(state: TouchState, deltaX: number, deltaY: number): boolean {
+	if (state.lockDirection === 'vertical') return true;
+	if (state.lockDirection === 'none') {
+		const direction = resolveTouchLockDirection(Math.abs(deltaX), Math.abs(deltaY));
+		if (direction === 'none' || direction === 'vertical') {
+			if (direction === 'vertical') state.lockDirection = 'vertical';
+			return true;
+		}
+		state.lockDirection = direction;
+	}
+	return false;
+}
+
+function trackDragMove(state: TouchState, deltaX: number, onDragStart?: () => void, onDragMove?: (offset: number) => void): void {
+	if (!state.isDragging) {
+		state.isDragging = true;
+		onDragStart?.();
+	}
+	onDragMove?.(deltaX);
+}
+
+function cancelDragging(isDragging: boolean, onDragEnd?: (settled: 'cancel') => void): void {
+	if (isDragging) {
+		onDragEnd?.('cancel');
+	}
+}
+
+function shouldCancelSwipe(state: TouchState, touch: Touch | undefined, maxDuration: number | undefined): boolean {
+	if (!touch) return true;
+	const duration = Date.now() - state.startTime;
+	if (maxDuration !== undefined && duration > maxDuration) return true;
+	return hasActiveTextSelection();
+}
+
+function dispatchSwipeCommit(
+	deltaX: number,
+	isDragging: boolean,
+	callbacks: {
+		onDragEnd?: (settled: 'left' | 'right' | 'cancel') => void;
+		onSwipeLeft?: () => void;
+		onSwipeRight?: () => void;
+	}
+): boolean {
+	if (deltaX < 0 && callbacks.onSwipeLeft) {
+		if (isDragging) callbacks.onDragEnd?.('left');
+		callbacks.onSwipeLeft();
+		return true;
+	}
+	if (deltaX > 0 && callbacks.onSwipeRight) {
+		if (isDragging) callbacks.onDragEnd?.('right');
+		callbacks.onSwipeRight();
+		return true;
+	}
+	return false;
+}
+
+function isSwipeTargetIgnored(target: Element | null, clientX: number, edgeIgnoreWidth: number): boolean {
+	if (target?.closest?.('[role="dialog"], [aria-modal="true"], .fixed.inset-0')) return true;
+	if (typeof document !== 'undefined' && document.body.style.overflow === 'hidden') return true;
+	return clientX < edgeIgnoreWidth || clientX > window.innerWidth - edgeIgnoreWidth;
+}
+
+function resolveTouchLockDirection(absX: number, absY: number): 'none' | 'horizontal' | 'vertical' {
+	if (absX < 10 && absY < 10) return 'none';
+	if (absY > absX * 1.2) return 'vertical';
+	return 'horizontal';
+}
+
+function hasActiveTextSelection(): boolean {
+	const selection = window.getSelection();
+	return Boolean(selection && !selection.isCollapsed && selection.toString().trim());
+}
+
+function isSwipeGestureCommit(absX: number, absY: number, duration: number, threshold?: number, minVelocity = 0.35): boolean {
+	if (absX <= absY * 1.3) return false;
+	const defaultThreshold = typeof window === 'undefined' ? 120 : Math.max(120, Math.round(window.innerWidth * 0.35));
+	const effectiveThreshold = threshold ?? defaultThreshold;
+	const hasDistance = absX >= effectiveThreshold;
+	const velocity = duration > 0 ? absX / duration : 0;
+	const minFlingDistance = Math.min(effectiveThreshold * 0.5, 30);
+	const hasVelocity = velocity >= minVelocity && absX >= minFlingDistance;
+	return hasDistance || hasVelocity;
 }

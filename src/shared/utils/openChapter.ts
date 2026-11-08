@@ -18,11 +18,11 @@ function reloadCurrentPage() {
 export function openChapter(bookId: string, chapterId: string, options?: OpenChapterOptions) {
 	if (!bookId || !chapterId) return;
 
-	if (options?.resetScroll && typeof window !== 'undefined' && window.scrollTo) {
+	if (typeof window === 'undefined') return;
+
+	if (options?.resetScroll && window.scrollTo) {
 		window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 	}
-
-	if (typeof window === 'undefined') return;
 
 	const targetHash = `#/book/${bookId}/chapter/${chapterId}`;
 	if (window.location.hash !== targetHash) {

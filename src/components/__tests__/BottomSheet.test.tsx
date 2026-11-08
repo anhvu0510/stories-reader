@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 
 import { BottomSheet } from '@/components/BottomSheet';
 
@@ -93,11 +93,11 @@ describe('BottomSheet Component', () => {
 		const sheetContainer = screen.getByTestId('bottom-sheet-container');
 
 		fireEvent.touchStart(sheetContainer, {
-			touches: [{ clientX: 200, clientY: 100 }]
+			touches: [{ clientX: 200, clientY: 100 }],
 		});
 
 		fireEvent.touchMove(sheetContainer, {
-			touches: [{ clientX: 200, clientY: 220 }]
+			touches: [{ clientX: 200, clientY: 220 }],
 		});
 
 		fireEvent.touchEnd(sheetContainer);
@@ -118,11 +118,11 @@ describe('BottomSheet Component', () => {
 		const sheetContainer = screen.getByTestId('bottom-sheet-container');
 
 		fireEvent.touchStart(sheetContainer, {
-			touches: [{ clientX: 200, clientY: 100 }]
+			touches: [{ clientX: 200, clientY: 100 }],
 		});
 
 		fireEvent.touchMove(sheetContainer, {
-			touches: [{ clientX: 200, clientY: 130 }]
+			touches: [{ clientX: 200, clientY: 130 }],
 		});
 
 		vi.advanceTimersByTime(200);

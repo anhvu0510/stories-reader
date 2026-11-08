@@ -18,7 +18,9 @@ export function useReadAloudResume(chapterId?: string) {
 			if (typeof parsed.chunkIndex === 'number' && parsed.chunkIndex >= 0) {
 				return parsed;
 			}
-		} catch {}
+		} catch {
+			// intentionally empty — invalid JSON in localStorage, ignore and return null
+		}
 		return null;
 	}, [chapterId]);
 
@@ -33,7 +35,9 @@ export function useReadAloudResume(chapterId?: string) {
 					position.version = 2;
 				}
 				localStorage.setItem(`stories_tts_pos_${chapterId}`, JSON.stringify(position));
-			} catch {}
+			} catch {
+				// intentionally empty — localStorage.setItem may throw in private/storage-full mode
+			}
 		},
 		[chapterId]
 	);
@@ -42,7 +46,9 @@ export function useReadAloudResume(chapterId?: string) {
 		if (!chapterId || typeof window === 'undefined') return;
 		try {
 			localStorage.removeItem(`stories_tts_pos_${chapterId}`);
-		} catch {}
+		} catch {
+			// intentionally empty — invalid JSON in localStorage, ignore and return null
+		}
 	}, [chapterId]);
 
 	const clearAllStaleResumePositions = useCallback((currentChapId?: string) => {
@@ -57,7 +63,7 @@ export function useReadAloudResume(chapterId?: string) {
 				}
 			}
 		} catch (err) {
-			console.debug('[ReadAloud] Clear stale positions error ignored:', err);
+			console.warn('[ReadAloud] Clear stale positions error ignored:', err);
 		}
 	}, []);
 

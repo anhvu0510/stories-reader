@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import 'fake-indexeddb/auto';
 
 import { QuickBookHistorySheet } from '@/features/reader/components/QuickBookHistorySheet';
@@ -15,7 +15,7 @@ vi.mock('react-router-dom', async () => {
 	const actual = await vi.importActual('react-router-dom');
 	return {
 		...actual,
-		useNavigate: () => mockNavigate
+		useNavigate: () => mockNavigate,
 	};
 });
 
@@ -33,8 +33,8 @@ describe('QuickBookHistorySheet', () => {
 			lastReadChapter: {
 				chapterId: 'chap-50',
 				chapterNumber: '50',
-				title: 'Chương 50: Đại chiến'
-			}
+				title: 'Chương 50: Đại chiến',
+			},
 		},
 		{
 			bookId: 'book-2',
@@ -48,9 +48,9 @@ describe('QuickBookHistorySheet', () => {
 			lastReadChapter: {
 				chapterId: 'chap-10',
 				chapterNumber: '10',
-				title: 'Chương 10: Khởi đầu'
-			}
-		}
+				title: 'Chương 10: Khởi đầu',
+			},
+		},
 	];
 
 	let getBooksSpy: any;
@@ -59,7 +59,7 @@ describe('QuickBookHistorySheet', () => {
 		vi.clearAllMocks();
 		getBooksSpy = vi.spyOn(BookRepository, 'getBooks').mockImplementation(async () => ({
 			books: mockBooks,
-			pagination: { currentPage: 1, totalPages: 1, total: 2 }
+			pagination: { currentPage: 1, totalPages: 1, total: 2 },
 		}));
 	});
 
@@ -125,8 +125,8 @@ describe('QuickBookHistorySheet', () => {
 			lastReadChapter: {
 				chapterId: `chap-${i + 1}`,
 				chapterNumber: '1',
-				title: 'Chương 1'
-			}
+				title: 'Chương 1',
+			},
 		}));
 
 		const page2Books: Book[] = [
@@ -142,21 +142,21 @@ describe('QuickBookHistorySheet', () => {
 				lastReadChapter: {
 					chapterId: 'chap-21',
 					chapterNumber: '1',
-					title: 'Chương 1'
-				}
-			}
+					title: 'Chương 1',
+				},
+			},
 		];
 
 		getBooksSpy.mockImplementation(async (page: number) => {
 			if (page === 1) {
 				return {
 					books: page1Books,
-					pagination: { currentPage: 1, totalPages: 2, total: 21 }
+					pagination: { currentPage: 1, totalPages: 2, total: 21 },
 				};
 			}
 			return {
 				books: page2Books,
-				pagination: { currentPage: 2, totalPages: 2, total: 21 }
+				pagination: { currentPage: 2, totalPages: 2, total: 21 },
 			};
 		});
 
@@ -190,8 +190,8 @@ describe('QuickBookHistorySheet', () => {
 			writable: true,
 			value: {
 				hash: '',
-				reload: reloadSpy
-			}
+				reload: reloadSpy,
+			},
 		});
 
 		render(

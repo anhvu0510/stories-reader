@@ -1,8 +1,9 @@
-import { create } from 'zustand';
 import { Capacitor } from '@capacitor/core';
+import { create } from 'zustand';
+
 import { biometricService } from '@/services/biometricService';
-import { isValidTimePasscode } from '@/services/secretServerService';
 import { isNativeDebugBuild } from '@/services/debugRuntime';
+import { isValidTimePasscode } from '@/services/secretServerService';
 
 /**
  * Kiểm tra xem ứng dụng có đang chạy trên môi trường di động Android hay không
@@ -44,7 +45,9 @@ function setSessionUnlocked(unlocked: boolean) {
 		} else {
 			sessionStorage.removeItem(STORAGE_KEY_SESSION_UNLOCKED);
 		}
-	} catch {}
+	} catch {
+		// intentionally empty — sessionStorage may be unavailable in some contexts
+	}
 }
 
 export const useAppLockStore = create<AppLockStore>((set, get) => {
@@ -66,7 +69,7 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 			set({
 				isLocked: true,
 				showPasscodeFallback: false,
-				isAuthenticating: false
+				isAuthenticating: false,
 			});
 		},
 
@@ -75,7 +78,7 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 			set({
 				isLocked: false,
 				showPasscodeFallback: false,
-				isAuthenticating: false
+				isAuthenticating: false,
 			});
 		},
 
@@ -88,7 +91,7 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 				isLockEnabled: true,
 				isLocked: false,
 				showPasscodeFallback: false,
-				isAuthenticating: false
+				isAuthenticating: false,
 			});
 		},
 
@@ -99,7 +102,7 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 				isLockEnabled: false,
 				isLocked: false,
 				showPasscodeFallback: false,
-				isAuthenticating: false
+				isAuthenticating: false,
 			});
 		},
 
@@ -132,7 +135,7 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 				const result = await biometricService.authenticate({
 					title: 'Xác thực bảo mật',
 					subtitle: 'Quét sinh trắc học để tiếp tục sử dụng Stories Reader',
-					negativeButtonText: 'Passcode'
+					negativeButtonText: 'Passcode',
 				});
 
 				clearTimeout(safetyTimer);
@@ -153,7 +156,7 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 				console.error('[AppLockStore] Lỗi khi kích hoạt sinh trắc học:', error);
 				set({
 					isAuthenticating: false,
-					showPasscodeFallback: true
+					showPasscodeFallback: true,
 				});
 				return false;
 			}
@@ -166,6 +169,6 @@ export const useAppLockStore = create<AppLockStore>((set, get) => {
 				return true;
 			}
 			return false;
-		}
+		},
 	};
 });

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
+import oboe from 'oboe';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import 'fake-indexeddb/auto';
-import oboe from 'oboe';
 
 import { downloadManager } from '@/lib/DownloadManager';
 import { offlineDb } from '@/lib/offlineDb';
@@ -30,11 +30,11 @@ vi.mock('oboe', () => {
 					return mockStream;
 				}),
 				fail: vi.fn(() => mockStream),
-				abort: vi.fn()
+				abort: vi.fn(),
 			};
 			return mockStream;
 		}),
-		drop: Symbol('oboe.drop')
+		drop: Symbol('oboe.drop'),
 	};
 });
 
@@ -43,7 +43,7 @@ describe('DownloadManager Stream & ID Normalization', () => {
 		await offlineDb.deleteAllBooks();
 		useAppStore.setState({
 			activeDomain: { id: '1', name: 'Local', url: 'http://localhost:3000/' },
-			activeDomainId: '1'
+			activeDomainId: '1',
 		});
 	});
 
@@ -80,7 +80,7 @@ describe('DownloadManager Stream & ID Normalization', () => {
 	it('handles object node matching for data.book and data.chapters.* patterns', async () => {
 		useAppStore.setState({
 			activeDomain: { id: '1', name: 'Local', url: 'http://api.example.com' },
-			activeDomainId: '1'
+			activeDomainId: '1',
 		});
 
 		downloadManager.addBook('book-456', 'Another Story');
@@ -101,7 +101,7 @@ describe('DownloadManager Stream & ID Normalization', () => {
 			chapterId: 'chap-100',
 			chapterNumber: 1,
 			title: 'Chap 100',
-			content: ['Content line']
+			content: ['Content line'],
 		});
 
 		await doneHandler();

@@ -25,5 +25,5 @@ export const useModalStore = create<ModalStore>((set) => ({
 	setSettingsTab: (tab: SettingsTab) => set({ activeSettingsTab: tab }),
 
 	openOfflineManager: () => set({ isOfflineManagerOpen: true }),
-	closeOfflineManager: () => set({ isOfflineManagerOpen: false })
+	closeOfflineManager: () => set({ isOfflineManagerOpen: false }),
 }));

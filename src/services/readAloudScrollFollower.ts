@@ -21,7 +21,7 @@ const createBrowserEnvironment = (): ScrollFollowerEnvironment => ({
 	scrollTo: (top) => window.scrollTo({ top, behavior: 'auto' }),
 	requestFrame: (callback) => window.requestAnimationFrame(callback),
 	cancelFrame: (handle) => window.cancelAnimationFrame(handle),
-	prefersReducedMotion: () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+	prefersReducedMotion: () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
 });
 
 /**
@@ -46,7 +46,7 @@ export class ReadAloudScrollFollower {
 
 	/**
 	 * Thông báo rằng người dùng đang tương tác chạm/cuộn màn hình.
- * Hủy ngay lập tức animation cuộn tự động và nhường quyền cuộn cho người dùng.
+	 * Hủy ngay lập tức animation cuộn tự động và nhường quyền cuộn cho người dùng.
 	 */
 	public notifyUserInteraction(): void {
 		this.following = false;
@@ -123,6 +123,37 @@ export class ReadAloudScrollFollower {
 		this.paused = paused;
 	}
 
+	private isOutsideViewportThresholds(viewportTop: number, viewportBottom: number, viewportHeight: number): boolean {
+		/*
+		 * 1. Nếu dòng highlight đã trôi lên trên khỏi đỉnh màn hình: dừng animation
+		 * 2. Nếu dòng highlight nằm quá xa phía dưới màn hình: dừng animation
+		 */
+		return viewportBottom < 0 || viewportTop > viewportHeight * 1.8;
+	}
+
+	private isWithinComfortableReadingZone(viewportTop: number, viewportBottom: number, viewportHeight: number): boolean {
+		return viewportTop >= viewportHeight * 0.25 && viewportBottom <= viewportHeight * 0.75;
+	}
+
+	private computeTargetScrollY(line: DOMRect, viewportHeight: number): number {
+		const maxScrollY = this.environment.getMaxScrollY?.() ?? Infinity;
+		return Math.min(maxScrollY, Math.max(0, line.top + line.height / 2 - viewportHeight * READING_ANCHOR_RATIO));
+	}
+
+	private applyTargetScroll(targetY: number): void {
+		if (this.environment.prefersReducedMotion()) {
+			this.environment.scrollTo(targetY);
+			this.targetY = null;
+			return;
+		}
+
+		this.targetY = targetY;
+		if (this.animationFrame === null) {
+			this.lastFrameTime = null;
+			this.animationFrame = this.environment.requestFrame(this.tick);
+		}
+	}
+
 	public follow(line: DOMRect, recenter = false): void {
 		this.latestLine = line;
 		if (this.environment.hasTextSelection?.()) this.notifyUserInteraction();
@@ -137,34 +168,19 @@ export class ReadAloudScrollFollower {
 		const viewportTop = line.top - scrollY;
 		const viewportBottom = line.bottom - scrollY;
 
-		// 1. Nếu dòng highlight đã trôi lên trên khỏi đỉnh màn hình (do người dùng cuộn xuống dưới):
-		// Tuyệt đối không cuộn giật ngược về lại, thả tự do cho người dùng đọc/thao tác tiếp
-		if (!recenter && viewportBottom < 0) {
-			this.stopAnimation();
-			return;
+		if (!recenter) {
+			if (this.isOutsideViewportThresholds(viewportTop, viewportBottom, viewportHeight)) {
+				this.stopAnimation();
+				return;
+			}
+			if (this.isWithinComfortableReadingZone(viewportTop, viewportBottom, viewportHeight)) {
+				return;
+			}
 		}
 
-		// 2. Nếu dòng highlight nằm quá xa phía dưới màn hình (người dùng đã cuộn lên trên đỉnh xem lại):
-		// Không tự động giật màn hình nhảy xuống
-		if (!recenter && viewportTop > viewportHeight * 1.8) {
-			this.stopAnimation();
-			return;
-		}
-
-		if (!recenter && viewportTop >= viewportHeight * 0.25 && viewportBottom <= viewportHeight * 0.75) return;
-		const maxScrollY = this.environment.getMaxScrollY?.() ?? Infinity;
-		this.targetY = Math.min(maxScrollY, Math.max(0, line.top + line.height / 2 - viewportHeight * READING_ANCHOR_RATIO));
-		if (Math.abs(this.targetY - scrollY) < 0.75) return;
-		if (this.environment.prefersReducedMotion()) {
-			this.environment.scrollTo(this.targetY);
-			this.targetY = null;
-			return;
-		}
-
-		if (this.animationFrame === null) {
-			this.lastFrameTime = null;
-			this.animationFrame = this.environment.requestFrame(this.tick);
-		}
+		const targetY = this.computeTargetScrollY(line, viewportHeight);
+		if (Math.abs(targetY - scrollY) < 0.75) return;
+		this.applyTargetScroll(targetY);
 	}
 
 	private ensureReclaimScheduled(): void {

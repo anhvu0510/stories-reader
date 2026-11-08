@@ -7,12 +7,12 @@ const { mockNativeTTS } = vi.hoisted(() => ({
 		stopPlayback: vi.fn(),
 		seekToChunk: vi.fn(),
 		clearCache: vi.fn(),
-		addListener: vi.fn()
-	}
+		addListener: vi.fn(),
+	},
 }));
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Capacitor } from '@capacitor/core';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@capacitor/core', async () => {
 	const actual = await vi.importActual<any>('@capacitor/core');
@@ -23,7 +23,7 @@ vi.mock('@capacitor/core', async () => {
 				return mockNativeTTS;
 			}
 			return actual.registerPlugin(name, options);
-		}
+		},
 	};
 });
 
@@ -60,7 +60,7 @@ describe('NativeTTSStreamService (Tracer Bullet - Behavior 1)', () => {
 			voice: 'vi-vn-x-gda-network',
 			rate: 1.5,
 			pitch: 1.0,
-			gatewayUrl: 'https://gateway.example.com'
+			gatewayUrl: 'https://gateway.example.com',
 		});
 
 		expect(mockNativeTTS.playChapter).toHaveBeenCalledWith({
@@ -69,7 +69,7 @@ describe('NativeTTSStreamService (Tracer Bullet - Behavior 1)', () => {
 			voice: 'vi-vn-x-gda-network',
 			rate: 1.5,
 			pitch: 1.0,
-			gatewayUrl: 'https://gateway.example.com'
+			gatewayUrl: 'https://gateway.example.com',
 		});
 	});
 
@@ -140,14 +140,14 @@ describe('NativeTTSStreamService (Tracer Bullet - Behavior 1)', () => {
 			chunkIndex: 0,
 			charIndex: 4,
 			charLength: 3,
-			text: 'một'
+			text: 'một',
 		});
 
 		playbackStateListener?.({ isPlaying: true, isPaused: false, isBuffering: false });
 		expect(onPlaybackStateSpy).toHaveBeenCalledWith({
 			isPlaying: true,
 			isPaused: false,
-			isBuffering: false
+			isBuffering: false,
 		});
 
 		playbackCompleteListener?.();

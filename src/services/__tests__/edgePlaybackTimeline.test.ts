@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+
 import { EdgePlaybackTimeline, type EdgeTimelineSnapshot } from '../edgePlaybackTimeline';
 
 const snapshot: EdgeTimelineSnapshot = {
@@ -13,8 +14,8 @@ const snapshot: EdgeTimelineSnapshot = {
 	sentAtMs: 1000,
 	words: [
 		{ charIndex: 0, charLength: 3, text: 'Một', startTimeMs: 100, durationMs: 100 },
-		{ charIndex: 4, charLength: 3, text: 'hai', startTimeMs: 200, durationMs: 100 }
-	]
+		{ charIndex: 4, charLength: 3, text: 'hai', startTimeMs: 200, durationMs: 100 },
+	],
 };
 
 describe('EdgePlaybackTimeline', () => {

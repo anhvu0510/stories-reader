@@ -1,10 +1,13 @@
-// @vitest-environment jsdom
-// Known failures, reproduced as ordinary failing tests before being marked here.
-// User requested a refactor plan, not implementation. These remain active as
-// expected-failure contracts: remove .fails when implementing the approved plan.
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, renderHook } from '@testing-library/react';
+/*
+ * @vitest-environment jsdom
+ * Known failures, reproduced as ordinary failing tests before being marked here.
+ * User requested a refactor plan, not implementation. These remain active as
+ * expected-failure contracts: remove .fails when implementing the approved plan.
+ */
 import { Capacitor } from '@capacitor/core';
+import { act, cleanup, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { usePullToRefresh } from '../usePullToRefresh';
 
 function touch(type: string, y: number, target: EventTarget = window): void {
@@ -25,14 +28,23 @@ describe('pull-to-refresh diagnosis before proposed Android refactor', () => {
 	it.fails('cancellation after arming must never refresh', () => {
 		const onRefresh = vi.fn();
 		renderHook(() => usePullToRefresh({ onRefresh, minDisplayTime: 0 }));
-		act(() => { touch('touchstart', 100); touch('touchmove', 300); touch('touchcancel', 300); });
+		act(() => {
+			touch('touchstart', 100);
+			touch('touchmove', 300);
+			touch('touchcancel', 300);
+		});
 		expect(onRefresh).not.toHaveBeenCalled();
 	});
 
 	it.fails('retracting an armed pull to its origin must disarm refresh', () => {
 		const onRefresh = vi.fn();
 		renderHook(() => usePullToRefresh({ onRefresh, minDisplayTime: 0 }));
-		act(() => { touch('touchstart', 100); touch('touchmove', 300); touch('touchmove', 100); touch('touchend', 100); });
+		act(() => {
+			touch('touchstart', 100);
+			touch('touchmove', 300);
+			touch('touchmove', 100);
+			touch('touchend', 100);
+		});
 		expect(onRefresh).not.toHaveBeenCalled();
 	});
 
@@ -42,7 +54,11 @@ describe('pull-to-refresh diagnosis before proposed Android refactor', () => {
 		document.body.appendChild(handle);
 		const onRefresh = vi.fn();
 		renderHook(() => usePullToRefresh({ onRefresh, minDisplayTime: 0 }));
-		act(() => { touch('touchstart', 100, handle); touch('touchmove', 300, handle); touch('touchend', 300, handle); });
+		act(() => {
+			touch('touchstart', 100, handle);
+			touch('touchmove', 300, handle);
+			touch('touchend', 300, handle);
+		});
 		handle.remove();
 		expect(onRefresh).not.toHaveBeenCalled();
 	});

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import 'fake-indexeddb/auto';
 
 import { BookCard } from '@/features/library/components/BookCard';
@@ -19,7 +19,7 @@ const mockBook: Book = {
 	totalPending: 0,
 	createdAt: '2024-01-01',
 	updatedAt: '2024-01-02',
-	lastReadChapter: { chapterId: 'c1', chapterNumber: '1', title: 'Khởi đầu' }
+	lastReadChapter: { chapterId: 'c1', chapterNumber: '1', title: 'Khởi đầu' },
 };
 
 describe('BookCard Favorite Toggle', () => {

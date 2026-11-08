@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { ReadAloudControlFrame } from '../ReadAloudControlFrame';
 
 class TestPointerEvent extends MouseEvent {
@@ -13,7 +14,11 @@ class TestPointerEvent extends MouseEvent {
 
 function setupFrame() {
 	const onStop = vi.fn();
-	const result = render(<ReadAloudControlFrame active isVisible><button onClick={onStop}>Dừng</button></ReadAloudControlFrame>);
+	const result = render(
+		<ReadAloudControlFrame active isVisible>
+			<button onClick={onStop}>Dừng</button>
+		</ReadAloudControlFrame>
+	);
 	const frame = screen.getByRole('group', { name: 'Điều khiển đọc thành tiếng' });
 	const handle = screen.getByRole('button', { name: 'Kéo thanh điều khiển lên hoặc xuống' });
 	const capture = vi.fn();
@@ -98,7 +103,11 @@ describe('ReadAloudControlFrame vertical movement', () => {
 		fireEvent.pointerDown(handle, { pointerId: 1, clientY: 500 });
 		fireEvent.pointerMove(handle, { pointerId: 1, clientY: 450 });
 		expect(offset()).toBe(-50);
-		rerender(<ReadAloudControlFrame active isVisible={false}>Controls</ReadAloudControlFrame>);
+		rerender(
+			<ReadAloudControlFrame active isVisible={false}>
+				Controls
+			</ReadAloudControlFrame>
+		);
 		fireEvent.pointerMove(handle, { pointerId: 1, clientY: 300 });
 		expect(offset()).toBe(-50);
 	});
@@ -106,11 +115,16 @@ describe('ReadAloudControlFrame vertical movement', () => {
 	it('reclamps when controls change size and cleans up its observer', () => {
 		let resized: (() => void) | undefined;
 		const disconnect = vi.fn();
-		vi.stubGlobal('ResizeObserver', class {
-			constructor(callback: () => void) { resized = callback; }
-			observe = vi.fn();
-			disconnect = disconnect;
-		});
+		vi.stubGlobal(
+			'ResizeObserver',
+			class {
+				constructor(callback: () => void) {
+					resized = callback;
+				}
+				observe = vi.fn();
+				disconnect = disconnect;
+			}
+		);
 		const { handle, frame, unmount } = setupFrame();
 		fireEvent.pointerDown(handle, { pointerId: 1, clientY: 500 });
 		fireEvent.pointerMove(handle, { pointerId: 1, clientY: -500 });
@@ -139,12 +153,22 @@ describe('ReadAloudControlFrame vertical movement', () => {
 
 	it('does not bubble handle gestures into reader gestures and cancels when hidden', () => {
 		const onReaderPointerDown = vi.fn();
-		const { rerender } = render(<div onPointerDown={onReaderPointerDown}><ReadAloudControlFrame active isVisible>Controls</ReadAloudControlFrame></div>);
+		const { rerender } = render(
+			<div onPointerDown={onReaderPointerDown}>
+				<ReadAloudControlFrame active isVisible>
+					Controls
+				</ReadAloudControlFrame>
+			</div>
+		);
 		const handle = screen.getByRole('button', { name: 'Kéo thanh điều khiển lên hoặc xuống' });
 		Object.assign(handle, { setPointerCapture: vi.fn() });
 		fireEvent.pointerDown(handle, { pointerId: 1, clientY: 500 });
 		expect(onReaderPointerDown).not.toHaveBeenCalled();
-		rerender(<ReadAloudControlFrame active isVisible={false}>Controls</ReadAloudControlFrame>);
+		rerender(
+			<ReadAloudControlFrame active isVisible={false}>
+				Controls
+			</ReadAloudControlFrame>
+		);
 		expect(screen.getByRole('button', { name: 'Kéo thanh điều khiển lên hoặc xuống' }).hasAttribute('disabled')).toBe(true);
 	});
 });

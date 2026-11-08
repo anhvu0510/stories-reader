@@ -1,12 +1,19 @@
-import type { ReadAloudScrollFollower } from './readAloudScrollFollower';
 import { onNativeReaderGesture } from './nativeReaderGestures';
 
+import type { ReadAloudScrollFollower } from './readAloudScrollFollower';
+
 export function bindNativeReadingInteraction(follower: ReadAloudScrollFollower, onInteraction?: () => void): () => void {
-	const suspend = () => { onInteraction?.(); follower.notifyUserInteraction(); };
+	const suspend = () => {
+		onInteraction?.();
+		follower.notifyUserInteraction();
+	};
 	const selection = () => follower.notifySelectionChange();
 	const scroll = () => follower.notifyViewportScroll();
 	const unsubscribe = onNativeReaderGesture((gesture) => {
-		if (gesture.kind === 'interaction-start') { onInteraction?.(); follower.beginUserInteraction(); }
+		if (gesture.kind === 'interaction-start') {
+			onInteraction?.();
+			follower.beginUserInteraction();
+		}
 		if (gesture.kind === 'interaction-end') follower.endUserInteraction();
 	});
 	window.addEventListener('wheel', suspend, { passive: true, capture: true });

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Capacitor } from '@capacitor/core';
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import React from 'react';
-import { Capacitor } from '@capacitor/core';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { SelectionSpeakerTooltip } from '../SelectionSpeakerTooltip';
 
@@ -81,8 +81,8 @@ describe('SelectionSpeakerTooltip Component', () => {
 				left: 50,
 				right: 150,
 				width: 100,
-				height: 20
-			})
+				height: 20,
+			}),
 		} as unknown as Range;
 
 		vi.spyOn(window, 'getSelection').mockReturnValue({
@@ -90,7 +90,7 @@ describe('SelectionSpeakerTooltip Component', () => {
 			rangeCount: 1,
 			toString: () => 'chuyện bắt',
 			getRangeAt: () => range,
-			removeAllRanges: vi.fn()
+			removeAllRanges: vi.fn(),
 		} as any);
 
 		act(() => {
@@ -124,9 +124,9 @@ describe('SelectionSpeakerTooltip Component', () => {
 				startOffset: 0,
 				endContainer: outsideP.firstChild!,
 				endOffset: 7,
-				getBoundingClientRect: () => ({ top: 100, bottom: 120, left: 50, right: 150, width: 100, height: 20 })
+				getBoundingClientRect: () => ({ top: 100, bottom: 120, left: 50, right: 150, width: 100, height: 20 }),
 			}),
-			removeAllRanges: vi.fn()
+			removeAllRanges: vi.fn(),
 		} as any);
 
 		act(() => {
@@ -160,8 +160,8 @@ describe('SelectionSpeakerTooltip Component', () => {
 				left: 50,
 				right: 150,
 				width: 100,
-				height: 20
-			})
+				height: 20,
+			}),
 		} as unknown as Range;
 
 		vi.spyOn(window, 'getSelection').mockReturnValue({
@@ -169,7 +169,7 @@ describe('SelectionSpeakerTooltip Component', () => {
 			rangeCount: 1,
 			toString: () => 'văn này',
 			getRangeAt: () => range,
-			removeAllRanges
+			removeAllRanges,
 		} as any);
 
 		act(() => {
@@ -213,8 +213,8 @@ describe('SelectionSpeakerTooltip Component', () => {
 				left: 50,
 				right: 200,
 				width: 150,
-				height: 20
-			})
+				height: 20,
+			}),
 		} as unknown as Range;
 
 		vi.spyOn(window, 'getSelection').mockReturnValue({
@@ -222,12 +222,14 @@ describe('SelectionSpeakerTooltip Component', () => {
 			rangeCount: 1,
 			toString: () => 'được chọn khi',
 			getRangeAt: () => range,
-			removeAllRanges
+			removeAllRanges,
 		} as any);
 
 		// Android long-press fires contextmenu / touchcancel when native ActionMode appears
 		const contextmenu = new MouseEvent('contextmenu', { cancelable: true });
-		act(() => { window.dispatchEvent(contextmenu); });
+		act(() => {
+			window.dispatchEvent(contextmenu);
+		});
 
 		expect(contextmenu.defaultPrevented).toBe(true);
 		expect(onSpeak).not.toHaveBeenCalled();
@@ -241,7 +243,7 @@ describe('SelectionSpeakerTooltip Component', () => {
 		vi.spyOn(window, 'getSelection').mockReturnValue({
 			isCollapsed: false,
 			rangeCount: 1,
-			getRangeAt: () => ({ startContainer: outside })
+			getRangeAt: () => ({ startContainer: outside }),
 		} as unknown as Selection);
 		const event = new MouseEvent('contextmenu', { cancelable: true });
 		window.dispatchEvent(event);
@@ -273,8 +275,8 @@ describe('SelectionSpeakerTooltip Component', () => {
 					left: 50,
 					right: 220,
 					width: 170,
-					height: 20
-				})
+					height: 20,
+				}),
 			} as unknown as Range;
 
 			vi.spyOn(window, 'getSelection').mockReturnValue({
@@ -282,7 +284,7 @@ describe('SelectionSpeakerTooltip Component', () => {
 				rangeCount: 1,
 				toString: () => 'cuộn xuống nhấn',
 				getRangeAt: () => range,
-				removeAllRanges
+				removeAllRanges,
 			} as any);
 
 			act(() => {

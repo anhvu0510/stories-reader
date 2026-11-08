@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import 'fake-indexeddb/auto';
 
 import { BookCard } from '@/features/library/components/BookCard';
@@ -18,7 +18,7 @@ const mockBook: Book = {
 	totalPending: 150,
 	createdAt: '2024-01-01',
 	updatedAt: '2024-01-02',
-	lastReadChapter: { chapterId: 'c10', chapterNumber: '10', title: 'Đột phá Cảnh giới' }
+	lastReadChapter: { chapterId: 'c10', chapterNumber: '10', title: 'Đột phá Cảnh giới' },
 };
 
 describe('BookCard Quick Action Menu & Long Press', () => {
@@ -39,7 +39,7 @@ describe('BookCard Quick Action Menu & Long Press', () => {
 		);
 
 		const moreButton = screen.getByRole('button', {
-			name: /Tùy chọn cho truyện Vũ Động Càn Khôn/i
+			name: /Tùy chọn cho truyện Vũ Động Càn Khôn/i,
 		});
 		expect(moreButton).toBeDefined();
 
@@ -71,7 +71,7 @@ describe('BookCard Quick Action Menu & Long Press', () => {
 
 		// Start touch
 		fireEvent.touchStart(card!, {
-			touches: [{ clientX: 100, clientY: 100 }]
+			touches: [{ clientX: 100, clientY: 100 }],
 		});
 
 		// Advance 400ms
@@ -90,7 +90,7 @@ describe('BookCard Quick Action Menu & Long Press', () => {
 		vi.spyOn(AIRepository, 'detectProperNouns').mockResolvedValue({});
 		vi.spyOn(AIRepository, 'detectTagsAndPov').mockResolvedValue({
 			tags: ['Tiên Hiệp'],
-			pointOfView: 'Ngôi thứ 3'
+			pointOfView: 'Ngôi thứ 3',
 		});
 
 		render(
@@ -100,14 +100,14 @@ describe('BookCard Quick Action Menu & Long Press', () => {
 		);
 
 		const moreButton = screen.getByRole('button', {
-			name: /Tùy chọn cho truyện Vũ Động Càn Khôn/i
+			name: /Tùy chọn cho truyện Vũ Động Càn Khôn/i,
 		});
 		fireEvent.click(moreButton);
 
 		const titleBtn = screen.getByText('Dịch tiêu đề');
 		fireEvent.click(titleBtn);
 		expect(AIRepository.translateChineseTitles).toHaveBeenCalledWith({
-			bookId: 'book-action-test-1'
+			bookId: 'book-action-test-1',
 		});
 
 		// Open again
@@ -115,7 +115,7 @@ describe('BookCard Quick Action Menu & Long Press', () => {
 		const nameBtn = screen.getByText('Dịch tên');
 		fireEvent.click(nameBtn);
 		expect(AIRepository.detectProperNouns).toHaveBeenCalledWith({
-			bookId: 'book-action-test-1'
+			bookId: 'book-action-test-1',
 		});
 
 		// Open again
@@ -123,7 +123,7 @@ describe('BookCard Quick Action Menu & Long Press', () => {
 		const povBtn = screen.getByText('Dịch POV');
 		fireEvent.click(povBtn);
 		expect(AIRepository.detectTagsAndPov).toHaveBeenCalledWith({
-			bookId: 'book-action-test-1'
+			bookId: 'book-action-test-1',
 		});
 	});
 });

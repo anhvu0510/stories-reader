@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { ReaderScreen } from '@/features/reader/ReaderScreen';
 import { BookRepository } from '@/repositories/BookRepository';
@@ -13,16 +13,16 @@ vi.mock('../../../repositories/ChapterRepository', () => ({
 	ChapterRepository: {
 		getChapterContent: vi.fn(),
 		getChapters: vi.fn().mockResolvedValue({ chapters: [], pagination: {} }),
-		getLatestChapter: vi.fn().mockResolvedValue(null)
-	}
+		getLatestChapter: vi.fn().mockResolvedValue(null),
+	},
 }));
 
 vi.mock('../../../repositories/BookRepository', () => ({
 	BookRepository: {
 		getLastReadChapter: vi.fn().mockResolvedValue(null),
 		getBook: vi.fn().mockResolvedValue(null),
-		updateLastReadChapter: vi.fn().mockResolvedValue({})
-	}
+		updateLastReadChapter: vi.fn().mockResolvedValue({}),
+	},
 }));
 
 vi.mock('../../../hooks/useReadAloud', () => ({
@@ -35,8 +35,8 @@ vi.mock('../../../hooks/useReadAloud', () => ({
 		pauseReading: vi.fn(),
 		stopReading: vi.fn(),
 		nextSection: vi.fn(),
-		prevSection: vi.fn()
-	})
+		prevSection: vi.fn(),
+	}),
 }));
 
 describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Click Force Reload)', () => {
@@ -58,14 +58,14 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 				chapterNumber: 1,
 				title: 'Chương 1: Khởi đầu',
 				bookName: 'Đại Phụng Đả Canh Nhân',
-				content: ['Nội dung chương 1']
-			}
+				content: ['Nội dung chương 1'],
+			},
 		});
 
 		vi.mocked(BookRepository.getLastReadChapter).mockResolvedValueOnce({
 			chapterId: 'chap-1',
 			chapterNumber: 1,
-			title: 'Chương 1: Khởi đầu'
+			title: 'Chương 1: Khởi đầu',
 		});
 
 		render(
@@ -81,7 +81,13 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 		});
 
 		// Initial load called without forceFresh
-		expect(ChapterRepository.getChapterContent).toHaveBeenCalledWith('chap-1', expect.any(Number), expect.any(Boolean), '', expect.any(Number));
+		expect(ChapterRepository.getChapterContent).toHaveBeenCalledWith(
+			'chap-1',
+			expect.any(Number),
+			expect.any(Boolean),
+			'',
+			expect.any(Number)
+		);
 
 		const titleBtn = screen.getByText(/Đại Phụng/).closest('button')!;
 
@@ -91,7 +97,7 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 
 		await waitFor(() => {
 			expect(BookRepository.getLastReadChapter).toHaveBeenCalledWith('book-1', {
-				forceFresh: true
+				forceFresh: true,
 			});
 		});
 
@@ -114,14 +120,14 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 				chapterNumber: 1,
 				title: 'Chương 1: Khởi đầu',
 				bookName: 'Đại Phụng Đả Canh Nhân',
-				content: ['Nội dung chương 1']
-			}
+				content: ['Nội dung chương 1'],
+			},
 		});
 
 		vi.mocked(BookRepository.getLastReadChapter).mockResolvedValueOnce({
 			chapterId: 'chap-15',
 			chapterNumber: 15,
-			title: 'Chương 15: Manh Mối'
+			title: 'Chương 15: Manh Mối',
 		});
 
 		render(
@@ -145,7 +151,7 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 
 		await waitFor(() => {
 			expect(BookRepository.getLastReadChapter).toHaveBeenCalledWith('book-1', {
-				forceFresh: true
+				forceFresh: true,
 			});
 		});
 
@@ -163,8 +169,8 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 				chapterNumber: 1,
 				title: 'Chương 1: Khởi đầu',
 				bookName: 'Đại Phụng Đả Canh Nhân',
-				content: ['Nội dung câu 1', 'Nội dung câu 2']
-			}
+				content: ['Nội dung câu 1', 'Nội dung câu 2'],
+			},
 		});
 
 		render(
@@ -201,7 +207,7 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 
 		expect(scrollMock).toHaveBeenCalledWith({
 			behavior: 'smooth',
-			block: 'center'
+			block: 'center',
 		});
 
 		document.body.removeChild(highlightSpan);
@@ -216,8 +222,8 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 				chapterNumber: 1,
 				title: 'Chương 1: Khởi đầu',
 				bookName: 'Đại Phụng Đả Canh Nhân',
-				content: ['Nội dung']
-			}
+				content: ['Nội dung'],
+			},
 		});
 
 		render(
@@ -255,8 +261,8 @@ describe('ReaderScreen - Title Bar Actions (Single Click Read Aloud & Double Cli
 				chapterNumber: 1,
 				title: 'Chương 1',
 				bookName: 'Đại Phụng',
-				content: ['Nội dung']
-			}
+				content: ['Nội dung'],
+			},
 		});
 
 		render(

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
 
 import { ChapterListScreen } from '@/features/chapter-list/ChapterListScreen';
 import { ReaderScreen } from '@/features/reader/ReaderScreen';
@@ -13,14 +13,14 @@ import { ChapterRepository } from '@/repositories/ChapterRepository';
 vi.mock('../../../repositories/ChapterRepository', () => ({
 	ChapterRepository: {
 		getChapterContent: vi.fn(),
-		getChapters: vi.fn().mockResolvedValue({ chapters: [], pagination: {} })
-	}
+		getChapters: vi.fn().mockResolvedValue({ chapters: [], pagination: {} }),
+	},
 }));
 
 vi.mock('../../../repositories/BookRepository', () => ({
 	BookRepository: {
-		getBook: vi.fn()
-	}
+		getBook: vi.fn(),
+	},
 }));
 
 describe('ReaderScreen & ChapterListScreen Document Title Integration', () => {
@@ -45,8 +45,8 @@ describe('ReaderScreen & ChapterListScreen Document Title Integration', () => {
 				state: 'SUCCEEDED',
 				totalTokens: 1000,
 				content: ['Vạn sự khởi đầu nan.'],
-				rootTab: ''
-			}
+				rootTab: '',
+			},
 		});
 
 		render(
@@ -90,8 +90,8 @@ describe('ReaderScreen & ChapterListScreen Document Title Integration', () => {
 				state: 'SUCCEEDED',
 				totalTokens: 500,
 				content: ['Nội dung chương.'],
-				rootTab: ''
-			}
+				rootTab: '',
+			},
 		});
 
 		const { unmount } = render(
@@ -119,7 +119,7 @@ describe('ReaderScreen & ChapterListScreen Document Title Integration', () => {
 			totalPending: 0,
 			createdAt: '2024-01-01',
 			updatedAt: '2024-01-02',
-			lastReadChapter: { chapterId: 'chap-1', chapterNumber: '1', title: 'Chương 1' }
+			lastReadChapter: { chapterId: 'chap-1', chapterNumber: '1', title: 'Chương 1' },
 		});
 
 		render(

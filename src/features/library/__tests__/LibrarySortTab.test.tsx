@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import 'fake-indexeddb/auto';
 
 import { LibraryHeader } from '@/features/library/components/LibraryHeader';
-import { SortSheet, SORT_OPTIONS } from '@/features/library/components/SortSheet';
+import { SORT_OPTIONS } from '@/features/library/components/sortOptions';
+import { SortSheet } from '@/features/library/components/SortSheet';
 import { LibraryScreen } from '@/features/library/LibraryScreen';
 import { BookRepository } from '@/repositories/BookRepository';
 
@@ -13,9 +14,9 @@ vi.mock('../../../repositories/BookRepository', () => ({
 	BookRepository: {
 		getBooks: vi.fn().mockResolvedValue({
 			books: [],
-			pagination: { currentPage: 1, totalPages: 1, total: 0 }
-		})
-	}
+			pagination: { currentPage: 1, totalPages: 1, total: 0 },
+		}),
+	},
 }));
 
 describe('Library Tab Sorting Requirements', () => {

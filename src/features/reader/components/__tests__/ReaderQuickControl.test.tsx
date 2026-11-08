@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 
 import { ReaderQuickControl } from '@/features/reader/components/ReaderQuickControl';
 
@@ -10,7 +10,7 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 	const mockChapters = [
 		{ chapterId: 'c551', chapterNumber: 551, title: 'Chương 551', content: [] },
 		{ chapterId: 'c552', chapterNumber: 552, title: 'Chương 552', content: [] },
-		{ chapterId: 'c553', chapterNumber: 553, title: 'Chương 553', content: [] }
+		{ chapterId: 'c553', chapterNumber: 553, title: 'Chương 553', content: [] },
 	];
 
 	beforeEach(() => {
@@ -21,7 +21,14 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 	it('renders horizontal circular buttons for batch chapters 551, 552, 553 above range button', () => {
 		render(
 			<MemoryRouter>
-				<ReaderQuickControl bookId="b1" chapterDisplayLabel="551 - 553" chapters={mockChapters} activeChapterId="c551" onOpenChapterSelect={vi.fn()} onOpenTranslation={vi.fn()} />
+				<ReaderQuickControl
+					bookId="b1"
+					chapterDisplayLabel="551 - 553"
+					chapters={mockChapters}
+					activeChapterId="c551"
+					onOpenChapterSelect={vi.fn()}
+					onOpenTranslation={vi.fn()}
+				/>
 			</MemoryRouter>
 		);
 
@@ -44,7 +51,14 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 
 		render(
 			<MemoryRouter>
-				<ReaderQuickControl bookId="b1" chapterDisplayLabel="551 - 553" chapters={mockChapters} activeChapterId="c551" onOpenChapterSelect={vi.fn()} onOpenTranslation={vi.fn()} />
+				<ReaderQuickControl
+					bookId="b1"
+					chapterDisplayLabel="551 - 553"
+					chapters={mockChapters}
+					activeChapterId="c551"
+					onOpenChapterSelect={vi.fn()}
+					onOpenTranslation={vi.fn()}
+				/>
 			</MemoryRouter>
 		);
 
@@ -53,7 +67,7 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 
 		expect(mockScrollIntoView).toHaveBeenCalledWith({
 			behavior: 'smooth',
-			block: 'start'
+			block: 'start',
 		});
 
 		document.body.removeChild(sectionEl);
@@ -83,7 +97,14 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 	it('does not render the quick TTS button on bottom dock anymore as it moved to vertical menu dock', () => {
 		render(
 			<MemoryRouter>
-				<ReaderQuickControl bookId="b1" chapterDisplayLabel="551 - 553" chapters={mockChapters} activeChapterId="c551" onOpenChapterSelect={vi.fn()} onOpenTranslation={vi.fn()} />
+				<ReaderQuickControl
+					bookId="b1"
+					chapterDisplayLabel="551 - 553"
+					chapters={mockChapters}
+					activeChapterId="c551"
+					onOpenChapterSelect={vi.fn()}
+					onOpenTranslation={vi.fn()}
+				/>
 			</MemoryRouter>
 		);
 		expect(screen.queryByTitle('Bật đọc thành tiếng (VieNeu AI TTS)')).toBeNull();
@@ -97,8 +118,8 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 			value: {
 				...originalLocation,
 				hash: '',
-				reload: reloadSpy
-			}
+				reload: reloadSpy,
+			},
 		});
 
 		window.scrollTo = vi.fn();
@@ -107,7 +128,14 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 
 		render(
 			<MemoryRouter>
-				<ReaderQuickControl bookId="b1" currentChapterId="c551" nextChapterId="c552" activeChapterId="c551" onOpenChapterSelect={vi.fn()} onOpenTranslation={vi.fn()} />
+				<ReaderQuickControl
+					bookId="b1"
+					currentChapterId="c551"
+					nextChapterId="c552"
+					activeChapterId="c551"
+					onOpenChapterSelect={vi.fn()}
+					onOpenTranslation={vi.fn()}
+				/>
 			</MemoryRouter>
 		);
 
@@ -123,7 +151,7 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 
 		Object.defineProperty(window, 'location', {
 			writable: true,
-			value: originalLocation
+			value: originalLocation,
 		});
 	});
 });

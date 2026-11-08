@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+
 import { DEFAULT_VIENEU_SERVER_URL } from '@/services/ttsService';
+import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 
 export function useVieNeuReadingConfig() {
 	const vieneuServerUrl = useReaderConfigStore((state) => state.vieneuServerUrl || DEFAULT_VIENEU_SERVER_URL);
@@ -34,7 +35,7 @@ export function useVieNeuReadingConfig() {
 			denoise: vieneuDenoise,
 			use_ref_codes: vieneuUseRefCodes,
 			apply_watermark: vieneuApplyWatermark,
-			...(vieneuOutputSampleRate ? { output_sample_rate: vieneuOutputSampleRate as 24000 | 48000 } : {})
+			...(vieneuOutputSampleRate ? { output_sample_rate: vieneuOutputSampleRate as 24000 | 48000 } : {}),
 		}),
 		[
 			vieneuTemperature,
@@ -50,15 +51,17 @@ export function useVieNeuReadingConfig() {
 			vieneuDenoise,
 			vieneuUseRefCodes,
 			vieneuApplyWatermark,
-			vieneuOutputSampleRate
+			vieneuOutputSampleRate,
 		]
 	);
 
 	const getVieneuOptionsForSegment = (text: string) => ({
 		...vieneuOptions,
-		// max_chars is also used by the model as its text budget. Never let the
-		// configured default truncate a complete source line selected by marker.
-		max_chars: Math.min(512, Math.max(vieneuOptions.max_chars ?? 140, text.length))
+		/*
+		 * max_chars is also used by the model as its text budget. Never let the
+		 * configured default truncate a complete source line selected by marker.
+		 */
+		max_chars: Math.min(512, Math.max(vieneuOptions.max_chars ?? 140, text.length)),
 	});
 
 	return { vieneuServerUrl, vieneuModel, vieneuOptions, getVieneuOptionsForSegment };

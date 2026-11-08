@@ -26,7 +26,8 @@ export const useTTSStore = create<TTSStore>((set) => ({
 	setIsLoading: (isLoading) => set({ isLoading }),
 	setIsPlaying: (isPlaying) => set({ isPlaying }),
 	setIsPaused: (isPaused) => set({ isPaused }),
-	setTTSPosition: (currentParagraphIndex, currentCharIndex, currentCharLength) => set({ currentParagraphIndex, currentCharIndex, currentCharLength }),
+	setTTSPosition: (currentParagraphIndex, currentCharIndex, currentCharLength) =>
+		set({ currentParagraphIndex, currentCharIndex, currentCharLength }),
 	resetTTS: () =>
 		set({
 			isPlaying: false,
@@ -34,6 +35,6 @@ export const useTTSStore = create<TTSStore>((set) => ({
 			isLoading: false,
 			currentParagraphIndex: -1,
 			currentCharIndex: -1,
-			currentCharLength: 0
-		})
+			currentCharLength: 0,
+		}),
 }));

@@ -1,9 +1,11 @@
 import { useEffect, useRef, type RefObject } from 'react';
+
 import { useTTSStore } from '@/features/reader/stores/useTTSStore';
 import { DomWordHighlighter } from '@/services/domWordHighlighter';
-import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
 import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
 import { bindNativeReadingInteraction } from '@/services/nativeReadingInteraction';
+import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
+
 import type { SentenceChunk } from '@/services/gaplessTtsPlayer';
 
 const WORD_HIGHLIGHT_CLASS = 'stories-tts-word-highlight';
@@ -25,18 +27,13 @@ export function useReadAloudHighlight(chunks: SentenceChunk[], cursor: Highlight
 	}
 	const updateWordHighlight = (chunkIndex: number, nextCharIndex: number, nextCharLength: number) => {
 		const highlighter = wordHighlighterRef.current;
-		if (!highlighter || !chunks[chunkIndex]) return;
-
-		const readerContent = document.querySelector('#main-story-content');
-		if (!readerContent) {
-			return;
-		}
-
+		if (!highlighter) return;
 		const chunk = chunks[chunkIndex];
-		const pNode = readerContent.querySelector<HTMLElement>(`article > div[data-paragraph-index="${chunk.pIdx}"]`);
-		if (!pNode) {
-			return;
-		}
+		if (!chunk) return;
+
+		const pNode = getParagraphNode(chunk.pIdx);
+		if (!pNode) return;
+
 		if (nextCharIndex < 0 || nextCharLength <= 0) {
 			// Keep the visual anchor until the next spoken word replaces it.
 			charIndexRef.current = Math.max(0, nextCharIndex);
@@ -45,15 +42,21 @@ export function useReadAloudHighlight(chunks: SentenceChunk[], cursor: Highlight
 			return;
 		}
 
-		if (charIndexRef.current === nextCharIndex && charLengthRef.current === nextCharLength && useTTSStore.getState().currentParagraphIndex === chunk.pIdx) {
+		if (
+			isSameHighlightPosition(
+				useTTSStore.getState().currentParagraphIndex,
+				charIndexRef.current,
+				charLengthRef.current,
+				chunk.pIdx,
+				nextCharIndex,
+				nextCharLength
+			)
+		) {
 			return;
 		}
 
-		const wordText = chunk.text.substring(nextCharIndex, nextCharIndex + nextCharLength);
-		const match = wordText.match(/[^\s.,!?:;'"(){}[\]“”‘’\-–—]+/);
-		if (!match || match.index === undefined) {
-			return;
-		}
+		const match = extractWordMatch(chunk.text, nextCharIndex, nextCharLength);
+		if (!match) return;
 
 		charIndexRef.current = nextCharIndex;
 		sourceOffsetRef.current = chunk.startOffset + nextCharIndex;
@@ -61,18 +64,21 @@ export function useReadAloudHighlight(chunks: SentenceChunk[], cursor: Highlight
 		useTTSStore.setState({
 			currentParagraphIndex: chunk.pIdx,
 			currentCharIndex: nextCharIndex,
-			currentCharLength: nextCharLength
+			currentCharLength: nextCharLength,
 		});
 		currentParagraphIndexRef.current = chunk.pIdx;
 
-		const offset = nextCharIndex + match.index;
-		const geometry = highlighter.highlight(pNode, chunk.startOffset + offset, match[0].length);
-		if (geometry?.lineChanged) {
-			scrollFollowerRef.current?.follow(geometry.line);
-		}
+		const geometry = highlighter.highlight(pNode, chunk.startOffset + match.offset, match.length);
+		followLineIfChanged(geometry, scrollFollowerRef.current);
 	};
 
-	const updateMedia3Highlight = (chunkIndex: number, paragraphIndex: number, sourceStart: number, wordCharIndex: number, wordCharLength: number) => {
+	const updateMedia3Highlight = (
+		chunkIndex: number,
+		paragraphIndex: number,
+		sourceStart: number,
+		wordCharIndex: number,
+		wordCharLength: number
+	) => {
 		const highlighter = wordHighlighterRef.current;
 		if (!highlighter || wordCharIndex < 0) return;
 		if (wordCharLength <= 0) {
@@ -82,23 +88,33 @@ export function useReadAloudHighlight(chunks: SentenceChunk[], cursor: Highlight
 			charLengthRef.current = 0;
 			return;
 		}
-		const readerContent = document.querySelector('#main-story-content');
-		const paragraphNode = readerContent?.querySelector<HTMLElement>(`article > div[data-paragraph-index="${paragraphIndex}"]`);
+		const paragraphNode = getParagraphNode(paragraphIndex);
 		if (!paragraphNode) return;
 		const absoluteWordIndex = sourceStart + wordCharIndex;
-		if (currentParagraphIndexRef.current === paragraphIndex && charIndexRef.current === absoluteWordIndex && charLengthRef.current === wordCharLength) return;
+		if (
+			isSameHighlightPosition(
+				currentParagraphIndexRef.current,
+				charIndexRef.current,
+				charLengthRef.current,
+				paragraphIndex,
+				absoluteWordIndex,
+				wordCharLength
+			)
+		) {
+			return;
+		}
 
 		currentParagraphIndexRef.current = paragraphIndex;
-		charIndexRef.current = sourceStart + wordCharIndex;
-		sourceOffsetRef.current = sourceStart + wordCharIndex;
+		charIndexRef.current = absoluteWordIndex;
+		sourceOffsetRef.current = absoluteWordIndex;
 		charLengthRef.current = wordCharLength;
 		useTTSStore.setState({
 			currentParagraphIndex: paragraphIndex,
-			currentCharIndex: sourceStart + wordCharIndex,
-			currentCharLength: wordCharLength
+			currentCharIndex: absoluteWordIndex,
+			currentCharLength: wordCharLength,
 		});
 		const geometry = highlighter.highlight(paragraphNode, absoluteWordIndex, wordCharLength);
-		if (geometry?.lineChanged) scrollFollowerRef.current?.follow(geometry.line);
+		followLineIfChanged(geometry, scrollFollowerRef.current);
 	};
 
 	useEffect(() => {
@@ -152,4 +168,33 @@ export function useReadAloudHighlight(chunks: SentenceChunk[], cursor: Highlight
 	}, []);
 
 	return { wordHighlighterRef, scrollFollowerRef, updateWordHighlight, updateMedia3Highlight };
+}
+
+function followLineIfChanged(geometry: ReturnType<DomWordHighlighter['highlight']>, scrollFollower: ReadAloudScrollFollower | null): void {
+	if (geometry?.lineChanged && scrollFollower) {
+		scrollFollower.follow(geometry.line);
+	}
+}
+
+function getParagraphNode(paragraphIndex: number): HTMLElement | null {
+	const readerContent = document.querySelector('#main-story-content');
+	return readerContent?.querySelector<HTMLElement>(`article > div[data-paragraph-index="${paragraphIndex}"]`) ?? null;
+}
+
+function isSameHighlightPosition(
+	currentPIdx: number,
+	currentCharIndex: number,
+	currentCharLength: number,
+	targetPIdx: number,
+	targetCharIndex: number,
+	targetCharLength: number
+): boolean {
+	return currentPIdx === targetPIdx && currentCharIndex === targetCharIndex && currentCharLength === targetCharLength;
+}
+
+function extractWordMatch(text: string, charIndex: number, charLength: number): { offset: number; length: number } | null {
+	const wordText = text.substring(charIndex, charIndex + charLength);
+	const match = wordText.match(/[^\s.,!?:;'"(){}[\]“”‘’\-–—]+/);
+	if (!match || match.index === undefined) return null;
+	return { offset: charIndex + match.index, length: match[0].length };
 }

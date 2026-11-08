@@ -30,13 +30,13 @@ function installStorage(name: 'localStorage' | 'sessionStorage'): void {
 	const storage = new TestStorage();
 	Object.defineProperty(globalThis, name, {
 		configurable: true,
-		value: storage
+		value: storage,
 	});
 
 	if (typeof window !== 'undefined' && window !== globalThis) {
 		Object.defineProperty(window, name, {
 			configurable: true,
-			value: storage
+			value: storage,
 		});
 	}
 }

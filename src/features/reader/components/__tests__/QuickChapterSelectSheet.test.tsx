@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
+import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
 
 import { QuickChapterSelectSheet } from '@/features/reader/components/QuickChapterSelectSheet';
 import { downloadManager } from '@/lib/DownloadManager';
@@ -12,8 +12,8 @@ vi.mock('../../../../lib/DownloadManager', () => ({
 	downloadManager: {
 		addBook: vi.fn(),
 		getTask: vi.fn(),
-		subscribe: vi.fn(() => () => {})
-	}
+		subscribe: vi.fn(() => () => {}),
+	},
 }));
 
 vi.mock('../../../../lib/offlineDb', () => ({
@@ -24,14 +24,14 @@ vi.mock('../../../../lib/offlineDb', () => ({
 			}
 			return Promise.resolve(undefined);
 		}),
-		deleteBook: vi.fn().mockResolvedValue(undefined)
-	}
+		deleteBook: vi.fn().mockResolvedValue(undefined),
+	},
 }));
 
 vi.mock('../../../../repositories/ChapterRepository', () => ({
 	ChapterRepository: {
-		getChapters: vi.fn().mockResolvedValue({ chapters: [], pagination: {} })
-	}
+		getChapters: vi.fn().mockResolvedValue({ chapters: [], pagination: {} }),
+	},
 }));
 
 describe('QuickChapterSelectSheet Download Button & Mobile Confirm Modal', () => {
@@ -39,7 +39,7 @@ describe('QuickChapterSelectSheet Download Button & Mobile Confirm Modal', () =>
 		bookId: 'book-test-1',
 		currentChapterId: 'chap-1',
 		currentChapterNumber: 1,
-		onClose: vi.fn()
+		onClose: vi.fn(),
 	};
 
 	beforeEach(() => {

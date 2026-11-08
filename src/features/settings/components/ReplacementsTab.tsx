@@ -1,10 +1,26 @@
-import React, { useState, useEffect } from 'react';
 import { Search, Plus, Trash2, ArrowRight, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import { ReplacementRepository } from '@/repositories/ReplacementRepository';
 import { useToastStore } from '@/stores/useToastStore';
 
 import type { Replacement } from '@/shared/types';
+
+type ReplacementScope = 'chapter' | 'book' | 'global';
+type ScopeFilter = 'all' | ReplacementScope;
+
+const SCOPES: readonly { id: ReplacementScope; label: string }[] = [
+	{ id: 'global', label: 'Global' },
+	{ id: 'book', label: 'Book' },
+	{ id: 'chapter', label: 'Chapter' },
+];
+
+const SCOPE_FILTERS: readonly { id: ScopeFilter; label: string }[] = [
+	{ id: 'all', label: 'Tất cả' },
+	{ id: 'global', label: 'Global' },
+	{ id: 'book', label: 'Book' },
+	{ id: 'chapter', label: 'Chapter' },
+];
 
 interface ReplacementsTabProps {
 	initialMatch?: string;
@@ -17,14 +33,14 @@ export function ReplacementsTab({ initialMatch = '', currentBookId, currentChapt
 	const [replacements, setReplacements] = useState<Replacement[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState('');
-	const [scopeFilter, setScopeFilter] = useState<'all' | 'chapter' | 'book' | 'global'>('all');
+	const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all');
 
 	const [matchStr, setMatchStr] = useState(initialMatch);
 	const [replacementStr, setReplacementStr] = useState('');
-	const [scope, setScope] = useState<'chapter' | 'book' | 'global'>('global');
+	const [scope, setScope] = useState<ReplacementScope>('global');
 	const [isSaving, setIsSaving] = useState(false);
 
-	const loadReplacements = async () => {
+	const loadReplacements = useCallback(async () => {
 		setLoading(true);
 		try {
 			const data = await ReplacementRepository.getReplacements();
@@ -34,11 +50,11 @@ export function ReplacementsTab({ initialMatch = '', currentBookId, currentChapt
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [showToast]);
 
 	useEffect(() => {
 		loadReplacements();
-	}, []);
+	}, [loadReplacements]);
 
 	const handleAdd = async () => {
 		if (!matchStr.trim() || !replacementStr.trim()) {
@@ -52,7 +68,7 @@ export function ReplacementsTab({ initialMatch = '', currentBookId, currentChapt
 				replacement: replacementStr.trim(),
 				scope,
 				bookId: scope === 'book' ? currentBookId : undefined,
-				chapterId: scope === 'chapter' ? currentChapterId : undefined
+				chapterId: scope === 'chapter' ? currentChapterId : undefined,
 			});
 			showToast('Đã thêm từ thay thế', 'success');
 			setMatchStr('');
@@ -107,17 +123,13 @@ export function ReplacementsTab({ initialMatch = '', currentBookId, currentChapt
 				</div>
 				<div className="flex items-center justify-between gap-2 pt-1">
 					<div className="flex items-center gap-1 p-1 bg-white/10 rounded-xl border border-white/15">
-						{[
-							{ id: 'global', label: 'Global' },
-							{ id: 'book', label: 'Book' },
-							{ id: 'chapter', label: 'Chapter' }
-						].map((item) => {
+						{SCOPES.map((item) => {
 							const isActive = scope === item.id;
 							return (
 								<button
 									key={item.id}
 									type="button"
-									onClick={() => setScope(item.id as any)}
+									onClick={() => setScope(item.id)}
 									className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-95 ${isActive ? 'bg-primary/20 border border-primary/60 text-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10 border border-transparent'}`}
 								>
 									{item.label}
@@ -150,18 +162,13 @@ export function ReplacementsTab({ initialMatch = '', currentBookId, currentChapt
 				</div>
 
 				<div className="flex items-center gap-1 p-1 bg-white/10 rounded-xl border border-white/15 shrink-0 overflow-x-auto hide-scrollbar">
-					{[
-						{ id: 'all', label: 'Tất cả' },
-						{ id: 'global', label: 'Global' },
-						{ id: 'book', label: 'Book' },
-						{ id: 'chapter', label: 'Chapter' }
-					].map((item) => {
+					{SCOPE_FILTERS.map((item) => {
 						const isActive = scopeFilter === item.id;
 						return (
 							<button
 								key={item.id}
 								type="button"
-								onClick={() => setScopeFilter(item.id as any)}
+								onClick={() => setScopeFilter(item.id)}
 								className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-95 whitespace-nowrap ${isActive ? 'bg-primary/20 border border-primary/60 text-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10 border border-transparent'}`}
 							>
 								{item.label}
@@ -172,29 +179,44 @@ export function ReplacementsTab({ initialMatch = '', currentBookId, currentChapt
 			</div>
 
 			{/* Danh sách quy tắc */}
-			{loading ? (
-				<div className="py-8 text-center text-xs text-on-surface-variant flex justify-center items-center gap-2">
-					<Loader2 size={16} className="animate-spin text-primary" /> Đang tải từ điển...
-				</div>
-			) : filtered.length === 0 ? (
-				<div className="py-8 text-center text-xs text-on-surface-variant/60">Không tìm thấy từ thay thế nào</div>
-			) : (
-				<div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 hide-scrollbar">
-					{filtered.map((item) => (
-						<div key={item.id} className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 flex items-center justify-between text-xs transition-all shadow-xs">
-							<div className="flex items-center gap-2 min-w-0 flex-1">
-								<span className="font-bold text-on-surface truncate">{item.match}</span>
-								<ArrowRight size={12} className="text-on-surface-variant/50 flex-shrink-0" />
-								<span className="font-extrabold text-primary truncate">{item.replacement}</span>
-								<span className="px-2 py-0.5 rounded-md bg-white/10 border border-white/15 text-[10px] font-mono text-on-surface-variant capitalize">{item.scope}</span>
-							</div>
-							<button onClick={() => handleDelete(item.id)} className="p-1 rounded-lg text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 transition-colors ml-2" title="Xóa">
-								<Trash2 size={13} />
-							</button>
+			{(() => {
+				if (loading) {
+					return (
+						<div className="py-8 text-center text-xs text-on-surface-variant flex justify-center items-center gap-2">
+							<Loader2 size={16} className="animate-spin text-primary" /> Đang tải từ điển...
 						</div>
-					))}
-				</div>
-			)}
+					);
+				}
+				if (filtered.length === 0) {
+					return <div className="py-8 text-center text-xs text-on-surface-variant/60">Không tìm thấy từ thay thế nào</div>;
+				}
+				return (
+					<div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 hide-scrollbar">
+						{filtered.map((item) => (
+							<div
+								key={item.id}
+								className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 flex items-center justify-between text-xs transition-all shadow-xs"
+							>
+								<div className="flex items-center gap-2 min-w-0 flex-1">
+									<span className="font-bold text-on-surface truncate">{item.match}</span>
+									<ArrowRight size={12} className="text-on-surface-variant/50 flex-shrink-0" />
+									<span className="font-extrabold text-primary truncate">{item.replacement}</span>
+									<span className="px-2 py-0.5 rounded-md bg-white/10 border border-white/15 text-[10px] font-mono text-on-surface-variant capitalize">
+										{item.scope}
+									</span>
+								</div>
+								<button
+									onClick={() => handleDelete(item.id)}
+									className="p-1 rounded-lg text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 transition-colors ml-2"
+									title="Xóa"
+								>
+									<Trash2 size={13} />
+								</button>
+							</div>
+						))}
+					</div>
+				);
+			})()}
 		</div>
 	);
 }

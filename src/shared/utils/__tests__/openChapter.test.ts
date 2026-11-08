@@ -15,8 +15,8 @@ describe('openChapter utility', () => {
 			value: {
 				...originalLocation,
 				hash: '',
-				reload: vi.fn()
-			}
+				reload: vi.fn(),
+			},
 		});
 	});
 
@@ -24,7 +24,7 @@ describe('openChapter utility', () => {
 		localStorage.clear();
 		Object.defineProperty(window, 'location', {
 			writable: true,
-			value: originalLocation
+			value: originalLocation,
 		});
 	});
 

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
-import { motion } from 'motion/react';
 import { X, Download, Search, RefreshCw, Trash2, Sparkles } from 'lucide-react';
+import { motion } from 'motion/react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 
 import { BottomSheet } from '@/components/BottomSheet';
 import { TranslationSheet } from '@/components/TranslationSheet';
@@ -15,6 +15,199 @@ import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { useToastStore } from '@/stores/useToastStore';
 
 import type { Book, Chapter } from '@/shared/types';
+
+function computeChapterWindow(
+	lastReadChapterNumber: string | number | undefined,
+	totalChapters: number,
+	chapterLimit: number,
+	searchQuery: string
+): { startChapterNumber?: number; endChapterNumber?: number } {
+	if (searchQuery) return {};
+	const target = lastReadChapterNumber ? Math.max(1, Number(lastReadChapterNumber)) : 1;
+	const remainingAhead = totalChapters > 0 ? Math.max(0, totalChapters - target) : 0;
+	const neededBehind = Math.max(5, chapterLimit - remainingAhead);
+	return {
+		startChapterNumber: Math.max(1, target - neededBehind),
+		endChapterNumber: target + chapterLimit,
+	};
+}
+
+function computeChapterBounds(newChapters: Chapter[], searchQuery: string, totalChapters: number, chapterLimit: number) {
+	if (newChapters.length === 0) {
+		return { minNum: 1, maxNum: 1, moreTop: false, moreBottom: false };
+	}
+	const minNum = Math.min(...newChapters.map((c) => c.chapterNumber));
+	const maxNum = Math.max(...newChapters.map((c) => c.chapterNumber));
+	return {
+		minNum,
+		maxNum,
+		moreTop: !searchQuery && minNum > 1,
+		moreBottom: maxNum < (totalChapters || 999999) && newChapters.length >= chapterLimit,
+	};
+}
+
+function QuickBookOfflineAction({
+	isOfflineMode,
+	isDownloaded,
+	onDownload,
+	onDeleteOffline,
+}: {
+	isOfflineMode: boolean;
+	isDownloaded: boolean;
+	onDownload: () => void;
+	onDeleteOffline: () => void;
+}) {
+	if (isOfflineMode) return null;
+	if (isDownloaded) {
+		return (
+			<motion.button
+				whileTap={{ scale: 0.88 }}
+				onClick={() => {
+					triggerHaptic('warning');
+					onDeleteOffline();
+				}}
+				className="w-8 h-8 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 transition-colors flex items-center justify-center cursor-pointer"
+				title="Xóa khỏi máy"
+				aria-label="Xóa khỏi máy"
+			>
+				<Trash2 size={16} />
+			</motion.button>
+		);
+	}
+	return (
+		<motion.button
+			whileTap={{ scale: 0.88 }}
+			onClick={() => {
+				triggerHaptic('light');
+				onDownload();
+			}}
+			className="w-8 h-8 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
+			title="Tải về ngoại tuyến"
+			aria-label="Tải về ngoại tuyến"
+		>
+			<Download size={16} />
+		</motion.button>
+	);
+}
+
+function QuickBookChapterList({
+	loading,
+	chapters,
+	lastReadChapter,
+	activeItemRef,
+	onSelectChapter,
+}: {
+	loading: boolean;
+	chapters: Chapter[];
+	lastReadChapter?: Book['lastReadChapter'];
+	activeItemRef: React.RefObject<HTMLDivElement | null>;
+	onSelectChapter: (chapterId: string) => void;
+}) {
+	if (loading && chapters.length === 0) {
+		return (
+			<div className="py-16 text-center space-y-2 text-on-surface-variant">
+				<RefreshCw size={20} className="animate-spin text-primary mx-auto" />
+				<p className="text-xs font-medium">Đang tải danh sách chương...</p>
+			</div>
+		);
+	}
+	if (chapters.length === 0) {
+		return <div className="py-12 text-center text-xs text-on-surface-variant/60 font-medium">Không tìm thấy chương nào</div>;
+	}
+
+	const lastId = lastReadChapter?.chapterId;
+	const lastNum = lastReadChapter?.chapterNumber === undefined ? undefined : Number(lastReadChapter.chapterNumber);
+
+	return (
+		<>
+			{chapters.map((c) => {
+				const isLastRead = Boolean((lastId && c.chapterId === lastId) || (lastNum !== undefined && c.chapterNumber === lastNum));
+
+				return (
+					<ChapterItem
+						key={c.chapterId}
+						ref={isLastRead ? activeItemRef : null}
+						chapter={c}
+						isActive={isLastRead}
+						onClick={() => onSelectChapter(c.chapterId)}
+					/>
+				);
+			})}
+		</>
+	);
+}
+
+function QuickBookTranslateButton({
+	isOfflineMode,
+	pendingCount,
+	onOpenTranslation,
+}: {
+	isOfflineMode: boolean;
+	pendingCount: number;
+	onOpenTranslation: () => void;
+}) {
+	if (isOfflineMode) return null;
+	return (
+		<motion.button
+			type="button"
+			whileTap={{ scale: 0.88 }}
+			onClick={onOpenTranslation}
+			className="relative w-8 h-8 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-primary hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
+			title={pendingCount > 0 ? `Chờ dịch: ${pendingCount} chương (Mở Dịch AI)` : 'Mở Dịch AI'}
+			aria-label="Mở Dịch AI"
+		>
+			<Sparkles size={16} className={pendingCount > 0 ? 'text-primary animate-pulse' : ''} />
+			{pendingCount > 0 && (
+				<span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-primary text-on-primary font-mono font-black text-[8px] flex items-center justify-center leading-none shadow-xs">
+					{pendingCount > 99 ? '99+' : pendingCount}
+				</span>
+			)}
+		</motion.button>
+	);
+}
+
+function QuickBookTags({ tags }: { tags?: string[] }) {
+	if (!tags || tags.length === 0) return null;
+	return (
+		<div className="flex flex-wrap items-center gap-1 pt-0.5">
+			{tags.map((tag) => (
+				<span
+					key={tag}
+					className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium bg-white/10 border border-white/15 text-on-surface-variant shrink-0"
+				>
+					#{tag}
+				</span>
+			))}
+		</div>
+	);
+}
+
+function QuickBookTopLoading({ loadingTop }: { loadingTop: boolean }) {
+	if (!loadingTop) return null;
+	return (
+		<div className="py-2.5 flex items-center justify-center gap-2 text-xs font-mono text-primary/80">
+			<RefreshCw size={14} className="animate-spin text-primary" />
+			<span>Đang tải thêm chương trước...</span>
+		</div>
+	);
+}
+
+function QuickBookBottomLoading({ loadingBottom }: { loadingBottom: boolean }) {
+	if (!loadingBottom) return null;
+	return (
+		<div className="space-y-1.5 mt-2">
+			{[1, 2, 3, 4, 5].map((idx) => (
+				<div
+					key={`sk-bottom-${idx}`}
+					className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 animate-pulse flex items-center justify-between"
+				>
+					<div className="h-4 w-36 bg-on-surface-variant/20 rounded" />
+					<div className="h-4 w-12 bg-primary/20 rounded-lg" />
+				</div>
+			))}
+		</div>
+	);
+}
 
 interface QuickBookSheetProps {
 	book: Book;
@@ -76,6 +269,56 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 	const percent = book.chapterCount > 0 ? Math.round((book.totalTranslated / book.chapterCount) * 100) : 0;
 	const pendingCount = book.totalPending || Math.max(0, book.chapterCount - book.totalTranslated);
 
+	// Fetch previous top chapters before minChapterNum (Scroll Up)
+	const fetchPrevTopPage = useCallback(async () => {
+		if (loadingTop || !hasMoreTop || minChapterNum <= 1 || search || !isInitialScrollDoneRef.current) return;
+		setLoadingTop(true);
+
+		const targetToChapter = minChapterNum - 1;
+		const targetFromChapter = Math.max(1, minChapterNum - configChapterLimit);
+
+		try {
+			const res = await ChapterRepository.getChapters(
+				book.bookId,
+				1,
+				configChapterLimit,
+				'chapterNumber',
+				'ASC',
+				'all',
+				search,
+				targetFromChapter,
+				targetToChapter
+			);
+
+			const newChapters = res.chapters || [];
+
+			if (newChapters.length > 0) {
+				const container = scrollContainerRef.current;
+				if (container) {
+					pendingPrependScrollRef.current = {
+						prevHeight: container.scrollHeight,
+						prevTop: container.scrollTop,
+					};
+				}
+
+				setChapters((prev) => {
+					const existingIds = new Set(prev.map((c) => c.chapterId));
+					const uniqueNew = newChapters.filter((c) => !existingIds.has(c.chapterId));
+					return [...uniqueNew, ...prev];
+				});
+				const newMin = Math.min(...newChapters.map((c) => c.chapterNumber));
+				setMinChapterNum(newMin);
+				setHasMoreTop(newMin > 1);
+			} else {
+				setHasMoreTop(false);
+			}
+		} catch {
+			// Ignore
+		} finally {
+			setLoadingTop(false);
+		}
+	}, [loadingTop, hasMoreTop, minChapterNum, search, configChapterLimit, book.bookId]);
+
 	// Load initial chapters windowed around lastReadChapterNumber
 	const loadInitialChapters = useCallback(
 		async (searchQuery: string = '') => {
@@ -83,36 +326,36 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 			setLoading(true);
 			isInitialScrollDoneRef.current = false;
 
-			const targetChapter = book.lastReadChapter?.chapterNumber ? Math.max(1, Number(book.lastReadChapter.chapterNumber)) : 1;
-
-			// Smart windowing: If targetChapter is near the end, backfill before it to always load enough chapters
-			const totalChapters = book.chapterCount || 0;
-			const remainingAhead = totalChapters > 0 ? Math.max(0, totalChapters - targetChapter) : 0;
-			const neededBehind = Math.max(5, configChapterLimit - remainingAhead);
-
-			const startChapterNumber = searchQuery ? undefined : Math.max(1, targetChapter - neededBehind);
-
-			const endChapterNumber = searchQuery ? undefined : targetChapter + configChapterLimit;
+			const { startChapterNumber, endChapterNumber } = computeChapterWindow(
+				book.lastReadChapter?.chapterNumber,
+				book.chapterCount || 0,
+				configChapterLimit,
+				searchQuery
+			);
 
 			try {
-				const res = await ChapterRepository.getChapters(book.bookId, 1, configChapterLimit + 10, 'chapterNumber', 'ASC', 'all', searchQuery, startChapterNumber, endChapterNumber);
+				const res = await ChapterRepository.getChapters(
+					book.bookId,
+					1,
+					configChapterLimit + 10,
+					'chapterNumber',
+					'ASC',
+					'all',
+					searchQuery,
+					startChapterNumber,
+					endChapterNumber
+				);
 
 				if (fetchId !== fetchIdRef.current) return;
 
 				const newChapters = res.chapters || [];
 				setChapters(newChapters);
 
-				if (newChapters.length > 0) {
-					const minNum = Math.min(...newChapters.map((c) => c.chapterNumber));
-					const maxNum = Math.max(...newChapters.map((c) => c.chapterNumber));
-					setMinChapterNum(minNum);
-					setMaxChapterNum(maxNum);
-					setHasMoreTop(!searchQuery && minNum > 1);
-					setHasMoreBottom(maxNum < (book.chapterCount || 999999) && newChapters.length >= configChapterLimit);
-				} else {
-					setHasMoreTop(false);
-					setHasMoreBottom(false);
-				}
+				const bounds = computeChapterBounds(newChapters, searchQuery, book.chapterCount, configChapterLimit);
+				setMinChapterNum(bounds.minNum);
+				setMaxChapterNum(bounds.maxNum);
+				setHasMoreTop(bounds.moreTop);
+				setHasMoreBottom(bounds.moreBottom);
 			} catch {
 				// Ignore error
 			} finally {
@@ -136,7 +379,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 				fetchPrevTopPage();
 			}
 		}
-	}, [loading, loadingTop, hasMoreTop, chapters.length]);
+	}, [loading, loadingTop, hasMoreTop, chapters.length, fetchPrevTopPage]);
 
 	// Auto-scroll positioning active chapter comfortably in upper-third of viewport
 	const scrollToActive = useCallback(() => {
@@ -181,7 +424,16 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 		const targetFromChapter = maxChapterNum + 1;
 
 		try {
-			const res = await ChapterRepository.getChapters(book.bookId, 1, configChapterLimit, 'chapterNumber', 'ASC', 'all', search, targetFromChapter);
+			const res = await ChapterRepository.getChapters(
+				book.bookId,
+				1,
+				configChapterLimit,
+				'chapterNumber',
+				'ASC',
+				'all',
+				search,
+				targetFromChapter
+			);
 
 			const newChapters = res.chapters || [];
 
@@ -201,47 +453,6 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 			// Ignore
 		} finally {
 			setLoadingBottom(false);
-		}
-	};
-
-	// Fetch previous top chapters before minChapterNum (Scroll Up)
-	const fetchPrevTopPage = async () => {
-		if (loadingTop || !hasMoreTop || minChapterNum <= 1 || search || !isInitialScrollDoneRef.current) return;
-		setLoadingTop(true);
-
-		const targetToChapter = minChapterNum - 1;
-		const targetFromChapter = Math.max(1, minChapterNum - configChapterLimit);
-
-		try {
-			const res = await ChapterRepository.getChapters(book.bookId, 1, configChapterLimit, 'chapterNumber', 'ASC', 'all', search, targetFromChapter, targetToChapter);
-
-			const newChapters = res.chapters || [];
-
-			if (newChapters.length > 0) {
-				const container = scrollContainerRef.current;
-				if (container) {
-					pendingPrependScrollRef.current = {
-						prevHeight: container.scrollHeight,
-						prevTop: container.scrollTop
-					};
-				}
-
-				setChapters((prev) => {
-					const existingIds = new Set(prev.map((c) => c.chapterId));
-					const uniqueNew = newChapters.filter((c) => !existingIds.has(c.chapterId));
-					return [...uniqueNew, ...prev];
-				});
-
-				const newMin = Math.min(...newChapters.map((c) => c.chapterNumber));
-				setMinChapterNum(newMin);
-				setHasMoreTop(newMin > 1);
-			} else {
-				setHasMoreTop(false);
-			}
-		} catch {
-			// Ignore
-		} finally {
-			setLoadingTop(false);
 		}
 	};
 
@@ -291,60 +502,29 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 
 					{/* Row 1: Title + Action Icon Buttons */}
 					<div className="flex items-center justify-between gap-2">
-						<h2 className="text-xs sm:text-sm font-extrabold text-on-surface tracking-tight leading-snug truncate flex-1 min-w-0">{book.bookName}</h2>
+						<h2 className="text-xs sm:text-sm font-extrabold text-on-surface tracking-tight leading-snug truncate flex-1 min-w-0">
+							{book.bookName}
+						</h2>
 
 						{/* Action Icon Group (Comfortable w-8 h-8 buttons with touch feedback) */}
 						<div className="flex items-center gap-1.5 shrink-0">
 							{/* AI Batch Translation icon button with pending badge */}
-							{!isOfflineMode && (
-								<motion.button
-									type="button"
-									whileTap={{ scale: 0.88 }}
-									onClick={() => {
-										triggerHaptic('light');
-										setShowTranslationSheet(true);
-									}}
-									className="relative w-8 h-8 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-primary hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
-									title={pendingCount > 0 ? `Chờ dịch: ${pendingCount} chương (Mở Dịch AI)` : 'Mở Dịch AI'}
-									aria-label="Mở Dịch AI"
-								>
-									<Sparkles size={16} className={pendingCount > 0 ? 'text-primary animate-pulse' : ''} />
-									{pendingCount > 0 && (
-										<span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-primary text-on-primary font-mono font-black text-[8px] flex items-center justify-center leading-none shadow-xs">
-											{pendingCount > 99 ? '99+' : pendingCount}
-										</span>
-									)}
-								</motion.button>
-							)}
+							<QuickBookTranslateButton
+								isOfflineMode={isOfflineMode}
+								pendingCount={pendingCount}
+								onOpenTranslation={() => {
+									triggerHaptic('light');
+									setShowTranslationSheet(true);
+								}}
+							/>
 
 							{/* Download / Delete icon button */}
-							{isDownloaded ? (
-								<motion.button
-									whileTap={{ scale: 0.88 }}
-									onClick={() => {
-										triggerHaptic('warning');
-										handleDeleteOfflineBook();
-									}}
-									className="w-8 h-8 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-rose-400 hover:text-rose-300 hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
-									title="Xóa truyện khỏi máy"
-									aria-label="Xóa truyện khỏi máy"
-								>
-									<Trash2 size={16} />
-								</motion.button>
-							) : !isOfflineMode ? (
-								<motion.button
-									whileTap={{ scale: 0.88 }}
-									onClick={() => {
-										triggerHaptic('light');
-										handleDownloadBook();
-									}}
-									className="w-8 h-8 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
-									title="Tải về ngoại tuyến"
-									aria-label="Tải về ngoại tuyến"
-								>
-									<Download size={16} />
-								</motion.button>
-							) : null}
+							<QuickBookOfflineAction
+								isOfflineMode={isOfflineMode}
+								isDownloaded={isDownloaded}
+								onDownload={handleDownloadBook}
+								onDeleteOffline={handleDeleteOfflineBook}
+							/>
 
 							{/* Close modal button */}
 							<motion.button
@@ -377,15 +557,7 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 					</div>
 
 					{/* Row 3: Tags List (Wrapping flex, zero horizontal scroll) */}
-					{book.tags && book.tags.length > 0 && (
-						<div className="flex flex-wrap items-center gap-1 pt-0.5">
-							{book.tags.map((tag) => (
-								<span key={tag} className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium bg-white/10 border border-white/15 text-on-surface-variant shrink-0">
-									#{tag}
-								</span>
-							))}
-						</div>
-					)}
+					<QuickBookTags tags={book.tags} />
 
 					{/* Row 4: Mobile-optimized Search Bar */}
 					<div className="relative pt-0.5">
@@ -416,60 +588,36 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 				</div>
 
 				{/* Inline Chapter List Container with 2-way Infinite Scroll */}
-				<div ref={scrollContainerRef} onScroll={handleScroll} className="p-3 pb-8 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5">
+				<div
+					ref={scrollContainerRef}
+					onScroll={handleScroll}
+					className="p-3 pb-8 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5"
+				>
 					{/* Scroll Up Top Loading Indicator */}
-					{loadingTop && (
-						<div className="py-2.5 flex items-center justify-center gap-2 text-xs font-mono text-primary/80">
-							<RefreshCw size={14} className="animate-spin text-primary" />
-							<span>Đang tải thêm chương trước...</span>
-						</div>
-					)}
+					<QuickBookTopLoading loadingTop={loadingTop} />
 
-					{loading && chapters.length === 0 ? (
-						<div className="py-16 text-center space-y-2 text-on-surface-variant">
-							<RefreshCw size={20} className="animate-spin text-primary mx-auto" />
-							<p className="text-xs font-medium">Đang tải danh sách chương...</p>
-						</div>
-					) : chapters.length === 0 ? (
-						<div className="py-12 text-center text-xs text-on-surface-variant/60 font-medium">Không tìm thấy chương nào</div>
-					) : (
-						<>
-							{chapters.map((c, idx) => {
-								const isLastRead = Boolean(
-									(book.lastReadChapter?.chapterId && c.chapterId === book.lastReadChapter.chapterId) ||
-									(book.lastReadChapter?.chapterNumber !== undefined && c.chapterNumber === Number(book.lastReadChapter.chapterNumber))
-								);
+					<QuickBookChapterList
+						loading={loading}
+						chapters={chapters}
+						lastReadChapter={book.lastReadChapter}
+						activeItemRef={activeItemRef}
+						onSelectChapter={handleSelectChapter}
+					/>
 
-								return (
-									<ChapterItem
-										key={c.chapterId || `chap-${c.chapterNumber || idx}-${idx}`}
-										ref={isLastRead ? activeItemRef : null}
-										chapter={c}
-										isActive={isLastRead}
-										onClick={() => handleSelectChapter(c.chapterId)}
-									/>
-								);
-							})}
-
-							{/* Scroll Down Bottom Loading Indicator */}
-							{loadingBottom && (
-								<div className="space-y-1.5 mt-2">
-									{[1, 2, 3, 4, 5].map((idx) => (
-										<div key={`sk-bottom-${idx}`} className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 animate-pulse flex items-center justify-between">
-											<div className="h-4 w-36 bg-on-surface-variant/20 rounded" />
-											<div className="h-4 w-12 bg-primary/20 rounded-lg" />
-										</div>
-									))}
-								</div>
-							)}
-						</>
-					)}
+					{/* Scroll Down Bottom Loading Indicator */}
+					<QuickBookBottomLoading loadingBottom={loadingBottom} />
 				</div>
 			</BottomSheet>
 
 			{/* Batch AI Translation Modal Sheet */}
 			{showTranslationSheet && (
-				<TranslationSheet currentBookId={book.bookId} currentBookName={book.bookName} initialTab="batch_chapter" disableCurrent={true} onClose={() => setShowTranslationSheet(false)} />
+				<TranslationSheet
+					currentBookId={book.bookId}
+					currentBookName={book.bookName}
+					initialTab="batch_chapter"
+					disableCurrent={true}
+					onClose={() => setShowTranslationSheet(false)}
+				/>
 			)}
 		</>
 	);

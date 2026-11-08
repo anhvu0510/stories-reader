@@ -1,6 +1,8 @@
-import React, { useRef, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 
 import { triggerHaptic } from './useHaptic';
+
+import type React from 'react';
 
 export interface UseLongPressOptions {
 	/**
@@ -41,12 +43,12 @@ export function useLongPress({ threshold = 400, moveTolerance = 10, onLongPress,
 			if ('touches' in e && e.touches.length > 0) {
 				startPosRef.current = {
 					x: e.touches[0].clientX,
-					y: e.touches[0].clientY
+					y: e.touches[0].clientY,
 				};
 			} else if ('clientX' in e) {
 				startPosRef.current = {
 					x: e.clientX,
-					y: e.clientY
+					y: e.clientY,
 				};
 			}
 
@@ -128,6 +130,6 @@ export function useLongPress({ threshold = 400, moveTolerance = 10, onLongPress,
 		onMouseUp: clear,
 		onMouseLeave: clear,
 		onClick: handleClick,
-		onContextMenu: handleContextMenu
+		onContextMenu: handleContextMenu,
 	};
 }

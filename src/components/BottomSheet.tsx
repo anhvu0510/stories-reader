@@ -1,12 +1,12 @@
+import { motion, AnimatePresence } from 'motion/react';
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'motion/react';
 
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { useNativeSheetGesture } from '@/hooks/useNativeSheetGesture';
-import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
 import { cn } from '@/lib/utils';
+import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
 
 export interface BottomSheetProps {
 	isOpen: boolean;
@@ -23,20 +23,80 @@ export interface BottomSheetProps {
 	'data-testid'?: string;
 }
 
-export function BottomSheet({
-	isOpen,
-	onClose,
-	children,
-	className,
-	contentClassName,
-	showDragHandle = true,
-	maxHeight = 'max-h-[88dvh]',
-	zIndex = 'z-[99000]',
-	ariaLabel = 'Modal Sheet',
-	disableDrag = false,
-	glassmorphic = true,
-	'data-testid': testId
-}: BottomSheetProps) {
+function resolveDirectionLock(
+	currentLock: 'none' | 'vertical' | 'horizontal',
+	absX: number,
+	absY: number
+): 'none' | 'vertical' | 'horizontal' {
+	if (currentLock !== 'none') return currentLock;
+	if (absX < 12 && absY < 12) return 'none';
+	return absX > absY * 1.5 ? 'horizontal' : 'vertical';
+}
+
+function resetCardDrag(sheetEl: HTMLDivElement | null) {
+	if (!sheetEl) return;
+	sheetEl.style.transition = 'none';
+	sheetEl.style.transform = '';
+}
+
+function applyCardDrag(sheetEl: HTMLDivElement | null, deltaY: number) {
+	if (!sheetEl) return;
+	sheetEl.style.transition = 'none';
+	sheetEl.style.transform = `translate3d(0, ${deltaY}px, 0)`;
+}
+
+function canInitiateDrag(scrollEl: HTMLElement | null, absY: number): boolean {
+	const scrollTop = scrollEl ? scrollEl.scrollTop : 0;
+	return scrollTop <= 0 && absY >= 16;
+}
+
+function findScrollableParent(target: HTMLElement | null, boundary: HTMLElement | null): HTMLElement | null {
+	let node = target;
+	while (node && node !== boundary) {
+		if (node.scrollHeight > node.clientHeight + 2) {
+			const overflowY = window.getComputedStyle(node).overflowY;
+			if (overflowY === 'auto' || overflowY === 'scroll') {
+				return node;
+			}
+		}
+		node = node.parentElement;
+	}
+	return null;
+}
+
+function resolveBottomSheetProps(props: BottomSheetProps) {
+	return {
+		isOpen: props.isOpen,
+		onClose: props.onClose,
+		children: props.children,
+		className: props.className,
+		contentClassName: props.contentClassName,
+		showDragHandle: props.showDragHandle ?? true,
+		maxHeight: props.maxHeight || 'max-h-[88dvh]',
+		zIndex: props.zIndex || 'z-[99000]',
+		ariaLabel: props.ariaLabel || 'Modal Sheet',
+		disableDrag: Boolean(props.disableDrag),
+		glassmorphic: props.glassmorphic ?? true,
+		testId: props['data-testid'],
+	};
+}
+
+export function BottomSheet(props: BottomSheetProps) {
+	const {
+		isOpen,
+		onClose,
+		children,
+		className,
+		contentClassName,
+		showDragHandle,
+		maxHeight,
+		zIndex,
+		ariaLabel,
+		disableDrag,
+		glassmorphic,
+		testId,
+	} = resolveBottomSheetProps(props);
+
 	useBodyScrollLock(isOpen);
 
 	const sheetCardRef = useRef<HTMLDivElement>(null);
@@ -73,18 +133,7 @@ export function BottomSheet({
 		const touch = e.touches[0];
 
 		// Tìm phần tử cuộn bên trong (nếu có)
-		let scrollEl: HTMLElement | null = null;
-		let node = e.target as HTMLElement | null;
-		while (node && node !== sheetCardRef.current) {
-			if (node.scrollHeight > node.clientHeight + 2) {
-				const overflowY = window.getComputedStyle(node).overflowY;
-				if (overflowY === 'auto' || overflowY === 'scroll') {
-					scrollEl = node;
-					break;
-				}
-			}
-			node = node.parentElement;
-		}
+		const scrollEl = findScrollableParent(e.target as HTMLElement | null, sheetCardRef.current);
 
 		touchStartRef.current = {
 			startY: touch.clientY,
@@ -92,53 +141,50 @@ export function BottomSheet({
 			startTime: Date.now(),
 			scrollEl,
 			canDrag: false,
-			lockDirection: 'none'
+			lockDirection: 'none',
 		};
 		currentDragYRef.current = 0;
 	};
 
 	const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-		if (!touchStartRef.current || isDismissingRef.current || !e.touches || e.touches.length !== 1) return;
+		const state = touchStartRef.current;
+		if (!state || isDismissingRef.current || !e.touches || e.touches.length !== 1) return;
 		const touch = e.touches[0];
-		const deltaY = touch.clientY - touchStartRef.current.startY;
-		const deltaX = touch.clientX - touchStartRef.current.startX;
+		const deltaY = touch.clientY - state.startY;
+		const deltaX = touch.clientX - state.startX;
 		const absX = Math.abs(deltaX);
 		const absY = Math.abs(deltaY);
 
-		// Giai đoạn 1: Xác định direction lock sau khi ngón tay di chuyển đủ xa (slop 12px)
-		// Giúp phân biệt rõ ràng scroll ngang (chuyển tab) vs kéo xuống đóng sheet
-		if (touchStartRef.current.lockDirection === 'none') {
-			if (absX < 12 && absY < 12) {
-				return;
-			}
-			touchStartRef.current.lockDirection = absX > absY * 1.5 ? 'horizontal' : 'vertical';
-		}
+		/*
+		 * Giai đoạn 1: Xác định direction lock sau khi ngón tay di chuyển đủ xa (slop 12px)
+		 * Giúp phân biệt rõ ràng scroll ngang (chuyển tab) vs kéo xuống đóng sheet
+		 */
+		state.lockDirection = resolveDirectionLock(state.lockDirection, absX, absY);
 
 		// Nếu đã lock horizontal (vuốt ngang) → bỏ qua hoàn toàn, không kéo sheet
-		if (touchStartRef.current.lockDirection === 'horizontal') return;
+		if (state.lockDirection !== 'vertical') return;
 
 		// Chỉ cho phép kéo xuống (deltaY > 0) để đóng sheet
-		if (deltaY > 0) {
-			const scrollTop = touchStartRef.current.scrollEl ? touchStartRef.current.scrollEl.scrollTop : 0;
-			// Chỉ kích hoạt kéo sheet khi danh sách con đang ở vị trí trên cùng (scrollTop <= 0)
-			// Yêu cầu thêm minimum slop 16px để tránh false trigger khi scroll nhanh items
-			if (scrollTop <= 0 && absY >= 16) {
-				touchStartRef.current.canDrag = true;
-				if (e.cancelable) {
-					e.preventDefault();
-				}
-				currentDragYRef.current = deltaY;
-				if (sheetCardRef.current) {
-					sheetCardRef.current.style.transition = 'none';
-					sheetCardRef.current.style.transform = `translate3d(0, ${deltaY}px, 0)`;
-				}
+		if (deltaY <= 0) {
+			if (currentDragYRef.current > 0) {
+				currentDragYRef.current = 0;
+				resetCardDrag(sheetCardRef.current);
 			}
-		} else if (currentDragYRef.current > 0 && sheetCardRef.current) {
-			// Người dùng đang cuộn lên — huỷ drag nếu đang kéo
-			currentDragYRef.current = 0;
-			sheetCardRef.current.style.transition = 'none';
-			sheetCardRef.current.style.transform = '';
+			return;
 		}
+
+		/*
+		 * Chỉ kích hoạt kéo sheet khi danh sách con đang ở vị trí trên cùng (scrollTop <= 0)
+		 * Yêu cầu thêm minimum slop 16px để tránh false trigger khi scroll nhanh items
+		 */
+		if (!canInitiateDrag(state.scrollEl, absY)) return;
+
+		state.canDrag = true;
+		if (e.cancelable) {
+			e.preventDefault();
+		}
+		currentDragYRef.current = deltaY;
+		applyCardDrag(sheetCardRef.current, deltaY);
 	};
 
 	const handleTouchEnd = () => {
@@ -153,8 +199,10 @@ export function BottomSheet({
 
 		if (!wasDragging || !sheetCardRef.current) return;
 
-		// Ngưỡng xác nhận đóng sheet: kéo xuống > 90px hoặc flick nhanh (deltaY >= 70px kèm velocity > 0.5 px/ms)
-		// Tăng ngưỡng so với trước (70px/0.35) để tránh dismiss không chủ ý khi scroll items từ đỉnh
+		/*
+		 * Ngưỡng xác nhận đóng sheet: kéo xuống > 90px hoặc flick nhanh (deltaY >= 70px kèm velocity > 0.5 px/ms)
+		 * Tăng ngưỡng so với trước (70px/0.35) để tránh dismiss không chủ ý khi scroll items từ đỉnh
+		 */
 		if (deltaY > 90 || (deltaY >= 70 && velocity > 0.5)) {
 			isDismissingRef.current = true;
 			triggerHaptic('light');
@@ -186,7 +234,11 @@ export function BottomSheet({
 					aria-label={ariaLabel}
 					data-testid={testId}
 					data-sheet-open="true"
-					className={cn('fixed inset-0 flex items-end justify-center overscroll-none overflow-x-hidden box-border bottom-sheet', zIndex, className)}
+					className={cn(
+						'fixed inset-0 flex items-end justify-center overscroll-none overflow-x-hidden box-border bottom-sheet',
+						zIndex,
+						className
+					)}
 				>
 					{/* Backdrop Blur Overlay */}
 					<motion.div
@@ -208,9 +260,9 @@ export function BottomSheet({
 						animate={{ y: 0 }}
 						exit={{ y: '100%' }}
 						transition={{ type: 'spring', damping: 32, stiffness: 280, mass: 0.85 }}
-							onTouchStart={nativeGestures ? undefined : handleTouchStart}
-							onTouchMove={nativeGestures ? undefined : handleTouchMove}
-							onTouchEnd={nativeGestures ? undefined : handleTouchEnd}
+						onTouchStart={nativeGestures ? undefined : handleTouchStart}
+						onTouchMove={nativeGestures ? undefined : handleTouchMove}
+						onTouchEnd={nativeGestures ? undefined : handleTouchEnd}
 						onClick={(e) => e.stopPropagation()}
 						className={cn(
 							'relative z-10 w-full max-w-md mx-auto text-on-surface rounded-t-[32px] border-t sm:border shadow-[0_-12px_40px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden hide-scrollbar no-scrollbar box-border transform-gpu transition-colors duration-200 will-change-transform',

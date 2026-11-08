@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Capacitor } from '@capacitor/core';
-import { useAppLockStore } from '../useAppLockStore';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
 import { biometricService } from '@/services/biometricService';
+
+import { useAppLockStore } from '../useAppLockStore';
 
 describe('useAppLockStore', () => {
 	beforeEach(() => {
@@ -13,7 +15,7 @@ describe('useAppLockStore', () => {
 			isLockEnabled: false,
 			isLocked: false,
 			showPasscodeFallback: false,
-			isAuthenticating: false
+			isAuthenticating: false,
 		});
 	});
 
@@ -116,7 +118,7 @@ describe('useAppLockStore', () => {
 			vi.spyOn(biometricService, 'authenticate').mockResolvedValue({
 				success: false,
 				fallbackToPasscode: true,
-				isCanceled: true
+				isCanceled: true,
 			});
 
 			const success = await useAppLockStore.getState().triggerBiometricPrompt();
@@ -129,7 +131,7 @@ describe('useAppLockStore', () => {
 			useAppLockStore.setState({ isLockEnabled: true, isLocked: true, showPasscodeFallback: false });
 
 			vi.spyOn(biometricService, 'authenticate').mockResolvedValue({
-				success: true
+				success: true,
 			});
 
 			const success = await useAppLockStore.getState().triggerBiometricPrompt();

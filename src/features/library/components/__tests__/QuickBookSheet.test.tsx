@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
+import { render, screen, fireEvent, cleanup, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, act, waitFor } from '@testing-library/react';
 import 'fake-indexeddb/auto';
 
 import { QuickBookSheet } from '@/features/library/components/QuickBookSheet';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
+
 import type { Book, Chapter } from '@/shared/types';
 
 const mockBook: Book = {
@@ -17,7 +18,7 @@ const mockBook: Book = {
 	totalPending: 20,
 	createdAt: '2024-01-01',
 	updatedAt: '2024-01-02',
-	lastReadChapter: { chapterId: 'c-20', chapterNumber: '20', title: 'Chương 20: Manh mối' }
+	lastReadChapter: { chapterId: 'c-20', chapterNumber: '20', title: 'Chương 20: Manh mối' },
 };
 
 const mockChapters: Chapter[] = Array.from({ length: 30 }, (_, i) => ({
@@ -25,7 +26,7 @@ const mockChapters: Chapter[] = Array.from({ length: 30 }, (_, i) => ({
 	chapterNumber: i + 15,
 	title: `Chương ${i + 15}`,
 	state: 'SUCCEEDED' as const,
-	updatedAt: '2024-01-02'
+	updatedAt: '2024-01-02',
 }));
 
 describe('QuickBookSheet Component', () => {
@@ -33,7 +34,7 @@ describe('QuickBookSheet Component', () => {
 		vi.clearAllMocks();
 		vi.spyOn(ChapterRepository, 'getChapters').mockResolvedValue({
 			chapters: mockChapters,
-			pagination: { currentPage: 1, totalPages: 4, total: 100 }
+			pagination: { currentPage: 1, totalPages: 4, total: 100 },
 		});
 	});
 
@@ -69,7 +70,7 @@ describe('QuickBookSheet Component', () => {
 	it('matches active chapter by both chapterId and chapterNumber', async () => {
 		const bookWithNumericChapter: Book = {
 			...mockBook,
-			lastReadChapter: { chapterId: 'different-id', chapterNumber: 20, title: 'Chương 20' }
+			lastReadChapter: { chapterId: 'different-id', chapterNumber: 20, title: 'Chương 20' },
 		};
 
 		render(

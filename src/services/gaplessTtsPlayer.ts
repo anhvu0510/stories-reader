@@ -127,7 +127,7 @@ const NATURAL_FAST_PAUSE_PROFILE: Readonly<BoundaryPauseProfile> = {
 	sentence: 0.26,
 	expressiveSentence: 0.34,
 	ellipsis: 0.46,
-	paragraph: 0.56
+	paragraph: 0.56,
 };
 const ELLIPSIS_ENDING_PATTERN = /(?:\.{3}|…)["'”’)\]]*$/u;
 const EXPRESSIVE_ENDING_PATTERN = /[!?]+["'”’)\]]*$/u;
@@ -140,9 +140,11 @@ const PCM_SCHEDULE_LEAD_SECONDS = 0.03;
 function getBoundaryPauseSeconds(previous: SpeechSegment, next: SpeechSegment): number {
 	if (previous.pIdx !== next.pIdx) return NATURAL_FAST_PAUSE_PROFILE.paragraph;
 
-	// A delimiter is a source boundary; an artificial max-length split is not.
-	// This prevents a long sentence ending near a comma from sounding like it
-	// was intentionally cut at a clause.
+	/*
+	 * A delimiter is a source boundary; an artificial max-length split is not.
+	 * This prevents a long sentence ending near a comma from sounding like it
+	 * was intentionally cut at a clause.
+	 */
 	if (previous.explicitBoundary) return NATURAL_FAST_PAUSE_PROFILE.sentence;
 	if (previous.artificialSplit) return NATURAL_FAST_PAUSE_PROFILE.softBreak;
 
@@ -178,8 +180,10 @@ function splitLongSpeechChunk(chunk: SentenceChunk, maxCharacters: number): Sent
 	while (chunk.text.length - cursor > maxCharacters) {
 		const candidateEnd = Math.min(chunk.text.length, cursor + maxCharacters);
 		const candidate = chunk.text.slice(cursor, candidateEnd);
-		// Never split a word/token. Prefer the last whitespace inside the window;
-		// if one token exceeds the window, extend to its next boundary.
+		/*
+		 * Never split a word/token. Prefer the last whitespace inside the window;
+		 * if one token exceeds the window, extend to its next boundary.
+		 */
 		const whitespace = [...candidate.matchAll(/\s/gu)].at(-1);
 		let breakAt = whitespace ? cursor + whitespace.index! : -1;
 		if (breakAt <= cursor) {
@@ -196,7 +200,7 @@ function splitLongSpeechChunk(chunk: SentenceChunk, maxCharacters: number): Sent
 				text: phraseText,
 				startOffset: chunk.startOffset + cursor + leadingWhitespace,
 				length: phraseText.length,
-				artificialSplit: true
+				artificialSplit: true,
 			});
 		}
 		cursor += breakAt;
@@ -211,7 +215,7 @@ function splitLongSpeechChunk(chunk: SentenceChunk, maxCharacters: number): Sent
 			text: remainderText,
 			startOffset: chunk.startOffset + cursor + leadingWhitespace,
 			length: remainderText.length,
-			artificialSplit: true
+			artificialSplit: true,
 		});
 	}
 
@@ -221,9 +225,11 @@ function splitLongSpeechChunk(chunk: SentenceChunk, maxCharacters: number): Sent
 export function splitParagraphIntoSentences(text: string, pIdx: number, options: SentenceSplitOptions = {}): SentenceChunk[] {
 	if (!text || !text.trim()) return [];
 
-	// The chapter API uses an invisible separator when it groups source lines.
-	// Split at that hard boundary before punctuation heuristics and preserve
-	// offsets so word highlighting still maps to the rendered text.
+	/*
+	 * The chapter API uses an invisible separator when it groups source lines.
+	 * Split at that hard boundary before punctuation heuristics and preserve
+	 * offsets so word highlighting still maps to the rendered text.
+	 */
 	if (text.includes(INVISIBLE_SENTENCE_DELIMITER)) {
 		const markedParts = text.split(INVISIBLE_SENTENCE_DELIMITER);
 		const chunks: SentenceChunk[] = [];
@@ -231,7 +237,7 @@ export function splitParagraphIntoSentences(text: string, pIdx: number, options:
 		markedParts.forEach((part, partIndex) => {
 			const partChunks = splitParagraphIntoSentences(part, pIdx, options).map((chunk) => ({
 				...chunk,
-				startOffset: chunk.startOffset + partOffset
+				startOffset: chunk.startOffset + partOffset,
 			}));
 			if (partIndex < markedParts.length - 1 && partChunks.length > 0) {
 				const lastChunk = partChunks[partChunks.length - 1];
@@ -259,7 +265,7 @@ export function splitParagraphIntoSentences(text: string, pIdx: number, options:
 			pIdx,
 			text: trimmedSentence,
 			startOffset: match.index + leadingSpaces,
-			length: trimmedSentence.length
+			length: trimmedSentence.length,
 		};
 		sentences.push(...splitLongSpeechChunk(sentence, maxCharacters));
 	}
@@ -270,7 +276,7 @@ export function splitParagraphIntoSentences(text: string, pIdx: number, options:
 			pIdx,
 			text: trimmedText,
 			startOffset: text.length - text.trimStart().length,
-			length: trimmedText.length
+			length: trimmedText.length,
 		});
 	}
 
@@ -307,7 +313,7 @@ export function splitByDatabaseBoundaries(text: string, pIdx: number): SentenceC
 				text: trimmed,
 				startOffset: offset + leadingSpaces,
 				length: trimmed.length,
-				explicitBoundary: index < parts.length - 1
+				explicitBoundary: index < parts.length - 1,
 			});
 		}
 		offset += part.length + INVISIBLE_SENTENCE_DELIMITER.length;
@@ -323,13 +329,14 @@ export function buildSpeechSegments(sentences: SentenceChunk[], options: SpeechS
 	sentences.forEach((sentence, sentenceIndex) => {
 		const previous = segments.at(-1);
 		const combinedText = previous && previous.pIdx === sentence.pIdx ? joinChunksPreservingOffsets(previous, sentence) : sentence.text;
-		const mustStartNewSegment = !previous || previous.pIdx !== sentence.pIdx || previous.text.length >= targetCharacters || combinedText.length > maxCharacters;
+		const mustStartNewSegment =
+			!previous || previous.pIdx !== sentence.pIdx || previous.text.length >= targetCharacters || combinedText.length > maxCharacters;
 
 		if (mustStartNewSegment) {
 			segments.push({
 				...sentence,
 				sentenceStartIndex: sentenceIndex,
-				sentenceEndIndex: sentenceIndex
+				sentenceEndIndex: sentenceIndex,
 			});
 			return;
 		}
@@ -354,14 +361,19 @@ export function buildWordTimeline(text: string, audioDurationSeconds: number): W
 		const nextCharIndex = matches[index + 1]?.index ?? text.length;
 		const trailingText = text.slice(charIndex + word.length, nextCharIndex);
 		const wordWeight = 1 + Math.min(word.length, 12) * 0.02;
-		const pauseWeight = /[.!?…]/u.test(trailingText) ? 0.9 : /[,;:]/u.test(trailingText) ? 0.35 : 0;
+		let pauseWeight = 0;
+		if (/[.!?…]/u.test(trailingText)) {
+			pauseWeight = 0.9;
+		} else if (/[,;:]/u.test(trailingText)) {
+			pauseWeight = 0.35;
+		}
 
 		return {
 			text: word,
 			charIndex,
 			charLength: word.length,
 			wordWeight,
-			totalWeight: wordWeight + pauseWeight
+			totalWeight: wordWeight + pauseWeight,
 		};
 	});
 	const totalWeight = weightedWords.reduce((total, word) => total + word.totalWeight, 0);
@@ -378,7 +390,7 @@ export function buildWordTimeline(text: string, audioDurationSeconds: number): W
 			charIndex: word.charIndex,
 			charLength: word.charLength,
 			startSeconds,
-			endSeconds
+			endSeconds,
 		};
 	});
 }
@@ -421,7 +433,7 @@ export class GaplessTtsPlayer {
 			}),
 			cancel: () => cancelSession(),
 			scheduledWordCues: [],
-			nextWordCueIndex: 0
+			nextWordCueIndex: 0,
 		};
 		this.activeSession = session;
 
@@ -449,7 +461,67 @@ export class GaplessTtsPlayer {
 		await this.engine.dispose();
 	}
 
+	private findParagraphEnd(segments: SpeechSegment[], index: number): number {
+		if (!this.prefetchByParagraph || index < 0 || index >= segments.length) return index + 1;
+		const paragraphIndex = segments[index].pIdx;
+		let end = index + 1;
+		while (end < segments.length && segments[end].pIdx === paragraphIndex) end += 1;
+		return end;
+	}
+
+	private prefetchItemsAhead<T>(
+		index: number,
+		totalSegments: number,
+		ensureItem: (idx: number) => Promise<T> | undefined,
+		ensureParagraph: (idx: number) => Promise<T[]>
+	): void {
+		if (this.prefetchByParagraph) {
+			let nextIndex = this.findParagraphEnd(this.lastSegmentsSnapshot || [], index);
+			for (let offset = 0; offset < this.prefetchParagraphsAhead; offset += 1) {
+				if (nextIndex >= totalSegments) break;
+				void ensureParagraph(nextIndex).catch(() => {});
+				nextIndex = this.findParagraphEnd(this.lastSegmentsSnapshot || [], nextIndex);
+			}
+			return;
+		}
+		for (let offset = 1; offset <= this.prefetchAhead; offset += 1) {
+			ensureItem(index + offset);
+		}
+	}
+
+	private lastSegmentsSnapshot: SpeechSegment[] | null = null;
+
+	private async playSegmentTransition(
+		session: PlaybackSession,
+		currentPlayback: ScheduledAudio,
+		nextAudio: DecodedAudio,
+		index: number,
+		segments: SpeechSegment[],
+		callbacks: GaplessPlaybackCallbacks
+	): Promise<ScheduledAudio | null> {
+		const nextStartAt = Math.max(
+			currentPlayback.endAt + getBoundaryPauseSeconds(segments[index - 1], segments[index]),
+			this.engine.now() + this.startLeadSeconds
+		);
+		const nextPlayback = this.scheduleAudio(nextAudio, nextStartAt);
+		this.queueWordCues(session, index, segments[index], nextAudio, nextStartAt);
+
+		await Promise.race([currentPlayback.ended, session.cancelled]);
+		this.scheduledAudio.delete(currentPlayback);
+		if (!this.isActive(session)) return null;
+
+		callbacks.onSegmentStart?.(index, segments[index]);
+		return nextPlayback;
+	}
+
+	private finishPlayback(session: PlaybackSession, callbacks: GaplessPlaybackCallbacks): void {
+		session.stopWatchingTime?.();
+		this.activeSession = null;
+		callbacks.onFinished?.();
+	}
+
 	private async run(session: PlaybackSession, segments: SpeechSegment[], callbacks: GaplessPlaybackCallbacks): Promise<void> {
+		this.lastSegmentsSnapshot = segments;
 		try {
 			const preparedAudio = new Map<number, Promise<DecodedAudio>>();
 			const ensurePrepared = (index: number): Promise<DecodedAudio> | undefined => {
@@ -463,30 +535,12 @@ export class GaplessTtsPlayer {
 				}
 				return prepared;
 			};
-			const paragraphEnd = (index: number): number => {
-				if (!this.prefetchByParagraph || index < 0 || index >= segments.length) return index + 1;
-				const paragraphIndex = segments[index].pIdx;
-				let end = index + 1;
-				while (end < segments.length && segments[end].pIdx === paragraphIndex) end += 1;
-				return end;
-			};
 			const ensurePreparedParagraph = (index: number): Promise<DecodedAudio[]> => {
-				const end = paragraphEnd(index);
+				const end = this.findParagraphEnd(segments, index);
 				return Promise.all(Array.from({ length: end - index }, (_, offset) => ensurePrepared(index + offset)!));
 			};
 			const prefetchAfter = (index: number) => {
-				if (this.prefetchByParagraph) {
-					let nextIndex = paragraphEnd(index);
-					for (let paragraphOffset = 0; paragraphOffset < this.prefetchParagraphsAhead; paragraphOffset += 1) {
-						if (nextIndex >= segments.length) break;
-						void ensurePreparedParagraph(nextIndex).catch(() => {});
-						nextIndex = paragraphEnd(nextIndex);
-					}
-					return;
-				}
-				for (let offset = 1; offset <= this.prefetchAhead; offset += 1) {
-					ensurePrepared(index + offset);
-				}
+				this.prefetchItemsAhead(index, segments.length, ensurePrepared, ensurePreparedParagraph);
 			};
 
 			const firstParagraph = await ensurePreparedParagraph(0);
@@ -506,15 +560,8 @@ export class GaplessTtsPlayer {
 				if (!this.isActive(session)) return;
 				preparedAudio.delete(index);
 
-				const nextStartAt = Math.max(currentPlayback.endAt + getBoundaryPauseSeconds(segments[index - 1], segments[index]), this.engine.now() + this.startLeadSeconds);
-				const nextPlayback = this.scheduleAudio(nextAudio, nextStartAt);
-				this.queueWordCues(session, index, segments[index], nextAudio, nextStartAt);
-
-				await Promise.race([currentPlayback.ended, session.cancelled]);
-				this.scheduledAudio.delete(currentPlayback);
-				if (!this.isActive(session)) return;
-
-				callbacks.onSegmentStart?.(index, segments[index]);
+				const nextPlayback = await this.playSegmentTransition(session, currentPlayback, nextAudio, index, segments, callbacks);
+				if (!nextPlayback) return;
 				currentPlayback = nextPlayback;
 				prefetchAfter(index);
 			}
@@ -523,9 +570,7 @@ export class GaplessTtsPlayer {
 			this.scheduledAudio.delete(currentPlayback);
 			if (!this.isActive(session)) return;
 
-			session.stopWatchingTime?.();
-			this.activeSession = null;
-			callbacks.onFinished?.();
+			this.finishPlayback(session, callbacks);
 		} catch (error: unknown) {
 			if (!this.isActive(session)) return;
 			this.cancelActiveSession();
@@ -533,7 +578,74 @@ export class GaplessTtsPlayer {
 		}
 	}
 
+	private async prefetchInitialStreams(
+		ensureStream: (index: number) => Promise<PrefetchedPcmStream> | undefined,
+		ensureStreamParagraph: (index: number) => Promise<PrefetchedPcmStream[]>
+	): Promise<void> {
+		if (this.prefetchByParagraph) {
+			await ensureStreamParagraph(0);
+		} else {
+			ensureStream(0);
+		}
+	}
+
+	private scheduleStreamChunk(
+		session: PlaybackSession,
+		audioStream: PrefetchedPcmStream,
+		segment: SpeechSegment,
+		index: number,
+		segments: SpeechSegment[],
+		previousPlayback: PcmStreamPlayback | null,
+		callbacks: GaplessPlaybackCallbacks
+	): PcmStreamPlayback | null {
+		if (!this.engine.beginPcmStream) return null;
+		const startAt = previousPlayback
+			? previousPlayback.endAt + getBoundaryPauseSeconds(segments[index - 1], segment)
+			: this.engine.now() + this.startLeadSeconds;
+		const playback = this.engine.beginPcmStream(audioStream.sampleRate, audioStream.channels, startAt);
+		this.scheduledAudio.add(playback);
+		audioStream.chunks.forEach((chunk) => playback.append(chunk));
+		playback.finish();
+
+		this.queueWordCuesForDuration(session, index, segment, playback.duration, playback.startAt);
+		this.startWordTracking(session, callbacks);
+
+		if (previousPlayback) {
+			const priorPlayback = previousPlayback;
+			void Promise.race([priorPlayback.ended, session.cancelled]).then(() => {
+				if (this.isActive(session)) {
+					callbacks.onSegmentStart?.(index, segment);
+				}
+			});
+		} else {
+			callbacks.onSegmentStart?.(index, segment);
+		}
+
+		void playback.ended.then(() => this.scheduledAudio.delete(playback));
+		return playback;
+	}
+
+	private async handleStreamingError(
+		error: unknown,
+		hasScheduledAudio: boolean,
+		session: PlaybackSession,
+		segments: SpeechSegment[],
+		callbacks: GaplessPlaybackCallbacks
+	): Promise<void> {
+		if (!this.isActive(session)) return;
+		if (!hasScheduledAudio) {
+			session.controller.abort();
+			session.controller = new AbortController();
+			this.stopScheduledAudio();
+			await this.run(session, segments, callbacks);
+			return;
+		}
+		this.cancelActiveSession();
+		callbacks.onError?.(error);
+	}
+
 	private async runStreaming(session: PlaybackSession, segments: SpeechSegment[], callbacks: GaplessPlaybackCallbacks): Promise<void> {
+		this.lastSegmentsSnapshot = segments;
 		let hasScheduledAudio = false;
 
 		try {
@@ -550,39 +662,15 @@ export class GaplessTtsPlayer {
 				}
 				return prepared;
 			};
-			const paragraphEnd = (index: number): number => {
-				if (!this.prefetchByParagraph || index < 0 || index >= segments.length) return index + 1;
-				const paragraphIndex = segments[index].pIdx;
-				let end = index + 1;
-				while (end < segments.length && segments[end].pIdx === paragraphIndex) end += 1;
-				return end;
-			};
 			const ensureStreamParagraph = (index: number): Promise<PrefetchedPcmStream[]> => {
-				const end = paragraphEnd(index);
+				const end = this.findParagraphEnd(segments, index);
 				return Promise.all(Array.from({ length: end - index }, (_, offset) => ensureStream(index + offset)!));
 			};
 			const prefetchAfter = (index: number) => {
-				if (this.prefetchByParagraph) {
-					let nextIndex = paragraphEnd(index);
-					for (let paragraphOffset = 0; paragraphOffset < this.prefetchParagraphsAhead; paragraphOffset += 1) {
-						if (nextIndex >= segments.length) break;
-						void ensureStreamParagraph(nextIndex).catch(() => {});
-						nextIndex = paragraphEnd(nextIndex);
-					}
-					return;
-				}
-				for (let offset = 1; offset <= this.prefetchAhead; offset += 1) {
-					ensureStream(index + offset);
-				}
+				this.prefetchItemsAhead(index, segments.length, ensureStream, ensureStreamParagraph);
 			};
 
-			if (this.prefetchByParagraph) {
-				// The first paragraph is a startup barrier: every sentence must be
-				// ready before playback begins so the first paragraph cannot stall.
-				await ensureStreamParagraph(0);
-			} else {
-				ensureStream(0);
-			}
+			await this.prefetchInitialStreams(ensureStream, ensureStreamParagraph);
 			prefetchAfter(0);
 
 			for (let index = 0; index < segments.length; index += 1) {
@@ -598,28 +686,9 @@ export class GaplessTtsPlayer {
 					throw new Error('TTS streaming returned no audio');
 				}
 
-				const startAt = previousPlayback ? previousPlayback.endAt + getBoundaryPauseSeconds(segments[index - 1], segment) : this.engine.now() + this.startLeadSeconds;
-				const playback = this.engine.beginPcmStream(audioStream.sampleRate, audioStream.channels, startAt);
-				this.scheduledAudio.add(playback);
-				audioStream.chunks.forEach((chunk) => playback.append(chunk));
-				playback.finish();
+				const playback = this.scheduleStreamChunk(session, audioStream, segment, index, segments, previousPlayback, callbacks);
+				if (!playback) return;
 				hasScheduledAudio = true;
-
-				this.queueWordCuesForDuration(session, index, segment, playback.duration, playback.startAt);
-				this.startWordTracking(session, callbacks);
-
-				if (previousPlayback) {
-					const priorPlayback = previousPlayback;
-					void Promise.race([priorPlayback.ended, session.cancelled]).then(() => {
-						if (this.isActive(session)) {
-							callbacks.onSegmentStart?.(index, segment);
-						}
-					});
-				} else {
-					callbacks.onSegmentStart?.(index, segment);
-				}
-
-				void playback.ended.then(() => this.scheduledAudio.delete(playback));
 				previousPlayback = playback;
 			}
 
@@ -627,20 +696,9 @@ export class GaplessTtsPlayer {
 			await Promise.race([previousPlayback.ended, session.cancelled]);
 			if (!this.isActive(session)) return;
 
-			session.stopWatchingTime?.();
-			this.activeSession = null;
-			callbacks.onFinished?.();
+			this.finishPlayback(session, callbacks);
 		} catch (error: unknown) {
-			if (!this.isActive(session)) return;
-			if (!hasScheduledAudio) {
-				session.controller.abort();
-				session.controller = new AbortController();
-				this.stopScheduledAudio();
-				await this.run(session, segments, callbacks);
-				return;
-			}
-			this.cancelActiveSession();
-			callbacks.onError?.(error);
+			await this.handleStreamingError(error, hasScheduledAudio, session, segments, callbacks);
 		}
 	}
 
@@ -678,7 +736,7 @@ export class GaplessTtsPlayer {
 			sampleRate: audioStream.sampleRate,
 			channels: audioStream.channels,
 			chunks,
-			byteLength
+			byteLength,
 		};
 	}
 
@@ -693,7 +751,13 @@ export class GaplessTtsPlayer {
 		return scheduled;
 	}
 
-	private queueWordCues(session: PlaybackSession, segmentIndex: number, segment: SpeechSegment, audio: DecodedAudio, startAt: number): void {
+	private queueWordCues(
+		session: PlaybackSession,
+		segmentIndex: number,
+		segment: SpeechSegment,
+		audio: DecodedAudio,
+		startAt: number
+	): void {
 		const rate = this.engine.playbackRate && this.engine.playbackRate > 0 ? this.engine.playbackRate : 1.0;
 		const effectiveDuration = audio.duration / rate;
 		this.queueWordCuesForDuration(session, segmentIndex, segment, effectiveDuration, startAt);
@@ -710,7 +774,7 @@ export class GaplessTtsPlayer {
 			...cue,
 			absoluteStart: startAt + cue.startSeconds,
 			segmentIndex,
-			segment
+			segment,
 		}));
 		session.scheduledWordCues.push(...scheduled);
 		return scheduled;
@@ -771,7 +835,7 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
 		const buffer = await this.context.decodeAudioData(await blob.arrayBuffer());
 		return {
 			duration: buffer.duration,
-			value: buffer
+			value: buffer,
 		};
 	}
 
@@ -812,7 +876,7 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
 				} finally {
 					settle();
 				}
-			}
+			},
 		};
 	}
 
@@ -942,7 +1006,7 @@ export class WebAudioPlaybackEngine implements AudioPlaybackEngine {
 				pendingByteLength = 0;
 				sources.clear();
 				settleIfDone();
-			}
+			},
 		};
 
 		return playback;

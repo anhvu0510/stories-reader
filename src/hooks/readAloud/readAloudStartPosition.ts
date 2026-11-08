@@ -1,11 +1,25 @@
-import type { SentenceChunk } from '@/services/gaplessTtsPlayer';
 import type { ReadAloudResumePosition } from './useReadAloudResume';
+import type { SentenceChunk } from '@/services/gaplessTtsPlayer';
 
-export function resolveReadAloudStart(chunks: SentenceChunk[], current: number, saved: ReadAloudResumePosition | null, targetIndex?: number, targetOffset = 0) {
+export function resolveReadAloudStart(
+	chunks: SentenceChunk[],
+	current: number,
+	saved: ReadAloudResumePosition | null,
+	targetIndex?: number,
+	targetOffset = 0
+) {
 	const fallback = { index: targetIndex ?? current, offset: targetOffset };
 	if (targetIndex !== undefined || current !== 0 || !saved) return fallback;
-	if (saved.version === 2 && saved.paragraphIndex !== undefined && saved.sourceOffset !== undefined) return migrateSourcePosition(chunks, saved, fallback);
-	if (saved.chunkIndex < chunks.length) return { index: saved.chunkIndex, offset: saved.charOffset || 0 };
+	return resolveSavedPosition(chunks, saved, fallback);
+}
+
+function resolveSavedPosition(chunks: SentenceChunk[], saved: ReadAloudResumePosition, fallback: { index: number; offset: number }) {
+	if (saved.version === 2 && saved.paragraphIndex !== undefined && saved.sourceOffset !== undefined) {
+		return migrateSourcePosition(chunks, saved, fallback);
+	}
+	if (saved.chunkIndex < chunks.length) {
+		return { index: saved.chunkIndex, offset: saved.charOffset ?? 0 };
+	}
 	return fallback;
 }
 

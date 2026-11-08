@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 
 import { VerticalBatchChapterNav } from '@/features/reader/components/VerticalBatchChapterNav';
 
@@ -9,7 +9,7 @@ describe('VerticalBatchChapterNav Component', () => {
 	const mockChapters = [
 		{ chapterId: 'c1', chapterNumber: 1, title: 'Chương 1: Khởi đầu', content: [] },
 		{ chapterId: 'c2', chapterNumber: 2, title: 'Chương 2: Đột phá', content: [] },
-		{ chapterId: 'c3', chapterNumber: 3, title: 'Chương 3: Ngoại truyện', content: [] }
+		{ chapterId: 'c3', chapterNumber: 3, title: 'Chương 3: Ngoại truyện', content: [] },
 	];
 
 	beforeEach(() => {
@@ -25,7 +25,16 @@ describe('VerticalBatchChapterNav Component', () => {
 	});
 
 	it('QC-2 [Active State Menu Dọc]: Transforms into vertical audio control menu bar without paragraph index badge', () => {
-		render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={true} isTTSPlaying={true} currentParagraphIndex={2} />);
+		render(
+			<VerticalBatchChapterNav
+				chapters={mockChapters}
+				activeChapterId="c1"
+				isVisible={true}
+				isTTSActive={true}
+				isTTSPlaying={true}
+				currentParagraphIndex={2}
+			/>
+		);
 
 		expect(screen.getByLabelText('Tạm dừng đọc')).toBeDefined();
 		expect(screen.queryByLabelText('Đoạn trước')).toBeNull();
@@ -37,7 +46,15 @@ describe('VerticalBatchChapterNav Component', () => {
 
 	it('QC-3 [Toggle / Start Reading]: Triggers onToggleTTS when clicking speaker icon in inactive state', () => {
 		const mockOnToggleTTS = vi.fn();
-		render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={false} onToggleTTS={mockOnToggleTTS} />);
+		render(
+			<VerticalBatchChapterNav
+				chapters={mockChapters}
+				activeChapterId="c1"
+				isVisible={true}
+				isTTSActive={false}
+				onToggleTTS={mockOnToggleTTS}
+			/>
+		);
 
 		const speakerBtn = screen.getByLabelText('Bật đọc thành tiếng');
 		fireEvent.click(speakerBtn);
@@ -47,7 +64,9 @@ describe('VerticalBatchChapterNav Component', () => {
 
 	it('QC-4 [Stop Reading]: Triggers onTTSStop when clicking Stop button in active state', () => {
 		const mockOnTTSStop = vi.fn();
-		render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={true} onTTSStop={mockOnTTSStop} />);
+		render(
+			<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={true} onTTSStop={mockOnTTSStop} />
+		);
 
 		const stopBtn = screen.getByLabelText('Dừng đọc');
 		fireEvent.click(stopBtn);
@@ -57,7 +76,9 @@ describe('VerticalBatchChapterNav Component', () => {
 
 	it('QC-5 [Next Section]: Triggers onTTSNext when clicking Next button and does not render Prev button', () => {
 		const mockOnTTSNext = vi.fn();
-		render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={true} onTTSNext={mockOnTTSNext} />);
+		render(
+			<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={true} onTTSNext={mockOnTTSNext} />
+		);
 
 		expect(screen.queryByLabelText('Đoạn trước')).toBeNull();
 
@@ -81,7 +102,7 @@ describe('VerticalBatchChapterNav Component', () => {
 
 		expect(mockScrollIntoView).toHaveBeenCalledWith({
 			behavior: 'smooth',
-			block: 'center'
+			block: 'center',
 		});
 
 		document.body.removeChild(highlightEl);
@@ -100,7 +121,9 @@ describe('VerticalBatchChapterNav Component', () => {
 	});
 
 	it('QC-7 [Sync Dock Hide/Show]: Applies translate class when isVisible is false', () => {
-		const { container } = render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={false} isTTSActive={false} />);
+		const { container } = render(
+			<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={false} isTTSActive={false} />
+		);
 
 		const nav = container.firstChild as HTMLElement;
 		expect(nav.className).toContain('-translate-x-14');
@@ -108,7 +131,9 @@ describe('VerticalBatchChapterNav Component', () => {
 	});
 
 	it('QC-8 [Loading State]: Displays loading spinner on single circle speaker button and no control bar when isTTSLoading is true', () => {
-		render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={false} isTTSLoading={true} />);
+		render(
+			<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={false} isTTSLoading={true} />
+		);
 
 		const loadingBtn = screen.getByLabelText('Đang chuẩn bị âm thanh');
 		expect(loadingBtn).toBeDefined();
@@ -120,7 +145,16 @@ describe('VerticalBatchChapterNav Component', () => {
 
 	it('QC-9 [Cancel Loading]: Calls onToggleTTS when clicking loading speaker button', () => {
 		const mockOnToggleTTS = vi.fn();
-		render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={false} isTTSLoading={true} onToggleTTS={mockOnToggleTTS} />);
+		render(
+			<VerticalBatchChapterNav
+				chapters={mockChapters}
+				activeChapterId="c1"
+				isVisible={true}
+				isTTSActive={false}
+				isTTSLoading={true}
+				onToggleTTS={mockOnToggleTTS}
+			/>
+		);
 
 		const loadingBtn = screen.getByLabelText('Đang chuẩn bị âm thanh');
 		fireEvent.click(loadingBtn);
@@ -132,7 +166,16 @@ describe('VerticalBatchChapterNav Component', () => {
 		const mockOnToggleBgm = vi.fn();
 
 		// 1. Without highlight class in DOM -> BGM button must NOT render
-		const { rerender } = render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={false} isBgmActive={false} onToggleBgm={mockOnToggleBgm} />);
+		const { rerender } = render(
+			<VerticalBatchChapterNav
+				chapters={mockChapters}
+				activeChapterId="c1"
+				isVisible={true}
+				isTTSActive={false}
+				isBgmActive={false}
+				onToggleBgm={mockOnToggleBgm}
+			/>
+		);
 
 		expect(screen.queryByTitle('Bật nhạc nền thư giãn')).toBeNull();
 
@@ -145,7 +188,16 @@ describe('VerticalBatchChapterNav Component', () => {
 			await Promise.resolve();
 		});
 
-		rerender(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={false} isBgmActive={false} onToggleBgm={mockOnToggleBgm} />);
+		rerender(
+			<VerticalBatchChapterNav
+				chapters={mockChapters}
+				activeChapterId="c1"
+				isVisible={true}
+				isTTSActive={false}
+				isBgmActive={false}
+				onToggleBgm={mockOnToggleBgm}
+			/>
+		);
 
 		const bgmBtn = screen.getByTitle('Bật nhạc nền thư giãn');
 		expect(bgmBtn).toBeDefined();
@@ -157,7 +209,9 @@ describe('VerticalBatchChapterNav Component', () => {
 	});
 
 	it('QC-11 [showTTSControl=false]: Hides speaker button when showTTSControl prop is set to false', () => {
-		render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={false} showTTSControl={false} />);
+		render(
+			<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={false} showTTSControl={false} />
+		);
 
 		expect(screen.queryByLabelText('Bật đọc thành tiếng')).toBeNull();
 	});

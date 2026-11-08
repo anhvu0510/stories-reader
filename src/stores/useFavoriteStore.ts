@@ -24,12 +24,11 @@ export const useFavoriteStore = create<FavoriteState>()(
 				if (exists) {
 					set({ favoriteBookIds: favoriteBookIds.filter((id) => id !== bookId) });
 					return false;
-				} 
-					set({
-						favoriteBookIds: [bookId, ...favoriteBookIds.filter((id) => id !== bookId)]
-					});
-					return true;
-				
+				}
+				set({
+					favoriteBookIds: [bookId, ...favoriteBookIds.filter((id) => id !== bookId)],
+				});
+				return true;
 			},
 
 			addFavorite: (bookId: string) => {
@@ -54,7 +53,9 @@ export const useFavoriteStore = create<FavoriteState>()(
 				const serverFavIds = books.filter((b) => b.isFavorite).map((b) => b.bookId);
 				const serverUnfavIds = new Set(books.filter((b) => b.isFavorite === false).map((b) => b.bookId));
 
-				const updated = Array.from(new Set([...serverFavIds, ...favoriteBookIds])).filter((id) => !serverUnfavIds.has(id) || serverFavIds.includes(id));
+				const updated = Array.from(new Set([...serverFavIds, ...favoriteBookIds])).filter(
+					(id) => !serverUnfavIds.has(id) || serverFavIds.includes(id)
+				);
 
 				if (updated.length === favoriteBookIds.length && updated.every((id, idx) => favoriteBookIds[idx] === id)) {
 					return;
@@ -63,10 +64,10 @@ export const useFavoriteStore = create<FavoriteState>()(
 				set({ favoriteBookIds: updated });
 			},
 
-			clearFavorites: () => set({ favoriteBookIds: [] })
+			clearFavorites: () => set({ favoriteBookIds: [] }),
 		}),
 		{
-			name: 'stories_favorite_books'
+			name: 'stories_favorite_books',
 		}
 	)
 );

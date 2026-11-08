@@ -4,7 +4,74 @@ import { useAppStore } from '@/stores/useAppStore';
 
 import { offlineDb } from './offlineDb';
 
-import type { Book } from '@/shared/types';
+import type { Book, Chapter, ChapterContent } from '@/shared/types';
+
+interface RawStreamBook {
+	bookId?: string;
+	_id?: string;
+	id?: string;
+	bookName?: string;
+	chapterCount?: number;
+	totalChapters?: number;
+	[key: string]: unknown;
+}
+
+interface RawStreamChapter {
+	chapterId?: string;
+	_id?: string;
+	id?: string;
+	chapterNumber?: number | string;
+	title?: string;
+	state?: Chapter['state'];
+	bookName?: string;
+	totalTokens?: number;
+	content?: string[];
+	rootTab?: string;
+	[key: string]: unknown;
+}
+
+function formatStreamError(err: unknown): string {
+	if (typeof err === 'string') return err;
+	if (err && typeof err === 'object') {
+		const obj = err as { error?: { message?: string }; statusCode?: number; message?: string };
+		return obj.error?.message || (obj.statusCode ? String(obj.statusCode) : obj.message) || 'Unknown';
+	}
+	return 'Unknown';
+}
+
+function buildOfflineChapterData(chap: RawStreamChapter, task: DownloadTask, chapterId: string, chapterNumber: number) {
+	const title = chap.title || `Chương ${chapterNumber}`;
+	const state = chap.state ?? 'SUCCEEDED';
+	const bookName = chap.bookName || task.bookName;
+	const totalTokens = typeof chap.totalTokens === 'number' ? chap.totalTokens : 0;
+	const content = Array.isArray(chap.content) ? chap.content : [];
+	const rootTab = typeof chap.rootTab === 'string' ? chap.rootTab : '';
+
+	const chapterRecord: Chapter & { bookId: string } = {
+		...(chap as unknown as Chapter),
+		chapterId,
+		chapterNumber,
+		title,
+		bookId: task.bookId,
+		state,
+		updatedAt: typeof chap.updatedAt === 'string' ? chap.updatedAt : new Date().toISOString(),
+	};
+
+	const chapterContent: ChapterContent = {
+		chapter: {
+			chapterId,
+			chapterNumber,
+			title,
+			bookName,
+			state,
+			totalTokens,
+			content,
+			rootTab,
+		},
+	};
+
+	return { chapterRecord, chapterContent };
+}
 
 // Suppress Oboe's attempt to set Content-Length which causes an ugly red browser warning
 const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
@@ -82,7 +149,7 @@ class DownloadManager {
 			status: 'waiting',
 			progress: 0,
 			totalChapters: 0,
-			completedChapters: 0
+			completedChapters: 0,
 		};
 
 		this.tasks.set(bookId, newTask);
@@ -107,6 +174,53 @@ class DownloadManager {
 		}
 	}
 
+	private handleTaskSuccess(task: DownloadTask, bookId: string) {
+		task.status = 'completed';
+		this.batchCompleted++;
+		this.lastProcessedBookName = task.bookName;
+		if (this.batchTotal <= 1) {
+			window.dispatchEvent(
+				new CustomEvent('app-toast', {
+					detail: { message: `Đã tải xong: ${task.bookName}`, type: 'success' },
+				})
+			);
+		}
+		this.tasks.delete(bookId);
+		this.notify();
+	}
+
+	private async handleTaskError(task: DownloadTask, bookId: string, error: unknown) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		task.status = 'error';
+		task.error = errorMessage;
+
+		// Rollback: clear the book and any partially downloaded chapters
+		try {
+			await offlineDb.deleteBook(bookId);
+		} catch (err) {
+			console.error('Failed to rollback book:', err);
+		}
+
+		this.batchCompleted++; // Count as processed for batch tracking
+		this.lastProcessedBookName = task.bookName;
+
+		if (this.batchTotal <= 1) {
+			const isCancelled = errorMessage === 'Đã hủy';
+			window.dispatchEvent(
+				new CustomEvent('app-toast', {
+					detail: {
+						message: isCancelled
+							? `Đã ngừng tải ${task.bookName}. Dữ liệu tải dở đã được dọn dẹp.`
+							: `Lỗi tải ${task.bookName}. Dữ liệu tải dở đã được dọn dẹp.`,
+						type: isCancelled ? 'info' : 'error',
+					},
+				})
+			);
+		}
+		this.tasks.delete(bookId);
+		this.notify();
+	}
+
 	private async processQueue() {
 		if (this.activeCount >= this.concurrency || this.queue.length === 0) {
 			return;
@@ -128,55 +242,9 @@ class DownloadManager {
 
 		try {
 			await this.downloadBookFlow(task);
-			task.status = 'completed';
-			this.batchCompleted++;
-			this.lastProcessedBookName = task.bookName;
-			if (this.batchTotal <= 1) {
-				window.dispatchEvent(
-					new CustomEvent('app-toast', {
-						detail: { message: `Đã tải xong: ${task.bookName}`, type: 'success' }
-					})
-				);
-			}
-			this.tasks.delete(bookId);
-			this.notify();
-		} catch (e: any) {
-			task.status = 'error';
-			task.error = e.message;
-
-			// Rollback: clear the book and any partially downloaded chapters
-			try {
-				await offlineDb.deleteBook(bookId);
-			} catch (err) {
-				console.error('Failed to rollback book:', err);
-			}
-
-			this.batchCompleted++; // Count as processed for batch tracking
-			this.lastProcessedBookName = task.bookName;
-
-			if (this.batchTotal <= 1) {
-				if (e.message === 'Đã hủy') {
-					window.dispatchEvent(
-						new CustomEvent('app-toast', {
-							detail: {
-								message: `Đã ngừng tải ${task.bookName}. Dữ liệu tải dở đã được dọn dẹp.`,
-								type: 'info'
-							}
-						})
-					);
-				} else {
-					window.dispatchEvent(
-						new CustomEvent('app-toast', {
-							detail: {
-								message: `Lỗi tải ${task.bookName}. Dữ liệu tải dở đã được dọn dẹp.`,
-								type: 'error'
-							}
-						})
-					);
-				}
-			}
-			this.tasks.delete(bookId);
-			this.notify();
+			this.handleTaskSuccess(task, bookId);
+		} catch (e: unknown) {
+			await this.handleTaskError(task, bookId, e);
 		} finally {
 			this.activeCount--;
 			this.notify();
@@ -205,15 +273,16 @@ class DownloadManager {
 			await new Promise<void>((resolve, reject) => {
 				let isBookSaved = false;
 				let bookSavePromise: Promise<void> | null = null;
-				const chapterPromises: Promise<any>[] = [];
+				const chapterPromises: Promise<void>[] = [];
 
-				const handleBookNode = (book: any) => {
-					const bookId = String(book.bookId || book._id || book.id || task.bookId);
+				const handleBookNode = (book: RawStreamBook) => {
+					const rawId = book.bookId ?? book._id ?? book.id ?? task.bookId;
+					const bookId = String(rawId);
 					const normalizedBook: Book = {
-						...book,
+						...(book as unknown as Book),
 						bookId,
 						bookName: book.bookName || task.bookName,
-						chapterCount: typeof book.chapterCount === 'number' ? book.chapterCount : book.totalChapters || task.totalChapters || 0
+						chapterCount: typeof book.chapterCount === 'number' ? book.chapterCount : book.totalChapters || task.totalChapters || 0,
 					};
 
 					task.bookName = normalizedBook.bookName;
@@ -228,43 +297,23 @@ class DownloadManager {
 					return oboe.drop;
 				};
 
-				const handleChapterNode = (chap: any) => {
+				const handleChapterNode = (chap: RawStreamChapter) => {
 					if (this.stopMap.get(task.bookId)) {
 						stream.abort();
 						reject(new Error('Đã hủy'));
 						return oboe.drop;
 					}
 
-					const chapterId = String(chap.chapterId || chap._id || chap.id || `chap-${chap.chapterNumber}`);
-					const chapterNumber = typeof chap.chapterNumber === 'number' ? chap.chapterNumber : parseInt(chap.chapterNumber, 10) || 0;
+					const chapterId = String(chap.chapterId ?? chap._id ?? chap.id ?? `chap-${chap.chapterNumber}`);
+					const chapterNumber = typeof chap.chapterNumber === 'number' ? chap.chapterNumber : parseInt(String(chap.chapterNumber), 10) || 0;
 
 					const saveAction = async () => {
 						if (bookSavePromise && !isBookSaved) {
 							await bookSavePromise;
 						}
-						await offlineDb.saveChapter({
-							...chap,
-							chapterId,
-							chapterNumber,
-							title: chap.title || `Chương ${chapterNumber}`,
-							bookId: task.bookId,
-							content: undefined,
-							state: chap.state ?? 'SUCCEEDED'
-						});
-
-						const content = {
-							chapter: {
-								chapterId,
-								chapterNumber,
-								title: chap.title || `Chương ${chapterNumber}`,
-								bookName: chap.bookName || task.bookName,
-								state: chap.state ?? 'SUCCEEDED',
-								totalTokens: chap.totalTokens || 0,
-								content: chap.content || [],
-								rootTab: chap.rootTab || ''
-							}
-						};
-						await offlineDb.saveChapterContent(content);
+						const { chapterRecord, chapterContent } = buildOfflineChapterData(chap, task, chapterId, chapterNumber);
+						await offlineDb.saveChapter(chapterRecord);
+						await offlineDb.saveChapterContent(chapterContent);
 
 						task.completedChapters++;
 						task.progress = 5 + Math.round((task.completedChapters / Math.max(1, task.totalChapters)) * 90);
@@ -280,10 +329,10 @@ class DownloadManager {
 					method: 'POST',
 					headers: {
 						'ngrok-skip-browser-warning': 'true',
-						'Content-Type': 'application/json'
+						'Content-Type': 'application/json',
 					},
 					body: JSON.stringify({ bookIds: [task.bookId] }),
-					cached: false
+					cached: false,
 				})
 					.node('data.*.book', handleBookNode)
 					.node('data.book', handleBookNode)
@@ -299,11 +348,11 @@ class DownloadManager {
 							reject(e);
 						}
 					})
-					.fail((err: any) => {
+					.fail((err: unknown) => {
 						if (this.stopMap.get(task.bookId)) {
 							reject(new Error('Đã hủy'));
 						} else {
-							reject(new Error('Lỗi luồng dữ liệu (Stream Error): ' + (err.error?.message || err.statusCode || (typeof err === 'string' ? err : 'Unknown'))));
+							reject(new Error(`Lỗi luồng dữ liệu (Stream Error): ${formatStreamError(err)}`));
 						}
 					});
 			});

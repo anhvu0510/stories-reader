@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { motion } from 'motion/react';
 import { Download, RefreshCw, Search, Trash2, X } from 'lucide-react';
+import { motion } from 'motion/react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { BottomSheet } from '@/components/BottomSheet';
 import { ChapterItem } from '@/features/chapter-list/components/ChapterItem';
 import { triggerHaptic } from '@/hooks/useHaptic';
-import { downloadManager, DownloadTask } from '@/lib/DownloadManager';
+import { downloadManager, type DownloadTask } from '@/lib/DownloadManager';
 import { offlineDb } from '@/lib/offlineDb';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
 import { openChapter } from '@/shared/utils/openChapter';
@@ -25,6 +25,27 @@ function ChapterSkeletonItem() {
 			<div className="w-8 h-8 rounded-full bg-on-surface-variant/15 flex-shrink-0" />
 		</div>
 	);
+}
+
+function computeInitialChapterRange(currentChapterNumber: number | undefined, limit: number) {
+	if (!currentChapterNumber) {
+		return { start: 1, end: undefined };
+	}
+	return {
+		start: Math.max(1, currentChapterNumber - 5),
+		end: currentChapterNumber + limit,
+	};
+}
+
+function getChapterExtremes(newChapters: Chapter[], limit: number, isSearch: boolean) {
+	const min = Math.min(...newChapters.map((c) => c.chapterNumber));
+	const max = Math.max(...newChapters.map((c) => c.chapterNumber));
+	return {
+		min,
+		max,
+		hasMoreTop: !isSearch && min > 1,
+		hasMoreBottom: newChapters.length >= limit,
+	};
 }
 
 interface QuickChapterSelectSheetProps {
@@ -108,6 +129,7 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 	const pendingPrependScrollRef = useRef<{ prevHeight: number; prevTop: number } | null>(null);
 	const lastScrollTopRef = useRef<number>(0);
 	const fetchIdRef = useRef(0);
+	const fetchPrevTopPageRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
 	useEffect(() => {
 		return () => {
@@ -121,11 +143,23 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 			const fetchId = ++fetchIdRef.current;
 			setLoading(true);
 			isInitialScrollDoneRef.current = false;
-			const startChapterNumber = searchQuery ? undefined : currentChapterNumber ? Math.max(1, currentChapterNumber - 5) : 1;
-			const endChapterNumber = searchQuery ? undefined : currentChapterNumber ? currentChapterNumber + configChapterLimit : undefined;
+
+			const range = searchQuery ? undefined : computeInitialChapterRange(currentChapterNumber, configChapterLimit);
+			const startChapterNumber = range?.start;
+			const endChapterNumber = range?.end;
 
 			try {
-				const res = await ChapterRepository.getChapters(bookId, 1, configChapterLimit, 'chapterNumber', 'ASC', 'all', searchQuery, startChapterNumber, endChapterNumber);
+				const res = await ChapterRepository.getChapters(
+					bookId,
+					1,
+					configChapterLimit,
+					'chapterNumber',
+					'ASC',
+					'all',
+					searchQuery,
+					startChapterNumber,
+					endChapterNumber
+				);
 
 				if (fetchId !== fetchIdRef.current) return;
 
@@ -133,12 +167,11 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 				setChapters(newChapters);
 
 				if (newChapters.length > 0) {
-					const minNum = Math.min(...newChapters.map((c) => c.chapterNumber));
-					const maxNum = Math.max(...newChapters.map((c) => c.chapterNumber));
-					setMinChapterNum(minNum);
-					setMaxChapterNum(maxNum);
-					setHasMoreTop(!searchQuery && minNum > 1);
-					setHasMoreBottom(newChapters.length >= configChapterLimit);
+					const extremes = getChapterExtremes(newChapters, configChapterLimit, Boolean(searchQuery));
+					setMinChapterNum(extremes.min);
+					setMaxChapterNum(extremes.max);
+					setHasMoreTop(extremes.hasMoreTop);
+					setHasMoreBottom(extremes.hasMoreBottom);
 				} else {
 					setHasMoreTop(false);
 					setHasMoreBottom(false);
@@ -164,7 +197,7 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 		if (!loading && !loadingTop && hasMoreTop && isInitialScrollDoneRef.current && scrollContainerRef.current) {
 			const { scrollHeight, clientHeight } = scrollContainerRef.current;
 			if (scrollHeight > 0 && scrollHeight <= clientHeight + 50) {
-				fetchPrevTopPage();
+				fetchPrevTopPageRef.current();
 			}
 		}
 	}, [loading, loadingTop, hasMoreTop, chapters.length]);
@@ -212,7 +245,16 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 		const targetFromChapter = maxChapterNum + 1;
 
 		try {
-			const res = await ChapterRepository.getChapters(bookId, 1, configChapterLimit, 'chapterNumber', 'ASC', 'all', search, targetFromChapter);
+			const res = await ChapterRepository.getChapters(
+				bookId,
+				1,
+				configChapterLimit,
+				'chapterNumber',
+				'ASC',
+				'all',
+				search,
+				targetFromChapter
+			);
 
 			const newChapters = res.chapters || [];
 
@@ -244,7 +286,17 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 		const targetFromChapter = Math.max(1, minChapterNum - configChapterLimit);
 
 		try {
-			const res = await ChapterRepository.getChapters(bookId, 1, configChapterLimit, 'chapterNumber', 'ASC', 'all', search, targetFromChapter, targetToChapter);
+			const res = await ChapterRepository.getChapters(
+				bookId,
+				1,
+				configChapterLimit,
+				'chapterNumber',
+				'ASC',
+				'all',
+				search,
+				targetFromChapter,
+				targetToChapter
+			);
 
 			const newChapters = res.chapters || [];
 
@@ -253,7 +305,7 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 				if (container) {
 					pendingPrependScrollRef.current = {
 						prevHeight: container.scrollHeight,
-						prevTop: container.scrollTop
+						prevTop: container.scrollTop,
 					};
 				}
 
@@ -275,6 +327,7 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 			setLoadingTop(false);
 		}
 	};
+	fetchPrevTopPageRef.current = fetchPrevTopPage;
 
 	// Scroll handler for 2-way Infinite Scroll (Top & Bottom)
 	const handleScroll = () => {
@@ -337,15 +390,21 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 								disabled={Boolean(downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting'))}
 								title={isDownloaded ? 'Xóa dữ liệu ngoại tuyến' : 'Tải bộ truyện về đọc offline'}
 								aria-label={isDownloaded ? 'Xóa dữ liệu ngoại tuyến' : 'Tải bộ truyện về đọc offline'}
-								className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${isDownloaded ? 'text-rose-500 bg-rose-500/10 hover:bg-rose-500/20' : downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting') ? 'text-primary bg-primary/10' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10'}`}
+								className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${(() => {
+									if (isDownloaded) return 'text-rose-500 bg-rose-500/10 hover:bg-rose-500/20';
+									if (downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting')) {
+										return 'text-primary bg-primary/10';
+									}
+									return 'text-on-surface-variant hover:text-on-surface hover:bg-white/10';
+								})()}`}
 							>
-								{downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting') ? (
-									<RefreshCw size={16} className="animate-spin text-primary" />
-								) : isDownloaded ? (
-									<Trash2 size={16} />
-								) : (
-									<Download size={16} />
-								)}
+								{(() => {
+									if (downloadTask && (downloadTask.status === 'downloading' || downloadTask.status === 'waiting')) {
+										return <RefreshCw size={16} className="animate-spin text-primary" />;
+									}
+									if (isDownloaded) return <Trash2 size={16} />;
+									return <Download size={16} />;
+								})()}
 							</motion.button>
 
 							<motion.button
@@ -391,7 +450,11 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 				</div>
 
 				{/* Chapter List with Windowing 2-way Infinite Scroll */}
-				<div ref={scrollContainerRef} onScroll={handleScroll} className="p-3 pb-8 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5">
+				<div
+					ref={scrollContainerRef}
+					onScroll={handleScroll}
+					className="p-3 pb-8 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5"
+				>
 					{/* Scroll Up Top Loading Indicator */}
 					{loadingTop && (
 						<div className="space-y-2 mb-2">
@@ -401,41 +464,50 @@ export function QuickChapterSelectSheet({ bookId, currentChapterId, currentChapt
 						</div>
 					)}
 
-					{loading && chapters.length === 0 ? (
-						<div className="space-y-2 py-2">
-							{[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
-								<ChapterSkeletonItem key={`sk-init-${idx}`} />
-							))}
-						</div>
-					) : chapters.length === 0 ? (
-						<div className="py-12 text-center text-xs text-on-surface-variant font-medium">Không tìm thấy chương nào</div>
-					) : (
-						<>
-							{chapters.map((c, idx) => {
-								const isCurrent = Boolean((currentChapterId && c.chapterId === currentChapterId) || (currentChapterNumber !== undefined && c.chapterNumber === currentChapterNumber));
-
-								return (
-									<ChapterItem
-										key={c.chapterId || `chap-${c.chapterNumber || idx}-${idx}`}
-										ref={isCurrent ? activeItemRef : null}
-										chapter={c}
-										isActive={isCurrent}
-										showStatus={true}
-										onClick={() => handleSelectChapter(c.chapterId)}
-									/>
-								);
-							})}
-
-							{/* Scroll Down Bottom Loading Indicator */}
-							{loadingBottom && (
-								<div className="space-y-2 mt-2">
-									{[1, 2, 3, 4, 5].map((idx) => (
-										<ChapterSkeletonItem key={`sk-bottom-${idx}`} />
+					{(() => {
+						if (loading && chapters.length === 0) {
+							return (
+								<div className="space-y-2 py-2">
+									{[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
+										<ChapterSkeletonItem key={`sk-init-${idx}`} />
 									))}
 								</div>
-							)}
-						</>
-					)}
+							);
+						}
+						if (chapters.length === 0) {
+							return <div className="py-12 text-center text-xs text-on-surface-variant font-medium">Không tìm thấy chương nào</div>;
+						}
+						return (
+							<>
+								{chapters.map((c, idx) => {
+									const isCurrent = Boolean(
+										(currentChapterId && c.chapterId === currentChapterId) ||
+										(currentChapterNumber !== undefined && c.chapterNumber === currentChapterNumber)
+									);
+
+									return (
+										<ChapterItem
+											key={c.chapterId || `chap-${c.chapterNumber || idx}-${idx}`}
+											ref={isCurrent ? activeItemRef : null}
+											chapter={c}
+											isActive={isCurrent}
+											showStatus={true}
+											onClick={() => handleSelectChapter(c.chapterId)}
+										/>
+									);
+								})}
+
+								{/* Scroll Down Bottom Loading Indicator */}
+								{loadingBottom && (
+									<div className="space-y-2 mt-2">
+										{[1, 2, 3, 4, 5].map((idx) => (
+											<ChapterSkeletonItem key={`sk-bottom-${idx}`} />
+										))}
+									</div>
+								)}
+							</>
+						);
+					})()}
 				</div>
 			</BottomSheet>
 

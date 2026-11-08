@@ -6,11 +6,13 @@ import { useAppStore } from './useAppStore';
 
 import type { EdgeBufferMode, FontType, ReaderConfig, ThemeType } from '@/shared/types';
 
+export type { ReaderConfig };
+
 const SETTINGS_KEY = 'stories.ui.config';
 
-function parseSettingsValue(res: any): any {
+function parseSettingsValue(res: unknown): unknown {
 	if (!res) return null;
-	const apiValue = res.value !== undefined ? res.value : res;
+	const apiValue = (res as { value?: unknown }).value ?? res;
 	if (typeof apiValue !== 'string') return apiValue;
 	try {
 		return JSON.parse(apiValue);
@@ -58,7 +60,7 @@ const defaultSettings: ReaderConfig = {
 	bgmFadeOutMs: 800,
 	bgmStopDelayMs: 1500,
 	bgmOnlyOnEdgeReadAloud: true,
-	isBgmPreviewing: false
+	isBgmPreviewing: false,
 };
 
 function getInitialSettings(isOffline: boolean): ReaderConfig {
@@ -68,7 +70,9 @@ function getInitialSettings(isOffline: boolean): ReaderConfig {
 		if (local) {
 			return { ...defaultSettings, ...JSON.parse(local) };
 		}
-	} catch {}
+	} catch {
+		// intentionally empty — localStorage may be unavailable in private mode
+	}
 	return defaultSettings;
 }
 
@@ -310,7 +314,7 @@ export const useReaderConfigStore = create<ReaderConfigStore>((set) => {
 				const res = await SettingsRepository.getSettings(SETTINGS_KEY);
 				const apiValue = parseSettingsValue(res);
 
-				if (apiValue && typeof apiValue === 'object' && Object.keys(apiValue).length > 0 && !apiValue.error) {
+				if (apiValue && typeof apiValue === 'object' && Object.keys(apiValue).length > 0 && !('error' in apiValue)) {
 					set((state) => {
 						const next = { ...state, ...apiValue };
 						localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
@@ -323,6 +327,6 @@ export const useReaderConfigStore = create<ReaderConfigStore>((set) => {
 			} catch (e) {
 				console.warn('Failed to fetch server reader config:', e);
 			}
-		}
+		},
 	};
 });

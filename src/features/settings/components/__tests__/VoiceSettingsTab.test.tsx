@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { VoiceSettingsTab } from '@/features/settings/components/VoiceSettingsTab';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
@@ -14,8 +14,8 @@ vi.mock('@/services/edgeTtsService', async (importOriginal) => {
 			isSupported: vi.fn(() => true),
 			fetchVoices: vi.fn().mockResolvedValue([]),
 			playPreview: vi.fn(),
-			stop: vi.fn()
-		}
+			stop: vi.fn(),
+		},
 	};
 });
 
@@ -29,8 +29,8 @@ vi.mock('@/services/nativeTtsService', async (importOriginal) => {
 			getVoices: vi.fn().mockResolvedValue([]),
 			getVietnameseVoices: vi.fn((voices: any[]) => voices.filter((v: any) => v.lang?.startsWith('vi'))),
 			playPreview: vi.fn(),
-			stop: vi.fn().mockResolvedValue(undefined)
-		}
+			stop: vi.fn().mockResolvedValue(undefined),
+		},
 	};
 });
 
@@ -41,7 +41,7 @@ describe('VoiceSettingsTab Component', () => {
 			speechRate: 1.0,
 			edgeVoiceUri: 'vi-VN-HoaiMyNeural',
 			edgeBufferMode: 'file',
-			voiceUri: ''
+			voiceUri: '',
 		});
 	});
 

@@ -22,8 +22,10 @@ export class BackgroundAudioKeepAlive {
 		document.body?.appendChild(audio);
 		this.audio = audio;
 		void Promise.resolve(audio.play()).catch(() => {
-			// A browser may reject background playback until the user gesture; the
-			// real TTS audio still proceeds and will retry on the next lifecycle event.
+			/*
+			 * A browser may reject background playback until the user gesture; the
+			 * real TTS audio still proceeds and will retry on the next lifecycle event.
+			 */
 		});
 	}
 

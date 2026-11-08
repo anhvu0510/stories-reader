@@ -17,7 +17,7 @@ const safeRemoveStorage = (key?: string | null): void => {
 	try {
 		localStorage.removeItem(key);
 	} catch (err) {
-		console.debug('[ReadingProgress] Remove storage error ignored:', err);
+		console.warn('[ReadingProgress] Remove storage error ignored:', err);
 	}
 };
 
@@ -41,7 +41,7 @@ const detectActiveParagraphAndChapter = (): { paragraphIndex?: number; activeCha
 	if (!paraEl) return {};
 
 	const pIdx = paraEl.getAttribute('data-paragraph-index');
-	const paragraphIndex = pIdx !== null ? parseInt(pIdx, 10) : undefined;
+	const paragraphIndex = pIdx === null ? undefined : parseInt(pIdx, 10);
 	const sectionEl = paraEl.closest('[data-chapter-id]') as HTMLElement | null;
 	const activeChapterId = sectionEl?.getAttribute('data-chapter-id') || undefined;
 
@@ -112,27 +112,19 @@ export function useReadingProgress(bookId: string | undefined, chapterId: string
 		if (!bookId || !chapterId) return;
 
 		const currentKey = `${bookId}_${chapterId}`;
-		const isDifferentChapter = (prevChapterIdRef.current && prevChapterIdRef.current !== chapterId) || (lastActiveChapterKey && lastActiveChapterKey !== currentKey);
-
-		if (isDifferentChapter) {
-			const prevCId =
-				prevChapterIdRef.current && prevChapterIdRef.current !== chapterId
-					? prevChapterIdRef.current
-					: lastActiveChapterKey.startsWith(`${bookId}_`)
-						? lastActiveChapterKey.replace(`${bookId}_`, '')
-						: undefined;
-
+		if (checkIsDifferentChapter(prevChapterIdRef.current, chapterId, lastActiveChapterKey, currentKey)) {
+			const prevCId = getPreviousChapterId(prevChapterIdRef.current, chapterId, lastActiveChapterKey, bookId);
 			if (prevCId && prevCId !== chapterId) {
 				safeRemoveStorage(getStorageKey(bookId, prevCId));
 			}
 
-			// Khi chuyển sang chapter mới trong phiên đọc:
-			// Xóa sạch tiến độ cũ của chapter đích để tránh nhảy xuống cuối trang, bắt đầu từ đỉnh 0px
+			/*
+			 * Khi chuyển sang chapter mới trong phiên đọc:
+			 * Xóa sạch tiến độ cũ của chapter đích để tránh nhảy xuống cuối trang, bắt đầu từ đỉnh 0px
+			 */
 			clearReadingProgress(bookId, chapterId);
 			isRestoredRef.current = true;
-			if (typeof window !== 'undefined' && window.scrollTo) {
-				window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-			}
+			scrollToTopInstant();
 		}
 
 		lastActiveChapterKey = currentKey;
@@ -156,7 +148,7 @@ export function useReadingProgress(bookId: string | undefined, chapterId: string
 				const { paragraphIndex, activeChapterId } = detectActiveParagraphAndChapter();
 
 				const currentY = window.scrollY || 0;
-				const totalHeight = typeof document !== 'undefined' ? document.documentElement.scrollHeight - window.innerHeight : 0;
+				const totalHeight = typeof document === 'undefined' ? 0 : document.documentElement.scrollHeight - window.innerHeight;
 				const isCompleted = totalHeight > 0 && currentY >= totalHeight - 60;
 
 				const state: ReadingState = {
@@ -165,13 +157,15 @@ export function useReadingProgress(bookId: string | undefined, chapterId: string
 					activeChapterId,
 					paragraphIndex,
 					isCompleted,
-					updatedAt: Date.now()
+					updatedAt: Date.now(),
 				};
 
 				localStorage.setItem(key, JSON.stringify(state));
 
-				// In multi-chapter batch mode: calculate relative scrollY against the active chapter's section
-				// to prevent giant global scroll offsets from dumping the user at the bottom when reading standalone
+				/*
+				 * In multi-chapter batch mode: calculate relative scrollY against the active chapter's section
+				 * to prevent giant global scroll offsets from dumping the user at the bottom when reading standalone
+				 */
 				if (activeChapterId && activeChapterId !== chapterId) {
 					const activeKey = getStorageKey(bookId, activeChapterId);
 					if (activeKey) {
@@ -182,7 +176,7 @@ export function useReadingProgress(bookId: string | undefined, chapterId: string
 							activeChapterId,
 							paragraphIndex,
 							isCompleted: false,
-							updatedAt: Date.now()
+							updatedAt: Date.now(),
 						};
 						localStorage.setItem(activeKey, JSON.stringify(activeState));
 					}
@@ -219,85 +213,124 @@ export function useReadingProgress(bookId: string | undefined, chapterId: string
 
 	// 3. Auto-restore scroll position upon tab reload / content ready
 	useEffect(() => {
-		if (!bookId || !chapterId || !isContentReady || isRestoredRef.current) return;
+		if (shouldSkipRestoration(bookId, chapterId, isContentReady, isRestoredRef.current)) return;
 
 		const key = getStorageKey(bookId, chapterId);
 		if (!key) return;
 
-		try {
-			const raw = localStorage.getItem(key);
-			if (raw) {
-				const savedState: ReadingState = JSON.parse(raw);
-				if (savedState.chapterId === chapterId && !savedState.isCompleted) {
-					// Double RAF / setTimeout ensures DOM layout & typography are computed before scrolling
-					requestAnimationFrame(() => {
-						setTimeout(() => {
-							let restoredByElement = false;
+		const savedState = loadSavedReadingState(key);
+		if (isValidResumeState(savedState, chapterId as string)) {
+			// Double RAF / setTimeout ensures DOM layout & typography are computed before scrolling
+			requestAnimationFrame(() => {
+				setTimeout(() => {
+					restoreSavedScrollPosition(savedState as ReadingState);
+					isRestoredRef.current = true;
+				}, 80);
+			});
+			return;
+		}
 
-							// Priority 1: Restore precision scroll by target paragraph element
-							if (savedState.paragraphIndex !== undefined && savedState.paragraphIndex > 0) {
-								let selector = `[data-paragraph-index="${savedState.paragraphIndex}"]`;
-								if (savedState.activeChapterId) {
-									selector = `#chapter-section-${savedState.activeChapterId} ${selector}`;
-								}
-								const targetEl = document.querySelector(selector) as HTMLElement | null;
-								if (targetEl && typeof targetEl.scrollIntoView === 'function') {
-									targetEl.scrollIntoView({
-										behavior: 'instant',
-										block: 'start'
-									});
-									// Adjust for sticky header height (~70px)
-									if (window.scrollY > 60) {
-										window.scrollBy({ top: -70, behavior: 'instant' });
-									}
-
-									// Visual Flash Highlight feedback on restored paragraph for 2 seconds
-									const highlightClasses = ['bg-primary/20', 'transition-colors', 'duration-500', 'rounded-lg'];
-									targetEl.classList.add(...highlightClasses);
-									setTimeout(() => {
-										if (targetEl && targetEl.classList) {
-											targetEl.classList.remove(...highlightClasses);
-										}
-									}, 2000);
-
-									restoredByElement = true;
-								}
-							}
-
-							// Priority 2: Fallback to pixel scrollY position
-							if (!restoredByElement && savedState.scrollY > 50) {
-								if (typeof window !== 'undefined' && window.scrollTo) {
-									window.scrollTo({
-										top: savedState.scrollY,
-										behavior: 'instant'
-									});
-								}
-								restoredByElement = true;
-							}
-
-							if (!restoredByElement) {
-								if (typeof window !== 'undefined' && window.scrollTo) {
-									window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-								}
-							}
-
-							isRestoredRef.current = true;
-						}, 80);
-					});
-					return;
-				} if (savedState.isCompleted) {
-					// Chapter was previously completed - start fresh from top and clear stale cache
-					clearReadingProgress(bookId, chapterId);
-				}
-			}
-		} catch {
-			// Safe fallback
+		if (savedState?.isCompleted) {
+			// Chapter was previously completed - start fresh from top and clear stale cache
+			clearReadingProgress(bookId, chapterId);
 		}
 
 		// Default when no saved state exists or state was completed: Ensure scroll is 0!
-		if (typeof window !== 'undefined' && window.scrollTo) {
-			window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-		}
+		scrollToTopInstant();
 		isRestoredRef.current = true;
 	}, [bookId, chapterId, isContentReady, getStorageKey]);
+}
+
+function shouldSkipRestoration(bookId?: string, chapterId?: string, isContentReady?: boolean, isRestored?: boolean): boolean {
+	return !bookId || !chapterId || !isContentReady || Boolean(isRestored);
+}
+
+function isValidResumeState(savedState: ReadingState | null, chapterId: string): boolean {
+	return Boolean(savedState && savedState.chapterId === chapterId && !savedState.isCompleted);
+}
+
+function scrollToTopInstant(): void {
+	if (typeof window !== 'undefined' && window.scrollTo) {
+		window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+	}
+}
+
+function checkIsDifferentChapter(
+	prevChapterId: string | undefined,
+	currentChapterId: string,
+	lastKey: string,
+	currentKey: string
+): boolean {
+	const prevChanged = Boolean(prevChapterId && prevChapterId !== currentChapterId);
+	const keyChanged = Boolean(lastKey && lastKey !== currentKey);
+	return prevChanged || keyChanged;
+}
+
+function getPreviousChapterId(
+	prevChapterId: string | undefined,
+	currentChapterId: string,
+	lastKey: string,
+	bookId: string
+): string | undefined {
+	if (prevChapterId && prevChapterId !== currentChapterId) {
+		return prevChapterId;
+	}
+	if (lastKey.startsWith(`${bookId}_`)) {
+		return lastKey.replace(`${bookId}_`, '');
+	}
+	return undefined;
+}
+
+function loadSavedReadingState(key: string): ReadingState | null {
+	try {
+		const raw = localStorage.getItem(key);
+		if (!raw) return null;
+		return JSON.parse(raw);
+	} catch {
+		return null;
+	}
+}
+
+function flashParagraphHighlight(targetEl: HTMLElement): void {
+	const highlightClasses = ['bg-primary/20', 'transition-colors', 'duration-500', 'rounded-lg'];
+	targetEl.classList.add(...highlightClasses);
+	setTimeout(() => {
+		if (targetEl && targetEl.classList) {
+			targetEl.classList.remove(...highlightClasses);
+		}
+	}, 2000);
+}
+
+function restoreByParagraphElement(paragraphIndex: number, activeChapterId?: string): boolean {
+	let selector = `[data-paragraph-index="${paragraphIndex}"]`;
+	if (activeChapterId) {
+		selector = `#chapter-section-${activeChapterId} ${selector}`;
+	}
+	const targetEl = document.querySelector(selector) as HTMLElement | null;
+	if (!targetEl || typeof targetEl.scrollIntoView !== 'function') return false;
+
+	targetEl.scrollIntoView({ behavior: 'instant', block: 'start' });
+	if (window.scrollY > 60) {
+		window.scrollBy({ top: -70, behavior: 'instant' });
+	}
+
+	flashParagraphHighlight(targetEl);
+	return true;
+}
+
+function restoreSavedScrollPosition(savedState: ReadingState): void {
+	if (savedState.paragraphIndex !== undefined && savedState.paragraphIndex > 0) {
+		if (restoreByParagraphElement(savedState.paragraphIndex, savedState.activeChapterId)) {
+			return;
+		}
+	}
+
+	if (savedState.scrollY > 50) {
+		if (typeof window !== 'undefined' && window.scrollTo) {
+			window.scrollTo({ top: savedState.scrollY, behavior: 'instant' });
+			return;
+		}
+	}
+
+	scrollToTopInstant();
 }

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+
 import { useAppLockStore, isAndroidApp } from '@/stores/useAppLockStore';
 
 /**
@@ -10,6 +11,29 @@ export const APP_LOCK_GRACE_PERIOD_MS = 30 * 1000;
  * Key lưu thời điểm app bị đưa xuống background trong sessionStorage
  */
 export const STORAGE_KEY_LAST_HIDDEN = 'stories_app_last_hidden_time';
+
+function readSavedHiddenAt(): number | null {
+	try {
+		const saved = sessionStorage.getItem(STORAGE_KEY_LAST_HIDDEN);
+		return saved ? Number(saved) : null;
+	} catch {
+		// intentionally empty — sessionStorage may be unavailable in some contexts
+		return null;
+	}
+}
+
+function clearSavedHiddenAt() {
+	try {
+		sessionStorage.removeItem(STORAGE_KEY_LAST_HIDDEN);
+	} catch {
+		// intentionally empty — sessionStorage may be unavailable in some contexts
+	}
+}
+
+function shouldLockAfterHidden(hiddenAt: number | null, state: { isLockEnabled: boolean; isLocked: boolean }) {
+	if (!hiddenAt || !state.isLockEnabled || state.isLocked) return false;
+	return Date.now() - hiddenAt >= APP_LOCK_GRACE_PERIOD_MS;
+}
 
 /**
  * Hook quản lý vòng đời ứng dụng (sleep / resume) cho tính năng khóa bảo mật sinh trắc học và Passcode.
@@ -45,7 +69,9 @@ export function useAppLockListener() {
 			lastHiddenTimestamp = now;
 			try {
 				sessionStorage.setItem(STORAGE_KEY_LAST_HIDDEN, String(now));
-			} catch {}
+			} catch {
+				// intentionally empty — sessionStorage may be unavailable in some contexts
+			}
 
 			// Đặt hẹn giờ: nếu sau 30 giây vẫn ở background thì tự động khóa app
 			if (gracePeriodTimer) {
@@ -66,24 +92,15 @@ export function useAppLockListener() {
 			}
 
 			// Lấy mốc thời gian lúc app bị down
-			let hiddenAt = lastHiddenTimestamp;
-			if (!hiddenAt) {
-				try {
-					const saved = sessionStorage.getItem(STORAGE_KEY_LAST_HIDDEN);
-					if (saved) hiddenAt = Number(saved);
-				} catch {}
-			}
+			const hiddenAt = lastHiddenTimestamp || readSavedHiddenAt();
 
 			// Xóa mốc thời gian đã lưu để tránh tính lại
 			lastHiddenTimestamp = null;
-			try {
-				sessionStorage.removeItem(STORAGE_KEY_LAST_HIDDEN);
-			} catch {}
+			clearSavedHiddenAt();
 
 			// Nếu app chưa khóa nhưng đã quá 30 giây ở background: khóa app và bắt nhập passcode
 			const currentState = useAppLockStore.getState();
-			const elapsed = hiddenAt ? Date.now() - hiddenAt : 0;
-			if (hiddenAt && currentState.isLockEnabled && !currentState.isLocked && elapsed >= APP_LOCK_GRACE_PERIOD_MS) {
+			if (shouldLockAfterHidden(hiddenAt, currentState)) {
 				lock();
 			}
 

@@ -1,4 +1,6 @@
-import { Capacitor, registerPlugin, PluginListenerHandle } from '@capacitor/core';
+import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
+
+import type { NativeWordBoundaryEvent, NativePlaybackStateEvent } from './nativeTtsStream';
 
 export interface NativeVoice {
 	name: string;
@@ -42,15 +44,28 @@ export interface NativeTTSPluginInterface {
 	clearCache?(): Promise<void>;
 	addListener(eventName: 'onStart', listenerFunc: (info: { utteranceId: string }) => void): Promise<PluginListenerHandle>;
 	addListener(eventName: 'onDone', listenerFunc: (info: { utteranceId: string }) => void): Promise<PluginListenerHandle>;
-	addListener(eventName: 'onError', listenerFunc: (info: { utteranceId?: string; error?: string; message?: string; chunkIndex?: number }) => void): Promise<PluginListenerHandle>;
-	addListener(eventName: 'onRangeStart', listenerFunc: (info: { utteranceId: string; start: number; end: number }) => void): Promise<PluginListenerHandle>;
+	addListener(
+		eventName: 'onError',
+		listenerFunc: (info: { utteranceId?: string; error?: string; message?: string; chunkIndex?: number }) => void
+	): Promise<PluginListenerHandle>;
+	addListener(
+		eventName: 'onRangeStart',
+		listenerFunc: (info: { utteranceId: string; start: number; end: number }) => void
+	): Promise<PluginListenerHandle>;
 	addListener(eventName: 'onChunkStart', listenerFunc: (data: { chunkIndex: number }) => void): Promise<PluginListenerHandle>;
-	addListener(eventName: 'onWordBoundary', listenerFunc: (data: any) => void): Promise<PluginListenerHandle>;
-	addListener(eventName: 'onPlaybackStateChange', listenerFunc: (data: any) => void): Promise<PluginListenerHandle>;
+	addListener(eventName: 'onWordBoundary', listenerFunc: (data: NativeWordBoundaryEvent) => void): Promise<PluginListenerHandle>;
+	addListener(eventName: 'onPlaybackStateChange', listenerFunc: (data: NativePlaybackStateEvent) => void): Promise<PluginListenerHandle>;
 	addListener(eventName: 'onPlaybackComplete', listenerFunc: () => void): Promise<PluginListenerHandle>;
 }
 
 export const NativeTTS = registerPlugin<NativeTTSPluginInterface>('NativeTTS');
+
+interface BrowserSpeakCallbacks {
+	onStart?: () => void;
+	onDone?: () => void;
+	onError?: (err: unknown) => void;
+	onRangeStart?: (start: number, end: number) => void;
+}
 
 class NativeTTSServiceClass {
 	private activeListeners: PluginListenerHandle[] = [];
@@ -101,7 +116,7 @@ class NativeTTSServiceClass {
 				lang: v.lang,
 				language: v.lang.split('-')[0],
 				displayName: `${v.name} (${v.lang})`,
-				requiresNetwork: !v.localService
+				requiresNetwork: !v.localService,
 			}));
 		}
 
@@ -124,7 +139,7 @@ class NativeTTSServiceClass {
 		utteranceId?: string;
 		onStart?: () => void;
 		onDone?: () => void;
-		onError?: (err: any) => void;
+		onError?: (err: unknown) => void;
 		onRangeStart?: (start: number, end: number) => void;
 	}): Promise<void> {
 		const { text, voice, rate = 1.0, pitch = 1.0, utteranceId = String(Date.now()), onStart, onDone, onError, onRangeStart } = options;
@@ -162,7 +177,7 @@ class NativeTTSServiceClass {
 					voice,
 					rate,
 					pitch,
-					utteranceId
+					utteranceId,
 				});
 			} catch (err) {
 				this.cleanupListeners();
@@ -172,6 +187,16 @@ class NativeTTSServiceClass {
 			return;
 		}
 
+		this.speakWithBrowser(text, voice, rate, pitch, { onStart, onDone, onError, onRangeStart });
+	}
+
+	private speakWithBrowser(
+		text: string,
+		voice: string | undefined,
+		rate: number,
+		pitch: number,
+		{ onStart, onDone, onError, onRangeStart }: BrowserSpeakCallbacks
+	): void {
 		// Web Browser fallback
 		if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 			const synth = window.speechSynthesis;
@@ -221,7 +246,9 @@ class NativeTTSServiceClass {
 		for (const handle of this.activeListeners) {
 			try {
 				void handle.remove();
-			} catch (ignored) {}
+			} catch {
+				// intentionally empty — listener.remove() may throw if native plugin is already torn down
+			}
 		}
 		this.activeListeners = [];
 	}

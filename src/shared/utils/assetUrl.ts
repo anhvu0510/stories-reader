@@ -8,17 +8,11 @@ interface CustomImportMeta {
 	};
 }
 
-export function getAssetUrl(path: string, customBase?: string): string {
-	if (!path) return path;
+function isPassthroughUrl(path: string): boolean {
+	return path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:');
+}
 
-	// Absolute HTTP/HTTPS URLs or Base64 Data URLs return as-is
-	if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
-		return path;
-	}
-
-	const rawBase = customBase ?? (import.meta as unknown as CustomImportMeta).env?.BASE_URL ?? '/';
-	const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-
+function normalizeBase(rawBase: string): string {
 	// Strip leading '.' for relative base paths (e.g. './' or '.') so it doesn't corrupt origin concatenation
 	let normalizedBase = rawBase.startsWith('.') ? rawBase.replace(/^\.+/, '') : rawBase;
 	if (!normalizedBase.startsWith('/')) {
@@ -27,11 +21,26 @@ export function getAssetUrl(path: string, customBase?: string): string {
 	if (!normalizedBase.endsWith('/')) {
 		normalizedBase = `${normalizedBase}/`;
 	}
+	return normalizedBase;
+}
 
-	if (typeof window !== 'undefined' && window.location?.origin && window.location.origin !== 'null') {
-		const origin = window.location.origin.replace(/\/+$/, '');
-		return `${origin}${normalizedBase}${cleanPath}`;
-	}
+function getWindowOrigin(): string | null {
+	if (typeof window === 'undefined') return null;
+	const origin = window.location?.origin;
+	if (!origin || origin === 'null') return null;
+	return origin.replace(/\/+$/, '');
+}
 
-	return `${normalizedBase}${cleanPath}`;
+export function getAssetUrl(path: string, customBase?: string): string {
+	if (!path) return path;
+
+	// Absolute HTTP/HTTPS URLs or Base64 Data URLs return as-is
+	if (isPassthroughUrl(path)) return path;
+
+	const rawBase = customBase ?? (import.meta as unknown as CustomImportMeta).env?.BASE_URL ?? '/';
+	const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+	const normalizedBase = normalizeBase(rawBase);
+	const origin = getWindowOrigin();
+
+	return `${origin ?? ''}${normalizedBase}${cleanPath}`;
 }

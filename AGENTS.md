@@ -44,6 +44,43 @@ needed.
 5. Strictly enforce flat guard clauses with early returns: zero nested `if` statements (max depth of 1 level). Eliminate redundant `else` blocks after returns or throws.
 6. Run the focused test, full suite, typecheck, and production build.
 
+## Code Style & Mandatory Lint Gate
+
+**Before writing any code**, read `.agents/rules/eslint-enforcement.md` for BAD/GOOD patterns and `.agents/rules/clean-control-flow.md` for flat guard clause examples.
+
+**After editing each file**, immediately run the inline lint gate:
+
+```bash
+cd stories-reader && node_modules/.bin/eslint "src/path/to/edited-file.tsx"
+```
+
+Fix all errors before moving to the next file. Do not let errors accumulate.
+
+**Before declaring task complete**, run the full verification gate:
+
+```bash
+# 1. Full ESLint — must show 0 new errors (87 no-explicit-any are pre-existing, ignore them)
+cd stories-reader && node_modules/.bin/eslint "src/**/*.{ts,tsx}" 2>&1 \
+  | grep " error " | grep -v "no-explicit-any" | wc -l
+# → must output 0
+
+# 2. Full test suite
+cd stories-reader && rtk npm test
+# → must output: 72 Test Files passed
+```
+
+**ESLint rules AI must comply with (zero tolerance):**
+
+| Rule | Violation | Fix |
+|---|---|---|
+| `no-else-return` | `if (x) { return a; } else { return b; }` | Remove `else`, use early return |
+| `unicorn/no-negated-condition` | `if (!x) { A } else { B }` | Flip: `if (x) { B } else { A }` |
+| `no-nested-ternary` | `a ? b ? c : d : e` | Extract to `if/return` helper |
+| `sonarjs/no-duplicated-branches` | Both if/else branches have identical code | Remove branching |
+| `no-empty` | `catch {}` or `catch (e) {}` | Log with `console.warn('[fn] ...', err)` |
+| `no-explicit-any` | `(data: any)` | Use specific type or `unknown` |
+| `max-depth: 3` | 4+ levels of nesting | Extract helper function |
+
 Use explicit types at component, hook, repository, and API boundaries. Do not
 add `any`, unchecked assertions, or untyped events/refs. Model nullable,
 loading, offline, and error states explicitly.

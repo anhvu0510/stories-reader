@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { useAppUpdate } from '../useAppUpdate';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { AppUpdateService } from '@/services/appUpdateService';
+
+import { useAppUpdate } from '../useAppUpdate';
 
 describe('useAppUpdate Hook (TDD)', () => {
 	beforeEach(() => {
@@ -27,7 +29,7 @@ describe('useAppUpdate Hook (TDD)', () => {
 		vi.spyOn(AppUpdateService, 'notifyAppReady').mockResolvedValue(undefined);
 		vi.spyOn(AppUpdateService, 'checkForUpdate').mockResolvedValue({
 			version: '1.0.1',
-			bundleUrl: 'https://mock.api/bundle.zip'
+			bundleUrl: 'https://mock.api/bundle.zip',
 		});
 
 		vi.spyOn(AppUpdateService, 'downloadAndApplyUpdate').mockImplementation(async (_m, onProg) => {

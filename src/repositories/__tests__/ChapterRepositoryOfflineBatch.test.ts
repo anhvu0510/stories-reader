@@ -10,8 +10,8 @@ vi.mock('../../lib/offlineDb', () => ({
 		getChapterContent: vi.fn(),
 		getChapterMeta: vi.fn(),
 		getChapters: vi.fn(),
-		getReplacements: vi.fn().mockResolvedValue([])
-	}
+		getReplacements: vi.fn().mockResolvedValue([]),
+	},
 }));
 
 describe('ChapterRepository - Offline Batch Chapters (TDD)', () => {
@@ -25,7 +25,7 @@ describe('ChapterRepository - Offline Batch Chapters (TDD)', () => {
 			{ chapterId: 'c1', bookId: 'b1', chapterNumber: 1, title: 'Chương 1' },
 			{ chapterId: 'c2', bookId: 'b1', chapterNumber: 2, title: 'Chương 2' },
 			{ chapterId: 'c3', bookId: 'b1', chapterNumber: 3, title: 'Chương 3' },
-			{ chapterId: 'c4', bookId: 'b1', chapterNumber: 4, title: 'Chương 4' }
+			{ chapterId: 'c4', bookId: 'b1', chapterNumber: 4, title: 'Chương 4' },
 		];
 
 		vi.mocked(offlineDb.getChapterMeta).mockResolvedValue(bookChapters[0] as any);
@@ -39,9 +39,9 @@ describe('ChapterRepository - Offline Batch Chapters (TDD)', () => {
 						bookId: 'b1',
 						chapterNumber: 1,
 						title: 'Chương 1',
-						content: ['Nội dung 1']
+						content: ['Nội dung 1'],
 					},
-					navigation: { prev: null, next: null }
+					navigation: { prev: null, next: null },
 				} as any;
 			}
 			if (id === 'c2') {
@@ -51,9 +51,9 @@ describe('ChapterRepository - Offline Batch Chapters (TDD)', () => {
 						bookId: 'b1',
 						chapterNumber: 2,
 						title: 'Chương 2',
-						content: ['Nội dung 2']
+						content: ['Nội dung 2'],
 					},
-					navigation: { prev: null, next: null }
+					navigation: { prev: null, next: null },
 				} as any;
 			}
 			if (id === 'c3') {
@@ -63,9 +63,9 @@ describe('ChapterRepository - Offline Batch Chapters (TDD)', () => {
 						bookId: 'b1',
 						chapterNumber: 3,
 						title: 'Chương 3',
-						content: ['Nội dung 3']
+						content: ['Nội dung 3'],
 					},
-					navigation: { prev: null, next: null }
+					navigation: { prev: null, next: null },
 				} as any;
 			}
 			return undefined;
@@ -90,7 +90,7 @@ describe('ChapterRepository - Offline Batch Chapters (TDD)', () => {
 			{ chapterId: 'c3', bookId: 'b1', chapterNumber: 3, title: 'Chương 3' },
 			{ chapterId: 'c4', bookId: 'b1', chapterNumber: 4, title: 'Chương 4' },
 			{ chapterId: 'c5', bookId: 'b1', chapterNumber: 5, title: 'Chương 5' },
-			{ chapterId: 'c6', bookId: 'b1', chapterNumber: 6, title: 'Chương 6' }
+			{ chapterId: 'c6', bookId: 'b1', chapterNumber: 6, title: 'Chương 6' },
 		];
 
 		vi.mocked(offlineDb.getChapterMeta).mockResolvedValue(bookChapters[3] as any);
@@ -101,7 +101,7 @@ describe('ChapterRepository - Offline Batch Chapters (TDD)', () => {
 			if (found) {
 				return {
 					chapter: { ...found, content: [`Nội dung ${found.chapterNumber}`] },
-					navigation: { prev: null, next: null }
+					navigation: { prev: null, next: null },
 				} as any;
 			}
 			return undefined;
@@ -121,7 +121,7 @@ describe('ChapterRepository - Offline Batch Chapters (TDD)', () => {
 			{ chapterId: 'c2', bookId: 'b1', chapterNumber: 2, title: 'Chương 2' },
 			{ chapterId: 'c3', bookId: 'b1', chapterNumber: 3, title: 'Chương 3' },
 			{ chapterId: 'c4', bookId: 'b1', chapterNumber: 4, title: 'Chương 4' },
-			{ chapterId: 'c5', bookId: 'b1', chapterNumber: 5, title: 'Chương 5' }
+			{ chapterId: 'c5', bookId: 'b1', chapterNumber: 5, title: 'Chương 5' },
 		];
 
 		vi.mocked(offlineDb.getChapterMeta).mockResolvedValue(bookChapters[3] as any);
@@ -132,7 +132,7 @@ describe('ChapterRepository - Offline Batch Chapters (TDD)', () => {
 			if (found) {
 				return {
 					chapter: { ...found, content: [`Nội dung ${found.chapterNumber}`] },
-					navigation: { prev: null, next: null }
+					navigation: { prev: null, next: null },
 				} as any;
 			}
 			return undefined;
@@ -150,7 +150,7 @@ describe('ChapterRepository - Offline Batch Chapters (TDD)', () => {
 		const bookChapters = [
 			{ chapterId: 'c1', bookId: 'b1', chapterNumber: 1, title: 'Chương 1' },
 			{ chapterId: 'c2', bookId: 'b1', chapterNumber: 2, title: 'Chương 2' },
-			{ chapterId: 'c3', bookId: 'b1', chapterNumber: 3, title: 'Chương 3' }
+			{ chapterId: 'c3', bookId: 'b1', chapterNumber: 3, title: 'Chương 3' },
 		];
 
 		vi.mocked(offlineDb.getChapterMeta).mockResolvedValue(bookChapters[0] as any);
@@ -164,9 +164,9 @@ describe('ChapterRepository - Offline Batch Chapters (TDD)', () => {
 						bookId: 'b1',
 						chapterNumber: 1,
 						title: 'Chương 1',
-						content: ['Nội dung 1']
+						content: ['Nội dung 1'],
 					},
-					navigation: { prev: null, next: null }
+					navigation: { prev: null, next: null },
 				} as any;
 			}
 			// c2 is not downloaded

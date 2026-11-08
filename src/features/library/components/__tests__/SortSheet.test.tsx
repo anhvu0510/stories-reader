@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import 'fake-indexeddb/auto';
 
-import { SortSheet, SORT_OPTIONS } from '@/features/library/components/SortSheet';
+import { SORT_OPTIONS } from '@/features/library/components/sortOptions';
+import { SortSheet } from '@/features/library/components/SortSheet';
 
 describe('SortSheet Component Tests', () => {
 	const mockOnApply = vi.fn();
@@ -29,7 +30,9 @@ describe('SortSheet Component Tests', () => {
 	});
 
 	it('does not render when isOpen is false', () => {
-		const { container } = render(<SortSheet isOpen={false} currentSortBy="updatedAt" currentSortOrder="DESC" onApply={mockOnApply} onClose={mockOnClose} />);
+		const { container } = render(
+			<SortSheet isOpen={false} currentSortBy="updatedAt" currentSortOrder="DESC" onApply={mockOnApply} onClose={mockOnClose} />
+		);
 
 		expect(container.firstChild).toBeNull();
 	});
@@ -48,7 +51,17 @@ describe('SortSheet Component Tests', () => {
 	});
 
 	it('resets to default sort when clicking Mặc định', () => {
-		render(<SortSheet isOpen={true} currentSortBy="updatedAt" currentSortOrder="DESC" defaultSortBy="createdAt" defaultSortOrder="DESC" onApply={mockOnApply} onClose={mockOnClose} />);
+		render(
+			<SortSheet
+				isOpen={true}
+				currentSortBy="updatedAt"
+				currentSortOrder="DESC"
+				defaultSortBy="createdAt"
+				defaultSortOrder="DESC"
+				onApply={mockOnApply}
+				onClose={mockOnClose}
+			/>
+		);
 
 		const defaultButton = screen.getByText('Mặc định');
 		fireEvent.click(defaultButton);

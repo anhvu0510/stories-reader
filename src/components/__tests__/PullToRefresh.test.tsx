@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { render, screen, cleanup, act } from '@testing-library/react';
 import { Capacitor } from '@capacitor/core';
+import { render, screen, cleanup, act } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 
 import { PullToRefresh } from '@/components/PullToRefresh';
 
@@ -31,13 +31,13 @@ describe('PullToRefresh component', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 100, clientY: 50 } as any]
+					touches: [{ clientX: 100, clientY: 50 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
 					touches: [{ clientX: 100, clientY: 180 } as any],
-					cancelable: true
+					cancelable: true,
 				})
 			);
 		});

@@ -1,9 +1,15 @@
 import { useMemo } from 'react';
+
 import { splitByDatabaseBoundaries, type SentenceChunk } from '@/services/gaplessTtsPlayer';
 import { buildReadAloudUtterancePlanFromChunks } from '@/services/readAloudUtterancePlan';
+
 import type { ReadAloudChapterContext } from '../useReadAloud';
 
-export function useReadAloudPlan(paragraphs: string[], chapterContext: ReadAloudChapterContext, paragraphContexts: ReadAloudChapterContext[]) {
+export function useReadAloudPlan(
+	paragraphs: string[],
+	chapterContext: ReadAloudChapterContext,
+	paragraphContexts: ReadAloudChapterContext[]
+) {
 	const chunks = useMemo(() => {
 		const res: SentenceChunk[] = [];
 		paragraphs.forEach((html, pIdx) => {
@@ -13,8 +19,10 @@ export function useReadAloudPlan(paragraphs: string[], chapterContext: ReadAloud
 			const text = tmp.textContent || tmp.innerText || '';
 
 			if (text.trim()) {
-				// Paragraphs are already sentence units from getChapterContent. The
-				// only valid subdivision is the invisible DB grouping delimiter.
+				/*
+				 * Paragraphs are already sentence units from getChapterContent. The
+				 * only valid subdivision is the invisible DB grouping delimiter.
+				 */
 				const sentenceChunks = splitByDatabaseBoundaries(text, pIdx);
 				res.push(...sentenceChunks);
 			}
@@ -22,13 +30,15 @@ export function useReadAloudPlan(paragraphs: string[], chapterContext: ReadAloud
 		return res.map((sentence, sentenceIndex) => ({
 			...sentence,
 			sentenceStartIndex: sentenceIndex,
-			sentenceEndIndex: sentenceIndex
+			sentenceEndIndex: sentenceIndex,
 		}));
 	}, [paragraphs]);
 	const media3Utterances = useMemo(() => buildReadAloudUtterancePlanFromChunks(chunks), [chunks]);
 	const getMedia3UtteranceIndex = (chunkIndex: number, sourceOffset?: number): number => {
 		const utteranceIndex = media3Utterances.findIndex(
-			(utterance) => utterance.sourceChunkIndex === chunkIndex && (sourceOffset === undefined || sourceOffset < utterance.sourceStart + utterance.sourceLength)
+			(utterance) =>
+				utterance.sourceChunkIndex === chunkIndex &&
+				(sourceOffset === undefined || sourceOffset < utterance.sourceStart + utterance.sourceLength)
 		);
 		return utteranceIndex >= 0 ? utteranceIndex : 0;
 	};
@@ -50,7 +60,7 @@ export function useReadAloudPlan(paragraphs: string[], chapterContext: ReadAloud
 			return {
 				context,
 				segmentIndex,
-				segmentCount: totals.get(key) || chunks.length
+				segmentCount: totals.get(key) || chunks.length,
 			};
 		});
 	}, [chapterContext, chunks, paragraphContexts]);

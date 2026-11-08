@@ -22,6 +22,15 @@ export interface EdgeTimelineSnapshot {
 	words: TimelineWord[];
 }
 
+function isRecentAge(age: number): boolean {
+	return age >= 0 && age <= 250;
+}
+
+function calculateClearOffset(lastWord: TimelineWord | undefined, isRecent: boolean): number {
+	if (!lastWord) return 0;
+	return lastWord.charIndex + (isRecent ? lastWord.charLength : 0);
+}
+
 /** A bounded audio-clock projection; late bridge callbacks are never replayed. */
 export class EdgePlaybackTimeline {
 	private snapshot: EdgeTimelineSnapshot | null = null;
@@ -34,7 +43,8 @@ export class EdgePlaybackTimeline {
 
 	update(snapshot: EdgeTimelineSnapshot): void {
 		if (this.isOlder(snapshot)) return;
-		if (snapshot.sessionId !== this.snapshot?.sessionId || snapshot.utteranceIndex !== this.snapshot?.utteranceIndex) this.lastWord = undefined;
+		if (snapshot.sessionId !== this.snapshot?.sessionId || snapshot.utteranceIndex !== this.snapshot?.utteranceIndex)
+			this.lastWord = undefined;
 		this.snapshot = snapshot;
 	}
 
@@ -51,18 +61,8 @@ export class EdgePlaybackTimeline {
 		this.lastWord = undefined;
 	}
 
-	render(): void {
-		const snapshot = this.snapshot;
-		if (!snapshot || snapshot.state !== 'PLAYING') return;
-		const age = this.now() - snapshot.sentAtMs;
-		const position = snapshot.positionMs + Math.max(0, age);
-		const word = age >= 0 && age <= 250 ? this.wordAt(snapshot.words, position) : undefined;
-		const key = `${snapshot.sessionId}:${snapshot.utteranceIndex}:${word?.charIndex ?? -1}`;
-		if (key === this.renderedKey) return;
-		this.renderedKey = key;
-		const clearOffset = this.lastWord ? this.lastWord.charIndex + (age >= 0 && age <= 250 ? this.lastWord.charLength : 0) : 0;
-		this.lastWord = word;
-		this.emit({
+	private createEventPayload(snapshot: EdgeTimelineSnapshot, word: TimelineWord | undefined, clearOffset: number): WordBoundaryEvent {
+		return {
 			sessionId: snapshot.sessionId,
 			utteranceIndex: snapshot.utteranceIndex,
 			chunkIndex: snapshot.chunkIndex,
@@ -71,8 +71,23 @@ export class EdgePlaybackTimeline {
 			sourceLength: snapshot.sourceLength,
 			charIndex: word?.charIndex ?? clearOffset,
 			charLength: word?.charLength ?? 0,
-			text: word?.text ?? ''
-		});
+			text: word?.text ?? '',
+		};
+	}
+
+	render(): void {
+		const snapshot = this.snapshot;
+		if (!snapshot || snapshot.state !== 'PLAYING') return;
+		const age = this.now() - snapshot.sentAtMs;
+		const isRecent = isRecentAge(age);
+		const position = snapshot.positionMs + Math.max(0, age);
+		const word = isRecent ? this.wordAt(snapshot.words, position) : undefined;
+		const key = `${snapshot.sessionId}:${snapshot.utteranceIndex}:${word?.charIndex ?? -1}`;
+		if (key === this.renderedKey) return;
+		this.renderedKey = key;
+		const clearOffset = calculateClearOffset(this.lastWord, isRecent);
+		this.lastWord = word;
+		this.emit(this.createEventPayload(snapshot, word, clearOffset));
 	}
 
 	private wordAt(words: TimelineWord[], position: number): TimelineWord | undefined {

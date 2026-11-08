@@ -34,7 +34,9 @@ function getInitialDomains(): ApiDomain[] {
 		if (legacy) {
 			return [{ id: 'legacy', name: 'Server Mặc định', url: legacy }];
 		}
-	} catch {}
+	} catch {
+		// intentionally empty — localStorage may be unavailable in private mode
+	}
 	return [];
 }
 
@@ -95,7 +97,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
 			isOfflineMode: localStorage.getItem(STORAGE_KEY_OFFLINE) === 'true',
 			domains,
 			activeDomainId: activeId,
-			activeDomain: active
+			activeDomain: active,
 		});
-	}
+	},
 }));

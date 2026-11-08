@@ -11,7 +11,7 @@ import {
 	type DecodedAudio,
 	type PcmStreamPlayback,
 	type ScheduledAudio,
-	type SpeechSegment
+	type SpeechSegment,
 } from '@/services/gaplessTtsPlayer';
 
 function createPendingPromise(): Promise<void> {
@@ -34,7 +34,7 @@ function createSegment(index: number): SpeechSegment {
 		startOffset: index * (text.length + 1),
 		length: text.length,
 		sentenceStartIndex: index,
-		sentenceEndIndex: index
+		sentenceEndIndex: index,
 	};
 }
 
@@ -51,7 +51,7 @@ describe('buildSpeechSegments', () => {
 			[
 				{ pIdx: 2, text: firstText, startOffset: firstOffset, length: firstText.length },
 				{ pIdx: 2, text: secondText, startOffset: secondOffset, length: secondText.length },
-				{ pIdx: 2, text: thirdText, startOffset: thirdOffset, length: thirdText.length }
+				{ pIdx: 2, text: thirdText, startOffset: thirdOffset, length: thirdText.length },
 			],
 			{ targetCharacters: 35, maxCharacters: 70 }
 		);
@@ -63,7 +63,7 @@ describe('buildSpeechSegments', () => {
 				startOffset: firstOffset,
 				length: firstText.length + secondText.length + 1,
 				sentenceStartIndex: 0,
-				sentenceEndIndex: 1
+				sentenceEndIndex: 1,
 			},
 			{
 				pIdx: 2,
@@ -71,8 +71,8 @@ describe('buildSpeechSegments', () => {
 				startOffset: thirdOffset,
 				length: thirdText.length,
 				sentenceStartIndex: 2,
-				sentenceEndIndex: 2
-			}
+				sentenceEndIndex: 2,
+			},
 		]);
 	});
 
@@ -80,7 +80,7 @@ describe('buildSpeechSegments', () => {
 		const paragraph = [
 			'Câu thứ nhất giới thiệu bối cảnh và các nhân vật đang xuất hiện trong câu chuyện.',
 			'Câu thứ hai tiếp tục diễn biến để luồng đọc có đủ dữ liệu dự phòng.',
-			'Câu thứ ba khép lại đoạn văn nhưng vẫn thuộc cùng một yêu cầu phát âm.'
+			'Câu thứ ba khép lại đoạn văn nhưng vẫn thuộc cùng một yêu cầu phát âm.',
 		].join(' ');
 		const sentences = splitParagraphIntoSentences(paragraph, 3);
 
@@ -95,7 +95,7 @@ describe('buildSpeechSegments', () => {
 		const paragraph = [
 			'Đây là một mệnh đề khá dài để kiểm tra cách chia cụm đọc tự nhiên',
 			'tiếp theo là một mệnh đề khác vẫn giữ nguyên dấu câu và vị trí ký tự',
-			'cuối cùng là phần kết thúc để tổng chiều dài vượt quá giới hạn thông thường.'
+			'cuối cùng là phần kết thúc để tổng chiều dài vượt quá giới hạn thông thường.',
 		].join(', ');
 
 		const phrases = splitParagraphIntoSentences(paragraph, 0);
@@ -123,15 +123,15 @@ describe('buildSpeechSegments', () => {
 		const paragraph = [
 			'Ngày hôm sau, Tần Thành lại tới, sau khi gửi thiệp cưới và bình tâm lại,',
 			'nhìn thấy mấy chục sợi tóc bạc bên thái dương Vương Huyên, hắn không khỏi lo lắng.',
-			'Cơ thể ngươi sẽ không để lại di chứng gì chứ.'
+			'Cơ thể ngươi sẽ không để lại di chứng gì chứ.',
 		].join(' ');
 
 		const phrases = splitParagraphIntoSentences(paragraph, 0, {
-			maxCharacters: 120
+			maxCharacters: 120,
 		});
 		const segments = buildSpeechSegments(phrases, {
 			targetCharacters: 108,
-			maxCharacters: 120
+			maxCharacters: 120,
 		});
 
 		expect(phrases.every((phrase) => phrase.length <= 120)).toBe(true);
@@ -180,7 +180,7 @@ describe('buildSpeechSegments', () => {
 
 		const [segment] = buildSpeechSegments(sentences, {
 			targetCharacters: 200,
-			maxCharacters: 300
+			maxCharacters: 300,
 		});
 
 		expect(segment.text).toBe(paragraph);
@@ -207,38 +207,38 @@ describe('GaplessTtsPlayer', () => {
 			previousText: 'Một nhịp đọc mềm',
 			nextParagraphIndex: 0,
 			expectedStart: 2.04,
-			boundary: 'soft split'
+			boundary: 'soft split',
 		},
 		{
 			previousText: 'Một mệnh đề,',
 			nextParagraphIndex: 0,
 			expectedStart: 2.12,
-			boundary: 'clause'
+			boundary: 'clause',
 		},
 		{
 			previousText: 'Một câu hoàn chỉnh.',
 			nextParagraphIndex: 0,
 			expectedStart: 2.26,
-			boundary: 'sentence'
+			boundary: 'sentence',
 		},
 		{
 			previousText: 'Một câu hỏi?',
 			nextParagraphIndex: 0,
 			expectedStart: 2.34,
-			boundary: 'expressive sentence'
+			boundary: 'expressive sentence',
 		},
 		{
 			previousText: 'Một ý còn bỏ ngỏ…',
 			nextParagraphIndex: 0,
 			expectedStart: 2.46,
-			boundary: 'ellipsis'
+			boundary: 'ellipsis',
 		},
 		{
 			previousText: 'Kết thúc đoạn.',
 			nextParagraphIndex: 1,
 			expectedStart: 2.56,
-			boundary: 'paragraph'
-		}
+			boundary: 'paragraph',
+		},
 	])('adds a natural-fast pause at a $boundary boundary', async ({ previousText, nextParagraphIndex, expectedStart }) => {
 		const scheduledStarts: number[] = [];
 		const engine: AudioPlaybackEngine = {
@@ -249,12 +249,12 @@ describe('GaplessTtsPlayer', () => {
 				return {
 					endAt: startAt + audio.duration,
 					ended: createPendingPromise(),
-					stop: vi.fn()
+					stop: vi.fn(),
 				};
 			}),
 			pause: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			dispose: vi.fn(async () => {})
+			dispose: vi.fn(async () => {}),
 		};
 		const synthesize = vi.fn(async () => new Blob(['audio']));
 		const segments: SpeechSegment[] = [
@@ -264,7 +264,7 @@ describe('GaplessTtsPlayer', () => {
 				startOffset: 0,
 				length: previousText.length,
 				sentenceStartIndex: 0,
-				sentenceEndIndex: 0
+				sentenceEndIndex: 0,
 			},
 			{
 				pIdx: nextParagraphIndex,
@@ -272,8 +272,8 @@ describe('GaplessTtsPlayer', () => {
 				startOffset: 13,
 				length: 12,
 				sentenceStartIndex: 1,
-				sentenceEndIndex: 1
-			}
+				sentenceEndIndex: 1,
+			},
 		];
 		const player = new GaplessTtsPlayer({ engine, synthesize, startLeadSeconds: 0 });
 
@@ -296,11 +296,11 @@ describe('GaplessTtsPlayer', () => {
 			schedule: vi.fn((audio: DecodedAudio, startAt: number): ScheduledAudio => ({
 				endAt: startAt + audio.duration,
 				ended: endedQueue.shift() ?? createPendingPromise(),
-				stop: vi.fn()
+				stop: vi.fn(),
 			})),
 			pause: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			dispose: vi.fn(async () => {})
+			dispose: vi.fn(async () => {}),
 		};
 		const synthesize = vi.fn(async () => new Blob(['audio']));
 		const player = new GaplessTtsPlayer({ engine, synthesize, startLeadSeconds: 0 });
@@ -329,18 +329,18 @@ describe('GaplessTtsPlayer', () => {
 			}),
 			pause: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			dispose: vi.fn(async () => {})
+			dispose: vi.fn(async () => {}),
 		};
 		const synthesize = vi.fn(async () => new Promise<Blob>((resolve) => synthesizeResolvers.push(() => resolve(new Blob(['audio'])))));
 		const player = new GaplessTtsPlayer({
 			engine,
 			synthesize,
 			startLeadSeconds: 0,
-			prefetchByParagraph: true
+			prefetchByParagraph: true,
 		});
 		const segments = [0, 1, 2, 3].map((index) => ({
 			...createSegment(index),
-			pIdx: index < 2 ? 0 : 1
+			pIdx: index < 2 ? 0 : 1,
 		}));
 
 		player.start(segments);
@@ -363,7 +363,7 @@ describe('GaplessTtsPlayer', () => {
 			schedule: vi.fn(),
 			pause: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			dispose: vi.fn(async () => {})
+			dispose: vi.fn(async () => {}),
 		};
 		const synthesize = vi.fn((_segment: SpeechSegment, signal: AbortSignal) => {
 			requestSignal = signal;
@@ -403,30 +403,30 @@ describe('GaplessTtsPlayer', () => {
 						duration += chunk.byteLength / 2 / sampleRate;
 					}),
 					finish: vi.fn(),
-					stop: vi.fn()
+					stop: vi.fn(),
 				};
 			}),
 			pause: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			dispose: vi.fn(async () => {})
+			dispose: vi.fn(async () => {}),
 		};
 		const stream = vi.fn(async () => ({
 			body: new ReadableStream<Uint8Array>({
 				start(controller) {
 					controller.enqueue(new Uint8Array([0, 0]));
 					controller.close();
-				}
+				},
 			}),
 			sampleRate: 24000,
 			channels: 1,
-			sampleFormat: 's16le' as const
+			sampleFormat: 's16le' as const,
 		}));
 		const synthesize = vi.fn(async () => new Blob(['wav fallback']));
 		const player = new GaplessTtsPlayer({
 			engine,
 			synthesize,
 			stream,
-			startLeadSeconds: 0
+			startLeadSeconds: 0,
 		});
 
 		const nextParagraph = { ...createSegment(1), pIdx: 1 };
@@ -436,7 +436,7 @@ describe('GaplessTtsPlayer', () => {
 		expect(synthesize).not.toHaveBeenCalled();
 		expect(appendedChunks).toEqual([
 			[0, 0],
-			[0, 0]
+			[0, 0],
 		]);
 		expect(streamStarts[0]).toBe(0);
 		expect(streamStarts[1]).toBeCloseTo(1 / 24000 + 0.56, 10);
@@ -467,7 +467,7 @@ describe('GaplessTtsPlayer', () => {
 						duration += chunk.byteLength / 2 / sampleRate;
 					},
 					finish: vi.fn(),
-					stop: vi.fn()
+					stop: vi.fn(),
 				};
 			}),
 			watchTime: (callback) => {
@@ -476,34 +476,34 @@ describe('GaplessTtsPlayer', () => {
 			},
 			pause: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			dispose: vi.fn(async () => {})
+			dispose: vi.fn(async () => {}),
 		};
 		const stream = vi.fn(async () => ({
 			body: new ReadableStream<Uint8Array>({
 				start(controller) {
 					streamController = controller;
 					controller.enqueue(new Uint8Array(2));
-				}
+				},
 			}),
 			sampleRate: 10,
 			channels: 1,
-			sampleFormat: 's16le' as const
+			sampleFormat: 's16le' as const,
 		}));
 		const segment: SpeechSegment = {
 			...createSegment(0),
 			text: 'một hai ba bốn',
-			length: 15
+			length: 15,
 		};
 		const player = new GaplessTtsPlayer({
 			engine,
 			synthesize: vi.fn(async () => new Blob()),
 			stream,
 			speechRate,
-			startLeadSeconds: 0
+			startLeadSeconds: 0,
 		});
 
 		player.start([segment], {
-			onWordBoundary: (_index, _segment, cue) => highlightedWords.push(cue.text)
+			onWordBoundary: (_index, _segment, cue) => highlightedWords.push(cue.text),
 		});
 		await vi.waitFor(() => expect(stream).toHaveBeenCalledTimes(1));
 
@@ -527,11 +527,11 @@ describe('GaplessTtsPlayer', () => {
 				pull() {
 					return new Promise<void>(() => {});
 				},
-				cancel: cancelStream
+				cancel: cancelStream,
 			}),
 			sampleRate: 24000,
 			channels: 1,
-			sampleFormat: 's16le' as const
+			sampleFormat: 's16le' as const,
 		}));
 		const engine: AudioPlaybackEngine = {
 			now: () => 0,
@@ -540,12 +540,12 @@ describe('GaplessTtsPlayer', () => {
 			beginPcmStream: vi.fn(),
 			pause: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			dispose: vi.fn(async () => {})
+			dispose: vi.fn(async () => {}),
 		};
 		const player = new GaplessTtsPlayer({
 			engine,
 			synthesize: vi.fn(async () => new Blob()),
-			stream
+			stream,
 		});
 
 		player.start([createSegment(0)]);
@@ -577,12 +577,12 @@ describe('GaplessTtsPlayer', () => {
 						duration += chunk.byteLength / 2 / sampleRate;
 					},
 					finish: vi.fn(),
-					stop: vi.fn()
+					stop: vi.fn(),
 				};
 			}),
 			pause: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			dispose: vi.fn(async () => {})
+			dispose: vi.fn(async () => {}),
 		};
 		const stream = vi.fn(async (segment: SpeechSegment) => {
 			const isFirstSegment = segment.text === 'Segment 0.';
@@ -597,18 +597,18 @@ describe('GaplessTtsPlayer', () => {
 						secondStreamPulls += 1;
 						controller.enqueue(new Uint8Array([0, 0]));
 						controller.close();
-					}
+					},
 				}),
 				sampleRate: 24000,
 				channels: 1,
-				sampleFormat: 's16le' as const
+				sampleFormat: 's16le' as const,
 			};
 		});
 		const player = new GaplessTtsPlayer({
 			engine,
 			synthesize: vi.fn(async () => new Blob()),
 			stream,
-			startLeadSeconds: 0
+			startLeadSeconds: 0,
 		});
 
 		player.start([createSegment(0), createSegment(1)]);
@@ -632,11 +632,11 @@ describe('GaplessTtsPlayer', () => {
 				ended: createPendingPromise(),
 				append: vi.fn(),
 				finish: vi.fn(),
-				stop: vi.fn()
+				stop: vi.fn(),
 			})),
 			pause: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			dispose: vi.fn(async () => {})
+			dispose: vi.fn(async () => {}),
 		};
 		const stream = vi.fn(async (segment: SpeechSegment) => ({
 			body: new ReadableStream<Uint8Array>({
@@ -644,17 +644,17 @@ describe('GaplessTtsPlayer', () => {
 					controller.enqueue(new Uint8Array([0, 0]));
 					if (segment.text === 'Segment 0.') firstController = controller;
 					else controller.close();
-				}
+				},
 			}),
 			sampleRate: 24000,
 			channels: 1,
-			sampleFormat: 's16le' as const
+			sampleFormat: 's16le' as const,
 		}));
 		const player = new GaplessTtsPlayer({
 			engine,
 			synthesize: vi.fn(async () => new Blob()),
 			stream,
-			prefetchAhead: 2
+			prefetchAhead: 2,
 		});
 
 		player.start([createSegment(0), createSegment(1), createSegment(2), createSegment(3)]);
@@ -673,12 +673,12 @@ describe('GaplessTtsPlayer', () => {
 			schedule: vi.fn((_audio, startAt): ScheduledAudio => ({
 				endAt: startAt + 1,
 				ended: createPendingPromise(),
-				stop: vi.fn()
+				stop: vi.fn(),
 			})),
 			beginPcmStream: vi.fn(),
 			pause: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			dispose: vi.fn(async () => {})
+			dispose: vi.fn(async () => {}),
 		};
 		const stream = vi.fn(async () => {
 			throw new Error('stream endpoint unavailable');
@@ -705,7 +705,7 @@ describe('GaplessTtsPlayer', () => {
 			schedule: vi.fn((_audio, startAt): ScheduledAudio => ({
 				endAt: startAt + 1,
 				ended: createPendingPromise(),
-				stop: vi.fn()
+				stop: vi.fn(),
 			})),
 			beginPcmStream: vi.fn((_sampleRate, _channels, startAt): PcmStreamPlayback => ({
 				startAt,
@@ -714,21 +714,21 @@ describe('GaplessTtsPlayer', () => {
 				ended: createPendingPromise(),
 				append: vi.fn(),
 				finish: vi.fn(),
-				stop: stopPcm
+				stop: stopPcm,
 			})),
 			pause: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			dispose: vi.fn(async () => {})
+			dispose: vi.fn(async () => {}),
 		};
 		const stream = vi.fn(async () => ({
 			body: new ReadableStream<Uint8Array>({
 				start(controller) {
 					controller.error(new Error('stream body failed'));
-				}
+				},
 			}),
 			sampleRate: 24000,
 			channels: 1,
-			sampleFormat: 's16le' as const
+			sampleFormat: 's16le' as const,
 		}));
 		const synthesize = vi.fn(async (_segment: SpeechSegment, signal: AbortSignal) => {
 			fallbackSignal = signal;
@@ -755,7 +755,7 @@ describe('WebAudioPlaybackEngine', () => {
 			onended: null as (() => void) | null,
 			connect: vi.fn(),
 			start: vi.fn(),
-			stop: vi.fn()
+			stop: vi.fn(),
 		};
 		const context = {
 			currentTime: 3,
@@ -764,7 +764,7 @@ describe('WebAudioPlaybackEngine', () => {
 			decodeAudioData: vi.fn(async () => nativeBuffer),
 			suspend: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			close: vi.fn(async () => {})
+			close: vi.fn(async () => {}),
 		} as unknown as AudioContext;
 		const engine = new WebAudioPlaybackEngine(context);
 
@@ -788,7 +788,7 @@ describe('WebAudioPlaybackEngine', () => {
 			onended: null as (() => void) | null,
 			connect: vi.fn(),
 			start: vi.fn(),
-			stop: vi.fn()
+			stop: vi.fn(),
 		};
 		const context = {
 			currentTime: 0,
@@ -797,7 +797,7 @@ describe('WebAudioPlaybackEngine', () => {
 			decodeAudioData: vi.fn(async () => nativeBuffer),
 			suspend: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			close: vi.fn(async () => {})
+			close: vi.fn(async () => {}),
 		} as unknown as AudioContext;
 		const engine = new WebAudioPlaybackEngine(context, 1.5);
 
@@ -822,7 +822,7 @@ describe('WebAudioPlaybackEngine', () => {
 			destination: {},
 			createBuffer: vi.fn((_channels: number, frameCount: number, sampleRate: number) => ({
 				duration: frameCount / sampleRate,
-				copyToChannel: vi.fn()
+				copyToChannel: vi.fn(),
 			})),
 			createBufferSource: vi.fn(() => {
 				const source = {
@@ -831,14 +831,14 @@ describe('WebAudioPlaybackEngine', () => {
 					onended: null as (() => void) | null,
 					connect: vi.fn(),
 					start: (at: number) => starts.push(at),
-					stop: vi.fn()
+					stop: vi.fn(),
 				};
 				sources.push(source);
 				return source;
 			}),
 			suspend: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			close: vi.fn(async () => {})
+			close: vi.fn(async () => {}),
 		} as unknown as AudioContext;
 		const engine = new WebAudioPlaybackEngine(context);
 		const playback = engine.beginPcmStream(24000, 1, 2);
@@ -861,7 +861,7 @@ describe('WebAudioPlaybackEngine', () => {
 			destination: {},
 			createBuffer: vi.fn((_channels: number, frameCount: number, sampleRate: number) => ({
 				duration: frameCount / sampleRate,
-				copyToChannel: vi.fn()
+				copyToChannel: vi.fn(),
 			})),
 			createBufferSource: vi.fn(() => ({
 				buffer: null as AudioBuffer | null,
@@ -869,11 +869,11 @@ describe('WebAudioPlaybackEngine', () => {
 				onended: null as (() => void) | null,
 				connect: vi.fn(),
 				start: (at: number) => starts.push(at),
-				stop: vi.fn()
+				stop: vi.fn(),
 			})),
 			suspend: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			close: vi.fn(async () => {})
+			close: vi.fn(async () => {}),
 		} as unknown as AudioContext;
 		const engine = new WebAudioPlaybackEngine(context);
 		const playback = engine.beginPcmStream(24000, 1, 0);
@@ -893,7 +893,7 @@ describe('WebAudioPlaybackEngine', () => {
 			destination: {},
 			createBuffer: vi.fn((_channels: number, frameCount: number, sampleRate: number) => ({
 				duration: frameCount / sampleRate,
-				copyToChannel: vi.fn()
+				copyToChannel: vi.fn(),
 			})),
 			createBufferSource: vi.fn(() => ({
 				buffer: null as AudioBuffer | null,
@@ -901,11 +901,11 @@ describe('WebAudioPlaybackEngine', () => {
 				onended: null as (() => void) | null,
 				connect: vi.fn(),
 				start: (at: number) => starts.push(at),
-				stop: vi.fn()
+				stop: vi.fn(),
 			})),
 			suspend: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			close: vi.fn(async () => {})
+			close: vi.fn(async () => {}),
 		} as unknown as AudioContext;
 		const playback = new WebAudioPlaybackEngine(context).beginPcmStream(10, 1, 0);
 
@@ -923,7 +923,7 @@ describe('WebAudioPlaybackEngine', () => {
 			destination: {},
 			createBuffer: vi.fn((_channels: number, frameCount: number, sampleRate: number) => ({
 				duration: frameCount / sampleRate,
-				copyToChannel: vi.fn()
+				copyToChannel: vi.fn(),
 			})),
 			createBufferSource: vi.fn(() => ({
 				buffer: null as AudioBuffer | null,
@@ -931,11 +931,11 @@ describe('WebAudioPlaybackEngine', () => {
 				onended: null as (() => void) | null,
 				connect: vi.fn(),
 				start: (at: number) => starts.push(at),
-				stop: vi.fn()
+				stop: vi.fn(),
 			})),
 			suspend: vi.fn(async () => {}),
 			resume: vi.fn(async () => {}),
-			close: vi.fn(async () => {})
+			close: vi.fn(async () => {}),
 		} as unknown as AudioContext;
 		const engine = new WebAudioPlaybackEngine(context);
 		const playback = engine.beginPcmStream(2, 1, 0);

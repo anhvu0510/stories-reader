@@ -8,11 +8,11 @@ export class AIRepository {
 		return apiClient.get<{ tokens: AIToken[] }>(`/api/ai-token${query}`);
 	}
 
-	static async createToken(tokenData: any): Promise<AIToken> {
+	static async createToken(tokenData: Partial<AIToken>): Promise<AIToken> {
 		return apiClient.post<AIToken>('/api/ai-token', tokenData);
 	}
 
-	static async updateToken(id: string, tokenData: any): Promise<AIToken> {
+	static async updateToken(id: string, tokenData: Partial<AIToken>): Promise<AIToken> {
 		return apiClient.put<AIToken>(`/api/ai-token/${id}`, tokenData);
 	}
 
@@ -24,11 +24,11 @@ export class AIRepository {
 		return apiClient.get<QuotaResponse>('/api/quota');
 	}
 
-	static async updateQuotaConfig(config: any): Promise<void> {
+	static async updateQuotaConfig(config: Record<string, unknown>): Promise<void> {
 		return apiClient.put('/api/quota/config', config);
 	}
 
-	static async createQuota(quotaData: any): Promise<AIQuota> {
+	static async createQuota(quotaData: Partial<AIQuota>): Promise<AIQuota> {
 		return apiClient.post<AIQuota>('/api/quota', quotaData);
 	}
 
@@ -36,19 +36,31 @@ export class AIRepository {
 		return apiClient.delete(`/api/quota/${id}`);
 	}
 
-	static async detectProperNouns(params: { bookId: string; model?: string; maxChars?: number }): Promise<any> {
+	static async detectProperNouns(params: { bookId: string; model?: string; maxChars?: number }): Promise<unknown> {
 		return apiClient.post('/stories/detect-proper-nouns', params);
 	}
 
-	static async translateChineseTitles(params: { bookId?: string; batchSize?: number; limitChapter?: number; model?: string; platform?: string }): Promise<any> {
+	static async translateChineseTitles(params: {
+		bookId?: string;
+		batchSize?: number;
+		limitChapter?: number;
+		model?: string;
+		platform?: string;
+	}): Promise<unknown> {
 		return apiClient.post('/stories/translate-chinese-titles', params);
 	}
 
-	static async detectPronounMatrix(params: { bookId: string; model?: string; batchChars?: number; maxChapters?: number; platform?: string }): Promise<any> {
+	static async detectPronounMatrix(params: {
+		bookId: string;
+		model?: string;
+		batchChars?: number;
+		maxChapters?: number;
+		platform?: string;
+	}): Promise<unknown> {
 		return apiClient.post('/stories/detect-pronoun-matrix', params);
 	}
 
-	static async detectTagsAndPov(params: { bookId: string; model?: string; maxChars?: number; platform?: string }): Promise<any> {
+	static async detectTagsAndPov(params: { bookId: string; model?: string; maxChars?: number; platform?: string }): Promise<unknown> {
 		return apiClient.post('/stories/detect-tags-and-pov', params);
 	}
 }

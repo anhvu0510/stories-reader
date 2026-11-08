@@ -26,25 +26,73 @@ interface ReaderGesturesPlugin {
 	configureControl(options: NativeControlGeometry): Promise<void>;
 	configureRefresh(options: { enabled: boolean; owner: string; threshold: number }): Promise<void>;
 	finishRefresh(options: { owner: string; requestId: string }): Promise<void>;
-	configureSwipe(options: { enabled: boolean; owner: string; threshold: number; minVelocity: number; maxDuration?: number; edgeIgnoreWidth: number }): Promise<void>;
+	configureSwipe(options: {
+		enabled: boolean;
+		owner: string;
+		threshold: number;
+		minVelocity: number;
+		maxDuration?: number;
+		edgeIgnoreWidth: number;
+	}): Promise<void>;
 	configureSheet(options: { enabled: boolean; owner: string }): Promise<void>;
 }
 
 const plugin = registerPlugin<ReaderGesturesPlugin>('ReaderGestures');
 export const hasNativeReaderGestures = () => Capacitor.getPlatform() === 'android' && Capacitor.isPluginAvailable('ReaderGestures');
 
+function parseControlOrSwipeMove(detail: Record<string, unknown>): NativeReaderGesture | null {
+	if (detail.kind !== 'control-move' && detail.kind !== 'swipe-move') return null;
+	if (typeof detail.offset !== 'number' || !Number.isFinite(detail.offset)) return null;
+	return { kind: detail.kind, offset: detail.offset };
+}
+
+function parseSheetGesture(detail: Record<string, unknown>): NativeReaderGesture | null {
+	if (detail.kind !== 'sheet-move' && detail.kind !== 'sheet-end') return null;
+	if (typeof detail.owner !== 'string') return null;
+	if (detail.kind === 'sheet-move' && typeof detail.offset === 'number' && Number.isFinite(detail.offset)) {
+		return { kind: 'sheet-move', owner: detail.owner, offset: detail.offset };
+	}
+	if (detail.kind === 'sheet-end' && typeof detail.dismiss === 'boolean') {
+		return { kind: 'sheet-end', owner: detail.owner, dismiss: detail.dismiss };
+	}
+	return null;
+}
+
+function parseSwipeEnd(detail: Record<string, unknown>): NativeReaderGesture | null {
+	if (detail.kind !== 'swipe-end') return null;
+	if (detail.settled === 'left' || detail.settled === 'right' || detail.settled === 'cancel') {
+		return { kind: 'swipe-end', settled: detail.settled };
+	}
+	return null;
+}
+
+function parseSimpleGesture(obj: Record<string, unknown>): NativeReaderGesture | null {
+	if (obj.kind === 'interaction-start' || obj.kind === 'interaction-end') {
+		return { kind: obj.kind };
+	}
+	if (obj.kind === 'refresh' && typeof obj.requestId === 'string') {
+		return { kind: 'refresh', requestId: obj.requestId };
+	}
+	return null;
+}
+
+function parseNativeGesture(detail: unknown): NativeReaderGesture | null {
+	if (!detail || typeof detail !== 'object' || !('kind' in detail)) return null;
+	const obj = detail as Record<string, unknown>;
+	const simple = parseSimpleGesture(obj);
+	if (simple) return simple;
+	const move = parseControlOrSwipeMove(obj);
+	if (move) return move;
+	const swipeEnd = parseSwipeEnd(obj);
+	if (swipeEnd) return swipeEnd;
+	return parseSheetGesture(obj);
+}
+
 export function onNativeReaderGesture(listener: (gesture: NativeReaderGesture) => void): () => void {
 	if (!hasNativeReaderGestures()) return () => {};
 	const receive = (event: Event) => {
-		const detail: unknown = (event as CustomEvent<unknown>).detail;
-		if (!detail || typeof detail !== 'object' || !('kind' in detail)) return;
-		if (detail.kind === 'interaction-start' || detail.kind === 'interaction-end') listener({ kind: detail.kind });
-		if (detail.kind === 'control-move' && 'offset' in detail && typeof detail.offset === 'number' && Number.isFinite(detail.offset)) listener({ kind: detail.kind, offset: detail.offset });
-		if (detail.kind === 'refresh' && 'requestId' in detail && typeof detail.requestId === 'string') listener({ kind: detail.kind, requestId: detail.requestId });
-		if (detail.kind === 'swipe-move' && 'offset' in detail && typeof detail.offset === 'number' && Number.isFinite(detail.offset)) listener({ kind: detail.kind, offset: detail.offset });
-		if (detail.kind === 'swipe-end' && 'settled' in detail && (detail.settled === 'left' || detail.settled === 'right' || detail.settled === 'cancel')) listener({ kind: detail.kind, settled: detail.settled });
-		if (detail.kind === 'sheet-move' && 'owner' in detail && typeof detail.owner === 'string' && 'offset' in detail && typeof detail.offset === 'number' && Number.isFinite(detail.offset)) listener({ kind: detail.kind, owner: detail.owner, offset: detail.offset });
-		if (detail.kind === 'sheet-end' && 'owner' in detail && typeof detail.owner === 'string' && 'dismiss' in detail && typeof detail.dismiss === 'boolean') listener({ kind: detail.kind, owner: detail.owner, dismiss: detail.dismiss });
+		const gesture = parseNativeGesture((event as CustomEvent<unknown>).detail);
+		if (gesture) listener(gesture);
 	};
 	window.addEventListener(NATIVE_GESTURE_EVENT, receive);
 	return () => window.removeEventListener(NATIVE_GESTURE_EVENT, receive);

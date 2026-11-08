@@ -18,7 +18,7 @@ export function useReadingWakeLock() {
 			}
 			lock.current = acquired;
 		} catch (error) {
-			console.debug('[ReadAloud] Screen wake lock unavailable:', error);
+			console.warn('[ReadAloud] Screen wake lock unavailable:', error);
 		} finally {
 			if (pending.current === requestId) pending.current = null;
 		}
@@ -28,7 +28,7 @@ export function useReadingWakeLock() {
 		pending.current = null;
 		const active = lock.current;
 		lock.current = null;
-		if (active) void active.release().catch((error: unknown) => console.debug('[ReadAloud] Wake lock release failed:', error));
+		if (active) void active.release().catch((error: unknown) => console.warn('[ReadAloud] Wake lock release failed:', error));
 	}, []);
 	useEffect(() => releaseWakeLock, [releaseWakeLock]);
 	return { requestWakeLock, releaseWakeLock };

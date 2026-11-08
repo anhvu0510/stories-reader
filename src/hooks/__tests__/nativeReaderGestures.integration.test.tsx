@@ -1,27 +1,29 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Capacitor } from '@capacitor/core';
 import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { useEffect } from 'react';
-import { Capacitor } from '@capacitor/core';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { BottomSheet } from '@/components/BottomSheet';
+import { ReadAloudControlFrame } from '@/features/reader/components/ReadAloudControlFrame';
+import { VerticalBatchChapterNav } from '@/features/reader/components/VerticalBatchChapterNav';
+import { NATIVE_GESTURE_EVENT, type NativeReaderGesture } from '@/services/nativeReaderGestures';
+import { bindNativeReadingInteraction } from '@/services/nativeReadingInteraction';
+import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
+
 import { usePullToRefresh } from '../usePullToRefresh';
 import { useSwipeGesture } from '../useSwipeGesture';
-import { ReadAloudControlFrame } from '@/features/reader/components/ReadAloudControlFrame';
-import { BottomSheet } from '@/components/BottomSheet';
-import { VerticalBatchChapterNav } from '@/features/reader/components/VerticalBatchChapterNav';
-import { ReadAloudScrollFollower } from '@/services/readAloudScrollFollower';
-import { bindNativeReadingInteraction } from '@/services/nativeReadingInteraction';
-import { NATIVE_GESTURE_EVENT, type NativeReaderGesture } from '@/services/nativeReaderGestures';
 
 const native = vi.hoisted(() => ({
 	configureControl: vi.fn().mockResolvedValue(undefined),
 	configureRefresh: vi.fn().mockResolvedValue(undefined),
 	finishRefresh: vi.fn().mockResolvedValue(undefined),
 	configureSwipe: vi.fn().mockResolvedValue(undefined),
-	configureSheet: vi.fn().mockResolvedValue(undefined)
+	configureSheet: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('@capacitor/core', () => ({
 	Capacitor: { getPlatform: vi.fn(() => 'android'), isPluginAvailable: vi.fn(() => true) },
-	registerPlugin: () => native
+	registerPlugin: () => native,
 }));
 vi.mock('@/hooks/useHaptic', () => ({ triggerHaptic: vi.fn() }));
 
@@ -44,7 +46,9 @@ describe('Android gestures through real React consumers', () => {
 
 	it('ignores DOM touch recognition on Android and refreshes once through native release', async () => {
 		let complete = () => {};
-		const pending = new Promise<void>((resolve) => { complete = resolve; });
+		const pending = new Promise<void>((resolve) => {
+			complete = resolve;
+		});
 		const onRefresh = vi.fn(() => pending);
 		const { result } = renderHook(() => usePullToRefresh({ onRefresh }));
 		const owner: string = native.configureRefresh.mock.calls[0][0].owner;
@@ -56,7 +60,10 @@ describe('Android gestures through real React consumers', () => {
 		emit({ kind: 'refresh', requestId: `${owner}:2` });
 		expect(onRefresh).toHaveBeenCalledTimes(1);
 		expect(result.current.isRefreshing).toBe(true);
-		await act(async () => { complete(); await pending; });
+		await act(async () => {
+			complete();
+			await pending;
+		});
 		expect(result.current.isRefreshing).toBe(false);
 		expect(native.finishRefresh).toHaveBeenCalledWith({ owner, requestId: `${owner}:1` });
 	});
@@ -84,7 +91,8 @@ describe('Android gestures through real React consumers', () => {
 		window.getSelection()?.addRange(range);
 		expect(check()).toBe(false);
 		window.getSelection()?.removeAllRanges();
-		button.remove(); scroller.remove();
+		button.remove();
+		scroller.remove();
 		unmount();
 		expect(window.__storiesNativeGestureHitTest).toBeUndefined();
 	});
@@ -94,12 +102,21 @@ describe('Android gestures through real React consumers', () => {
 		const scrollTo = vi.fn();
 		const stop = vi.fn();
 		const follower = new ReadAloudScrollFollower({
-			getScrollY: () => 0, getViewportHeight: () => 800, scrollTo,
-			requestFrame: vi.fn(), cancelFrame: vi.fn(), prefersReducedMotion: () => true, autoReclaim: false
+			getScrollY: () => 0,
+			getViewportHeight: () => 800,
+			scrollTo,
+			requestFrame: vi.fn(),
+			cancelFrame: vi.fn(),
+			prefersReducedMotion: () => true,
+			autoReclaim: false,
 		});
 		function Reader() {
 			useEffect(() => bindNativeReadingInteraction(follower), []);
-			return <ReadAloudControlFrame active isVisible><button onClick={stop}>Dừng</button></ReadAloudControlFrame>;
+			return (
+				<ReadAloudControlFrame active isVisible>
+					<button onClick={stop}>Dừng</button>
+				</ReadAloudControlFrame>
+			);
 		}
 		render(<Reader />);
 		const frame = screen.getByRole('group', { name: 'Điều khiển đọc thành tiếng' });
@@ -119,7 +136,10 @@ describe('Android gestures through real React consumers', () => {
 	});
 
 	it('routes native chapter drag and cancel without also running DOM swipe callbacks', () => {
-		const left = vi.fn(); const right = vi.fn(); const move = vi.fn(); const end = vi.fn();
+		const left = vi.fn();
+		const right = vi.fn();
+		const move = vi.fn();
+		const end = vi.fn();
 		const { unmount } = renderHook(() => useSwipeGesture({ onSwipeLeft: left, onSwipeRight: right, onDragMove: move, onDragEnd: end }));
 		fireEvent.touchStart(window, { touches: [{ clientX: 250, clientY: 100 }] });
 		fireEvent.touchMove(window, { touches: [{ clientX: 80, clientY: 100 }] });
@@ -142,7 +162,11 @@ describe('Android gestures through real React consumers', () => {
 	it('native sheet drag cancels without closing; confirmed release closes once', () => {
 		vi.useFakeTimers();
 		const close = vi.fn();
-		render(<BottomSheet isOpen onClose={close}><p>Sheet content</p></BottomSheet>);
+		render(
+			<BottomSheet isOpen onClose={close}>
+				<p>Sheet content</p>
+			</BottomSheet>
+		);
 		const owner: string = native.configureSheet.mock.calls[0][0].owner;
 		const card = screen.getByTestId('bottom-sheet-container');
 		emit({ kind: 'sheet-move', offset: 120, owner });
@@ -159,21 +183,34 @@ describe('Android gestures through real React consumers', () => {
 	it('does not lose native sheet dismissal when the reader rerenders with an inline close callback', () => {
 		vi.useFakeTimers();
 		const close = vi.fn();
-		const { rerender } = render(<BottomSheet isOpen onClose={() => close('before')}>Content</BottomSheet>);
+		const { rerender } = render(
+			<BottomSheet isOpen onClose={() => close('before')}>
+				Content
+			</BottomSheet>
+		);
 		const owner: string = native.configureSheet.mock.calls[0][0].owner;
 		emit({ kind: 'sheet-move', offset: 120, owner });
 		emit({ kind: 'sheet-end', dismiss: true, owner });
-		rerender(<BottomSheet isOpen onClose={() => close('after')}>Updated reader</BottomSheet>);
+		rerender(
+			<BottomSheet isOpen onClose={() => close('after')}>
+				Updated reader
+			</BottomSheet>
+		);
 		act(() => vi.advanceTimersByTime(200));
 		expect(close).toHaveBeenCalledExactlyOnceWith('after');
 	});
 
 	it('leaves browser behavior native-free, even when the plugin is advertised', () => {
 		vi.mocked(Capacitor.getPlatform).mockReturnValue('web');
-		const refresh = vi.fn(); const left = vi.fn();
+		const refresh = vi.fn();
+		const left = vi.fn();
 		renderHook(() => usePullToRefresh({ onRefresh: refresh }));
 		renderHook(() => useSwipeGesture({ onSwipeLeft: left, threshold: 100 }));
-		render(<ReadAloudControlFrame active isVisible>Controls</ReadAloudControlFrame>);
+		render(
+			<ReadAloudControlFrame active isVisible>
+				Controls
+			</ReadAloudControlFrame>
+		);
 		expect(native.configureControl).not.toHaveBeenCalled();
 		expect(native.configureRefresh).not.toHaveBeenCalled();
 		expect(native.configureSwipe).not.toHaveBeenCalled();
@@ -187,7 +224,8 @@ describe('Android gestures through real React consumers', () => {
 	});
 
 	it('offers explicit locate on Android without replaying audio', () => {
-		const locate = vi.fn(); const play = vi.fn();
+		const locate = vi.fn();
+		const play = vi.fn();
 		render(<VerticalBatchChapterNav isTTSActive isTTSPlaying onLocateReadingLine={locate} onTTSPlay={play} />);
 		fireEvent.click(screen.getByRole('button', { name: 'Nhảy tới dòng đang đọc' }));
 		expect(locate).toHaveBeenCalledOnce();
@@ -196,14 +234,19 @@ describe('Android gestures through real React consumers', () => {
 
 	it('releases a native refresh after unmount without refreshing the next screen', async () => {
 		let complete = () => {};
-		const pending = new Promise<void>((resolve) => { complete = resolve; });
+		const pending = new Promise<void>((resolve) => {
+			complete = resolve;
+		});
 		const onRefresh = vi.fn(() => pending);
 		const { unmount } = renderHook(() => usePullToRefresh({ onRefresh }));
 		const owner: string = native.configureRefresh.mock.calls[0][0].owner;
 		emit({ kind: 'refresh', requestId: `${owner}:1` });
 		unmount();
 		emit({ kind: 'refresh', requestId: `${owner}:2` });
-		await act(async () => { complete(); await pending; });
+		await act(async () => {
+			complete();
+			await pending;
+		});
 		expect(onRefresh).toHaveBeenCalledOnce();
 		expect(native.finishRefresh).toHaveBeenCalledWith({ owner, requestId: `${owner}:1` });
 	});

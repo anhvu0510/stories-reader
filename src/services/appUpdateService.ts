@@ -1,8 +1,10 @@
 import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
+
 import { useAppStore } from '@/stores/useAppStore';
-import { getEncryptedDefaultGatewayUrl } from './secretServerService';
+
 import { isNativeDebugBuild } from './debugRuntime';
+import { getEncryptedDefaultGatewayUrl } from './secretServerService';
 
 export interface UpdateManifest {
 	version: string;
@@ -20,8 +22,7 @@ export interface AppInfo {
 }
 
 declare const __APP_VERSION__: string | undefined;
-export const CURRENT_APP_VERSION =
-	typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__ ? __APP_VERSION__ : '1.0.4';
+export const CURRENT_APP_VERSION = typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__ ? __APP_VERSION__ : '1.0.4';
 export const DEFAULT_UPDATE_ENDPOINT = 'https://anhvu0510.github.io/stories-reader/ota/version.json';
 export const FALLBACK_UPDATE_ENDPOINT = '';
 
@@ -56,7 +57,7 @@ export class AppUpdateService {
 		try {
 			await CapacitorUpdater.notifyAppReady();
 		} catch (err) {
-			console.debug('[AppUpdateService] notifyAppReady ignored:', err);
+			console.warn('[AppUpdateService] notifyAppReady ignored:', err);
 		}
 	}
 
@@ -68,7 +69,7 @@ export class AppUpdateService {
 			return {
 				version: CURRENT_APP_VERSION,
 				isBuiltin: true,
-				native: CURRENT_APP_VERSION
+				native: CURRENT_APP_VERSION,
 			};
 		}
 
@@ -83,88 +84,74 @@ export class AppUpdateService {
 				version,
 				isBuiltin,
 				native: nativeVer,
-				bundleId: res.bundle?.id
+				bundleId: res.bundle?.id,
 			};
 		} catch (err) {
-			console.debug('[AppUpdateService] getCurrentAppInfo ignored:', err);
+			console.warn('[AppUpdateService] getCurrentAppInfo ignored:', err);
 			return {
 				version: CURRENT_APP_VERSION,
 				isBuiltin: true,
-				native: CURRENT_APP_VERSION
+				native: CURRENT_APP_VERSION,
 			};
 		}
+	}
+
+	private static async resolveCheckVersion(currentVer?: string): Promise<string> {
+		if (currentVer) return currentVer;
+		const appInfo = await this.getCurrentAppInfo();
+		return appInfo.version;
+	}
+
+	private static parseManifest(data: UpdateManifest | null | undefined, checkVer: string): UpdateManifest | null {
+		if (!data?.version || !data?.bundleUrl) return null;
+		if (isNewerVersion(data.version, checkVer)) return data;
+		return null;
 	}
 
 	/**
 	 * Check if a new OTA update bundle is available on the server.
 	 */
-	static async checkForUpdate(
-		endpoint = DEFAULT_UPDATE_ENDPOINT,
-		currentVer?: string
-	): Promise<UpdateManifest | null> {
-		if (isNativeDebugBuild()) return null;
-		if (Capacitor.getPlatform() !== 'android') {
-			return null;
-		}
+	static async checkForUpdate(endpoint = DEFAULT_UPDATE_ENDPOINT, currentVer?: string): Promise<UpdateManifest | null> {
+		if (isNativeDebugBuild() || Capacitor.getPlatform() !== 'android') return null;
 
 		try {
-			let checkVer = currentVer;
-			if (!checkVer) {
-				const info = await this.getCurrentAppInfo();
-				checkVer = info.version;
-			}
-
-			let res: Response | null = null;
-			try {
-				res = await fetch(endpoint, {
-					headers: { Accept: 'application/json' },
-					cache: 'no-store'
-				});
-			} catch {
-				// Primary failed, will attempt fallback below
-			}
-
-			if (!res || !res.ok) {
-				const activeDomainUrl = useAppStore.getState().activeDomain?.url || getEncryptedDefaultGatewayUrl();
-				const fallback = activeDomainUrl ? `${activeDomainUrl.replace(/\/+$/, '')}/api/app-update/version` : '';
-				if (!fallback) return null;
-				try {
-					res = await fetch(fallback, {
-						headers: { Accept: 'application/json' },
-						cache: 'no-store'
-					});
-				} catch {
-					return null;
-				}
-			}
-
-			if (!res || !res.ok) {
-				return null;
-			}
+			const checkVer = await this.resolveCheckVersion(currentVer);
+			const res = await this.fetchManifestResponse(endpoint);
+			if (!res?.ok) return null;
 
 			const data = (await res.json()) as UpdateManifest;
-			if (!data?.version || !data?.bundleUrl) {
-				return null;
-			}
-
-			if (isNewerVersion(data.version, checkVer)) {
-				return data;
-			}
-
-			return null;
+			return this.parseManifest(data, checkVer);
 		} catch (err) {
-			console.debug('[AppUpdateService] Checking update failed or offline:', err);
+			console.warn('[AppUpdateService] Checking update failed or offline:', err);
 			return null;
 		}
+	}
+
+	private static async fetchJsonNoStore(url: string): Promise<Response | null> {
+		try {
+			return await fetch(url, {
+				headers: { Accept: 'application/json' },
+				cache: 'no-store',
+			});
+		} catch {
+			return null;
+		}
+	}
+
+	private static async fetchManifestResponse(endpoint: string): Promise<Response | null> {
+		// Primary failed, will attempt fallback below
+		const primary = await this.fetchJsonNoStore(endpoint);
+		if (primary?.ok) return primary;
+
+		const activeDomainUrl = useAppStore.getState().activeDomain?.url || getEncryptedDefaultGatewayUrl();
+		if (!activeDomainUrl) return null;
+		return await this.fetchJsonNoStore(`${activeDomainUrl.replace(/\/+$/, '')}/api/app-update/version`);
 	}
 
 	/**
 	 * Download the OTA update bundle and apply it to reload the app.
 	 */
-	static async downloadAndApplyUpdate(
-		manifest: UpdateManifest,
-		onProgress?: (percent: number) => void
-	): Promise<boolean> {
+	static async downloadAndApplyUpdate(manifest: UpdateManifest, onProgress?: (percent: number) => void): Promise<boolean> {
 		if (isNativeDebugBuild()) return false;
 		try {
 			let listenerHandle: { remove: () => void } | null = null;
@@ -177,7 +164,7 @@ export class AppUpdateService {
 			const bundle = await CapacitorUpdater.download({
 				url: manifest.bundleUrl,
 				version: manifest.version,
-				checksum: manifest.checksum
+				checksum: manifest.checksum,
 			});
 
 			if (listenerHandle) {

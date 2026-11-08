@@ -31,13 +31,13 @@ export const useToastStore = create<ToastStore>((set, get) => ({
 
 		set({
 			activeToast: newToast,
-			toasts: [newToast]
+			toasts: [newToast],
 		});
 
 		activeTimeout = setTimeout(() => {
 			set({
 				activeToast: null,
-				toasts: []
+				toasts: [],
 			});
 			activeTimeout = null;
 		}, 2800);
@@ -51,10 +51,10 @@ export const useToastStore = create<ToastStore>((set, get) => ({
 		if (!id || (current && current.id === id)) {
 			set({
 				activeToast: null,
-				toasts: []
+				toasts: [],
 			});
 		}
-	}
+	},
 }));
 
 // Helper compatibility wrapper for non-React context callers

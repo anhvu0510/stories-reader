@@ -1,7 +1,9 @@
 import { useRef, type RefObject } from 'react';
+
 import { EdgeTTSService, type EdgeSpeechWithBoundaries } from '@/services/edgeTtsService';
-import type { SentenceChunk } from '@/services/gaplessTtsPlayer';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
+
+import type { SentenceChunk } from '@/services/gaplessTtsPlayer';
 
 interface BrowserEdgeOptions {
 	chunks: SentenceChunk[];
@@ -35,7 +37,7 @@ export function useBrowserEdgePlayback(options: BrowserEdgeOptions) {
 		clearResumePosition,
 		stopReading,
 		updateWordHighlight,
-		playChunkViaBrowser
+		playChunkViaBrowser,
 	} = options;
 	const edgeAudioRef = useRef<HTMLAudioElement | null>(null);
 	const edgeAudioUrlRef = useRef<string | null>(null);
@@ -81,16 +83,20 @@ export function useBrowserEdgePlayback(options: BrowserEdgeOptions) {
 		if (existing) return existing;
 
 		const chunk = chunks[index];
-		if (!chunk || !chunk.text.trim()) {
+		if (isChunkEmpty(chunk)) {
 			return Promise.reject(new Error('Empty chunk text'));
 		}
 
-		if (!edgeRequestAbortRef.current || edgeRequestAbortRef.current.signal.aborted) {
-			edgeRequestAbortRef.current = new AbortController();
-		}
+		edgeRequestAbortRef.current = getOrCreateAbortController(edgeRequestAbortRef.current);
 
-		const currentSpeechRate = useReaderConfigStore.getState().speechRate ?? speechRateRef.current ?? 1.8;
-		const promise = EdgeTTSService.synthesizeSpeechWithBoundaries(chunk.text, edgeVoiceUri, currentSpeechRate, activeDomain?.url, edgeRequestAbortRef.current.signal).catch((err) => {
+		const currentSpeechRate = getSpeechRate(speechRateRef.current ?? 1.8);
+		const promise = EdgeTTSService.synthesizeSpeechWithBoundaries(
+			chunk.text,
+			edgeVoiceUri,
+			currentSpeechRate,
+			activeDomain?.url,
+			edgeRequestAbortRef.current.signal
+		).catch((err) => {
 			edgePrefetchCacheRef.current.delete(index);
 			throw err;
 		});
@@ -122,7 +128,8 @@ export function useBrowserEdgePlayback(options: BrowserEdgeOptions) {
 	const queuePrefetchWindow = (fromIndex: number, count: number = PREFETCH_WINDOW_SIZE) => {
 		for (let i = 1; i <= count; i++) {
 			const targetIdx = fromIndex + i;
-			if (targetIdx < chunks.length && !edgePrefetchCacheRef.current.has(targetIdx) && !edgePrefetchQueueRef.current.includes(targetIdx)) edgePrefetchQueueRef.current.push(targetIdx);
+			if (targetIdx < chunks.length && !edgePrefetchCacheRef.current.has(targetIdx) && !edgePrefetchQueueRef.current.includes(targetIdx))
+				edgePrefetchQueueRef.current.push(targetIdx);
 		}
 		processPrefetchQueue();
 	};
@@ -139,16 +146,13 @@ export function useBrowserEdgePlayback(options: BrowserEdgeOptions) {
 		setCurrentChunkIndex(index);
 
 		const chunk = chunks[index];
-		if (!chunk || !chunk.text.trim()) {
+		if (isChunkEmpty(chunk)) {
 			playChunkViaEdge(index + 1, sessionId, 0);
 			return;
 		}
 
 		releaseEdgeAudio();
-
-		if (!edgeRequestAbortRef.current || edgeRequestAbortRef.current.signal.aborted) {
-			edgeRequestAbortRef.current = new AbortController();
-		}
+		edgeRequestAbortRef.current = getOrCreateAbortController(edgeRequestAbortRef.current);
 
 		// Ensure current chunk is in cache (or in flight)
 		let fetchPromise = edgePrefetchCacheRef.current.get(index);
@@ -161,9 +165,7 @@ export function useBrowserEdgePlayback(options: BrowserEdgeOptions) {
 		}
 
 		// Clean old entries (keep chunk index - 1 and forward)
-		for (const k of edgePrefetchCacheRef.current.keys()) {
-			if (k < index - 1) edgePrefetchCacheRef.current.delete(k);
-		}
+		prunePrefetchCache(edgePrefetchCacheRef.current, index - 1);
 
 		// Trigger sliding window prefetch for upcoming 5 chunks
 		queuePrefetchWindow(index, PREFETCH_WINDOW_SIZE);
@@ -188,7 +190,9 @@ export function useBrowserEdgePlayback(options: BrowserEdgeOptions) {
 					try {
 						audio.currentTime = initialSeekTime;
 						initialSeekApplied = true;
-					} catch {}
+					} catch {
+						// intentionally empty — currentTime assignment may fail on some browsers
+					}
 				};
 
 				audio.addEventListener?.('loadedmetadata', applyInitialSeek, { once: true });
@@ -233,7 +237,8 @@ export function useBrowserEdgePlayback(options: BrowserEdgeOptions) {
 						setIsPlaying(true);
 					}
 					// Immediate highlight of starting word if seeking into middle of chunk
-					const startingBoundary = (initialBoundaryIndex < wordBoundaries.length && wordBoundaries[initialBoundaryIndex]) || wordBoundaries[0];
+					const startingBoundary =
+						(initialBoundaryIndex < wordBoundaries.length && wordBoundaries[initialBoundaryIndex]) || wordBoundaries[0];
 					if (initialSeekTime > 0 && startingBoundary) updateWordHighlight(index, startingBoundary.charIndex, startingBoundary.charLength);
 					startBoundaryTracking();
 				};
@@ -296,7 +301,7 @@ export function useBrowserEdgePlayback(options: BrowserEdgeOptions) {
 		resume: () => edgeAudioRef.current?.play() ?? Promise.resolve(),
 		recoverIfPaused: () => {
 			if (edgeAudioRef.current?.paused) void edgeAudioRef.current.play().catch(() => {});
-		}
+		},
 	};
 }
 
@@ -305,4 +310,25 @@ function initialBoundary(words: EdgeSpeechWithBoundaries['wordBoundaries'], offs
 	const index = words.findIndex((word) => word.charIndex >= offset || word.charIndex + word.charLength > offset);
 	if (index < 0) return { time: 0, index: 0 };
 	return { time: words[index].startSeconds, index };
+}
+
+function getOrCreateAbortController(current: AbortController | null): AbortController {
+	if (!current || current.signal.aborted) {
+		return new AbortController();
+	}
+	return current;
+}
+
+function prunePrefetchCache(cache: Map<number, unknown>, minIndex: number): void {
+	for (const k of cache.keys()) {
+		if (k < minIndex) cache.delete(k);
+	}
+}
+
+function isChunkEmpty(chunk: SentenceChunk | undefined): boolean {
+	return !chunk || !chunk.text.trim();
+}
+
+function getSpeechRate(fallback: number): number {
+	return useReaderConfigStore.getState().speechRate ?? fallback;
 }

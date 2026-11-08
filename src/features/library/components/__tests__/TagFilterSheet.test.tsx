@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import React from 'react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 
 import { TagFilterSheet } from '@/features/library/components/TagFilterSheet';
 import { TagRepository } from '@/repositories/TagRepository';
@@ -9,23 +9,23 @@ import { TagRepository } from '@/repositories/TagRepository';
 const MOCK_CATEGORIES = [
 	{
 		name: 'Thể loại R18 & Quan hệ',
-		tags: ['Sắc Hiệp', 'Thuần Dục', 'Mẹ Kế']
+		tags: ['Sắc Hiệp', 'Thuần Dục', 'Mẹ Kế'],
 	},
 	{
 		name: 'Bối cảnh & Thể loại chính',
-		tags: ['Tiên Hiệp', 'Đô Thị']
+		tags: ['Tiên Hiệp', 'Đô Thị'],
 	},
 	{
 		name: 'Phong cách & Cốt truyện',
-		tags: ['Hệ Thống', 'Xuyên Không']
-	}
+		tags: ['Hệ Thống', 'Xuyên Không'],
+	},
 ];
 
 describe('TagFilterSheet Component', () => {
 	beforeEach(() => {
 		vi.spyOn(TagRepository, 'getTags').mockResolvedValue({
 			categories: MOCK_CATEGORIES,
-			tags: MOCK_CATEGORIES.flatMap((c) => c.tags)
+			tags: MOCK_CATEGORIES.flatMap((c) => c.tags),
 		});
 	});
 
@@ -54,10 +54,10 @@ describe('TagFilterSheet Component', () => {
 			categories: [
 				{
 					name: 'Danh mục Backend Mới',
-					tags: ['Tag Tùy Biến 1', 'Tag Tùy Biến 2']
-				}
+					tags: ['Tag Tùy Biến 1', 'Tag Tùy Biến 2'],
+				},
 			],
-			tags: ['Tag Tùy Biến 1', 'Tag Tùy Biến 2']
+			tags: ['Tag Tùy Biến 1', 'Tag Tùy Biến 2'],
 		});
 
 		render(<TagFilterSheet isOpen={true} selectedTags={[]} onApply={vi.fn()} onClose={vi.fn()} />);

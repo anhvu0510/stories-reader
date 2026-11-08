@@ -53,11 +53,41 @@ export interface VieNeuRequestContext {
 
 export const DEFAULT_VIENEU_SERVER_URL = '';
 
+function validatePcmMetadata(headers: Headers): { sampleRate: number; channels: number; sampleFormat: 's16le' } {
+	const sampleRate = Number(headers.get('X-Audio-Sample-Rate'));
+	const channels = Number(headers.get('X-Audio-Channels'));
+	const sampleFormat = headers.get('X-Audio-Sample-Format');
+	const isValid = Number.isFinite(sampleRate) && sampleRate > 0 && channels === 1 && sampleFormat === 's16le';
+	if (!isValid) {
+		throw new Error('TTS streaming returned unsupported PCM metadata');
+	}
+	return { sampleRate, channels, sampleFormat: 's16le' };
+}
+
+function buildStreamBody(
+	text: string,
+	voice?: string,
+	speed?: number,
+	model?: string,
+	options?: VieNeuSynthesisOptions,
+	context?: VieNeuRequestContext
+): string {
+	return JSON.stringify({
+		model,
+		input: text.trim(),
+		...(voice ? { voice } : {}),
+		response_format: 'pcm',
+		speed,
+		...options,
+		...context,
+	});
+}
+
 export class TTSService {
 	public static async fetchModels(baseUrl: string = DEFAULT_VIENEU_SERVER_URL): Promise<VieNeuModel[]> {
 		const cleanUrl = baseUrl.replace(/\/+$/, '');
 		const response = await fetch(`${cleanUrl}/v1/models`, {
-			headers: { Accept: 'application/json' }
+			headers: { Accept: 'application/json' },
 		});
 		if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 		const data = await response.json();
@@ -71,7 +101,7 @@ export class TTSService {
 			const query = model ? `?model=${encodeURIComponent(model)}` : '';
 			const response = await fetch(`${cleanUrl}/v1/voices${query}`, {
 				method: 'GET',
-				headers: { Accept: 'application/json' }
+				headers: { Accept: 'application/json' },
 			});
 			if (!response.ok) {
 				throw new Error(`HTTP error ${response.status}`);
@@ -106,7 +136,7 @@ export class TTSService {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				Accept: 'audio/wav, audio/mpeg, audio/pcm'
+				Accept: 'audio/wav, audio/mpeg, audio/pcm',
 			},
 			signal,
 			body: JSON.stringify({
@@ -116,8 +146,8 @@ export class TTSService {
 				response_format: 'wav',
 				speed: speed,
 				...options,
-				...context
-			})
+				...context,
+			}),
 		});
 
 		if (!response.ok) {
@@ -138,7 +168,7 @@ export class TTSService {
 		options: VieNeuSynthesisOptions = {},
 		context: VieNeuRequestContext = {}
 	): Promise<PcmAudioStream> {
-		if (!text || !text.trim()) {
+		if (!text?.trim()) {
 			throw new Error('Input text cannot be empty');
 		}
 
@@ -147,18 +177,10 @@ export class TTSService {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				Accept: 'audio/pcm'
+				Accept: 'audio/pcm',
 			},
 			signal,
-			body: JSON.stringify({
-				model,
-				input: text.trim(),
-				...(voice ? { voice } : {}),
-				response_format: 'pcm',
-				speed,
-				...options,
-				...context
-			})
+			body: buildStreamBody(text, voice, speed, model, options, context),
 		});
 
 		if (!response.ok || !response.body) {
@@ -166,20 +188,16 @@ export class TTSService {
 			throw new Error(`TTS streaming failed (${response.status}): ${errText}`);
 		}
 
-		const sampleRate = Number(response.headers.get('X-Audio-Sample-Rate'));
-		const channels = Number(response.headers.get('X-Audio-Channels'));
-		const sampleFormat = response.headers.get('X-Audio-Sample-Format');
-		if (!Number.isFinite(sampleRate) || sampleRate <= 0 || channels !== 1 || sampleFormat !== 's16le') {
+		try {
+			const metadata = validatePcmMetadata(response.headers);
+			return {
+				body: response.body,
+				...metadata,
+			};
+		} catch (err) {
 			await response.body.cancel();
-			throw new Error('TTS streaming returned unsupported PCM metadata');
+			throw err;
 		}
-
-		return {
-			body: response.body,
-			sampleRate,
-			channels,
-			sampleFormat
-		};
 	}
 
 	public static createAudioUrl(blob: Blob): string {

@@ -6,7 +6,7 @@ if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
 		Object.defineProperty(navigator, 'vibrate', {
 			value: () => false,
 			configurable: true,
-			writable: true
+			writable: true,
 		});
 	} catch {
 		// ignore if locked
@@ -52,8 +52,10 @@ export function playFeedbackSound(_type?: HapticFeedbackType): boolean {
 		osc.connect(gain);
 		gain.connect(ctx.destination);
 
-		// High-frequency crisp click (1800Hz -> 850Hz in 14ms)
-		// Avoids frequencies < 800Hz so phone body / speaker frame does not physically resonate
+		/*
+		 * High-frequency crisp click (1800Hz -> 850Hz in 14ms)
+		 * Avoids frequencies < 800Hz so phone body / speaker frame does not physically resonate
+		 */
 		osc.type = 'sine';
 		osc.frequency.setValueAtTime(1800, now);
 		osc.frequency.exponentialRampToValueAtTime(850, now + 0.014);
@@ -80,12 +82,14 @@ export function triggerHaptic(type: HapticFeedbackType = 'light'): boolean {
 export const triggerSound = triggerHaptic;
 
 export function useHaptic() {
-	const isSupported = typeof window !== 'undefined' && typeof (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext) === 'function';
+	const isSupported =
+		typeof window !== 'undefined' &&
+		typeof (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext) === 'function';
 
 	return {
 		trigger: triggerHaptic,
 		playSound: playFeedbackSound,
-		isSupported
+		isSupported,
 	};
 }
 

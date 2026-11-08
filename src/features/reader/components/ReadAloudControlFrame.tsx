@@ -1,8 +1,10 @@
-import { useCallback, useLayoutEffect, useRef } from 'react';
-import type { KeyboardEvent, PointerEvent, ReactNode } from 'react';
 import { GripHorizontal } from 'lucide-react';
-import { configureNativeControl, hasNativeReaderGestures, onNativeReaderGesture } from '@/services/nativeReaderGestures';
+import { useCallback, useLayoutEffect, useRef } from 'react';
+
 import { hasNativeGestureBlocker } from '@/services/nativeGestureEligibility';
+import { configureNativeControl, hasNativeReaderGestures, onNativeReaderGesture } from '@/services/nativeReaderGestures';
+
+import type { KeyboardEvent, PointerEvent, ReactNode, RefObject } from 'react';
 
 interface ReadAloudControlFrameProps {
 	active: boolean;
@@ -21,6 +23,84 @@ interface VerticalDrag {
 const TOP_CLEARANCE = 80;
 const BOTTOM_CLEARANCE = 100;
 const KEYBOARD_STEP = 24;
+
+function setupNativeGestureListeners(nativeGestures: boolean, publish: () => void): () => void {
+	if (!nativeGestures) return () => {};
+	const bodyObserver = new MutationObserver(publish);
+	bodyObserver.observe(document.body, { attributes: true });
+	window.addEventListener('transitionend', publish);
+	window.addEventListener('animationend', publish);
+	return () => {
+		bodyObserver.disconnect();
+		window.removeEventListener('transitionend', publish);
+		window.removeEventListener('animationend', publish);
+		configureNativeControl({ enabled: false });
+	};
+}
+
+function setupResizeListeners(frame: HTMLDivElement | null, nativeGestures: boolean, reclamp: () => void): () => void {
+	const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(reclamp);
+	if (frame) observer?.observe(frame);
+	window.addEventListener('resize', reclamp);
+	window.visualViewport?.addEventListener('resize', reclamp);
+	if (!nativeGestures) {
+		window.visualViewport?.addEventListener('scroll', reclamp);
+	}
+	return () => {
+		observer?.disconnect();
+		window.removeEventListener('resize', reclamp);
+		window.visualViewport?.removeEventListener('resize', reclamp);
+		window.visualViewport?.removeEventListener('scroll', reclamp);
+	};
+}
+
+interface ReadAloudHandleProps {
+	handleRef: RefObject<HTMLButtonElement | null>;
+	isVisible: boolean;
+	nativeGestures: boolean;
+	startDrag: (event: PointerEvent<HTMLButtonElement>) => void;
+	moveDrag: (event: PointerEvent<HTMLButtonElement>) => void;
+	finishDrag: (event: PointerEvent<HTMLButtonElement>) => void;
+	stopDrag: () => void;
+	moveWithKeyboard: (event: KeyboardEvent<HTMLButtonElement>) => void;
+}
+
+function ReadAloudHandle({
+	handleRef,
+	isVisible,
+	nativeGestures,
+	startDrag,
+	moveDrag,
+	finishDrag,
+	stopDrag,
+	moveWithKeyboard,
+}: ReadAloudHandleProps) {
+	const pointerProps = nativeGestures
+		? {}
+		: {
+				onPointerDown: startDrag,
+				onPointerMove: moveDrag,
+				onPointerUp: finishDrag,
+				onPointerCancel: finishDrag,
+				onLostPointerCapture: stopDrag,
+			};
+
+	return (
+		<button
+			ref={handleRef}
+			type="button"
+			aria-label="Kéo thanh điều khiển lên hoặc xuống"
+			title="Kéo lên/xuống hoặc dùng phím mũi tên"
+			disabled={!isVisible}
+			className="w-9 h-6 shrink-0 flex items-center justify-center bg-transparent text-primary/70 cursor-ns-resize touch-none select-none rounded-full focus-visible:outline-2 focus-visible:outline-primary"
+			{...pointerProps}
+			onKeyDown={moveWithKeyboard}
+			onClick={(event) => event.stopPropagation()}
+		>
+			<GripHorizontal size={16} aria-hidden="true" />
+		</button>
+	);
+}
 
 export function ReadAloudControlFrame({ active, isVisible, children }: ReadAloudControlFrameProps) {
 	const frameRef = useRef<HTMLDivElement>(null);
@@ -66,10 +146,20 @@ export function ReadAloudControlFrame({ active, isVisible, children }: ReadAloud
 		const bounds = getBounds();
 		const rect = handleRef.current?.getBoundingClientRect();
 		const enabled = active && isVisible && Boolean(bounds && rect) && !hasNativeGestureBlocker();
-		if (!enabled || !bounds || !rect) { configureNativeControl({ enabled: false }); return; }
-		configureNativeControl({ enabled: true, viewportWidth: window.innerWidth,
-			left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom,
-			offset: offset.current, ...bounds });
+		if (!enabled || !bounds || !rect) {
+			configureNativeControl({ enabled: false });
+			return;
+		}
+		configureNativeControl({
+			enabled: true,
+			viewportWidth: window.innerWidth,
+			left: rect.left,
+			top: rect.top,
+			right: rect.right,
+			bottom: rect.bottom,
+			offset: offset.current,
+			...bounds,
+		});
 	}, [nativeGestures, active, isVisible, getBounds]);
 
 	useLayoutEffect(() => {
@@ -85,26 +175,13 @@ export function ReadAloudControlFrame({ active, isVisible, children }: ReadAloud
 			if (!active || !isVisible || gesture.kind !== 'control-move') return;
 			applyOffset(gesture.offset);
 		});
-		const bodyObserver = nativeGestures ? new MutationObserver(publishNativeGeometry) : null;
-		bodyObserver?.observe(document.body, { attributes: true });
-		if (nativeGestures) window.addEventListener('transitionend', publishNativeGeometry);
-		if (nativeGestures) window.addEventListener('animationend', publishNativeGeometry);
-		const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(reclamp);
-		if (frameRef.current) observer?.observe(frameRef.current);
-		window.addEventListener('resize', reclamp);
-		window.visualViewport?.addEventListener('resize', reclamp);
-		if (!nativeGestures) window.visualViewport?.addEventListener('scroll', reclamp);
+		const cleanupNative = setupNativeGestureListeners(nativeGestures, publishNativeGeometry);
+		const cleanupResize = setupResizeListeners(frameRef.current, nativeGestures, reclamp);
 		return () => {
 			unsubscribe();
-			bodyObserver?.disconnect();
-			window.removeEventListener('transitionend', publishNativeGeometry);
-			window.removeEventListener('animationend', publishNativeGeometry);
-			if (nativeGestures) configureNativeControl({ enabled: false });
+			cleanupNative();
+			cleanupResize();
 			stopDrag();
-			observer?.disconnect();
-			window.removeEventListener('resize', reclamp);
-			window.visualViewport?.removeEventListener('resize', reclamp);
-			window.visualViewport?.removeEventListener('scroll', reclamp);
 		};
 	}, [active, isVisible, applyOffset, getBounds, stopDrag, nativeGestures, publishNativeGeometry]);
 
@@ -143,32 +220,29 @@ export function ReadAloudControlFrame({ active, isVisible, children }: ReadAloud
 		publishNativeGeometry();
 	};
 
+	const containerClasses = active
+		? 'w-fit flex flex-col items-center gap-1 pointer-events-auto box-border transform-gpu [--reader-control-safe-top:env(safe-area-inset-top,0px)] [--reader-control-safe-bottom:env(safe-area-inset-bottom,0px)] rounded-[24px] border border-primary/25 bg-transparent p-1.5 max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-180px)] overflow-y-auto'
+		: 'w-fit flex flex-col items-center gap-2 pointer-events-auto box-border transform-gpu [--reader-control-safe-top:env(safe-area-inset-top,0px)] [--reader-control-safe-bottom:env(safe-area-inset-bottom,0px)]';
+
 	return (
 		<div
 			ref={frameRef}
 			data-reader-control="true"
 			role={active ? 'group' : undefined}
 			aria-label={active ? 'Điều khiển đọc thành tiếng' : undefined}
-			className={`w-fit flex flex-col items-center ${active ? 'gap-1' : 'gap-2'} pointer-events-auto box-border transform-gpu [--reader-control-safe-top:env(safe-area-inset-top,0px)] [--reader-control-safe-bottom:env(safe-area-inset-bottom,0px)] ${active ? 'rounded-[24px] border border-primary/25 bg-transparent p-1.5 max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-180px)] overflow-y-auto' : ''}`}
+			className={containerClasses}
 		>
 			{active && (
-				<button
-					ref={handleRef}
-					type="button"
-					aria-label="Kéo thanh điều khiển lên hoặc xuống"
-					title="Kéo lên/xuống hoặc dùng phím mũi tên"
-					disabled={!isVisible}
-					className="w-9 h-6 shrink-0 flex items-center justify-center bg-transparent text-primary/70 cursor-ns-resize touch-none select-none rounded-full focus-visible:outline-2 focus-visible:outline-primary"
-						onPointerDown={nativeGestures ? undefined : startDrag}
-						onPointerMove={nativeGestures ? undefined : moveDrag}
-						onPointerUp={nativeGestures ? undefined : finishDrag}
-						onPointerCancel={nativeGestures ? undefined : finishDrag}
-						onLostPointerCapture={nativeGestures ? undefined : stopDrag}
-					onKeyDown={moveWithKeyboard}
-					onClick={(event) => event.stopPropagation()}
-				>
-					<GripHorizontal size={16} aria-hidden="true" />
-				</button>
+				<ReadAloudHandle
+					handleRef={handleRef}
+					isVisible={isVisible}
+					nativeGestures={nativeGestures}
+					startDrag={startDrag}
+					moveDrag={moveDrag}
+					finishDrag={finishDrag}
+					stopDrag={stopDrag}
+					moveWithKeyboard={moveWithKeyboard}
+				/>
 			)}
 			{children}
 		</div>

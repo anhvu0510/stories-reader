@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Volume2 } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+
 import { triggerHaptic } from '@/hooks/useHaptic';
 
 export interface SelectionSpeakerTooltipProps {
@@ -16,6 +17,31 @@ interface TooltipPosition {
 	charOffset: number;
 }
 
+function getSelectedParagraphInfo(range: Range, containerId: string): { paragraphIndex: number; charOffset: number } | null {
+	const container = document.getElementById(containerId);
+	if (!container?.contains(range.startContainer)) return null;
+
+	const node = range.startContainer;
+	const paragraph = (node instanceof Element ? node : node.parentElement)?.closest('[data-paragraph-index]');
+	if (!paragraph) return null;
+
+	const paragraphIndex = Number(paragraph.getAttribute('data-paragraph-index'));
+	if (!Number.isInteger(paragraphIndex)) return null;
+
+	const preRange = document.createRange();
+	preRange.selectNodeContents(paragraph);
+	preRange.setEnd(range.startContainer, range.startOffset);
+	const charOffset = preRange.toString().length;
+
+	return { paragraphIndex, charOffset };
+}
+
+function calculateTooltipCoords(rect: DOMRect): { top: number; left: number } {
+	const top = rect.bottom + 12 + 38 > window.innerHeight - 70 ? Math.max(16, rect.top - 38 - 12) : rect.bottom + 12;
+	const left = Math.max(16, Math.min(window.innerWidth - 110 - 16, rect.left + rect.width / 2 - 55));
+	return { top, left };
+}
+
 export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-content' }: SelectionSpeakerTooltipProps) {
 	const isAndroid = Capacitor.getPlatform() === 'android';
 	const [position, setPosition] = useState<TooltipPosition | null>(null);
@@ -26,30 +52,18 @@ export function SelectionSpeakerTooltip({ onSpeak, containerId = 'main-story-con
 			return;
 		}
 		const range = selection.getRangeAt(0);
-		const container = document.getElementById(containerId);
-		if (!container?.contains(range.startContainer)) {
-			setPosition(null);
-			return;
-		}
-		const node = range.startContainer;
-		const paragraph = (node instanceof Element ? node : node.parentElement)?.closest('[data-paragraph-index]');
-		if (!paragraph) return;
-		const paragraphIndex = Number(paragraph.getAttribute('data-paragraph-index'));
-		if (!Number.isInteger(paragraphIndex)) return;
-		const preRange = document.createRange();
-		preRange.selectNodeContents(paragraph);
-		preRange.setEnd(range.startContainer, range.startOffset);
-		const charOffset = preRange.toString().length;
 		const rect = range.getBoundingClientRect();
 		if (rect.width === 0 && rect.height === 0) {
 			setPosition(null);
 			return;
 		}
-		const top = rect.bottom + 12 + 38 > window.innerHeight - 70
-			? Math.max(16, rect.top - 38 - 12)
-			: rect.bottom + 12;
-		const left = Math.max(16, Math.min(window.innerWidth - 110 - 16, rect.left + rect.width / 2 - 55));
-		setPosition({ top, left, paragraphIndex, charOffset });
+		const info = getSelectedParagraphInfo(range, containerId);
+		if (!info) {
+			setPosition(null);
+			return;
+		}
+		const { top, left } = calculateTooltipCoords(rect);
+		setPosition({ top, left, paragraphIndex: info.paragraphIndex, charOffset: info.charOffset });
 	}, [containerId]);
 
 	useEffect(() => {

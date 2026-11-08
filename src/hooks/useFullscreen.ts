@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
-/** Trả về trạng thái fullscreen hiện tại và hàm toggle.
+/**
+ * Trả về trạng thái fullscreen hiện tại và hàm toggle.
  *  Chỉ hoạt động trên web (Fullscreen API không khả dụng trong WebView Android).
  */
 export function useFullscreen() {

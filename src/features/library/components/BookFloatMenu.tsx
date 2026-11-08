@@ -1,5 +1,19 @@
+import {
+	BookOpen,
+	Sparkles,
+	Download,
+	ExternalLink,
+	Heart,
+	ListTree,
+	X,
+	RefreshCw,
+	Languages,
+	Users,
+	Tags,
+	ChevronRight,
+	Trash2,
+} from 'lucide-react';
 import React from 'react';
-import { BookOpen, Sparkles, Download, ExternalLink, Heart, ListTree, X, RefreshCw, Languages, Users, Tags, ChevronRight, Trash2 } from 'lucide-react';
 
 import { BottomSheet } from '@/components/BottomSheet';
 import { triggerHaptic } from '@/hooks/useHaptic';
@@ -27,6 +41,173 @@ export interface BookFloatMenuProps {
 	onOpenNewTab: () => void;
 }
 
+interface BookFloatMenuGridProps {
+	isDownloaded: boolean;
+	isOfflineMode: boolean;
+	isFavorite: boolean;
+	onAction: (action: () => void) => void;
+	onOpenQuickSheet: () => void;
+	onOpenNewTab: () => void;
+	onDownloadBook: () => void;
+	onToggleFavorite: (e: React.MouseEvent) => void;
+	onOpenTranslationSheet: () => void;
+	onTranslateTitles: () => void;
+	onDetectProperNouns: () => void;
+	onDetectTagsAndPov: () => void;
+}
+
+function BookFloatMenuGrid({
+	isDownloaded,
+	isOfflineMode,
+	isFavorite,
+	onAction,
+	onOpenQuickSheet,
+	onOpenNewTab,
+	onDownloadBook,
+	onToggleFavorite,
+	onOpenTranslationSheet,
+	onTranslateTitles,
+	onDetectProperNouns,
+	onDetectTagsAndPov,
+}: BookFloatMenuGridProps) {
+	const downloadBgClass = isDownloaded
+		? 'bg-emerald-500/15 hover:bg-emerald-500/20 border-emerald-500/30 text-emerald-400'
+		: 'bg-sky-500/15 hover:bg-sky-500/20 border-sky-500/30 text-sky-400';
+
+	const favBgClass = isFavorite
+		? 'bg-rose-500/20 border-rose-500/40 text-rose-500'
+		: 'bg-white/10 hover:bg-white/15 border-white/15 text-on-surface-variant';
+
+	return (
+		<div className="grid grid-cols-4 gap-y-3 gap-x-1.5 sm:gap-x-2">
+			{/* 1. Mục lục */}
+			<button
+				type="button"
+				onClick={() => onAction(onOpenQuickSheet)}
+				className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+			>
+				<div className="w-11 h-11 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 flex items-center justify-center text-on-surface group-hover:scale-105 transition-transform mb-1 shadow-xs">
+					<ListTree size={19} />
+				</div>
+				<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-on-surface transition-colors truncate max-w-full">
+					Mục lục
+				</span>
+			</button>
+
+			{/* 2. Mở tab mới */}
+			<button
+				type="button"
+				onClick={() => onAction(onOpenNewTab)}
+				className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+			>
+				<div className="w-11 h-11 rounded-2xl bg-sky-500/15 hover:bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
+					<ExternalLink size={19} />
+				</div>
+				<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-sky-400 transition-colors truncate max-w-full">
+					Tab mới
+				</span>
+			</button>
+
+			{/* 3. Tải về / Đồng bộ lại */}
+			<button
+				type="button"
+				onClick={() => onAction(onDownloadBook)}
+				className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+			>
+				<div
+					className={`w-11 h-11 rounded-2xl border flex items-center justify-center group-hover:scale-105 transition-transform mb-1 shadow-xs ${downloadBgClass}`}
+				>
+					{isDownloaded ? <RefreshCw size={18} /> : <Download size={19} />}
+				</div>
+				<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-emerald-400 transition-colors truncate max-w-full">
+					{isDownloaded ? 'Đồng bộ lại' : 'Tải về'}
+				</span>
+			</button>
+
+			{/* 4. Yêu thích */}
+			<button
+				type="button"
+				onClick={(e) => {
+					triggerHaptic('selection');
+					onToggleFavorite(e);
+				}}
+				className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+			>
+				<div
+					className={`w-11 h-11 rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform mb-1 border shadow-xs ${favBgClass}`}
+				>
+					<Heart size={19} className={isFavorite ? 'fill-rose-500' : ''} />
+				</div>
+				<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-rose-400 transition-colors truncate max-w-full">
+					{isFavorite ? 'Đã thích' : 'Yêu thích'}
+				</span>
+			</button>
+
+			{/* 5. Dịch AI */}
+			<button
+				type="button"
+				onClick={() => onAction(onOpenTranslationSheet)}
+				className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+			>
+				<div className="w-11 h-11 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
+					<Sparkles size={19} />
+				</div>
+				<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-indigo-400 transition-colors truncate max-w-full">
+					Dịch AI
+				</span>
+			</button>
+
+			{/* 6. Dịch tiêu đề */}
+			{!isOfflineMode && (
+				<button
+					type="button"
+					onClick={onTranslateTitles}
+					className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+				>
+					<div className="w-11 h-11 rounded-2xl bg-amber-500/15 hover:bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
+						<Languages size={19} />
+					</div>
+					<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-amber-400 transition-colors truncate max-w-full">
+						Dịch tiêu đề
+					</span>
+				</button>
+			)}
+
+			{/* 7. Dịch tên */}
+			{!isOfflineMode && (
+				<button
+					type="button"
+					onClick={onDetectProperNouns}
+					className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+				>
+					<div className="w-11 h-11 rounded-2xl bg-teal-500/15 hover:bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
+						<Users size={19} />
+					</div>
+					<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-teal-400 transition-colors truncate max-w-full">
+						Dịch tên
+					</span>
+				</button>
+			)}
+
+			{/* 8. Dịch POV */}
+			{!isOfflineMode && (
+				<button
+					type="button"
+					onClick={onDetectTagsAndPov}
+					className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+				>
+					<div className="w-11 h-11 rounded-2xl bg-violet-500/15 hover:bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
+						<Tags size={19} />
+					</div>
+					<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-violet-400 transition-colors truncate max-w-full">
+						Dịch POV
+					</span>
+				</button>
+			)}
+		</div>
+	);
+}
+
 export const BookFloatMenu = React.memo(function BookFloatMenu({
 	book,
 	isOpen,
@@ -40,7 +221,7 @@ export const BookFloatMenu = React.memo(function BookFloatMenu({
 	onDownloadBook,
 	onOpenDeleteOnline,
 	onToggleFavorite,
-	onOpenNewTab
+	onOpenNewTab,
 }: BookFloatMenuProps) {
 	const showToast = useToastStore((state) => state.showToast);
 
@@ -81,7 +262,13 @@ export const BookFloatMenu = React.memo(function BookFloatMenu({
 	};
 
 	return (
-		<BottomSheet isOpen={isOpen} onClose={onClose} ariaLabel={`Thao tác cho truyện ${book.bookName}`} maxHeight="max-h-[85dvh]" className="p-0">
+		<BottomSheet
+			isOpen={isOpen}
+			onClose={onClose}
+			ariaLabel={`Thao tác cho truyện ${book.bookName}`}
+			maxHeight="max-h-[85dvh]"
+			className="p-0"
+		>
 			<div className="flex flex-col text-on-surface">
 				{/* Header mini thanh thoát */}
 				<div className="flex items-center justify-between px-4 py-2.5 border-b border-outline-variant/30 flex-shrink-0 bg-white/[0.02]">
@@ -145,120 +332,20 @@ export const BookFloatMenu = React.memo(function BookFloatMenu({
 					</button>
 
 					{/* Lưới chuẩn 4 nút / hàng (Không lồng hộp thô cứng, chỉ gồm Icon squircle + Title) */}
-					<div className="grid grid-cols-4 gap-y-3 gap-x-1.5 sm:gap-x-2">
-						{/* 1. Mục lục */}
-						<button
-							type="button"
-							onClick={() => handleAction(onOpenQuickSheet)}
-							className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
-						>
-							<div className="w-11 h-11 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 flex items-center justify-center text-on-surface group-hover:scale-105 transition-transform mb-1 shadow-xs">
-								<ListTree size={19} />
-							</div>
-							<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-on-surface transition-colors truncate max-w-full">Mục lục</span>
-						</button>
-
-						{/* 2. Mở tab mới */}
-						<button
-							type="button"
-							onClick={() => handleAction(onOpenNewTab)}
-							className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
-						>
-							<div className="w-11 h-11 rounded-2xl bg-sky-500/15 hover:bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
-								<ExternalLink size={19} />
-							</div>
-							<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-sky-400 transition-colors truncate max-w-full">Tab mới</span>
-						</button>
-
-						{/* 3. Tải về / Đồng bộ lại */}
-						<button
-							type="button"
-							onClick={() => handleAction(onDownloadBook)}
-							className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
-						>
-							<div
-								className={`w-11 h-11 rounded-2xl border flex items-center justify-center group-hover:scale-105 transition-transform mb-1 shadow-xs ${isDownloaded ? 'bg-emerald-500/15 hover:bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-sky-500/15 hover:bg-sky-500/20 border-sky-500/30 text-sky-400'}`}
-							>
-								{isDownloaded ? <RefreshCw size={18} /> : <Download size={19} />}
-							</div>
-							<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-emerald-400 transition-colors truncate max-w-full">
-								{isDownloaded ? 'Đồng bộ lại' : 'Tải về'}
-							</span>
-						</button>
-
-						{/* 4. Yêu thích */}
-						<button
-							type="button"
-							onClick={(e) => {
-								triggerHaptic('selection');
-								onToggleFavorite(e);
-							}}
-							className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
-						>
-							<div
-								className={`w-11 h-11 rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform mb-1 border shadow-xs ${isFavorite ? 'bg-rose-500/20 border-rose-500/40 text-rose-500' : 'bg-white/10 hover:bg-white/15 border-white/15 text-on-surface-variant'}`}
-							>
-								<Heart size={19} className={isFavorite ? 'fill-rose-500' : ''} />
-							</div>
-							<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-rose-400 transition-colors truncate max-w-full">
-								{isFavorite ? 'Đã thích' : 'Yêu thích'}
-							</span>
-						</button>
-
-						{/* 5. Dịch AI */}
-						<button
-							type="button"
-							onClick={() => handleAction(onOpenTranslationSheet)}
-							className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
-						>
-							<div className="w-11 h-11 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
-								<Sparkles size={19} />
-							</div>
-							<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-indigo-400 transition-colors truncate max-w-full">Dịch AI</span>
-						</button>
-
-						{/* 6. Dịch tiêu đề */}
-						{!isOfflineMode && (
-							<button
-								type="button"
-								onClick={handleTranslateTitles}
-								className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
-							>
-								<div className="w-11 h-11 rounded-2xl bg-amber-500/15 hover:bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
-									<Languages size={19} />
-								</div>
-								<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-amber-400 transition-colors truncate max-w-full">Dịch tiêu đề</span>
-							</button>
-						)}
-
-						{/* 7. Dịch tên */}
-						{!isOfflineMode && (
-							<button
-								type="button"
-								onClick={handleDetectProperNouns}
-								className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
-							>
-								<div className="w-11 h-11 rounded-2xl bg-teal-500/15 hover:bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
-									<Users size={19} />
-								</div>
-								<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-teal-400 transition-colors truncate max-w-full">Dịch tên</span>
-							</button>
-						)}
-
-						{/* 8. Dịch POV */}
-						{!isOfflineMode && (
-							<button
-								type="button"
-								onClick={handleDetectTagsAndPov}
-								className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
-							>
-								<div className="w-11 h-11 rounded-2xl bg-violet-500/15 hover:bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
-									<Tags size={19} />
-								</div>
-								<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-violet-400 transition-colors truncate max-w-full">Dịch POV</span>
-							</button>
-						)}
-					</div>
+					<BookFloatMenuGrid
+						isDownloaded={isDownloaded}
+						isOfflineMode={isOfflineMode}
+						isFavorite={isFavorite}
+						onAction={handleAction}
+						onOpenQuickSheet={onOpenQuickSheet}
+						onOpenNewTab={onOpenNewTab}
+						onDownloadBook={onDownloadBook}
+						onToggleFavorite={onToggleFavorite}
+						onOpenTranslationSheet={onOpenTranslationSheet}
+						onTranslateTitles={handleTranslateTitles}
+						onDetectProperNouns={handleDetectProperNouns}
+						onDetectTagsAndPov={handleDetectTagsAndPov}
+					/>
 				</div>
 			</div>
 		</BottomSheet>

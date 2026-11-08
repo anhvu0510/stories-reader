@@ -1,7 +1,7 @@
 const { mockEdgeTTSNative } = vi.hoisted(() => ({
 	mockEdgeTTSNative: {
-		synthesize: vi.fn()
-	}
+		synthesize: vi.fn(),
+	},
 }));
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -15,7 +15,7 @@ vi.mock('@capacitor/core', async () => {
 				return mockEdgeTTSNative;
 			}
 			return actual.registerPlugin(name, options);
-		}
+		},
 	};
 });
 
@@ -39,7 +39,7 @@ describe('EdgeTTSService', () => {
 			'fetch',
 			vi.fn().mockResolvedValue({
 				ok: true,
-				json: async () => ({ voices: mockVoices })
+				json: async () => ({ voices: mockVoices }),
 			})
 		);
 
@@ -53,7 +53,7 @@ describe('EdgeTTSService', () => {
 			'fetch',
 			vi.fn().mockResolvedValue({
 				ok: true,
-				blob: async () => mockBlob
+				blob: async () => mockBlob,
 			})
 		);
 
@@ -68,15 +68,15 @@ describe('EdgeTTSService', () => {
 				charIndex: 0,
 				charLength: 3,
 				startSeconds: 0.125,
-				endSeconds: 0.325
+				endSeconds: 0.325,
 			},
 			{
 				text: 'chào',
 				charIndex: 4,
 				charLength: 4,
 				startSeconds: 0.325,
-				endSeconds: 0.5875
-			}
+				endSeconds: 0.5875,
+			},
 		];
 		const encodedBoundaries = Buffer.from(
 			JSON.stringify([
@@ -85,15 +85,15 @@ describe('EdgeTTSService', () => {
 					char_index: 0,
 					char_length: 3,
 					start_seconds: 0.125,
-					end_seconds: 0.325
+					end_seconds: 0.325,
 				},
 				{
 					text: 'chào',
 					char_index: 4,
 					char_length: 4,
 					start_seconds: 0.325,
-					end_seconds: 0.5875
-				}
+					end_seconds: 0.5875,
+				},
 			]),
 			'utf8'
 		).toString('base64url');
@@ -101,7 +101,7 @@ describe('EdgeTTSService', () => {
 		const fetchMock = vi.fn().mockResolvedValue({
 			ok: true,
 			blob: async () => mockBlob,
-			headers: new Headers({ 'X-Word-Boundaries': encodedBoundaries })
+			headers: new Headers({ 'X-Word-Boundaries': encodedBoundaries }),
 		});
 		vi.stubGlobal('fetch', fetchMock);
 
@@ -111,10 +111,10 @@ describe('EdgeTTSService', () => {
 		expect(result.wordBoundaries).toEqual(boundaries);
 		expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
 			include_word_boundaries: true,
-			rate: '+20%'
+			rate: '+20%',
 		});
 		// Đảm bảo không spam reportClientLog lên server khi tổng hợp thành công trên web
-		expect(fetchMock.mock.calls.some(call => String(call[0]).includes('/api/logs/client-error'))).toBe(false);
+		expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/api/logs/client-error'))).toBe(false);
 	});
 
 	it('uses EdgeTTSNative plugin on Android native platform and maps word boundaries accurately', async () => {
@@ -127,8 +127,8 @@ describe('EdgeTTSService', () => {
 			mimeType: 'audio/mpeg',
 			wordBoundaries: [
 				{ text: 'Xin', charIndex: 0, charLength: 3, startSeconds: 0.1, endSeconds: 0.3 },
-				{ text: 'chào', charIndex: 0, charLength: 4, startSeconds: 0.33, endSeconds: 0.58 }
-			]
+				{ text: 'chào', charIndex: 0, charLength: 4, startSeconds: 0.33, endSeconds: 0.58 },
+			],
 		});
 
 		const result = await EdgeTTSService.synthesizeSpeechWithBoundaries('Xin chào các bạn', 'vi-VN-HoaiMyNeural', 1.0);
@@ -138,7 +138,7 @@ describe('EdgeTTSService', () => {
 				text: 'Xin chào các bạn',
 				voice: 'vi-VN-HoaiMyNeural',
 				rate: '+0%',
-				pitch: '+0Hz'
+				pitch: '+0Hz',
 			})
 		);
 		expect(result.audio).toBeInstanceOf(Blob);
@@ -148,14 +148,14 @@ describe('EdgeTTSService', () => {
 			charIndex: 0,
 			charLength: 3,
 			startSeconds: 0.1,
-			endSeconds: 0.3
+			endSeconds: 0.3,
 		});
 		expect(result.wordBoundaries[1]).toEqual({
 			text: 'chào',
 			charIndex: 4,
 			charLength: 4,
 			startSeconds: 0.33,
-			endSeconds: 0.58
+			endSeconds: 0.58,
 		});
 	});
 
@@ -171,7 +171,7 @@ describe('EdgeTTSService', () => {
 			{ text: 'nói', startSeconds: 1.6, endSeconds: 1.8 },
 			{ text: 'quác', startSeconds: 1.9, endSeconds: 2.1 },
 			{ text: 'quác', startSeconds: 2.15, endSeconds: 2.35 },
-			{ text: 'quác', startSeconds: 2.4, endSeconds: 2.6 }
+			{ text: 'quác', startSeconds: 2.4, endSeconds: 2.6 },
 		];
 
 		const mapped = mapEdgeWordBoundaries(sourceText, rawBoundaries);
@@ -200,16 +200,16 @@ describe('EdgeTTSService', () => {
 		const fetchMock = vi.fn().mockResolvedValue({ ok: true });
 		vi.stubGlobal('fetch', fetchMock);
 
-		await expect(
-			EdgeTTSService.synthesizeSpeechWithBoundaries('Xin chào', 'vi-VN-HoaiMyNeural', 1.0, 'https://api.test')
-		).rejects.toThrow('WebSocket 403 Forbidden');
+		await expect(EdgeTTSService.synthesizeSpeechWithBoundaries('Xin chào', 'vi-VN-HoaiMyNeural', 1.0, 'https://api.test')).rejects.toThrow(
+			'WebSocket 403 Forbidden'
+		);
 
 		expect(toastSpy).toHaveBeenCalledWith(expect.stringContaining('Lỗi Edge TTS: WebSocket 403 Forbidden'), 'error');
 		expect(fetchMock).toHaveBeenCalledWith(
 			'https://api.test/api/logs/client-error',
 			expect.objectContaining({
 				method: 'POST',
-				body: expect.stringContaining('"platform":"android"')
+				body: expect.stringContaining('"platform":"android"'),
 			})
 		);
 	});
@@ -219,13 +219,13 @@ describe('EdgeTTSService', () => {
 			{ id: 'vi-VN-HoaiMyNeural', name: 'Hoài Mỹ', language: 'vi-VN', gender: 'female' },
 			{ id: 'vi-VN-NamMinhNeural', name: 'Nam Minh', language: 'vi-VN', gender: 'male' },
 			{ id: 'en-US-AvaNeural', name: 'Ava', language: 'en-US', gender: 'female' },
-			{ id: 'zh-CN-XiaoxiaoNeural', name: 'Xiaoxiao', language: 'zh-CN', gender: 'female' }
+			{ id: 'zh-CN-XiaoxiaoNeural', name: 'Xiaoxiao', language: 'zh-CN', gender: 'female' },
 		];
 		vi.stubGlobal(
 			'fetch',
 			vi.fn().mockResolvedValue({
 				ok: true,
-				json: async () => ({ voices: mixedVoices })
+				json: async () => ({ voices: mixedVoices }),
 			})
 		);
 
@@ -242,7 +242,7 @@ describe('EdgeTTSService', () => {
 		vi.spyOn(EdgeTTSNative, 'synthesize').mockResolvedValue({
 			audioBase64: Buffer.from('mock audio').toString('base64'),
 			mimeType: 'audio/mpeg',
-			wordBoundaries: []
+			wordBoundaries: [],
 		});
 
 		const fetchMock = vi.fn().mockResolvedValue({ ok: true });
@@ -254,7 +254,7 @@ describe('EdgeTTSService', () => {
 			'https://api.test/api/logs/client-error',
 			expect.objectContaining({
 				method: 'POST',
-				body: expect.stringContaining('"level":"info"')
+				body: expect.stringContaining('"level":"info"'),
 			})
 		);
 	});

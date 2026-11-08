@@ -1,5 +1,5 @@
-import React, { memo } from 'react';
 import { RefreshCw, Sparkles } from 'lucide-react';
+import React, { memo } from 'react';
 
 export interface AppUpdateOverlayProps {
 	isUpdating: boolean;
@@ -7,11 +7,7 @@ export interface AppUpdateOverlayProps {
 	statusMessage?: string;
 }
 
-export const AppUpdateOverlay = memo(function AppUpdateOverlay({
-	isUpdating,
-	progress = 0,
-	statusMessage
-}: AppUpdateOverlayProps) {
+export const AppUpdateOverlay = memo(function AppUpdateOverlay({ isUpdating, progress = 0, statusMessage }: AppUpdateOverlayProps) {
 	if (!isUpdating) {
 		return null;
 	}
@@ -37,9 +33,7 @@ export const AppUpdateOverlay = memo(function AppUpdateOverlay({
 				</div>
 
 				{/* Title */}
-				<h3 className="text-base font-extrabold text-on-surface tracking-tight">
-					Đang cập nhật phiên bản mới...
-				</h3>
+				<h3 className="text-base font-extrabold text-on-surface tracking-tight">Đang cập nhật phiên bản mới...</h3>
 
 				{/* Description */}
 				<p className="mt-2 text-xs text-on-surface-variant/80 leading-relaxed px-2">

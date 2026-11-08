@@ -1,17 +1,39 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import type { UsePullToRefreshOptions, UsePullToRefreshReturn } from './usePullToRefresh';
-import { configureNativeRefresh, finishNativeRefresh, hasNativeReaderGestures, onNativeReaderGesture, registerNativeGestureHitTest } from '@/services/nativeReaderGestures';
-import { eligibleNativeTarget, isAtNativeScrollTop } from '@/services/nativeGestureEligibility';
 
-export function useNativePullToRefresh({ onRefresh, enabled, disabled, threshold = 65, containerRef, targetRef }: UsePullToRefreshOptions): UsePullToRefreshReturn {
+import { eligibleNativeTarget, isAtNativeScrollTop } from '@/services/nativeGestureEligibility';
+import {
+	configureNativeRefresh,
+	finishNativeRefresh,
+	hasNativeReaderGestures,
+	onNativeReaderGesture,
+	registerNativeGestureHitTest,
+} from '@/services/nativeReaderGestures';
+
+import type { UsePullToRefreshOptions, UsePullToRefreshReturn } from './usePullToRefresh';
+
+export function useNativePullToRefresh({
+	onRefresh,
+	enabled,
+	disabled,
+	threshold = 65,
+	containerRef,
+	targetRef,
+}: UsePullToRefreshOptions): UsePullToRefreshReturn {
 	const owner = useId();
 	const latestRefresh = useRef(onRefresh);
 	const busy = useRef(false);
 	const mounted = useRef(false);
 	const currentRequest = useRef<string | null>(null);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-	useEffect(() => { latestRefresh.current = onRefresh; }, [onRefresh]);
+	useEffect(() => {
+		mounted.current = true;
+		return () => {
+			mounted.current = false;
+		};
+	}, []);
+	useEffect(() => {
+		latestRefresh.current = onRefresh;
+	}, [onRefresh]);
 	const supported = hasNativeReaderGestures() && enabled !== false && !disabled;
 	useEffect(() => {
 		if (!supported) return;

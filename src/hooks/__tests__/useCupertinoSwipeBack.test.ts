@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { useCupertinoSwipeBack } from '@/hooks/useCupertinoSwipeBack';
 import { useModalStore } from '@/stores/useModalStore';
 
@@ -19,7 +20,7 @@ describe('useCupertinoSwipeBack Hook', () => {
 		renderHook(() =>
 			useCupertinoSwipeBack({
 				onBack,
-				edgeWidth: 28
+				edgeWidth: 28,
 			})
 		);
 
@@ -27,17 +28,17 @@ describe('useCupertinoSwipeBack Hook', () => {
 			// Chạm ở giữa màn hình (x = 100 > 28)
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 100, clientY: 200 } as any]
+					touches: [{ clientX: 100, clientY: 200 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 200, clientY: 200 } as any]
+					touches: [{ clientX: 200, clientY: 200 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 200, clientY: 200 } as any]
+					changedTouches: [{ clientX: 200, clientY: 200 } as any],
 				})
 			);
 		});
@@ -54,7 +55,7 @@ describe('useCupertinoSwipeBack Hook', () => {
 				onBack,
 				onSwipeProgress,
 				edgeWidth: 28,
-				threshold: 80
+				threshold: 80,
 			})
 		);
 
@@ -62,13 +63,13 @@ describe('useCupertinoSwipeBack Hook', () => {
 			// Chạm ở sát mép trái (x = 15 <= 28)
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 15, clientY: 150 } as any]
+					touches: [{ clientX: 15, clientY: 150 } as any],
 				})
 			);
 			// Kéo sang phải 100px (vượt ngưỡng 80px)
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 115, clientY: 150 } as any]
+					touches: [{ clientX: 115, clientY: 150 } as any],
 				})
 			);
 		});
@@ -78,7 +79,7 @@ describe('useCupertinoSwipeBack Hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 115, clientY: 150 } as any]
+					changedTouches: [{ clientX: 115, clientY: 150 } as any],
 				})
 			);
 		});
@@ -95,7 +96,7 @@ describe('useCupertinoSwipeBack Hook', () => {
 				onBack,
 				onSwipeCancel,
 				edgeWidth: 28,
-				threshold: 120
+				threshold: 120,
 			})
 		);
 
@@ -103,19 +104,19 @@ describe('useCupertinoSwipeBack Hook', () => {
 			// Chạm mép trái (x = 10 <= 28)
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 10, clientY: 150 } as any]
+					touches: [{ clientX: 10, clientY: 150 } as any],
 				})
 			);
 			// Kéo nhẹ 40px (chưa đủ 120px)
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 50, clientY: 150 } as any]
+					touches: [{ clientX: 50, clientY: 150 } as any],
 				})
 			);
 			// Thả tay
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 50, clientY: 150 } as any]
+					changedTouches: [{ clientX: 50, clientY: 150 } as any],
 				})
 			);
 		});
@@ -132,20 +133,20 @@ describe('useCupertinoSwipeBack Hook', () => {
 			useCupertinoSwipeBack({
 				onBack,
 				onSwipeProgress,
-				edgeWidth: 28
+				edgeWidth: 28,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 15, clientY: 100 } as any]
+					touches: [{ clientX: 15, clientY: 100 } as any],
 				})
 			);
 			// Di chuyển dọc 50px, ngang 5px -> cuộn dọc
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 20, clientY: 150 } as any]
+					touches: [{ clientX: 20, clientY: 150 } as any],
 				})
 			);
 		});
@@ -155,7 +156,7 @@ describe('useCupertinoSwipeBack Hook', () => {
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 20, clientY: 150 } as any]
+					changedTouches: [{ clientX: 20, clientY: 150 } as any],
 				})
 			);
 		});
@@ -170,24 +171,24 @@ describe('useCupertinoSwipeBack Hook', () => {
 		renderHook(() =>
 			useCupertinoSwipeBack({
 				onBack,
-				edgeWidth: 28
+				edgeWidth: 28,
 			})
 		);
 
 		act(() => {
 			window.dispatchEvent(
 				new TouchEvent('touchstart', {
-					touches: [{ clientX: 15, clientY: 150 } as any]
+					touches: [{ clientX: 15, clientY: 150 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchmove', {
-					touches: [{ clientX: 120, clientY: 150 } as any]
+					touches: [{ clientX: 120, clientY: 150 } as any],
 				})
 			);
 			window.dispatchEvent(
 				new TouchEvent('touchend', {
-					changedTouches: [{ clientX: 120, clientY: 150 } as any]
+					changedTouches: [{ clientX: 120, clientY: 150 } as any],
 				})
 			);
 		});
@@ -196,4 +197,3 @@ describe('useCupertinoSwipeBack Hook', () => {
 		useModalStore.setState({ isSettingsOpen: false });
 	});
 });
-
