@@ -1,7 +1,7 @@
 {
-  "version": "1.0.363",
+  "version": "1.0.365",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "4c5437a634bdcfa066db19adca9012f9efdd579a78d45157e8f9fdddf58c0535",
-  "releaseNotes": "feat: add fullscreen support to reader header and remove chapter reload on navigation",
-  "updatedAt": "2026-11-08T14:35:17Z"
+  "checksum": "f2263374c1e86ba5bdeab3a3d87be54120564287472440bd63a565a7d7b6d1eb",
+  "releaseNotes": "chore: downgrade @eslint/js in package.json",
+  "updatedAt": "2026-11-08T16:29:05Z"
 }
