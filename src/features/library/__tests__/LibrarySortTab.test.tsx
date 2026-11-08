@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor, act } from '@testing-library/react';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import 'fake-indexeddb/auto';
@@ -92,5 +92,35 @@ describe('Library Tab Sorting Requirements', () => {
 		// Ensure LibraryHeader title is inside sticky container
 		const headerTitle = stickyContainer?.querySelector('h1');
 		expect(headerTitle?.textContent).toBe('Stories Reader');
+	});
+
+	it('QC-6: Collapses LibraryHeader keeping Tabs visible when scrolling down and expands when scrolling up', async () => {
+		const { container } = render(<LibraryScreen />);
+		await waitFor(() => {
+			expect(BookRepository.getBooks).toHaveBeenCalled();
+		});
+
+		const stickyContainer = container.querySelector('.sticky.top-0');
+		expect(stickyContainer?.getAttribute('data-header-collapsed')).toBe('false');
+
+		// Simulate scroll down past threshold
+		act(() => {
+			Object.defineProperty(window, 'scrollY', { value: 140, writable: true, configurable: true });
+			fireEvent.scroll(window);
+		});
+
+		await waitFor(() => {
+			expect(stickyContainer?.getAttribute('data-header-collapsed')).toBe('true');
+		});
+
+		// Simulate scroll up
+		act(() => {
+			Object.defineProperty(window, 'scrollY', { value: 90, writable: true, configurable: true });
+			fireEvent.scroll(window);
+		});
+
+		await waitFor(() => {
+			expect(stickyContainer?.getAttribute('data-header-collapsed')).toBe('false');
+		});
 	});
 });

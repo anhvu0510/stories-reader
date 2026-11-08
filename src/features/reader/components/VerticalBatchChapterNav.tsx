@@ -1,9 +1,8 @@
-import { Loader2, LocateFixed, Maximize2, Minimize2, Pause, Play, SkipForward, Square, Volume2 } from 'lucide-react';
+import { Loader2, LocateFixed, Pause, Play, SkipForward, Square, Volume2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 
 import { isEdgeReadAloudActive } from '@/hooks/useEdgeReadAloudBgm';
-import { useFullscreen } from '@/hooks/useFullscreen';
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
 
@@ -89,30 +88,6 @@ function LocateButton({ onClick }: { onClick: () => void }) {
 			aria-label="Nhảy tới dòng đang đọc"
 		>
 			<LocateFixed size={16} />
-		</motion.button>
-	);
-}
-
-function FullscreenButton() {
-	const { isFullscreen, toggleFullscreen } = useFullscreen();
-
-	const activeStyle = isFullscreen
-		? 'bg-primary/25 text-primary border border-primary/60 shadow-[0_3px_12px_rgba(59,130,246,0.45)]'
-		: 'bg-black/20 dark:bg-black/40 border border-primary/50 text-on-surface hover:text-primary';
-
-	return (
-		<motion.button
-			whileTap={{ scale: 0.88 }}
-			onClick={(e) => {
-				e.stopPropagation();
-				triggerHaptic('light');
-				toggleFullscreen();
-			}}
-			className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors shrink-0 cursor-pointer backdrop-blur-[2px] shadow-[0_3px_12px_rgba(0,0,0,0.4),_inset_0_1px_0.5px_rgba(255,255,255,0.4)] hover:bg-white/20 ${activeStyle}`}
-			title={isFullscreen ? 'Thu nhỏ màn hình' : 'Toàn màn hình'}
-			aria-label={isFullscreen ? 'Thu nhỏ màn hình' : 'Toàn màn hình'}
-		>
-			{isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
 		</motion.button>
 	);
 }
@@ -223,7 +198,6 @@ function TTSActiveControls({
 	return (
 		<div className="flex flex-col items-center gap-2.5 animate-in fade-in zoom-in-90 duration-300 ease-out">
 			{canLocate && <LocateButton onClick={onLocate} />}
-			<FullscreenButton />
 			<PlayPauseButton isTTSPlaying={isTTSPlaying} isTTSLoading={isTTSLoading} onTTSPlay={onTTSPlay} onTTSPause={onTTSPause} />
 			<motion.button
 				whileTap={{ scale: 0.88 }}
@@ -281,7 +255,6 @@ function TTSInactiveControls({
 	return (
 		<div className="flex flex-col items-center gap-2.5">
 			{hasBrowserReadAloudHighlight && <LocateButton onClick={onLocate} />}
-			{hasBrowserReadAloudHighlight && <FullscreenButton />}
 			{showSpeaker && (
 				<motion.button
 					whileTap={{ scale: 0.88 }}

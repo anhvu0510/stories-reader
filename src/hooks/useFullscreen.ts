@@ -58,7 +58,7 @@ export function useFullscreen() {
 			msExitFullscreen?: () => Promise<void>;
 		};
 		const exit = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
-		if (!exit || !doc.fullscreenElement) return;
+		if (!exit || !isBrowserFullscreen()) return;
 		try {
 			await exit.call(doc);
 		} catch {
@@ -67,11 +67,11 @@ export function useFullscreen() {
 	}, []);
 
 	const toggleFullscreen = useCallback(() => {
-		if (document.fullscreenElement) {
+		if (isBrowserFullscreen()) {
 			exitFullscreen();
-		} else {
-			enterFullscreen();
+			return;
 		}
+		enterFullscreen();
 	}, [enterFullscreen, exitFullscreen]);
 
 	/** True khi trình duyệt hỗ trợ Fullscreen API */
@@ -85,5 +85,5 @@ export function useFullscreen() {
 				'msRequestFullscreen' in document.documentElement)
 		);
 
-	return { isFullscreen, isSupported, toggleFullscreen };
+	return { isFullscreen, isSupported, enterFullscreen, exitFullscreen, toggleFullscreen };
 }

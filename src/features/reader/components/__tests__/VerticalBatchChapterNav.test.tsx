@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -164,50 +164,12 @@ describe('VerticalBatchChapterNav Component', () => {
 		expect(mockOnToggleTTS).toHaveBeenCalledTimes(1);
 	});
 
-	it('QC-10 [Vertical Menu Fullscreen Toggle]: Shows Fullscreen toggle button ONLY when Edge Read Aloud highlight is present in DOM', async () => {
-		// 1. Without highlight class in DOM -> Fullscreen button must NOT render in inactive state
-		const { rerender } = render(
-			<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={false} />
-		);
-
-		expect(screen.queryByTitle('Toàn màn hình')).toBeNull();
-
-		// 2. Add Edge Read Aloud highlight class to DOM -> Fullscreen button must render in vertical menu
-		const span = document.createElement('span');
-		span.className = 'msreadout-line-highlight';
-
-		await act(async () => {
-			document.body.appendChild(span);
-			await Promise.resolve();
-		});
-
-		rerender(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={false} />);
-
-		const fullscreenBtn = screen.getByTitle('Toàn màn hình');
-		expect(fullscreenBtn).toBeDefined();
-
-		fireEvent.click(fullscreenBtn);
-		expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(1);
-
-		document.body.removeChild(span);
-	});
-
 	it('QC-11 [showTTSControl=false]: Hides speaker button when showTTSControl prop is set to false', () => {
 		render(
 			<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={false} showTTSControl={false} />
 		);
 
 		expect(screen.queryByLabelText('Bật đọc thành tiếng')).toBeNull();
-	});
-
-	it('QC-12 [Active Vertical Menu]: Always shows Fullscreen toggle button when isTTSActive is true (speaker button pressed to open vertical menu)', () => {
-		render(<VerticalBatchChapterNav chapters={mockChapters} activeChapterId="c1" isVisible={true} isTTSActive={true} />);
-
-		const fullscreenBtn = screen.getByTitle('Toàn màn hình');
-		expect(fullscreenBtn).toBeDefined();
-
-		fireEvent.click(fullscreenBtn);
-		expect(document.documentElement.requestFullscreen).toHaveBeenCalledTimes(1);
 	});
 
 	it('encloses active controls in a transparent frame without changing button styles', () => {

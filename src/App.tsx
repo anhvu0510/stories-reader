@@ -6,6 +6,7 @@ import { AppLockOverlay } from './components/AppLockOverlay';
 import { AppUpdateOverlay } from './components/AppUpdateOverlay';
 import { GlobalApiLoading } from './components/GlobalApiLoading';
 import { GlobalDownloadProgress } from './components/GlobalDownloadProgress';
+import { GlobalFullscreenButton } from './components/GlobalFullscreenButton';
 import { PasscodeModal } from './components/PasscodeModal';
 import { ToastContainer } from './components/Toast';
 import { ChapterListScreen } from './features/chapter-list/ChapterListScreen';
@@ -42,7 +43,7 @@ function AppContent() {
 	}, [location.pathname]);
 
 	return (
-		<div className="min-h-dvh w-full max-w-full overflow-x-hidden bg-background text-on-background flex flex-col box-border hide-scrollbar no-scrollbar">
+		<div className="min-h-dvh w-full max-w-full overflow-x-clip bg-background text-on-background flex flex-col box-border hide-scrollbar no-scrollbar">
 			<div className="flex-1 flex flex-col w-full">
 				<Routes location={location}>
 					<Route path="/" element={<LibraryScreen />} />
@@ -219,6 +220,7 @@ export default function App() {
 			<ApplicationGate>
 				<GlobalApiLoading />
 				<AppContent />
+				<GlobalFullscreenButton />
 				<GlobalDownloadProgress />
 				<ToastContainer />
 				<AppUpdateManager />

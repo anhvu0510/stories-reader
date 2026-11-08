@@ -239,7 +239,7 @@
 			-apple-system,
 			sans-serif;
 		-webkit-font-smoothing: antialiased;
-		overflow-x: hidden;
+		overflow-x: clip;
 		scrollbar-width: none !important;
 		-ms-overflow-style: none !important;
 	}

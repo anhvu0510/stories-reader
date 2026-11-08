@@ -154,7 +154,7 @@ function LibraryTabsNav({
 	onTabChange: (tab: LibraryTab) => void;
 }) {
 	return (
-		<div className="px-3.5 pt-1 pb-2 border-t border-white/10 dark:border-white/5 bg-transparent">
+		<div className="px-3.5 py-2 border-t border-white/10 dark:border-white/5 bg-transparent">
 			<div className="grid grid-cols-4 gap-1 p-1 bg-white/[0.04] dark:bg-white/[0.04] border border-white/10 dark:border-white/10 rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)] box-border">
 				{TAB_ITEMS.map((t) => {
 					const isActive = currentTab === t.id;
@@ -425,6 +425,138 @@ function resetScrollTop() {
 	}
 }
 
+function isSearchInputFocused(): boolean {
+	if (typeof document === 'undefined') return false;
+	return document.activeElement?.tagName === 'INPUT';
+}
+
+function shouldCollapseHeader(currentY: number, deltaY: number): boolean {
+	if (isSearchInputFocused()) return false;
+	return currentY > 80 && deltaY > 12;
+}
+
+function shouldExpandHeader(currentY: number, deltaY: number): boolean {
+	return deltaY < -10 || currentY <= 48;
+}
+
+function useLibraryScrollHeader({ loading, setSavedScrollY }: { loading: boolean; setSavedScrollY: (scrollY: number) => void }) {
+	const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+	const [headerCollapseOffset, setHeaderCollapseOffset] = useState(96);
+	const headerContentRef = useRef<HTMLDivElement | null>(null);
+	const lastScrollYRef = useRef(0);
+	const saveScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+	useEffect(() => {
+		const el = headerContentRef.current;
+		if (!el) return;
+		const measured = el.offsetHeight;
+		if (measured > 0) {
+			setHeaderCollapseOffset(measured);
+		}
+	}, []);
+
+	useEffect(() => {
+		const handleScroll = () => {
+			const currentY = Math.max(0, window.scrollY || 0);
+			const deltaY = currentY - lastScrollYRef.current;
+
+			if (shouldCollapseHeader(currentY, deltaY)) {
+				setIsHeaderCollapsed(true);
+				lastScrollYRef.current = currentY;
+			} else if (shouldExpandHeader(currentY, deltaY)) {
+				setIsHeaderCollapsed(false);
+				lastScrollYRef.current = currentY;
+			}
+
+			if (loading) return;
+			if (saveScrollTimeoutRef.current) clearTimeout(saveScrollTimeoutRef.current);
+			saveScrollTimeoutRef.current = setTimeout(() => {
+				setSavedScrollY(currentY);
+			}, 150);
+		};
+
+		window.addEventListener('scroll', handleScroll, { passive: true });
+		return () => {
+			window.removeEventListener('scroll', handleScroll);
+			if (saveScrollTimeoutRef.current) clearTimeout(saveScrollTimeoutRef.current);
+		};
+	}, [loading, setSavedScrollY]);
+
+	return {
+		isHeaderCollapsed,
+		setIsHeaderCollapsed,
+		headerCollapseOffset,
+		headerContentRef,
+	};
+}
+
+function LibraryStickyHeaderSection({
+	isHeaderCollapsed,
+	headerCollapseOffset,
+	headerContentRef,
+	search,
+	onSearchChange,
+	onSubmitSearch,
+	onOpenSettings,
+	onOpenTagFilter,
+	selectedTags,
+	onOpenSort,
+	isCustomSortActive,
+	onClearAllTags,
+	onRemoveTag,
+	tab,
+	total,
+	onTabChange,
+}: {
+	isHeaderCollapsed: boolean;
+	headerCollapseOffset: number;
+	headerContentRef: React.RefObject<HTMLDivElement | null>;
+	search: string;
+	onSearchChange: (val: string) => void;
+	onSubmitSearch: () => void;
+	onOpenSettings: () => void;
+	onOpenTagFilter: () => void;
+	selectedTags: string[];
+	onOpenSort?: () => void;
+	isCustomSortActive: boolean;
+	onClearAllTags: () => void;
+	onRemoveTag: (tag: string) => void;
+	tab: LibraryTab;
+	total: number;
+	onTabChange: (tab: LibraryTab) => void;
+}) {
+	const collapsedState = isHeaderCollapsed ? 'true' : 'false';
+	const stickyTop = isHeaderCollapsed ? -headerCollapseOffset : 0;
+	const headerOpacityClass = isHeaderCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100';
+
+	return (
+		<div
+			data-header-collapsed={collapsedState}
+			style={{ top: stickyTop }}
+			className="sticky top-0 z-30 bg-background/95 dark:bg-background/95 backdrop-blur-xl border-b border-outline-variant/20 shadow-[0_4px_20px_rgba(0,0,0,0.22)] transition-[top,box-shadow] duration-250 ease-out"
+		>
+			<div ref={headerContentRef} className={`transition-opacity duration-200 ${headerOpacityClass}`}>
+				<LibraryHeader
+					searchQuery={search}
+					onSearchChange={onSearchChange}
+					onSubmitSearch={onSubmitSearch}
+					onOpenSettings={onOpenSettings}
+					onOpenTagFilter={onOpenTagFilter}
+					activeTagsCount={selectedTags.length}
+					onOpenSort={onOpenSort}
+					isCustomSortActive={isCustomSortActive}
+				/>
+			</div>
+
+			{/* Active Tag Filter Pills Row */}
+			<LibraryTagBadges selectedTags={selectedTags} onClearAll={onClearAllTags} onRemoveTag={onRemoveTag} />
+
+			{/* Navigation Tabs (Full Width One UI Segmented Capsule) */}
+			<LibraryTabsNav currentTab={tab} total={total} onTabChange={onTabChange} />
+		</div>
+	);
+}
+
 function LibraryOfflineModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
 	if (!isOpen) return null;
 	return <OfflineManagerSheet onClose={onClose} />;
@@ -432,8 +564,16 @@ function LibraryOfflineModal({ isOpen, onClose }: { isOpen: boolean; onClose: ()
 
 export function LibraryScreen() {
 	useDocumentTitle();
-	const { savedPage, savedTab, savedSearch, savedTags, savedSortBy, savedSortOrder, savedScrollY, setLibraryState, setSort } =
-		useLibraryStore();
+	const savedPage = useLibraryStore((state) => state.savedPage);
+	const savedTab = useLibraryStore((state) => state.savedTab);
+	const savedSearch = useLibraryStore((state) => state.savedSearch);
+	const savedTags = useLibraryStore((state) => state.savedTags);
+	const savedSortBy = useLibraryStore((state) => state.savedSortBy);
+	const savedSortOrder = useLibraryStore((state) => state.savedSortOrder);
+	const setLibraryState = useLibraryStore((state) => state.setLibraryState);
+	const setSavedScrollY = useLibraryStore((state) => state.setSavedScrollY);
+	const setSort = useLibraryStore((state) => state.setSort);
+	const [initialSavedScrollY] = useState(() => useLibraryStore.getState().savedScrollY);
 
 	const initState = getInitialLibraryState(savedPage, savedSearch, savedTags, savedSortBy, savedSortOrder);
 
@@ -463,7 +603,12 @@ export function LibraryScreen() {
 	const fetchIdRef = useRef(0);
 	const tabCacheRef = useRef<Record<string, { books: Book[]; totalPages: number; total: number }>>({});
 
-	useRestoreScrollOnLoad(loading, books.length > 0, savedScrollY);
+	useRestoreScrollOnLoad(loading, books.length > 0, initialSavedScrollY);
+
+	const { isHeaderCollapsed, setIsHeaderCollapsed, headerCollapseOffset, headerContentRef } = useLibraryScrollHeader({
+		loading,
+		setSavedScrollY,
+	});
 
 	// Sync state to useLibraryStore whenever page, tab, search, selectedTags, sortBy, sortOrder changes
 	useEffect(() => {
@@ -476,15 +621,6 @@ export function LibraryScreen() {
 			if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 		};
 	}, []);
-
-	// Track and save scroll position on window scroll
-	useEffect(() => {
-		const handleScroll = () => {
-			setLibraryState(page, tab, search, selectedTags, sortBy, sortOrder, window.scrollY);
-		};
-		window.addEventListener('scroll', handleScroll, { passive: true });
-		return () => window.removeEventListener('scroll', handleScroll);
-	}, [page, tab, search, selectedTags, sortBy, sortOrder, setLibraryState]);
 
 	// Fetch paginated books directly from backend API with tab, tags, and sort filter
 	const fetchBooks = useCallback(
@@ -547,6 +683,7 @@ export function LibraryScreen() {
 
 	// Page change handler
 	const handlePageChange = (newPage: number) => {
+		setIsHeaderCollapsed(false);
 		setPage(newPage);
 		setLibraryState(newPage, tab, search, selectedTags, sortBy, sortOrder, 0);
 		resetScrollTop();
@@ -554,6 +691,7 @@ export function LibraryScreen() {
 
 	// Optimized Debounced search handler (400ms delay + immediate clear)
 	const handleSearchChange = (val: string) => {
+		setIsHeaderCollapsed(false);
 		setSearch(val);
 		if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 
@@ -574,6 +712,7 @@ export function LibraryScreen() {
 	// Immediate search submit handler (e.g. Enter key or Search icon click)
 	const handleSearchSubmit = () => {
 		if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+		setIsHeaderCollapsed(false);
 		setPage(1);
 		setAppliedSearch(search);
 		setLibraryState(1, tab, search, selectedTags, sortBy, sortOrder, 0);
@@ -585,6 +724,7 @@ export function LibraryScreen() {
 		(newTab: 'ALL' | 'HISTORY' | 'FAVORITE' | 'AI') => {
 			if (newTab === tab) return;
 			triggerHaptic('selection');
+			setIsHeaderCollapsed(false);
 
 			setTab(newTab);
 			setPage(1);
@@ -604,7 +744,7 @@ export function LibraryScreen() {
 			setLibraryState(1, newTab, search, selectedTags, sortBy, sortOrder, 0);
 			resetScrollTop();
 		},
-		[tab, sortBy, sortOrder, appliedSearch, selectedTags, search, setLibraryState]
+		[tab, sortBy, sortOrder, appliedSearch, selectedTags, search, setLibraryState, setIsHeaderCollapsed]
 	);
 
 	// Native Swipe Gestures for Mobile Tab Switching with Smooth Transitions
@@ -620,6 +760,7 @@ export function LibraryScreen() {
 	// Tag filter apply handler
 	const handleTagFilterApply = (newTags: string[]) => {
 		triggerHaptic('light');
+		setIsHeaderCollapsed(false);
 		setSelectedTags(newTags);
 		setPage(1);
 		setLibraryState(1, tab, search, newTags, sortBy, sortOrder, 0);
@@ -629,6 +770,7 @@ export function LibraryScreen() {
 	// Sort apply handler
 	const handleSortApply = (newSortBy: SortByField, newSortOrder: SortOrderDirection) => {
 		triggerHaptic('selection');
+		setIsHeaderCollapsed(false);
 		setSortByState(newSortBy);
 		setSortOrderState(newSortOrder);
 		setSort(newSortBy, newSortOrder);
@@ -647,37 +789,37 @@ export function LibraryScreen() {
 		await fetchBooks(1, appliedSearch, tab, selectedTags, sortBy, sortOrder, { forceFresh: true });
 	}, [fetchBooks, appliedSearch, tab, selectedTags, sortBy, sortOrder]);
 
+	const bottomPaddingClass = totalPages > 1 ? 'pb-[calc(max(1rem,env(safe-area-inset-bottom))+4.5rem)]' : 'pb-12';
+
 	return (
-		<div className="min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-20 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200">
+		<div
+			className={`min-h-dvh w-full max-w-md mx-auto bg-background text-on-background ${bottomPaddingClass} border-x border-outline-variant/20 shadow-2xl relative overflow-x-clip transition-colors duration-200`}
+		>
 			{/* Pull-to-refresh clear-cache gesture */}
 			<PullToRefresh onRefresh={handlePullRefresh} disabled={loading} showIndicator={false} />
 
-			{/* Unified Pinned Sticky Header (Title + Search + Tabs fixed together at top-0) */}
-			<div className="sticky top-0 z-30 bg-background/98 dark:bg-background/98 backdrop-blur-md border-b border-outline-variant/20 transition-all duration-300">
-				<LibraryHeader
-					searchQuery={search}
-					onSearchChange={handleSearchChange}
-					onSubmitSearch={handleSearchSubmit}
-					onOpenSettings={() => openSettings('reader')}
-					onOpenTagFilter={() => setIsTagFilterOpen(true)}
-					activeTagsCount={selectedTags.length}
-					onOpenSort={tab === 'ALL' ? () => setIsSortSheetOpen(true) : undefined}
-					isCustomSortActive={isCustomSortActive}
-				/>
-
-				{/* Active Tag Filter Pills Row */}
-				<LibraryTagBadges
-					selectedTags={selectedTags}
-					onClearAll={() => handleTagFilterApply([])}
-					onRemoveTag={(tag) => {
-						const updated = selectedTags.filter((t) => t !== tag);
-						handleTagFilterApply(updated);
-					}}
-				/>
-
-				{/* Navigation Tabs (Full Width One UI Segmented Capsule) */}
-				<LibraryTabsNav currentTab={tab} total={total} onTabChange={handleTabChange} />
-			</div>
+			{/* Smart Collapsible Sticky Header (Collapses Title + Search on scroll down while keeping Tabs pinned at top-0) */}
+			<LibraryStickyHeaderSection
+				isHeaderCollapsed={isHeaderCollapsed}
+				headerCollapseOffset={headerCollapseOffset}
+				headerContentRef={headerContentRef}
+				search={search}
+				onSearchChange={handleSearchChange}
+				onSubmitSearch={handleSearchSubmit}
+				onOpenSettings={() => openSettings('reader')}
+				onOpenTagFilter={() => setIsTagFilterOpen(true)}
+				selectedTags={selectedTags}
+				onOpenSort={tab === 'ALL' ? () => setIsSortSheetOpen(true) : undefined}
+				isCustomSortActive={isCustomSortActive}
+				onClearAllTags={() => handleTagFilterApply([])}
+				onRemoveTag={(tag) => {
+					const updated = selectedTags.filter((t) => t !== tag);
+					handleTagFilterApply(updated);
+				}}
+				tab={tab}
+				total={total}
+				onTabChange={handleTabChange}
+			/>
 
 			{/* Book Cards List Content Container */}
 			<div ref={contentContainerRef} className="px-3.5 pt-3.5 space-y-3 will-change-transform">

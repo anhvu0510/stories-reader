@@ -520,7 +520,7 @@ export function ChapterListScreen() {
 	return (
 		<div
 			ref={screenRef}
-			className="min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-28 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200"
+			className="min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-28 border-x border-outline-variant/20 shadow-2xl relative overflow-x-clip transition-colors duration-200"
 		>
 			<PullToRefresh onRefresh={handlePullRefresh} disabled={loading} showIndicator={false} />
 
