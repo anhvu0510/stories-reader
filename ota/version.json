@@ -1,7 +1,7 @@
 {
-  "version": "1.0.372",
+  "version": "1.0.373",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "d80cf5ab1131572588afa4afc7a2f9ba6e46867843c2fc9257cdd856ed25021a",
-  "releaseNotes": "fix: remove duplicate export of isBrowserFullscreen in useFullscreen",
-  "updatedAt": "2026-11-08T17:49:55Z"
+  "checksum": "4fb5f4d481bb7e8a9c39a86f326ab587a322bd2da339d78f933f09f85f4708e7",
+  "releaseNotes": "feat: add global fullscreen button component and update overflow handling",
+  "updatedAt": "2026-11-08T18:17:47Z"
 }
