@@ -1,7 +1,7 @@
 {
-  "version": "1.0.368",
+  "version": "1.0.369",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "f5f48e20906e1789b7fe5e5ecfed30ee50d83d288895f54bd1e4d0e3cb39300a",
-  "releaseNotes": "feat: add base HTML structure, PWA manifest, and app icon for stories reader",
-  "updatedAt": "2026-11-08T16:55:04Z"
+  "checksum": "6b18a07b8f942c6167d1d4a1bef8ba9d90c6cb578198b4b3caf8cf414edf1f16",
+  "releaseNotes": "docs: update verification gate commands and guidelines in AGENTS.md",
+  "updatedAt": "2026-11-08T17:20:49Z"
 }
