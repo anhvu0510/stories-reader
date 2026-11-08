@@ -323,32 +323,22 @@ function LibraryTagBadges({
 	);
 }
 
-function useRestoreScrollOnLoad(
-	loading: boolean,
-	hasBooks: boolean,
-	savedScrollY: number,
-	containerRef: React.RefObject<HTMLDivElement | null>
-) {
+function useRestoreScrollOnLoad(loading: boolean, hasBooks: boolean, savedScrollY: number) {
 	const isRestoredRef = useRef(false);
 	useEffect(() => {
 		if (!loading && hasBooks && !isRestoredRef.current) {
 			isRestoredRef.current = true;
 			if (typeof window !== 'undefined') {
-				window.scrollTo(0, 0);
-			}
-			const container = containerRef.current;
-			if (!container) return;
-			if (savedScrollY > 0) {
-				requestAnimationFrame(() => {
-					if (containerRef.current) {
-						containerRef.current.scrollTop = savedScrollY;
-					}
-				});
-			} else {
-				container.scrollTop = 0;
+				if (savedScrollY > 0) {
+					requestAnimationFrame(() => {
+						window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+					});
+				} else {
+					window.scrollTo({ top: 0, behavior: 'instant' });
+				}
 			}
 		}
-	}, [loading, hasBooks, savedScrollY, containerRef]);
+	}, [loading, hasBooks, savedScrollY]);
 }
 
 function useLibrarySwipeTabs({
@@ -429,9 +419,9 @@ function getInitialLibraryState(
 	};
 }
 
-function resetScrollTop(ref: React.RefObject<HTMLDivElement | null>) {
-	if (ref.current) {
-		ref.current.scrollTop = 0;
+function resetScrollTop() {
+	if (typeof window !== 'undefined') {
+		window.scrollTo({ top: 0, behavior: 'instant' });
 	}
 }
 
@@ -469,12 +459,11 @@ export function LibraryScreen() {
 	const bookLimit = readerLimit || 20;
 	const { openSettings, isOfflineManagerOpen, closeOfflineManager } = useModalStore();
 
-	const mainScrollRef = useRef<HTMLDivElement | null>(null);
 	const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const fetchIdRef = useRef(0);
 	const tabCacheRef = useRef<Record<string, { books: Book[]; totalPages: number; total: number }>>({});
 
-	useRestoreScrollOnLoad(loading, books.length > 0, savedScrollY, mainScrollRef);
+	useRestoreScrollOnLoad(loading, books.length > 0, savedScrollY);
 
 	// Sync state to useLibraryStore whenever page, tab, search, selectedTags, sortBy, sortOrder changes
 	useEffect(() => {
@@ -488,12 +477,14 @@ export function LibraryScreen() {
 		};
 	}, []);
 
-	// Track and save scroll position on main container scroll
-	const handleMainScroll = () => {
-		if (mainScrollRef.current) {
-			setLibraryState(page, tab, search, selectedTags, sortBy, sortOrder, mainScrollRef.current.scrollTop);
-		}
-	};
+	// Track and save scroll position on window scroll
+	useEffect(() => {
+		const handleScroll = () => {
+			setLibraryState(page, tab, search, selectedTags, sortBy, sortOrder, window.scrollY);
+		};
+		window.addEventListener('scroll', handleScroll, { passive: true });
+		return () => window.removeEventListener('scroll', handleScroll);
+	}, [page, tab, search, selectedTags, sortBy, sortOrder, setLibraryState]);
 
 	// Fetch paginated books directly from backend API with tab, tags, and sort filter
 	const fetchBooks = useCallback(
@@ -558,7 +549,7 @@ export function LibraryScreen() {
 	const handlePageChange = (newPage: number) => {
 		setPage(newPage);
 		setLibraryState(newPage, tab, search, selectedTags, sortBy, sortOrder, 0);
-		resetScrollTop(mainScrollRef);
+		resetScrollTop();
 	};
 
 	// Optimized Debounced search handler (400ms delay + immediate clear)
@@ -586,6 +577,7 @@ export function LibraryScreen() {
 		setPage(1);
 		setAppliedSearch(search);
 		setLibraryState(1, tab, search, selectedTags, sortBy, sortOrder, 0);
+		resetScrollTop();
 	};
 
 	// Tab switch handler: resets page and passes new tab to API
@@ -610,7 +602,7 @@ export function LibraryScreen() {
 			}
 
 			setLibraryState(1, newTab, search, selectedTags, sortBy, sortOrder, 0);
-			resetScrollTop(mainScrollRef);
+			resetScrollTop();
 		},
 		[tab, sortBy, sortOrder, appliedSearch, selectedTags, search, setLibraryState]
 	);
@@ -631,7 +623,7 @@ export function LibraryScreen() {
 		setSelectedTags(newTags);
 		setPage(1);
 		setLibraryState(1, tab, search, newTags, sortBy, sortOrder, 0);
-		resetScrollTop(mainScrollRef);
+		resetScrollTop();
 	};
 
 	// Sort apply handler
@@ -641,7 +633,7 @@ export function LibraryScreen() {
 		setSortOrderState(newSortOrder);
 		setSort(newSortBy, newSortOrder);
 		setPage(1);
-		resetScrollTop(mainScrollRef);
+		resetScrollTop();
 	};
 
 	const defaultSortBy: SortByField = 'createdAt';
@@ -656,51 +648,48 @@ export function LibraryScreen() {
 	}, [fetchBooks, appliedSearch, tab, selectedTags, sortBy, sortOrder]);
 
 	return (
-		<div className="h-dvh w-full max-w-md mx-auto bg-background text-on-background border-x border-outline-variant/20 shadow-2xl relative overflow-hidden flex flex-col transition-colors duration-200">
+		<div className="min-h-dvh w-full max-w-md mx-auto bg-background text-on-background pb-20 border-x border-outline-variant/20 shadow-2xl relative overflow-x-hidden transition-colors duration-200">
 			{/* Pull-to-refresh clear-cache gesture */}
-			<PullToRefresh onRefresh={handlePullRefresh} containerRef={mainScrollRef} disabled={loading} showIndicator={false} />
+			<PullToRefresh onRefresh={handlePullRefresh} disabled={loading} showIndicator={false} />
 
-			{/* Main Scroll Container covering entire screen so items scroll UNDER sticky glass header */}
-			<main ref={mainScrollRef} onScroll={handleMainScroll} className="flex-1 overflow-y-auto hide-scrollbar no-scrollbar relative">
-				{/* Unified Pinned Sticky Header (Title + Search + Tabs fixed together at top-0) */}
-				<div className="sticky top-0 z-30 bg-background/98 dark:bg-background/98 backdrop-blur-md border-b border-outline-variant/20 transition-all duration-300">
-					<LibraryHeader
-						searchQuery={search}
-						onSearchChange={handleSearchChange}
-						onSubmitSearch={handleSearchSubmit}
-						onOpenSettings={() => openSettings('reader')}
-						onOpenTagFilter={() => setIsTagFilterOpen(true)}
-						activeTagsCount={selectedTags.length}
-						onOpenSort={tab === 'ALL' ? () => setIsSortSheetOpen(true) : undefined}
-						isCustomSortActive={isCustomSortActive}
-					/>
+			{/* Unified Pinned Sticky Header (Title + Search + Tabs fixed together at top-0) */}
+			<div className="sticky top-0 z-30 bg-background/98 dark:bg-background/98 backdrop-blur-md border-b border-outline-variant/20 transition-all duration-300">
+				<LibraryHeader
+					searchQuery={search}
+					onSearchChange={handleSearchChange}
+					onSubmitSearch={handleSearchSubmit}
+					onOpenSettings={() => openSettings('reader')}
+					onOpenTagFilter={() => setIsTagFilterOpen(true)}
+					activeTagsCount={selectedTags.length}
+					onOpenSort={tab === 'ALL' ? () => setIsSortSheetOpen(true) : undefined}
+					isCustomSortActive={isCustomSortActive}
+				/>
 
-					{/* Active Tag Filter Pills Row */}
-					<LibraryTagBadges
-						selectedTags={selectedTags}
-						onClearAll={() => handleTagFilterApply([])}
-						onRemoveTag={(tag) => {
-							const updated = selectedTags.filter((t) => t !== tag);
-							handleTagFilterApply(updated);
-						}}
-					/>
+				{/* Active Tag Filter Pills Row */}
+				<LibraryTagBadges
+					selectedTags={selectedTags}
+					onClearAll={() => handleTagFilterApply([])}
+					onRemoveTag={(tag) => {
+						const updated = selectedTags.filter((t) => t !== tag);
+						handleTagFilterApply(updated);
+					}}
+				/>
 
-					{/* Navigation Tabs (Full Width One UI Segmented Capsule) */}
-					<LibraryTabsNav currentTab={tab} total={total} onTabChange={handleTabChange} />
-				</div>
+				{/* Navigation Tabs (Full Width One UI Segmented Capsule) */}
+				<LibraryTabsNav currentTab={tab} total={total} onTabChange={handleTabChange} />
+			</div>
 
-				{/* Book Cards List Content Container */}
-				<div ref={contentContainerRef} className="px-3.5 pt-3.5 pb-28 space-y-3 will-change-transform">
-					<LibraryBookList
-						loading={loading}
-						books={books}
-						tab={tab}
-						selectedTags={selectedTags}
-						onClearTags={() => handleTagFilterApply([])}
-						onOpenServerSettings={() => openSettings('servers')}
-					/>
-				</div>
-			</main>
+			{/* Book Cards List Content Container */}
+			<div ref={contentContainerRef} className="px-3.5 pt-3.5 space-y-3 will-change-transform">
+				<LibraryBookList
+					loading={loading}
+					books={books}
+					tab={tab}
+					selectedTags={selectedTags}
+					onClearTags={() => handleTagFilterApply([])}
+					onOpenServerSettings={() => openSettings('servers')}
+				/>
+			</div>
 
 			{/* Global Settings & Modals */}
 			<GlobalSettingsSheet />
