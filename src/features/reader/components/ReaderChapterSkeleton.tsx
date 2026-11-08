@@ -21,7 +21,7 @@ export const ReaderChapterSkeleton = memo(function ReaderChapterSkeleton({ class
 			className={`w-full min-h-[85vh] pt-[calc(max(env(safe-area-inset-top),0.75rem)+4.25rem)] sm:pt-24 pb-24 select-none relative overflow-hidden pointer-events-none ${className}`}
 		>
 			{/* Tiêu đề chương khớp 100% với ChapterContentSection */}
-			<div className="px-4 mb-5 pt-0.5">
+			<div className="px-4 sm:px-6 md:px-8 mb-5 pt-0.5">
 				<h2 className="text-base sm:text-lg font-bold tracking-tight leading-snug flex items-center gap-2">
 					<span className="w-1 h-4 rounded-full bg-primary/70 inline-block shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.35)]" />
 					{titleHint ? (
@@ -33,7 +33,7 @@ export const ReaderChapterSkeleton = memo(function ReaderChapterSkeleton({ class
 			</div>
 
 			{/* Các đoạn văn với nhịp điệu tự nhiên của trang sách */}
-			<article className="px-4 space-y-6 opacity-85">
+			<article className="px-4 sm:px-6 md:px-8 space-y-6 opacity-85">
 				{/* Đoạn 1: Mở đầu (4 dòng) */}
 				<div className="space-y-3">
 					<div className="h-4 w-full rounded-md skeleton-shimmer" />

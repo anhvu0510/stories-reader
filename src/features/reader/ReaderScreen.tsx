@@ -73,7 +73,7 @@ function ChapterParagraphs({
 }: ChapterParagraphsProps) {
 	const items = useMemo(
 		() =>
-			content.map((paragraphHtml, index) => ({
+			(content || []).map((paragraphHtml, index) => ({
 				id: `${chapterId}-p-${offset + index}`,
 				index: offset + index,
 				content: paragraphHtml,
@@ -82,7 +82,7 @@ function ChapterParagraphs({
 	);
 
 	return (
-		<article className="px-4 select-text" style={{ fontSize: `${fontSize}px`, lineHeight }}>
+		<article className="px-4 sm:px-6 md:px-8 select-text" style={{ fontSize: `${fontSize}px`, lineHeight }}>
 			{items.map((item) => {
 				const isTTSActive = (isPlaying || isPaused) && currentParagraphIndex === item.index;
 				return (
@@ -140,7 +140,7 @@ const ChapterContentSection = memo(function ChapterContentSection({
 					>
 						{/* Subtle 3D Glowing Glass Divider between chapters in batch */}
 						{chapIdx > 0 && (
-							<div className="mt-8 mb-6 px-6 flex items-center gap-3 select-none">
+							<div className="mt-8 mb-6 px-4 sm:px-6 md:px-8 flex items-center gap-3 select-none">
 								<div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white/30 dark:via-white/20 to-transparent" />
 								<div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(59,130,246,0.8)] border border-white/40" />
 								<div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white/30 dark:via-white/20 to-transparent" />
@@ -148,7 +148,7 @@ const ChapterContentSection = memo(function ChapterContentSection({
 						)}
 
 						{/* Chapter Section Title with Accent Indicator */}
-						<div className="px-4 mb-3 pt-0.5">
+						<div className="px-4 sm:px-6 md:px-8 mb-3 pt-0.5">
 							<h2 className="text-base sm:text-lg font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2">
 								<span className="w-1 h-4 rounded-full bg-primary inline-block shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
 								<p>{chapterTitleText}</p>
@@ -215,7 +215,17 @@ function isTouchMoved(touch: React.Touch | undefined, startPos: { x: number; y: 
 function hasTextSelection(): boolean {
 	if (typeof window === 'undefined') return false;
 	const selection = window.getSelection();
-	return Boolean(selection && !selection.isCollapsed && selection.toString().trim());
+	if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+		return false;
+	}
+	if (isEdgeReadAloudActive()) {
+		const anchorNode = selection.anchorNode;
+		const parent = anchorNode instanceof Element ? anchorNode : anchorNode?.parentElement;
+		if (parent?.closest('.msreadout-word-highlight, .msreadout-line-highlight, msreadoutspan')) {
+			return false;
+		}
+	}
+	return true;
 }
 
 function scrollElementIntoView(el: Element | null): boolean {
@@ -611,17 +621,33 @@ interface UseScrollProgressProps {
 	displayChapters: ChapterDetailItem[];
 	activeChapter: { chapterId: string } | null;
 	onNearBottom: () => void;
+	onScrollVisibilityChange?: (visible: boolean) => void;
 }
 
-function useScrollProgress({ displayChapters, activeChapter, onNearBottom }: UseScrollProgressProps) {
+function resolveScrollVisibility(currentY: number, deltaY: number, lastVisible: boolean): boolean {
+	if (currentY <= 60) return true;
+	if (deltaY > 15) return false;
+	if (deltaY < -15) return true;
+	return lastVisible;
+}
+
+function checkIsNearBottom(currentY: number, totalHeight: number, newProgress: number, isLastChapterActive: boolean): boolean {
+	if (!isLastChapterActive) return false;
+	return currentY >= totalHeight - 40 || newProgress >= 98;
+}
+
+function useScrollProgress({ displayChapters, activeChapter, onNearBottom, onScrollVisibilityChange }: UseScrollProgressProps) {
 	const [scrollProgress, setScrollProgress] = useState(0);
 	const lastScrollY = useRef(0);
-	const scrollAnimRef = useRef<number | null>(null);
+	const lastVisibleRef = useRef(true);
+	const isTickingRef = useRef(false);
 
 	useEffect(() => {
 		const handleScroll = () => {
-			if (scrollAnimRef.current !== null) return;
-			scrollAnimRef.current = requestAnimationFrame(() => {
+			if (isTickingRef.current) return;
+			isTickingRef.current = true;
+			requestAnimationFrame(() => {
+				isTickingRef.current = false;
 				const currentY = window.scrollY;
 				const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
 				if (totalHeight > 0) {
@@ -630,22 +656,27 @@ function useScrollProgress({ displayChapters, activeChapter, onNearBottom }: Use
 
 					const lastChap = displayChapters[displayChapters.length - 1];
 					const isLastChapterActive = !lastChap || !activeChapter || activeChapter.chapterId === lastChap.chapterId;
-					const isNearBottom = isLastChapterActive && (currentY >= totalHeight - 40 || newProgress >= 98);
-					if (isNearBottom) {
+					if (checkIsNearBottom(currentY, totalHeight, newProgress, isLastChapterActive)) {
 						onNearBottom();
 					}
 				}
+
+				const deltaY = currentY - lastScrollY.current;
+				const nextVisible = resolveScrollVisibility(currentY, deltaY, lastVisibleRef.current);
+				if (nextVisible !== lastVisibleRef.current) {
+					lastVisibleRef.current = nextVisible;
+					onScrollVisibilityChange?.(nextVisible);
+				}
+
 				lastScrollY.current = currentY;
-				scrollAnimRef.current = null;
 			});
 		};
 
 		window.addEventListener('scroll', handleScroll, { passive: true });
 		return () => {
 			window.removeEventListener('scroll', handleScroll);
-			if (scrollAnimRef.current !== null) cancelAnimationFrame(scrollAnimRef.current);
 		};
-	}, [displayChapters, activeChapter, onNearBottom]);
+	}, [displayChapters, activeChapter, onNearBottom, onScrollVisibilityChange]);
 
 	return scrollProgress;
 }
@@ -875,7 +906,7 @@ function ReaderLoadingView({ fontClass, bookId, onOpenHistory }: { fontClass: st
 		<div className={`min-h-dvh w-full bg-background text-on-background relative overflow-x-hidden ${fontClass}`}>
 			<div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl lg:max-w-5xl h-96 bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent blur-3xl" />
 			<ReaderHeader bookId={bookId || ''} progress={0} isVisible={true} onOpenHistory={onOpenHistory} />
-			<div className="w-full max-w-4xl lg:max-w-5xl mx-auto px-2 sm:px-6 md:px-8">
+			<div className="w-full max-w-4xl lg:max-w-5xl mx-auto">
 				<ReaderChapterSkeleton />
 			</div>
 		</div>
@@ -1154,7 +1185,7 @@ function ReaderScrollContent({
 	zen,
 }: ReaderScrollContentProps) {
 	return (
-		<div className="relative w-full max-w-4xl lg:max-w-5xl mx-auto overflow-hidden px-2 sm:px-6 md:px-8">
+		<div className="relative w-full max-w-4xl lg:max-w-5xl mx-auto overflow-hidden">
 			{swipe.isDragging && (
 				<div
 					aria-hidden="true"
@@ -1530,10 +1561,18 @@ export function ReaderScreen() {
 		zen.setShowZenControls(true);
 	}, [zen]);
 
+	const handleScrollVisibilityChange = useCallback(
+		(visible: boolean) => {
+			zen.setShowZenControls(visible);
+		},
+		[zen]
+	);
+
 	const scrollProgress = useScrollProgress({
 		displayChapters,
 		activeChapter,
 		onNearBottom: handleNearBottom,
+		onScrollVisibilityChange: handleScrollVisibilityChange,
 	});
 
 	const sheets = useReaderSheets();
