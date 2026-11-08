@@ -1,23 +1,41 @@
 import { useCallback, useEffect, useState } from 'react';
 
 /**
+ * Kiểm tra trạng thái fullscreen của trình duyệt (hỗ trợ cả vendor prefixes).
+ */
+export function isBrowserFullscreen(): boolean {
+	if (typeof document === 'undefined') return false;
+	const doc = document as Document & {
+		webkitFullscreenElement?: Element | null;
+		mozFullScreenElement?: Element | null;
+		msFullscreenElement?: Element | null;
+	};
+	return Boolean(document.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+}
+
+/**
+ * Kiểm tra trạng thái fullscreen của trình duyệt (hỗ trợ cả vendor prefixes).
+ */
+export function isBrowserFullscreen(): boolean {
+	if (typeof document === 'undefined') return false;
+	const doc = document as Document & {
+		webkitFullscreenElement?: Element | null;
+		mozFullScreenElement?: Element | null;
+		msFullscreenElement?: Element | null;
+	};
+	return Boolean(document.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+}
+
+/**
  * Trả về trạng thái fullscreen hiện tại và hàm toggle.
  *  Chỉ hoạt động trên web (Fullscreen API không khả dụng trong WebView Android).
  */
 export function useFullscreen() {
-	const [isFullscreen, setIsFullscreen] = useState(false);
+	const [isFullscreen, setIsFullscreen] = useState(isBrowserFullscreen);
 
 	useEffect(() => {
 		const handler = () => {
-			const doc = document as Document & {
-				webkitFullscreenElement?: Element | null;
-				mozFullScreenElement?: Element | null;
-				msFullscreenElement?: Element | null;
-			};
-			const isFull = Boolean(
-				document.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement
-			);
-			setIsFullscreen(isFull);
+			setIsFullscreen(isBrowserFullscreen());
 		};
 		document.addEventListener('fullscreenchange', handler);
 		document.addEventListener('webkitfullscreenchange', handler);

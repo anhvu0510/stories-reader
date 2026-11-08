@@ -436,4 +436,48 @@ describe('usePullToRefresh hook', () => {
 
 		document.body.removeAttribute('data-sheet-open');
 	});
+
+	it('QC-Fullscreen: enables pull-to-refresh on web when browser is in fullscreen mode', async () => {
+		vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('web');
+		window.scrollY = 0;
+
+		// Mock fullscreen mode active
+		Object.defineProperty(document, 'fullscreenElement', {
+			value: document.documentElement,
+			configurable: true,
+			writable: true,
+		});
+
+		const onRefresh = vi.fn().mockResolvedValue(undefined);
+		const { result } = renderHook(() => usePullToRefresh({ onRefresh, threshold: 50, maxPull: 100 }));
+
+		act(() => {
+			window.dispatchEvent(
+				new TouchEvent('touchstart', {
+					touches: [{ clientX: 100, clientY: 50 } as any],
+				})
+			);
+			window.dispatchEvent(
+				new TouchEvent('touchmove', {
+					touches: [{ clientX: 100, clientY: 180 } as any],
+				})
+			);
+		});
+
+		expect(result.current.isPulling).toBe(true);
+		expect(result.current.pullDistance).toBeGreaterThanOrEqual(50);
+
+		await act(async () => {
+			window.dispatchEvent(new TouchEvent('touchend'));
+		});
+
+		expect(onRefresh).toHaveBeenCalledTimes(1);
+
+		// Clean up fullscreen mock
+		Object.defineProperty(document, 'fullscreenElement', {
+			value: null,
+			configurable: true,
+			writable: true,
+		});
+	});
 });

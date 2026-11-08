@@ -1,5 +1,6 @@
-import React, { memo } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 
+import { isBrowserFullscreen } from '@/hooks/useFullscreen';
 import { usePullToRefresh, type UsePullToRefreshOptions } from '@/hooks/usePullToRefresh';
 
 import { PullToRefreshIndicator } from './PullToRefreshIndicator';
@@ -32,7 +33,28 @@ export const PullToRefresh = memo(function PullToRefresh({
 		targetRef,
 	});
 
-	if (!showIndicator) {
+	const [isFullscreen, setIsFullscreen] = useState(isBrowserFullscreen);
+
+	useEffect(() => {
+		if (typeof document === 'undefined') return;
+		const handler = () => {
+			setIsFullscreen(isBrowserFullscreen());
+		};
+		document.addEventListener('fullscreenchange', handler);
+		document.addEventListener('webkitfullscreenchange', handler);
+		document.addEventListener('mozfullscreenchange', handler);
+		document.addEventListener('MSFullscreenChange', handler);
+		return () => {
+			document.removeEventListener('fullscreenchange', handler);
+			document.removeEventListener('webkitfullscreenchange', handler);
+			document.removeEventListener('mozfullscreenchange', handler);
+			document.removeEventListener('MSFullscreenChange', handler);
+		};
+	}, []);
+
+	const shouldShowIndicator = showIndicator || isFullscreen;
+
+	if (!shouldShowIndicator) {
 		return null;
 	}
 

@@ -46,10 +46,29 @@ describe('PullToRefresh component', () => {
 		expect(indicator.getAttribute('aria-hidden')).toBe('false');
 	});
 
-	it('suppresses indicator rendering when showIndicator is false', () => {
+	it('suppresses indicator rendering when showIndicator is false and not fullscreen', () => {
 		const onRefresh = vi.fn().mockResolvedValue(undefined);
 		render(<PullToRefresh onRefresh={onRefresh} showIndicator={false} />);
 
 		expect(screen.queryByTestId('pull-to-refresh-indicator')).toBeNull();
+	});
+
+	it('shows indicator in fullscreen mode even if showIndicator is false', () => {
+		Object.defineProperty(document, 'fullscreenElement', {
+			value: document.documentElement,
+			configurable: true,
+			writable: true,
+		});
+
+		const onRefresh = vi.fn().mockResolvedValue(undefined);
+		render(<PullToRefresh onRefresh={onRefresh} showIndicator={false} />);
+
+		expect(screen.queryByTestId('pull-to-refresh-indicator')).not.toBeNull();
+
+		Object.defineProperty(document, 'fullscreenElement', {
+			value: null,
+			configurable: true,
+			writable: true,
+		});
 	});
 });

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, type RefObject } from 'react'
 import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
 import { useModalStore } from '@/stores/useModalStore';
 
+import { isBrowserFullscreen } from './useFullscreen';
 import { triggerHaptic } from './useHaptic';
 import { useNativePullToRefresh } from './useNativePullToRefresh';
 
@@ -77,10 +78,29 @@ export function usePullToRefresh({
 }: UsePullToRefreshOptions): UsePullToRefreshReturn {
 	const native = useNativePullToRefresh({ onRefresh, enabled, disabled, threshold, containerRef, targetRef });
 	const nativeGestures = hasNativeReaderGestures();
+	const [isFullscreen, setIsFullscreen] = useState(isBrowserFullscreen);
+
+	useEffect(() => {
+		if (typeof document === 'undefined') return;
+		const handler = () => {
+			setIsFullscreen(isBrowserFullscreen());
+		};
+		document.addEventListener('fullscreenchange', handler);
+		document.addEventListener('webkitfullscreenchange', handler);
+		document.addEventListener('mozfullscreenchange', handler);
+		document.addEventListener('MSFullscreenChange', handler);
+		return () => {
+			document.removeEventListener('fullscreenchange', handler);
+			document.removeEventListener('webkitfullscreenchange', handler);
+			document.removeEventListener('mozfullscreenchange', handler);
+			document.removeEventListener('MSFullscreenChange', handler);
+		};
+	}, []);
+
 	const resolveSupported = () => {
 		if (enabled !== undefined) return enabled;
 		if (disabled) return false;
-		return isAndroidApp();
+		return isAndroidApp() || isFullscreen;
 	};
 	const isSupported = !nativeGestures && resolveSupported();
 	const [pullDistance, setPullDistance] = useState(0);
