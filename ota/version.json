@@ -1,7 +1,7 @@
 {
-  "version": "1.0.365",
+  "version": "1.0.366",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "f2263374c1e86ba5bdeab3a3d87be54120564287472440bd63a565a7d7b6d1eb",
-  "releaseNotes": "chore: downgrade @eslint/js in package.json",
-  "updatedAt": "2026-11-08T16:29:05Z"
+  "checksum": "5636174a0cde870dbe25fcdb7813d202fdd03b48db10d6570be22797e6b5b50c",
+  "releaseNotes": "refactor: change paragraph element from p to div in ParagraphView",
+  "updatedAt": "2026-11-08T16:36:16Z"
 }
