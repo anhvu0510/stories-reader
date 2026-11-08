@@ -1,9 +1,11 @@
 import React, { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Home, Clock, Loader2 } from 'lucide-react';
+import { Home, Clock, Loader2, Maximize, Minimize } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 
 import { triggerHaptic } from '@/hooks/useHaptic';
+import { useFullscreen } from '@/hooks/useFullscreen';
 
 interface ReaderHeaderProps {
 	bookId: string;
@@ -37,6 +39,9 @@ export const ReaderHeader = memo(function ReaderHeader({
 	const navigate = useNavigate();
 	const tapCountRef = React.useRef<number>(0);
 	const resetTapTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+	const { isFullscreen, isSupported: isFullscreenSupported, toggleFullscreen } = useFullscreen();
+	const isNative = Capacitor.isNativePlatform();
+	const showFullscreenBtn = !isNative && isFullscreenSupported;
 
 	React.useEffect(() => {
 		return () => {
@@ -118,6 +123,20 @@ export const ReaderHeader = memo(function ReaderHeader({
 
 				{/* Right: Actions (Mobile-Optimized 3D Glass Sphere) */}
 				<div className="flex items-center gap-1.5 flex-shrink-0">
+					{showFullscreenBtn && (
+						<motion.button
+							whileTap={{ scale: 0.88 }}
+							onClick={() => {
+								triggerHaptic('light');
+								toggleFullscreen();
+							}}
+							className="w-9 h-9 rounded-full bg-gradient-to-b from-white/20 via-white/10 to-white/5 dark:from-white/15 dark:via-white/5 dark:to-black/25 border border-white/35 dark:border-white/25 text-on-surface hover:text-primary hover:from-white/25 hover:to-white/10 shadow-[0_3px_8px_rgba(0,0,0,0.35),_inset_0_1px_1px_0_rgba(255,255,255,0.45),_inset_0_-1px_1px_0_rgba(0,0,0,0.35)] transition-all flex items-center justify-center flex-shrink-0 cursor-pointer"
+							title={isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}
+							aria-label={isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}
+						>
+							{isFullscreen ? <Minimize size={15} strokeWidth={2.3} /> : <Maximize size={15} strokeWidth={2.3} />}
+						</motion.button>
+					)}
 					<motion.button
 						whileTap={{ scale: 0.88 }}
 						onClick={() => {

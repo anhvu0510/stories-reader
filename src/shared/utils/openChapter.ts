@@ -39,7 +39,8 @@ export function openChapter(bookId: string, chapterId: string, options?: OpenCha
  * 1. Clear previous chapter's completed progress
  * 2. Clear any stale progress for next chapter
  * 3. Immediately reset window scroll to 0
- * 4. Navigate to next chapter and force reload the page
+ * 4. Navigate to next chapter via hash (React Router re-renders → useEffect loads chapter)
+ *    — KHÔNG gọi window.location.reload() để tránh double-loading
  */
 export function openNextChapter(bookId: string, currentChapterId?: string, nextChapterId?: string) {
 	if (!bookId || !nextChapterId) return;
@@ -53,7 +54,8 @@ export function openNextChapter(bookId: string, currentChapterId?: string, nextC
 		window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 	}
 
-	openChapter(bookId, nextChapterId, { resetScroll: true, forceReload: true });
+	// resetScroll: true nhưng bỏ forceReload để tránh giật 2 lần
+	openChapter(bookId, nextChapterId, { resetScroll: true });
 }
 
 /**
