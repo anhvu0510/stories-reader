@@ -14,19 +14,6 @@ export function isBrowserFullscreen(): boolean {
 }
 
 /**
- * Kiểm tra trạng thái fullscreen của trình duyệt (hỗ trợ cả vendor prefixes).
- */
-export function isBrowserFullscreen(): boolean {
-	if (typeof document === 'undefined') return false;
-	const doc = document as Document & {
-		webkitFullscreenElement?: Element | null;
-		mozFullScreenElement?: Element | null;
-		msFullscreenElement?: Element | null;
-	};
-	return Boolean(document.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
-}
-
-/**
  * Trả về trạng thái fullscreen hiện tại và hàm toggle.
  *  Chỉ hoạt động trên web (Fullscreen API không khả dụng trong WebView Android).
  */
