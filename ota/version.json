@@ -1,7 +1,7 @@
 {
-  "version": "1.0.370",
+  "version": "1.0.372",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "3c3f7f6474fe613a482909eb08d196233349a9d70c96b3c096a962fdc836e105",
-  "releaseNotes": "fix: support cross-browser fullscreen detection and edge read-aloud navigation visibility",
-  "updatedAt": "2026-11-08T17:27:42Z"
+  "checksum": "d80cf5ab1131572588afa4afc7a2f9ba6e46867843c2fc9257cdd856ed25021a",
+  "releaseNotes": "fix: remove duplicate export of isBrowserFullscreen in useFullscreen",
+  "updatedAt": "2026-11-08T17:49:55Z"
 }
