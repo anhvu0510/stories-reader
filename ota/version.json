@@ -1,7 +1,7 @@
 {
-  "version": "1.0.366",
+  "version": "1.0.367",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "5636174a0cde870dbe25fcdb7813d202fdd03b48db10d6570be22797e6b5b50c",
-  "releaseNotes": "refactor: change paragraph element from p to div in ParagraphView",
-  "updatedAt": "2026-11-08T16:36:16Z"
+  "checksum": "a640326a260008a6f186eef8cbb1e81ff395fab73e9d0b721cb2dc8a81963622",
+  "releaseNotes": "feat: auto-hide reader dock on scroll and add test suite",
+  "updatedAt": "2026-11-08T16:47:38Z"
 }
