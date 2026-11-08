@@ -56,17 +56,17 @@ cd stories-reader && node_modules/.bin/eslint "src/path/to/edited-file.tsx"
 
 Fix all errors before moving to the next file. Do not let errors accumulate.
 
-**Before declaring task complete**, run the full verification gate:
+**Before declaring task complete**, run the full verification gate (BẮT BUỘC chạy lint sạch 100% trước khi bàn giao):
 
 ```bash
-# 1. Full ESLint — must show 0 new errors (87 no-explicit-any are pre-existing, ignore them)
-cd stories-reader && node_modules/.bin/eslint "src/**/*.{ts,tsx}" 2>&1 \
-  | grep " error " | grep -v "no-explicit-any" | wc -l
-# → must output 0
+# 1. Typecheck & Full ESLint — must pass with 0 errors
+rtk npm run lint
 
-# 2. Full test suite
-cd stories-reader && rtk npm test
-# → must output: 72 Test Files passed
+# 2. Format check — ensures pre-commit (lint-staged) passes smoothly
+rtk npm run format
+
+# 3. Full test suite
+rtk npm test
 ```
 
 **ESLint rules AI must comply with (zero tolerance):**
