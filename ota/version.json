@@ -1,7 +1,7 @@
 {
-  "version": "1.0.376",
+  "version": "1.0.377",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "ee29097a9bbb41f57fb18984f522e4f63f6469448f5604d7ad7b7e6717cfdc46",
-  "releaseNotes": "feat: update GlobalSettingsSheet and GlobalFullscreenButton components for improved accessibility and styling; add TypeScript types for React and ReactDOM",
-  "updatedAt": "2026-11-09T03:25:39Z"
+  "checksum": "97adef9b3d89ec6a6b3cef71841fcf132b0d3cb9b426a7a45403365759642731",
+  "releaseNotes": "feat: refactor ReaderScreen and related components for improved scroll handling and performance; add ReaderProgressHeader for better progress visualization",
+  "updatedAt": "2026-11-09T06:57:28Z"
 }
