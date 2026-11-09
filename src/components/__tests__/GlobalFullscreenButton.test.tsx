@@ -50,8 +50,10 @@ describe('GlobalFullscreenButton Component', () => {
 		expect(btn).toBeDefined();
 		expect(btn.getAttribute('aria-label')).toBe('Bật toàn màn hình');
 		expect(btn.className).toContain('28rem');
-		expect(btn.className).toContain('h-11');
-		expect(btn.className).toContain('w-11');
+		expect(btn.className).toContain('h-[30px]');
+		expect(btn.className).toContain('w-[30px]');
+		expect(btn.className).toContain('bg-surface-container');
+		expect(btn.className).toContain('text-primary');
 		expect(btn.className).toContain('focus-visible:ring-2');
 	});
 

@@ -13,7 +13,9 @@ export function useOfflineSync() {
 		const unsubscribe = downloadManager.subscribe(handleUpdate);
 		handleUpdate(); // Initial load
 
-		return () => unsubscribe();
+		return () => {
+			unsubscribe();
+		};
 	}, []);
 
 	const syncBook = (bookId: string, bookName?: string) => {

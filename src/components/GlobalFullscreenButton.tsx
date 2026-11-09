@@ -51,11 +51,11 @@ export const GlobalFullscreenButton = memo(function GlobalFullscreenButton() {
 				triggerHaptic('light');
 				enterFullscreen();
 			}}
-			className={`fixed ${topOffsetClass} ${rightOffsetClass} z-30 flex h-11 w-11 flex-shrink-0 cursor-pointer select-none items-center justify-center rounded-2xl border border-outline-variant/60 bg-surface-container-high/90 text-on-surface shadow-lg shadow-black/20 backdrop-blur-md transition-[top,transform,background-color,border-color,box-shadow] duration-200 ease-out hover:border-primary/60 hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95`}
+			className={`fixed ${topOffsetClass} ${rightOffsetClass} z-30 flex h-[30px] w-[30px] flex-shrink-0 cursor-pointer select-none items-center justify-center rounded-xl border border-primary/30 bg-surface-container text-primary shadow-md shadow-black/20 backdrop-blur-md transition-[top,transform,background-color,border-color,box-shadow] duration-200 ease-out hover:border-primary/60 hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95`}
 			title="Bật toàn màn hình"
 			aria-label="Bật toàn màn hình"
 		>
-			<Maximize2 size={18} strokeWidth={2} aria-hidden="true" />
+			<Maximize2 size={14} strokeWidth={2} aria-hidden="true" />
 		</motion.button>
 	);
 });

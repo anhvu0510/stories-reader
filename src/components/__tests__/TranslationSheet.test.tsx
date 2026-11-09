@@ -61,6 +61,13 @@ describe('TranslationSheet Requirements', () => {
 		expect(batchTabButton.className).toContain('text-primary');
 	});
 
+	it('exposes chapter translation states to assistive technology', async () => {
+		render(<TranslationSheet {...defaultProps} />);
+
+		expect(await screen.findByLabelText('Đã dịch')).toBeDefined();
+		expect(await screen.findByLabelText('Chưa dịch')).toBeDefined();
+	});
+
 	it('has enabled "Ẩn đã dịch" checkbox and activates it when clicking "Chưa dịch"', async () => {
 		const { fireEvent } = await import('@testing-library/react');
 		render(<TranslationSheet {...defaultProps} />);

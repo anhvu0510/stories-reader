@@ -53,7 +53,7 @@ function ReaderModals(props: ReaderModalsProps) {
 
 	return (
 		<div aria-hidden="true">
-			<GlobalSettingsSheet currentBookId={props.bookId} currentChapterId={props.chapterId} />
+			<GlobalSettingsSheet />
 			{props.showTypographySheet && <QuickTypographySheet onClose={props.onCloseTypography} />}
 			{props.showChapterSelectSheet && (
 				<QuickChapterSelectSheet

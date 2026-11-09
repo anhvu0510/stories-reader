@@ -13,12 +13,7 @@ import { ReplacementsTab } from './components/ReplacementsTab';
 import { ServerTab } from './components/ServerTab';
 import { VoiceSettingsTab } from './components/VoiceSettingsTab';
 
-interface GlobalSettingsSheetProps {
-	currentBookId?: string;
-	currentChapterId?: string;
-}
-
-export function GlobalSettingsSheet({ currentBookId, currentChapterId }: GlobalSettingsSheetProps) {
+export function GlobalSettingsSheet() {
 	const { isSettingsOpen, activeSettingsTab, closeSettings, setSettingsTab } = useModalStore();
 	const { appInfo } = useAppUpdate({ autoCheck: false });
 
@@ -102,7 +97,7 @@ export function GlobalSettingsSheet({ currentBookId, currentChapterId }: GlobalS
 				{activeSettingsTab === 'reader' && <ReaderSettingsTab />}
 				{activeSettingsTab === 'voice' && <VoiceSettingsTab />}
 				{activeSettingsTab === 'bgm' && <BgmSettingsTab />}
-				{activeSettingsTab === 'translation' && <AISettingsTab bookId={currentBookId} chapterId={currentChapterId} />}
+				{activeSettingsTab === 'translation' && <AISettingsTab />}
 				{activeSettingsTab === 'replacements' && <ReplacementsTab />}
 			</div>
 		</BottomSheet>

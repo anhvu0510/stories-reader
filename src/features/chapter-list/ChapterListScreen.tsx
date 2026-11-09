@@ -104,7 +104,7 @@ export function ChapterListScreen() {
 			</main>
 
 			<LoadingOverlay isLoading={loading} />
-			<GlobalSettingsSheet currentBookId={bookId} />
+			<GlobalSettingsSheet />
 			<BottomDock />
 		</div>
 	);

@@ -2,7 +2,7 @@ import { useRef, type RefObject } from 'react';
 
 import { BackgroundAudioKeepAlive } from '@/services/backgroundAudioKeepAlive';
 import { type DomWordHighlighter } from '@/services/domWordHighlighter';
-import { type GaplessTtsPlayer, type SentenceChunk } from '@/services/gaplessTtsPlayer';
+import { type GaplessTtsPlayer } from '@/services/gaplessTtsPlayer';
 
 import { createBrowserSpeechPlayback } from './browserSpeechPlayback';
 import { useBrowserEdgePlayback } from './useBrowserEdgePlayback';
@@ -78,7 +78,7 @@ export function useReadAloudRefs() {
 }
 
 export function useReadAloudEnginePlaybacks(params: {
-	chunks: SentenceChunk[];
+	chunks: ReturnType<typeof useReadAloudPlan>['chunks'];
 	synth: SpeechSynthesis | null;
 	voiceUri: string;
 	edgeVoiceUri: string;

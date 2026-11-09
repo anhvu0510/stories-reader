@@ -9,12 +9,24 @@ import type { Book, Chapter } from '@/shared/types';
 
 function ChapterStateIcon({ state }: { state?: string }) {
 	if (state === 'SUCCEEDED') {
-		return <CheckCircle2 size={13} className="text-primary shrink-0" title="Đã dịch" />;
+		return (
+			<span title="Đã dịch">
+				<CheckCircle2 size={13} className="text-primary shrink-0" role="img" aria-label="Đã dịch" />
+			</span>
+		);
 	}
 	if (state === 'FAILED') {
-		return <AlertCircle size={13} className="text-rose-400 shrink-0" title="Lỗi dịch" />;
+		return (
+			<span title="Lỗi dịch">
+				<AlertCircle size={13} className="text-rose-400 shrink-0" role="img" aria-label="Lỗi dịch" />
+			</span>
+		);
 	}
-	return <Clock size={13} className="text-amber-400/80 shrink-0" title="Chưa dịch" />;
+	return (
+		<span title="Chưa dịch">
+			<Clock size={13} className="text-amber-400/80 shrink-0" role="img" aria-label="Chưa dịch" />
+		</span>
+	);
 }
 
 export interface ChapterBatchControlsProps {
