@@ -39,7 +39,11 @@ Do not start the dev server unless interactive verification is needed.
 ## Working pattern
 
 1. **Language & Framework Best Practices First**: Before writing or refactoring any component, hook, or service, view the authoritative skill for React/TypeScript (`react-patterns`, `coding-standards`, `frontend-patterns`) and follow official React 19 & TypeScript 5.8 idioms.
-2. For code modifications or bug fixes: Use CodeGraph to trace the component, hook, repository, and tests involved. For Q&A, answer directly.
+2. For code modifications or bug fixes: Use RepoMap with this repository's
+   root to inspect relevant symbols and trace component, hook, repository, and
+   caller relationships. Locate and verify tests separately because impact
+   results may omit test coverage. If RepoMap is unavailable or incomplete,
+   use native search and inspect the source directly. For Q&A, answer directly.
 3. Before any test, propose the public seam to the user with one concise note
    on what it catches and misses, and get confirmation. A seam explicitly
    named by the user is already confirmed. Then add/update one focused Vitest
