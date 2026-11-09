@@ -13,6 +13,7 @@ import { QuickChapterSelectSheet } from './QuickChapterSelectSheet';
 import { QuickTypographySheet } from './QuickTypographySheet';
 import { ReaderChapterSkeleton } from './ReaderChapterSkeleton';
 import { ReaderHeader } from './ReaderHeader';
+import { ReaderProgressHeader } from './ReaderProgressHeader';
 import { ReaderQuickControl } from './ReaderQuickControl';
 import { SelectionSpeakerTooltip } from './SelectionSpeakerTooltip';
 import { VerticalBatchChapterNav } from './VerticalBatchChapterNav';
@@ -188,7 +189,8 @@ export interface ReaderActiveViewProps {
 	contentData: ChapterContent;
 	displayChapters: ChapterDetailItem[];
 	activeChapter: { chapterId: string; chapterNumber: number; title: string } | null;
-	scrollProgress: number;
+	onNearBottom: () => void;
+	onScrollVisibilityChange: (visible: boolean) => void;
 	isRefreshingLatest: boolean;
 	hasEdgeReadAloud: boolean;
 	config: ReturnType<typeof useReaderConfig>;
@@ -238,12 +240,15 @@ export function ReaderActiveView(props: ReaderActiveViewProps) {
 			<PullToRefresh onRefresh={props.onPullRefresh} disabled={props.pullDisabled} showIndicator={false} />
 			<div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl lg:max-w-5xl h-96 bg-gradient-to-b from-primary/10 via-primary/[0.03] to-transparent blur-3xl" />
 
-			<ReaderHeader
+			<ReaderProgressHeader
 				bookId={safeBookId}
 				bookName={chapter.bookName}
 				chapterNumber={currentViewingNumber}
 				chapterTitle={currentViewingTitle}
-				progress={props.scrollProgress}
+				displayChapters={props.displayChapters}
+				activeChapter={props.activeChapter}
+				onNearBottom={props.onNearBottom}
+				onScrollVisibilityChange={props.onScrollVisibilityChange}
 				isVisible={true}
 				isTTSActive={props.tts.isTTSActive}
 				isRefreshingLatest={props.isRefreshingLatest}

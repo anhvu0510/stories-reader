@@ -1,4 +1,3 @@
-import { Capacitor } from '@capacitor/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -123,70 +122,6 @@ export function useZenControls() {
 	};
 }
 
-interface UseScrollProgressProps {
-	displayChapters: ChapterDetailItem[];
-	activeChapter: { chapterId: string } | null;
-	onNearBottom: () => void;
-	onScrollVisibilityChange?: (visible: boolean) => void;
-}
-
-function resolveScrollVisibility(currentY: number, deltaY: number, lastVisible: boolean): boolean {
-	if (currentY <= 60) return true;
-	if (deltaY > 15) return false;
-	if (deltaY < -15) return true;
-	return lastVisible;
-}
-
-function checkIsNearBottom(currentY: number, totalHeight: number, newProgress: number, isLastChapterActive: boolean): boolean {
-	if (!isLastChapterActive) return false;
-	return currentY >= totalHeight - 40 || newProgress >= 98;
-}
-
-export function useScrollProgress({ displayChapters, activeChapter, onNearBottom, onScrollVisibilityChange }: UseScrollProgressProps) {
-	const [scrollProgress, setScrollProgress] = useState(0);
-	const lastScrollY = useRef(0);
-	const lastVisibleRef = useRef(true);
-	const isTickingRef = useRef(false);
-
-	useEffect(() => {
-		const handleScroll = () => {
-			if (isTickingRef.current) return;
-			isTickingRef.current = true;
-			requestAnimationFrame(() => {
-				isTickingRef.current = false;
-				const currentY = window.scrollY;
-				const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-				if (totalHeight > 0) {
-					const newProgress = (currentY / totalHeight) * 100;
-					setScrollProgress((prev) => (Math.abs(prev - newProgress) > 0.5 ? newProgress : prev));
-
-					const lastChap = displayChapters[displayChapters.length - 1];
-					const isLastChapterActive = !lastChap || !activeChapter || activeChapter.chapterId === lastChap.chapterId;
-					if (checkIsNearBottom(currentY, totalHeight, newProgress, isLastChapterActive)) {
-						onNearBottom();
-					}
-				}
-
-				const deltaY = currentY - lastScrollY.current;
-				const nextVisible = resolveScrollVisibility(currentY, deltaY, lastVisibleRef.current);
-				if (nextVisible !== lastVisibleRef.current) {
-					lastVisibleRef.current = nextVisible;
-					onScrollVisibilityChange?.(nextVisible);
-				}
-
-				lastScrollY.current = currentY;
-			});
-		};
-
-		window.addEventListener('scroll', handleScroll, { passive: true });
-		return () => {
-			window.removeEventListener('scroll', handleScroll);
-		};
-	}, [displayChapters, activeChapter, onNearBottom, onScrollVisibilityChange]);
-
-	return scrollProgress;
-}
-
 function navigateNextIfAvailable(bookId?: string, chapterId?: string, nextChapterId?: string, onSwipe?: () => void) {
 	if (!bookId || !nextChapterId) return;
 	onSwipe?.();
@@ -233,9 +168,14 @@ function computeDragMoveOffset(offset: number, navigation: ChapterContent['navig
 	return computeDragOffset(offset, hasPrev, hasNext);
 }
 
-function isSwipeDisabled(isNative: boolean, loading: boolean, isRefreshing: boolean): boolean {
-	if (!isNative || loading) return true;
-	return isRefreshing;
+function resolveDragDirection(offset: number): 'left' | 'right' | null {
+	if (offset < 0) return 'left';
+	if (offset > 0) return 'right';
+	return null;
+}
+
+function isSwipeDisabled(loading: boolean, isRefreshing: boolean): boolean {
+	return loading || isRefreshing;
 }
 
 interface UseReaderSwipeProps {
@@ -250,13 +190,15 @@ export function useReaderSwipeNavigation({ bookId, chapterId, contentData, loadi
 	const navigate = useNavigate();
 	const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
 	const [isDragging, setIsDragging] = useState(false);
-	const [dragOffset, setDragOffset] = useState(0);
+	const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
+	const dragDirectionRef = useRef<'left' | 'right' | null>(null);
 	const readerContentRef = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
 		setSwipeDirection(null);
 		setIsDragging(false);
-		setDragOffset(0);
+		setDragDirection(null);
+		dragDirectionRef.current = null;
 		resetSwipeState(readerContentRef.current);
 	}, [chapterId]);
 
@@ -290,26 +232,29 @@ export function useReaderSwipeNavigation({ bookId, chapterId, contentData, loadi
 			const contentEl = readerContentRef.current;
 			if (!contentEl) return;
 			const effectiveOffset = computeDragMoveOffset(offset, contentData?.navigation);
-			setDragOffset(effectiveOffset);
 			contentEl.style.transform = `translate3d(${effectiveOffset}px, 0, 0)`;
+			const nextDirection = resolveDragDirection(effectiveOffset);
+			if (nextDirection === dragDirectionRef.current) return;
+			dragDirectionRef.current = nextDirection;
+			setDragDirection(nextDirection);
 		},
 		[contentData?.navigation]
 	);
 
 	const handleDragEnd = useCallback((settled?: 'left' | 'right' | 'cancel') => {
 		setIsDragging(false);
-		setDragOffset(0);
+		dragDirectionRef.current = null;
+		setDragDirection(null);
 		applySettledDragTransform(readerContentRef.current, settled);
 	}, []);
 
 	const pendingTitleHint = useMemo(
-		() => resolvePendingTitleHint(swipeDirection, dragOffset, contentData?.navigation),
-		[swipeDirection, dragOffset, contentData?.navigation]
+		() => resolvePendingTitleHint(swipeDirection ?? dragDirection, 0, contentData?.navigation),
+		[swipeDirection, dragDirection, contentData?.navigation]
 	);
 
 	const commitThreshold = getSwipeCommitThreshold();
-	const isNative = Capacitor.isNativePlatform();
-	const swipeDisabled = isSwipeDisabled(isNative, loading, isRefreshingLatest);
+	const swipeDisabled = isSwipeDisabled(loading, isRefreshingLatest);
 
 	useSwipeGesture({
 		onSwipeLeft: handleSwipeNext,

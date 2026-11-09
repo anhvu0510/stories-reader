@@ -4,6 +4,7 @@ import React from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import * as readerContentViews from '@/features/reader/components/ReaderContentViews';
 import { ReaderScreen } from '@/features/reader/ReaderScreen';
 import * as edgeBgmModule from '@/hooks/useEdgeReadAloudBgm';
 import { BookRepository } from '@/repositories/BookRepository';
@@ -99,6 +100,37 @@ describe('ReaderScreen Scroll Visibility & Dock Auto-Hide', () => {
 		await waitFor(() => {
 			expect(getDock()?.classList.contains('translate-y-0')).toBe(true);
 		});
+	});
+
+	it('updates scroll progress without re-rendering the reader content tree', async () => {
+		const activeViewSpy = vi.spyOn(readerContentViews, 'ReaderActiveView');
+		Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 1100 });
+		Object.defineProperty(window, 'innerHeight', { configurable: true, value: 100 });
+
+		render(
+			<MemoryRouter initialEntries={['/books/b1/chapters/c1']}>
+				<Routes>
+					<Route path="/books/:bookId/chapters/:chapterId" element={<ReaderScreen />} />
+				</Routes>
+			</MemoryRouter>
+		);
+
+		await waitFor(() => {
+			expect(screen.getAllByText('Chương 1: Mở đầu').length).toBeGreaterThan(0);
+		});
+		activeViewSpy.mockClear();
+
+		act(() => {
+			Object.defineProperty(window, 'scrollY', { value: 10, configurable: true });
+			fireEvent.scroll(window);
+		});
+
+		await waitFor(() => {
+			const progress = document.querySelector('header > div:last-child > div');
+			expect(progress?.getAttribute('style')).toContain('scaleX(0.01)');
+		});
+		expect(activeViewSpy).not.toHaveBeenCalled();
+		expect(ChapterRepository.getChapterContent).toHaveBeenCalledTimes(1);
 	});
 
 	it('QC-2: Khi Edge Read Aloud đang active, double-tap vẫn ẩn/hiện thanh dock không bị chặn', async () => {

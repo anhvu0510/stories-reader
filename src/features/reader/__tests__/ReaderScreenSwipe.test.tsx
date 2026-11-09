@@ -4,6 +4,7 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import * as readerContentViews from '@/features/reader/components/ReaderContentViews';
 import { ReaderScreen } from '@/features/reader/ReaderScreen';
 import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
@@ -212,7 +213,7 @@ describe('ReaderScreen - Swipe Gesture Chapter Navigation', () => {
 			vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(false);
 		});
 
-		it('disables swipe gestures so swiping left does not navigate to next chapter', async () => {
+		it('swiping left navigates to the next chapter on the web reader', async () => {
 			const openNextSpy = vi.spyOn(openChapterUtils, 'openNextChapter').mockImplementation(() => {});
 
 			vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
@@ -256,10 +257,10 @@ describe('ReaderScreen - Swipe Gesture Chapter Navigation', () => {
 				);
 			});
 
-			expect(openNextSpy).not.toHaveBeenCalled();
+			expect(openNextSpy).toHaveBeenCalledWith('b1', 'chap-1', 'chap-2');
 		});
 
-		it('disables swipe gestures so swiping right does not navigate to previous chapter', async () => {
+		it('swiping right navigates to the previous chapter on the web reader', async () => {
 			const openPrevSpy = vi.spyOn(openChapterUtils, 'openPrevChapter').mockImplementation(() => {});
 
 			vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
@@ -303,7 +304,49 @@ describe('ReaderScreen - Swipe Gesture Chapter Navigation', () => {
 				);
 			});
 
-			expect(openPrevSpy).not.toHaveBeenCalled();
+			expect(openPrevSpy).toHaveBeenCalledWith('b1', 'chap-2', 'chap-1');
+		});
+
+		it('keeps reader content renders bounded while dragging across multiple touch updates', async () => {
+			vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
+				chapter: {
+					chapterId: 'chap-1',
+					chapterNumber: 1,
+					title: 'Chương 1',
+					bookName: 'Test Book',
+					content: ['<p>Nội dung chương 1</p>'],
+				},
+				navigation: {
+					prev: null,
+					next: { chapterId: 'chap-2', chapterNumber: 2, title: 'Chương 2' },
+				},
+			} as any);
+
+			const activeViewSpy = vi.spyOn(readerContentViews, 'ReaderActiveView');
+
+			render(
+				<MemoryRouter initialEntries={['/book/b1/chapter/chap-1']}>
+					<Routes>
+						<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+					</Routes>
+				</MemoryRouter>
+			);
+
+			await waitFor(() => {
+				expect(screen.getByText('Nội dung chương 1')).toBeDefined();
+			});
+			activeViewSpy.mockClear();
+
+			act(() => {
+				window.dispatchEvent(new TouchEvent('touchstart', { touches: [{ clientX: 250, clientY: 200 } as any] }));
+			});
+			[220, 190, 160, 130].forEach((clientX) => {
+				act(() => {
+					window.dispatchEvent(new TouchEvent('touchmove', { touches: [{ clientX, clientY: 205 } as any] }));
+				});
+			});
+
+			expect(activeViewSpy).toHaveBeenCalledTimes(1);
 		});
 	});
 });

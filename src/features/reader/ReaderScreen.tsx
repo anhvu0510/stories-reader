@@ -7,7 +7,7 @@ import { useReadingProgress } from '@/hooks/useReadingProgress';
 import { clearAllCaches } from '@/shared/utils/cacheUtils';
 
 import { ReaderActiveView, ReaderErrorView, ReaderLoadingView } from './components/ReaderContentViews';
-import { useReaderAudioService, useReaderSwipeNavigation, useScrollProgress, useZenControls } from './hooks/useReaderInteractions';
+import { useReaderAudioService, useReaderSwipeNavigation, useZenControls } from './hooks/useReaderInteractions';
 import {
 	useActiveChapterObserver,
 	useChapterLoader,
@@ -62,15 +62,9 @@ export function ReaderScreen() {
 
 	const activeChapter = useActiveChapterObserver({ bookId, displayChapters });
 	const zen = useZenControls();
-	const handleNearBottom = useCallback(() => zen.setShowZenControls(true), [zen]);
-	const handleScrollVisibilityChange = useCallback((visible: boolean) => zen.setShowZenControls(visible), [zen]);
-
-	const scrollProgress = useScrollProgress({
-		displayChapters,
-		activeChapter,
-		onNearBottom: handleNearBottom,
-		onScrollVisibilityChange: handleScrollVisibilityChange,
-	});
+	const { setShowZenControls } = zen;
+	const handleNearBottom = useCallback(() => setShowZenControls(true), [setShowZenControls]);
+	const handleScrollVisibilityChange = useCallback((visible: boolean) => setShowZenControls(visible), [setShowZenControls]);
 
 	const sheets = useReaderSheets();
 	const hasEdgeReadAloud = useEdgeReadAloudDetector();
@@ -121,7 +115,8 @@ export function ReaderScreen() {
 			contentData={contentData}
 			displayChapters={displayChapters}
 			activeChapter={activeChapter}
-			scrollProgress={scrollProgress}
+			onNearBottom={handleNearBottom}
+			onScrollVisibilityChange={handleScrollVisibilityChange}
 			isRefreshingLatest={isRefreshingLatest}
 			hasEdgeReadAloud={hasEdgeReadAloud}
 			config={config}

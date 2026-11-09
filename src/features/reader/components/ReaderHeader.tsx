@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { triggerHaptic } from '@/hooks/useHaptic';
 
-interface ReaderHeaderProps {
+export interface ReaderHeaderProps {
 	bookId: string;
 	bookName?: string;
 	chapterNumber?: number;
@@ -162,8 +162,8 @@ export const ReaderHeader = memo(function ReaderHeader({
 			{/* Thin Reading Progress Indicator Bar with Glowing Tip */}
 			<div className="absolute bottom-0 left-0 right-0 h-0.5 bg-outline-variant/15 overflow-hidden">
 				<div
-					className="h-full bg-gradient-to-r from-primary/60 via-primary to-primary shadow-[0_0_8px_rgba(59,130,246,0.8)] transition-all duration-150 ease-out"
-					style={{ width: `${progressPercent}%` }}
+					className="h-full w-full origin-left bg-gradient-to-r from-primary/60 via-primary to-primary shadow-[0_0_8px_rgba(59,130,246,0.8)]"
+					style={{ transform: `scaleX(${progressPercent / 100})` }}
 				/>
 			</div>
 		</header>
