@@ -1,7 +1,7 @@
 {
-  "version": "1.0.374",
+  "version": "1.0.375",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "38ef18c6ff295103ddba83b0f09f5be1029a9b2a3546de4ca2141c8e6abfb850",
-  "releaseNotes": "refactor: refactor codebase to adhere to modular architecture and anti-god-file standards",
-  "updatedAt": "2026-11-09T01:32:28Z"
+  "checksum": "ec9d4d018f915053000331117c7750d9f62717d0e5f8ea086a3fc7d6ab3c8ed1",
+  "releaseNotes": "update",
+  "updatedAt": "2026-11-09T02:51:17Z"
 }
