@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import React from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { GlobalFullscreenButton } from '../GlobalFullscreenButton';
@@ -10,6 +11,14 @@ let mockIsAndroidApp = false;
 vi.mock('@/stores/useAppLockStore', () => ({
 	isAndroidApp: () => mockIsAndroidApp,
 }));
+
+function renderButton(route = '/') {
+	return render(
+		<MemoryRouter initialEntries={[route]}>
+			<GlobalFullscreenButton />
+		</MemoryRouter>
+	);
+}
 
 describe('GlobalFullscreenButton Component', () => {
 	beforeEach(() => {
@@ -35,15 +44,16 @@ describe('GlobalFullscreenButton Component', () => {
 		cleanup();
 	});
 
-	it('renders small fullscreen icon at bottom-right when not in fullscreen mode on web', () => {
-		render(<GlobalFullscreenButton />);
+	it('renders sleek fullscreen icon below headers when not in fullscreen mode on web', () => {
+		renderButton('/');
 		const btn = screen.getByTestId('global-fullscreen-btn');
 		expect(btn).toBeDefined();
 		expect(btn.getAttribute('aria-label')).toBe('Toàn màn hình');
+		expect(btn.className).toContain('right-3.5');
 	});
 
 	it('enters fullscreen mode and hides the button without showing an exit button', async () => {
-		render(<GlobalFullscreenButton />);
+		renderButton('/');
 		const btn = screen.getByTestId('global-fullscreen-btn');
 
 		await act(async () => {
@@ -61,7 +71,7 @@ describe('GlobalFullscreenButton Component', () => {
 			configurable: true,
 		});
 
-		render(<GlobalFullscreenButton />);
+		renderButton('/');
 		expect(screen.queryByTestId('global-fullscreen-btn')).toBeNull();
 
 		act(() => {
@@ -78,7 +88,7 @@ describe('GlobalFullscreenButton Component', () => {
 
 	it('does not render on native Android app', () => {
 		mockIsAndroidApp = true;
-		render(<GlobalFullscreenButton />);
+		renderButton('/');
 		expect(screen.queryByTestId('global-fullscreen-btn')).toBeNull();
 	});
 });
