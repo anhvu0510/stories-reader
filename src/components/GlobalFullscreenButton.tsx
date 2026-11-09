@@ -10,14 +10,13 @@ import { isAndroidApp } from '@/stores/useAppLockStore';
 const SCROLL_THRESHOLD = 60;
 
 /**
- * Nút mở chế độ Toàn màn hình (Fullscreen) toàn cục cho trình duyệt Web.
- * Thiết kế khối cầu kính 3D mờ cao cấp, cố định ngay dưới Header bên góc phải.
- * Tự động ẩn hoàn toàn khi đã vào Fullscreen (người dùng vuốt cạnh để thoát).
+ * Nút fullscreen cho web, canh theo cột nội dung và đặt ngay dưới header.
  */
 export const GlobalFullscreenButton = memo(function GlobalFullscreenButton() {
 	const { isFullscreen, isSupported, enterFullscreen } = useFullscreen();
 	const location = useLocation();
 	const isLibrary = location.pathname === '/';
+	const isReader = location.pathname.includes('/chapter/');
 	const [isScrolled, setIsScrolled] = useState(false);
 
 	useEffect(() => {
@@ -38,6 +37,9 @@ export const GlobalFullscreenButton = memo(function GlobalFullscreenButton() {
 		isLibrary && !isScrolled
 			? 'top-[calc(max(env(safe-area-inset-top),0.5rem)+9.15rem)]'
 			: 'top-[calc(max(env(safe-area-inset-top),0.5rem)+3.5rem)]';
+	const rightOffsetClass = isReader
+		? 'right-[max(1rem,env(safe-area-inset-right),calc((100vw_-_56rem)/2_+_1rem))]'
+		: 'right-[max(1rem,env(safe-area-inset-right),calc((100vw_-_28rem)/2_+_1rem))]';
 
 	return (
 		<motion.button
@@ -49,11 +51,11 @@ export const GlobalFullscreenButton = memo(function GlobalFullscreenButton() {
 				triggerHaptic('light');
 				enterFullscreen();
 			}}
-			className={`fixed ${topOffsetClass} right-3.5 z-30 w-8 h-8 rounded-full bg-gradient-to-b from-white/20 via-white/10 to-white/5 dark:from-white/15 dark:via-white/5 dark:to-black/30 border border-white/35 dark:border-white/20 text-primary hover:from-white/25 hover:to-white/10 hover:border-primary/50 shadow-[0_4px_14px_rgba(0,0,0,0.35),_inset_0_1px_1px_0_rgba(255,255,255,0.45),_inset_0_-1px_1px_0_rgba(0,0,0,0.35)] transition-[top,opacity,transform] duration-250 ease-out flex items-center justify-center flex-shrink-0 cursor-pointer select-none`}
-			title="Toàn màn hình"
-			aria-label="Toàn màn hình"
+			className={`fixed ${topOffsetClass} ${rightOffsetClass} z-30 flex h-11 w-11 flex-shrink-0 cursor-pointer select-none items-center justify-center rounded-2xl border border-outline-variant/60 bg-surface-container-high/90 text-on-surface shadow-lg shadow-black/20 backdrop-blur-md transition-[top,transform,background-color,border-color,box-shadow] duration-200 ease-out hover:border-primary/60 hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95`}
+			title="Bật toàn màn hình"
+			aria-label="Bật toàn màn hình"
 		>
-			<Maximize2 size={15} strokeWidth={2.3} className="drop-shadow-[0_1px_3px_rgba(245,158,11,0.45)]" />
+			<Maximize2 size={18} strokeWidth={2} aria-hidden="true" />
 		</motion.button>
 	);
 });

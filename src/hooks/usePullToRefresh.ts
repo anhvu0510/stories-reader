@@ -4,6 +4,13 @@ import { useState, useEffect, useRef, useCallback, type RefObject } from 'react'
 import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
 import { useModalStore } from '@/stores/useModalStore';
 
+import {
+	applyPullResistance,
+	evaluateInitialPullMove,
+	getSingleTouchIfEligible,
+	isPullMoveInactive,
+	reloadBrowserPage,
+} from './pull-to-refresh/pullToRefreshHelpers';
 import { isBrowserFullscreen } from './useFullscreen';
 import { triggerHaptic } from './useHaptic';
 import { useNativePullToRefresh } from './useNativePullToRefresh';
@@ -116,7 +123,7 @@ export function usePullToRefresh({
 
 		const handleTouchStart = (e: TouchEvent) => {
 			if (!isSupported || isRefreshingRef.current) return;
-			const touch = getSingleTouchIfEligible(e, getContainerScrollTop(containerRef));
+			const touch = getSingleTouchIfEligible(e, getContainerScrollTop(containerRef), isModalOrSheetActive());
 			if (!touch) {
 				canPullRef.current = false;
 				return;
@@ -261,6 +268,25 @@ async function completePullCycle(
 	setPullDistance(Math.min(threshold, 56));
 	triggerHaptic('medium');
 
+	if (!isAndroidApp()) {
+		// Trình duyệt Web: Thực hiện reload lại toàn bộ trang web (F5 reload)
+		try {
+			await Promise.resolve(onRefresh());
+		} catch {
+			// ignore
+		}
+		if (minDisplayTime > 0) {
+			await new Promise((r) => setTimeout(r, minDisplayTime));
+		}
+		reloadBrowserPage();
+		setIsRefreshing(false);
+		setPullDistance(0);
+		setHasTriggeredThreshold(false);
+		hasTriggeredHapticRef.current = false;
+		return;
+	}
+
+	// Mobile Native App (Android): giữ nguyên gọi onRefresh in-app mà không reload webview
 	const startTime = Date.now();
 	try {
 		await Promise.resolve(onRefresh());
@@ -278,78 +304,10 @@ async function completePullCycle(
 	}
 }
 
-function isPullMoveInactive(canPull: boolean, isRefreshing: boolean, isSupported: boolean): boolean {
-	return !canPull || isRefreshing || !isSupported;
-}
-
 function handleModalInterruption(isPulling: boolean, reset: () => void): boolean {
 	if (!isModalOrSheetActive()) return false;
 	if (isPulling) reset();
 	return true;
-}
-
-function applyPullResistance(
-	e: TouchEvent,
-	deltaY: number,
-	maxPull: number,
-	threshold: number,
-	pullRef: { current: number },
-	setPull: (d: number) => void,
-	hapticRef: { current: boolean },
-	setThreshold: (b: boolean) => void
-): void {
-	if (e.cancelable) e.preventDefault();
-	const dampedDistance = Math.min(maxPull, Math.pow(deltaY, 0.82) * 1.45);
-	pullRef.current = dampedDistance;
-	setPull(dampedDistance);
-	updateHapticThreshold(dampedDistance, threshold, hapticRef, setThreshold);
-}
-
-function isInsideScrollableChild(targetEl: HTMLElement | null): boolean {
-	let currentParent = targetEl;
-	while (currentParent && currentParent !== document.body && currentParent !== document.documentElement) {
-		if (currentParent.scrollTop > 1) return true;
-		currentParent = currentParent.parentElement;
-	}
-	return false;
-}
-
-function isTargetInsideModal(targetEl: HTMLElement | null): boolean {
-	return Boolean(
-		targetEl?.closest?.('[role="dialog"], [aria-modal="true"], .bottom-sheet, [data-modal], [data-sheet], [data-dialog], [data-sheet-open]')
-	);
-}
-
-function isNearEdge(x: number): boolean {
-	return x < 28 || (typeof window !== 'undefined' && x > window.innerWidth - 28);
-}
-
-function canInitiatePull(targetEl: HTMLElement | null, scrollTop: number, clientX: number): boolean {
-	if (isModalOrSheetActive() || isTargetInsideModal(targetEl)) return false;
-	if (isInsideScrollableChild(targetEl) || scrollTop > 0) return false;
-	return !isNearEdge(clientX);
-}
-
-function getSingleTouchIfEligible(e: TouchEvent, scrollTop: number): Touch | null {
-	const touch = e.touches?.[0];
-	if (!touch || e.touches.length !== 1) return null;
-	if (!canInitiatePull(e.target as HTMLElement | null, scrollTop, touch.clientX)) return null;
-	return touch;
-}
-
-function shouldCancelPullOnMove(deltaX: number, deltaY: number): boolean {
-	if (deltaX >= deltaY && deltaX > 8) return true;
-	return deltaY <= 0;
-}
-
-function shouldStartPulling(deltaX: number, deltaY: number): boolean {
-	return deltaY >= 14 && deltaY > deltaX * 1.3;
-}
-
-function evaluateInitialPullMove(deltaX: number, deltaY: number): 'cancel' | 'start' | 'wait' {
-	if (shouldCancelPullOnMove(deltaX, deltaY)) return 'cancel';
-	if (shouldStartPulling(deltaX, deltaY)) return 'start';
-	return 'wait';
 }
 
 function attachPullTouchListeners(
@@ -370,24 +328,4 @@ function attachPullTouchListeners(
 		target.removeEventListener('touchend', onEnd as EventListener);
 		target.removeEventListener('touchcancel', onEnd as EventListener);
 	};
-}
-
-function updateHapticThreshold(
-	dampedDistance: number,
-	threshold: number,
-	hasTriggeredHapticRef: { current: boolean },
-	setHasTriggeredThreshold: (v: boolean) => void
-): void {
-	if (dampedDistance >= threshold) {
-		if (!hasTriggeredHapticRef.current) {
-			hasTriggeredHapticRef.current = true;
-			setHasTriggeredThreshold(true);
-			triggerHaptic('light');
-		}
-		return;
-	}
-	if (hasTriggeredHapticRef.current) {
-		hasTriggeredHapticRef.current = false;
-		setHasTriggeredThreshold(false);
-	}
 }

@@ -188,6 +188,41 @@ describe('usePullToRefresh hook', () => {
 		expect(result.current.pullDistance).toBe(0);
 	});
 
+	it('reloads browser page on web platform when released past threshold', async () => {
+		vi.spyOn(Capacitor, 'getPlatform').mockReturnValue('web');
+		const reloadSpy = vi.fn();
+		Object.defineProperty(window, 'location', {
+			value: { reload: reloadSpy },
+			writable: true,
+			configurable: true,
+		});
+
+		window.scrollY = 0;
+		const onRefresh = vi.fn();
+		const { result } = renderHook(() => usePullToRefresh({ onRefresh, threshold: 50, maxPull: 100, minDisplayTime: 0, enabled: true }));
+
+		act(() => {
+			window.dispatchEvent(
+				new TouchEvent('touchstart', {
+					touches: [{ clientX: 100, clientY: 100 } as any],
+				})
+			);
+			window.dispatchEvent(
+				new TouchEvent('touchmove', {
+					touches: [{ clientX: 100, clientY: 260 } as any],
+					cancelable: true,
+				})
+			);
+		});
+
+		await act(async () => {
+			window.dispatchEvent(new TouchEvent('touchend'));
+		});
+
+		expect(reloadSpy).toHaveBeenCalledTimes(1);
+		expect(onRefresh).toHaveBeenCalledTimes(1);
+	});
+
 	it('respects containerRef scrollTop instead of window.scrollY', () => {
 		const div = document.createElement('div');
 		div.scrollTop = 80;

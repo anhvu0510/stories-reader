@@ -44,12 +44,20 @@ describe('GlobalFullscreenButton Component', () => {
 		cleanup();
 	});
 
-	it('renders sleek fullscreen icon below headers when not in fullscreen mode on web', () => {
+	it('renders an accessible fullscreen control below headers on web', () => {
 		renderButton('/');
 		const btn = screen.getByTestId('global-fullscreen-btn');
 		expect(btn).toBeDefined();
-		expect(btn.getAttribute('aria-label')).toBe('Toàn màn hình');
-		expect(btn.className).toContain('right-3.5');
+		expect(btn.getAttribute('aria-label')).toBe('Bật toàn màn hình');
+		expect(btn.className).toContain('28rem');
+		expect(btn.className).toContain('h-11');
+		expect(btn.className).toContain('w-11');
+		expect(btn.className).toContain('focus-visible:ring-2');
+	});
+
+	it('aligns the fullscreen control with the wider reader column', () => {
+		renderButton('/book/story/chapter/chapter');
+		expect(screen.getByTestId('global-fullscreen-btn').className).toContain('56rem');
 	});
 
 	it('enters fullscreen mode and hides the button without showing an exit button', async () => {
