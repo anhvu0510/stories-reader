@@ -57,7 +57,9 @@ describe('GlobalFullscreenButton Component', () => {
 
 	it('aligns the fullscreen control with the wider reader column', () => {
 		renderButton('/book/story/chapter/chapter');
-		expect(screen.getByTestId('global-fullscreen-btn').className).toContain('56rem');
+		const btn = screen.getByTestId('global-fullscreen-btn');
+		expect(btn.className).toContain('56rem');
+		expect(btn.className).toContain('80rem');
 	});
 
 	it('enters fullscreen mode and hides the button without showing an exit button', async () => {
