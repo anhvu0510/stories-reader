@@ -18,9 +18,12 @@ npm run build                                               # Vite production bu
 npm run dev                                                 # local server on :3000
 ```
 
-Run the narrowest relevant test first, then test, typecheck, and build for a
-code change. Do not start the dev server unless interactive verification is
-needed.
+For behavior changes, first confirm the public test seam with the user, record
+the focused-test baseline, then prove a focused test RED before production
+edits. Implement one vertical slice and prove that same test GREEN before
+starting the next slice. Do not refactor inside the RED → GREEN loop. After all
+slices are GREEN, run the full suite, typecheck/lint, and build as applicable.
+Do not start the dev server unless interactive verification is needed.
 
 ## Stack and layout
 
@@ -37,12 +40,20 @@ needed.
 
 1. **Language & Framework Best Practices First**: Before writing or refactoring any component, hook, or service, view the authoritative skill for React/TypeScript (`react-patterns`, `coding-standards`, `frontend-patterns`) and follow official React 19 & TypeScript 5.8 idioms.
 2. For code modifications or bug fixes: Use CodeGraph to trace the component, hook, repository, and tests involved. For Q&A, answer directly.
-3. Reproduce the behavior and add a focused Vitest test first when a practical
-   seam exists.
+3. Before any test, propose the public seam to the user with one concise note
+   on what it catches and misses, and get confirmation. A seam explicitly
+   named by the user is already confirmed. Then add/update one focused Vitest
+   test for one user-visible guarantee and run it. RED is valid only when the
+   test compiles, executes, and fails because that behavior is missing/wrong;
+   setup and unrelated baseline failures do not count. If RED cannot be
+   established, stop before production edits and report the blocker.
 4. Keep screens compositional; put reusable lifecycle behavior in hooks, server
    access in repositories/services, and persisted UI state in stores.
 5. Strictly enforce flat guard clauses with early returns: zero nested `if` statements (max depth of 1 level). Eliminate redundant `else` blocks after returns or throws.
-6. Run the focused test, full suite, typecheck, and production build.
+6. After RED, make the smallest fix and rerun the same test to prove GREEN.
+   Only then start the next test slice. Do not refactor inside the TDD loop;
+   after all slices are GREEN, run the full suite, typecheck/lint, and
+   production build as applicable.
 
 ## Code Style & Mandatory Lint Gate
 

@@ -38,7 +38,7 @@ export const GlobalFullscreenButton = memo(function GlobalFullscreenButton() {
 			? 'top-[calc(max(env(safe-area-inset-top),0.5rem)+9.15rem)]'
 			: 'top-[calc(max(env(safe-area-inset-top),0.5rem)+3.5rem)]';
 	const rightOffsetClass = isReader
-		? 'right-[max(1rem,env(safe-area-inset-right),calc((100vw_-_56rem)/2_+_1rem))] lg:right-[max(1rem,env(safe-area-inset-right),calc((100vw_-_80rem)/2_+_1rem))]'
+		? 'right-[max(1rem,env(safe-area-inset-right),calc((100vw_-_56rem)/2_+_1rem))] lg:right-[max(1rem,env(safe-area-inset-right),calc((100vw_-_64rem)/2_+_1rem))]'
 		: 'right-[max(1rem,env(safe-area-inset-right),calc((100vw_-_28rem)/2_+_1rem))]';
 
 	return (

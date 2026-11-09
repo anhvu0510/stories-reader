@@ -59,7 +59,7 @@ describe('GlobalFullscreenButton Component', () => {
 		renderButton('/book/story/chapter/chapter');
 		const btn = screen.getByTestId('global-fullscreen-btn');
 		expect(btn.className).toContain('56rem');
-		expect(btn.className).toContain('80rem');
+		expect(btn.className).toContain('64rem');
 	});
 
 	it('enters fullscreen mode and hides the button without showing an exit button', async () => {
