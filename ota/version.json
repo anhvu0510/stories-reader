@@ -1,7 +1,7 @@
 {
-  "version": "1.0.377",
+  "version": "1.0.378",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "97adef9b3d89ec6a6b3cef71841fcf132b0d3cb9b426a7a45403365759642731",
-  "releaseNotes": "feat: refactor ReaderScreen and related components for improved scroll handling and performance; add ReaderProgressHeader for better progress visualization",
-  "updatedAt": "2026-11-09T06:57:28Z"
+  "checksum": "d5604e336703655ee243c58d4d11966ed2f2b04e85e3ef4101127576e2ee1fca",
+  "releaseNotes": "feat: synchronize vertical and horizontal navigation dock visibility in fullscreen mode",
+  "updatedAt": "2026-11-09T10:01:18Z"
 }
