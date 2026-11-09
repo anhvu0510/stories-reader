@@ -1,13 +1,14 @@
 {
   "servers": {
-    "codegraph": {
+    "repomap": {
       "type": "stdio",
-      "command": "codegraph",
+      "command": "npx",
       "args": [
-        "serve",
-        "--mcp",
-        "--path",
-        "/Users/vula/Workspace/VuLA/stories/stories-reader"
+        "-y",
+        "@sylphx/repomap",
+        "mcp",
+        "--root",
+        "${workspaceFolder}"
       ]
     }
   }
