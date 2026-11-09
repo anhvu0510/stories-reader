@@ -1,213 +1,24 @@
-import { X, Download, Search, RefreshCw, Trash2, Sparkles } from 'lucide-react';
-import { motion } from 'motion/react';
-import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import { BottomSheet } from '@/components/BottomSheet';
 import { TranslationSheet } from '@/components/TranslationSheet';
-import { ChapterItem } from '@/features/chapter-list/components/ChapterItem';
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { downloadManager } from '@/lib/DownloadManager';
 import { offlineDb } from '@/lib/offlineDb';
-import { ChapterRepository } from '@/repositories/ChapterRepository';
 import { openChapter } from '@/shared/utils/openChapter';
 import { useAppStore } from '@/stores/useAppStore';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 import { useToastStore } from '@/stores/useToastStore';
 
-import type { Book, Chapter } from '@/shared/types';
+import {
+	QuickBookBottomLoading,
+	QuickBookChapterList,
+	QuickBookHeader,
+	QuickBookTopLoading,
+} from './quick-book-sheet/QuickBookSubComponents';
+import { useQuickBookChapters } from './quick-book-sheet/useQuickBookChapters';
 
-function computeChapterWindow(
-	lastReadChapterNumber: string | number | undefined,
-	totalChapters: number,
-	chapterLimit: number,
-	searchQuery: string
-): { startChapterNumber?: number; endChapterNumber?: number } {
-	if (searchQuery) return {};
-	const target = lastReadChapterNumber ? Math.max(1, Number(lastReadChapterNumber)) : 1;
-	const remainingAhead = totalChapters > 0 ? Math.max(0, totalChapters - target) : 0;
-	const neededBehind = Math.max(5, chapterLimit - remainingAhead);
-	return {
-		startChapterNumber: Math.max(1, target - neededBehind),
-		endChapterNumber: target + chapterLimit,
-	};
-}
-
-function computeChapterBounds(newChapters: Chapter[], searchQuery: string, totalChapters: number, chapterLimit: number) {
-	if (newChapters.length === 0) {
-		return { minNum: 1, maxNum: 1, moreTop: false, moreBottom: false };
-	}
-	const minNum = Math.min(...newChapters.map((c) => c.chapterNumber));
-	const maxNum = Math.max(...newChapters.map((c) => c.chapterNumber));
-	return {
-		minNum,
-		maxNum,
-		moreTop: !searchQuery && minNum > 1,
-		moreBottom: maxNum < (totalChapters || 999999) && newChapters.length >= chapterLimit,
-	};
-}
-
-function QuickBookOfflineAction({
-	isOfflineMode,
-	isDownloaded,
-	onDownload,
-	onDeleteOffline,
-}: {
-	isOfflineMode: boolean;
-	isDownloaded: boolean;
-	onDownload: () => void;
-	onDeleteOffline: () => void;
-}) {
-	if (isOfflineMode) return null;
-	if (isDownloaded) {
-		return (
-			<motion.button
-				whileTap={{ scale: 0.88 }}
-				onClick={() => {
-					triggerHaptic('warning');
-					onDeleteOffline();
-				}}
-				className="w-8 h-8 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 transition-colors flex items-center justify-center cursor-pointer"
-				title="Xóa khỏi máy"
-				aria-label="Xóa khỏi máy"
-			>
-				<Trash2 size={16} />
-			</motion.button>
-		);
-	}
-	return (
-		<motion.button
-			whileTap={{ scale: 0.88 }}
-			onClick={() => {
-				triggerHaptic('light');
-				onDownload();
-			}}
-			className="w-8 h-8 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
-			title="Tải về ngoại tuyến"
-			aria-label="Tải về ngoại tuyến"
-		>
-			<Download size={16} />
-		</motion.button>
-	);
-}
-
-function QuickBookChapterList({
-	loading,
-	chapters,
-	lastReadChapter,
-	activeItemRef,
-	onSelectChapter,
-}: {
-	loading: boolean;
-	chapters: Chapter[];
-	lastReadChapter?: Book['lastReadChapter'];
-	activeItemRef: React.RefObject<HTMLDivElement | null>;
-	onSelectChapter: (chapterId: string) => void;
-}) {
-	if (loading && chapters.length === 0) {
-		return (
-			<div className="py-16 text-center space-y-2 text-on-surface-variant">
-				<RefreshCw size={20} className="animate-spin text-primary mx-auto" />
-				<p className="text-xs font-medium">Đang tải danh sách chương...</p>
-			</div>
-		);
-	}
-	if (chapters.length === 0) {
-		return <div className="py-12 text-center text-xs text-on-surface-variant/60 font-medium">Không tìm thấy chương nào</div>;
-	}
-
-	const lastId = lastReadChapter?.chapterId;
-	const lastNum = lastReadChapter?.chapterNumber === undefined ? undefined : Number(lastReadChapter.chapterNumber);
-
-	return (
-		<>
-			{chapters.map((c) => {
-				const isLastRead = Boolean((lastId && c.chapterId === lastId) || (lastNum !== undefined && c.chapterNumber === lastNum));
-
-				return (
-					<ChapterItem
-						key={c.chapterId}
-						ref={isLastRead ? activeItemRef : null}
-						chapter={c}
-						isActive={isLastRead}
-						onClick={() => onSelectChapter(c.chapterId)}
-					/>
-				);
-			})}
-		</>
-	);
-}
-
-function QuickBookTranslateButton({
-	isOfflineMode,
-	pendingCount,
-	onOpenTranslation,
-}: {
-	isOfflineMode: boolean;
-	pendingCount: number;
-	onOpenTranslation: () => void;
-}) {
-	if (isOfflineMode) return null;
-	return (
-		<motion.button
-			type="button"
-			whileTap={{ scale: 0.88 }}
-			onClick={onOpenTranslation}
-			className="relative w-8 h-8 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-primary hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
-			title={pendingCount > 0 ? `Chờ dịch: ${pendingCount} chương (Mở Dịch AI)` : 'Mở Dịch AI'}
-			aria-label="Mở Dịch AI"
-		>
-			<Sparkles size={16} className={pendingCount > 0 ? 'text-primary animate-pulse' : ''} />
-			{pendingCount > 0 && (
-				<span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-primary text-on-primary font-mono font-black text-[8px] flex items-center justify-center leading-none shadow-xs">
-					{pendingCount > 99 ? '99+' : pendingCount}
-				</span>
-			)}
-		</motion.button>
-	);
-}
-
-function QuickBookTags({ tags }: { tags?: string[] }) {
-	if (!tags || tags.length === 0) return null;
-	return (
-		<div className="flex flex-wrap items-center gap-1 pt-0.5">
-			{tags.map((tag) => (
-				<span
-					key={tag}
-					className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-medium bg-white/10 border border-white/15 text-on-surface-variant shrink-0"
-				>
-					#{tag}
-				</span>
-			))}
-		</div>
-	);
-}
-
-function QuickBookTopLoading({ loadingTop }: { loadingTop: boolean }) {
-	if (!loadingTop) return null;
-	return (
-		<div className="py-2.5 flex items-center justify-center gap-2 text-xs font-mono text-primary/80">
-			<RefreshCw size={14} className="animate-spin text-primary" />
-			<span>Đang tải thêm chương trước...</span>
-		</div>
-	);
-}
-
-function QuickBookBottomLoading({ loadingBottom }: { loadingBottom: boolean }) {
-	if (!loadingBottom) return null;
-	return (
-		<div className="space-y-1.5 mt-2">
-			{[1, 2, 3, 4, 5].map((idx) => (
-				<div
-					key={`sk-bottom-${idx}`}
-					className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 animate-pulse flex items-center justify-between"
-				>
-					<div className="h-4 w-36 bg-on-surface-variant/20 rounded" />
-					<div className="h-4 w-12 bg-primary/20 rounded-lg" />
-				</div>
-			))}
-		</div>
-	);
-}
+import type { Book } from '@/shared/types';
 
 interface QuickBookSheetProps {
 	book: Book;
@@ -219,32 +30,19 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 	const isOfflineMode = useAppStore((state) => state.isOfflineMode);
 	const configChapterLimit = useReaderConfigStore((state) => state.chapterLimit || 50);
 
-	const [chapters, setChapters] = useState<Chapter[]>([]);
 	const [isDownloaded, setIsDownloaded] = useState(false);
 	const [showTranslationSheet, setShowTranslationSheet] = useState(false);
-	const [loading, setLoading] = useState(true);
-	const [loadingBottom, setLoadingBottom] = useState(false);
-	const [loadingTop, setLoadingTop] = useState(false);
-
-	const [hasMoreTop, setHasMoreTop] = useState(false);
-	const [hasMoreBottom, setHasMoreBottom] = useState(true);
-	const [minChapterNum, setMinChapterNum] = useState<number>(1);
-	const [maxChapterNum, setMaxChapterNum] = useState<number>(1);
-	const [search, setSearch] = useState('');
 
 	const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 	const activeItemRef = useRef<HTMLDivElement | null>(null);
-	const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-	const isInitialScrollDoneRef = useRef(false);
-	const pendingPrependScrollRef = useRef<{ prevHeight: number; prevTop: number } | null>(null);
-	const lastScrollTopRef = useRef<number>(0);
-	const fetchIdRef = useRef(0);
 
-	useEffect(() => {
-		return () => {
-			if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-		};
-	}, []);
+	const { chapters, loading, loadingBottom, loadingTop, search, setSearch, loadInitialChapters, handleScroll, handleSearchChange } =
+		useQuickBookChapters({
+			book,
+			configChapterLimit,
+			scrollContainerRef,
+			activeItemRef,
+		});
 
 	useEffect(() => {
 		offlineDb.getBook(book.bookId).then((b) => setIsDownloaded(Boolean(b)));
@@ -269,224 +67,6 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 	const percent = book.chapterCount > 0 ? Math.round((book.totalTranslated / book.chapterCount) * 100) : 0;
 	const pendingCount = book.totalPending || Math.max(0, book.chapterCount - book.totalTranslated);
 
-	// Fetch previous top chapters before minChapterNum (Scroll Up)
-	const fetchPrevTopPage = useCallback(async () => {
-		if (loadingTop || !hasMoreTop || minChapterNum <= 1 || search || !isInitialScrollDoneRef.current) return;
-		setLoadingTop(true);
-
-		const targetToChapter = minChapterNum - 1;
-		const targetFromChapter = Math.max(1, minChapterNum - configChapterLimit);
-
-		try {
-			const res = await ChapterRepository.getChapters(
-				book.bookId,
-				1,
-				configChapterLimit,
-				'chapterNumber',
-				'ASC',
-				'all',
-				search,
-				targetFromChapter,
-				targetToChapter
-			);
-
-			const newChapters = res.chapters || [];
-
-			if (newChapters.length > 0) {
-				const container = scrollContainerRef.current;
-				if (container) {
-					pendingPrependScrollRef.current = {
-						prevHeight: container.scrollHeight,
-						prevTop: container.scrollTop,
-					};
-				}
-
-				setChapters((prev) => {
-					const existingIds = new Set(prev.map((c) => c.chapterId));
-					const uniqueNew = newChapters.filter((c) => !existingIds.has(c.chapterId));
-					return [...uniqueNew, ...prev];
-				});
-				const newMin = Math.min(...newChapters.map((c) => c.chapterNumber));
-				setMinChapterNum(newMin);
-				setHasMoreTop(newMin > 1);
-			} else {
-				setHasMoreTop(false);
-			}
-		} catch {
-			// Ignore
-		} finally {
-			setLoadingTop(false);
-		}
-	}, [loadingTop, hasMoreTop, minChapterNum, search, configChapterLimit, book.bookId]);
-
-	// Load initial chapters windowed around lastReadChapterNumber
-	const loadInitialChapters = useCallback(
-		async (searchQuery: string = '') => {
-			const fetchId = ++fetchIdRef.current;
-			setLoading(true);
-			isInitialScrollDoneRef.current = false;
-
-			const { startChapterNumber, endChapterNumber } = computeChapterWindow(
-				book.lastReadChapter?.chapterNumber,
-				book.chapterCount || 0,
-				configChapterLimit,
-				searchQuery
-			);
-
-			try {
-				const res = await ChapterRepository.getChapters(
-					book.bookId,
-					1,
-					configChapterLimit + 10,
-					'chapterNumber',
-					'ASC',
-					'all',
-					searchQuery,
-					startChapterNumber,
-					endChapterNumber
-				);
-
-				if (fetchId !== fetchIdRef.current) return;
-
-				const newChapters = res.chapters || [];
-				setChapters(newChapters);
-
-				const bounds = computeChapterBounds(newChapters, searchQuery, book.chapterCount, configChapterLimit);
-				setMinChapterNum(bounds.minNum);
-				setMaxChapterNum(bounds.maxNum);
-				setHasMoreTop(bounds.moreTop);
-				setHasMoreBottom(bounds.moreBottom);
-			} catch {
-				// Ignore error
-			} finally {
-				if (fetchId === fetchIdRef.current) {
-					setLoading(false);
-				}
-			}
-		},
-		[book.bookId, book.lastReadChapter, book.chapterCount, configChapterLimit]
-	);
-
-	useEffect(() => {
-		loadInitialChapters('');
-	}, [loadInitialChapters]);
-
-	// Auto-backfill previous chapters if initial viewport has extra space and hasMoreTop is true
-	useEffect(() => {
-		if (!loading && !loadingTop && hasMoreTop && isInitialScrollDoneRef.current && scrollContainerRef.current) {
-			const { scrollHeight, clientHeight } = scrollContainerRef.current;
-			if (scrollHeight > 0 && scrollHeight <= clientHeight + 50) {
-				fetchPrevTopPage();
-			}
-		}
-	}, [loading, loadingTop, hasMoreTop, chapters.length, fetchPrevTopPage]);
-
-	// Auto-scroll positioning active chapter comfortably in upper-third of viewport
-	const scrollToActive = useCallback(() => {
-		if (activeItemRef.current && scrollContainerRef.current) {
-			const container = scrollContainerRef.current;
-			const activeEl = activeItemRef.current;
-			const targetScrollTop = Math.max(0, activeEl.offsetTop - container.clientHeight / 3);
-			container.scrollTop = targetScrollTop;
-			lastScrollTopRef.current = targetScrollTop;
-		}
-	}, []);
-
-	// Synchronous scroll compensation after prepending items to top (Runs BEFORE browser paint)
-	useLayoutEffect(() => {
-		if (pendingPrependScrollRef.current && scrollContainerRef.current) {
-			const { prevHeight, prevTop } = pendingPrependScrollRef.current;
-			pendingPrependScrollRef.current = null;
-			const newHeight = scrollContainerRef.current.scrollHeight;
-			const diff = newHeight - prevHeight;
-			if (diff > 0) {
-				scrollContainerRef.current.scrollTop = prevTop + diff;
-				lastScrollTopRef.current = prevTop + diff;
-			}
-		}
-	}, [chapters]);
-
-	useLayoutEffect(() => {
-		if (!loading && chapters.length > 0 && !isInitialScrollDoneRef.current) {
-			requestAnimationFrame(() => {
-				scrollToActive();
-				setTimeout(() => {
-					isInitialScrollDoneRef.current = true;
-				}, 100);
-			});
-		}
-	}, [loading, chapters, scrollToActive]);
-
-	// Fetch next bottom chapters starting from maxChapterNum + 1 (Scroll Down)
-	const fetchNextBottomPage = async () => {
-		if (loadingBottom || !hasMoreBottom || search || !isInitialScrollDoneRef.current) return;
-		setLoadingBottom(true);
-		const targetFromChapter = maxChapterNum + 1;
-
-		try {
-			const res = await ChapterRepository.getChapters(
-				book.bookId,
-				1,
-				configChapterLimit,
-				'chapterNumber',
-				'ASC',
-				'all',
-				search,
-				targetFromChapter
-			);
-
-			const newChapters = res.chapters || [];
-
-			if (newChapters.length > 0) {
-				setChapters((prev) => {
-					const existingIds = new Set(prev.map((c) => c.chapterId));
-					const uniqueNew = newChapters.filter((c) => !existingIds.has(c.chapterId));
-					return [...prev, ...uniqueNew];
-				});
-				const newMax = Math.max(...newChapters.map((c) => c.chapterNumber));
-				setMaxChapterNum(newMax);
-				setHasMoreBottom(newChapters.length >= configChapterLimit);
-			} else {
-				setHasMoreBottom(false);
-			}
-		} catch {
-			// Ignore
-		} finally {
-			setLoadingBottom(false);
-		}
-	};
-
-	// Scroll handler for 2-way Infinite Scroll (Top & Bottom)
-	const handleScroll = () => {
-		if (!scrollContainerRef.current || loading || !isInitialScrollDoneRef.current) return;
-		const { scrollTop, clientHeight, scrollHeight } = scrollContainerRef.current;
-
-		const isScrollingUp = scrollTop < lastScrollTopRef.current;
-		const isScrollingDown = scrollTop > lastScrollTopRef.current;
-		lastScrollTopRef.current = scrollTop;
-
-		// Scroll Down -> Load More Bottom (Prefetch early at 300px threshold)
-		if (isScrollingDown && scrollTop + clientHeight >= scrollHeight - 300) {
-			fetchNextBottomPage();
-		}
-
-		// Scroll Up -> Load More Top (Only when user actually scrolls near top <= 80px)
-		if (isScrollingUp && scrollTop <= 80) {
-			fetchPrevTopPage();
-		}
-	};
-
-	// Debounced API Search
-	const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const val = e.target.value;
-		setSearch(val);
-
-		if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-		searchTimeoutRef.current = setTimeout(() => {
-			loadInitialChapters(val);
-		}, 300);
-	};
-
 	const handleSelectChapter = (chapterId: string) => {
 		onClose();
 		openChapter(book.bookId, chapterId);
@@ -495,105 +75,33 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 	return (
 		<>
 			<BottomSheet isOpen={true} onClose={onClose} ariaLabel={book.bookName} maxHeight="h-[82vh] max-h-[90dvh]" showDragHandle={false}>
-				{/* Top Header & Compact Mobile Info Area (Includes Drag Handle for 100% seamless unified background) */}
-				<div className="pt-2 px-3.5 pb-1.5 border-b border-white/10 space-y-1.5 flex-shrink-0 bg-transparent relative z-20">
-					{/* Drag Handle */}
-					<div className="w-8 h-1 rounded-full bg-white/25 dark:bg-white/20 mx-auto mb-1 flex-shrink-0" />
+				<QuickBookHeader
+					book={book}
+					isOfflineMode={isOfflineMode}
+					isDownloaded={isDownloaded}
+					pendingCount={pendingCount}
+					percent={percent}
+					search={search}
+					onOpenTranslation={() => {
+						triggerHaptic('light');
+						setShowTranslationSheet(true);
+					}}
+					onDownload={handleDownloadBook}
+					onDeleteOffline={handleDeleteOfflineBook}
+					onClose={onClose}
+					onSearchChange={handleSearchChange}
+					onClearSearch={() => {
+						triggerHaptic('light');
+						setSearch('');
+						loadInitialChapters('');
+					}}
+				/>
 
-					{/* Row 1: Title + Action Icon Buttons */}
-					<div className="flex items-center justify-between gap-2">
-						<h2 className="text-xs sm:text-sm font-extrabold text-on-surface tracking-tight leading-snug truncate flex-1 min-w-0">
-							{book.bookName}
-						</h2>
-
-						{/* Action Icon Group (Comfortable w-8 h-8 buttons with touch feedback) */}
-						<div className="flex items-center gap-1.5 shrink-0">
-							{/* AI Batch Translation icon button with pending badge */}
-							<QuickBookTranslateButton
-								isOfflineMode={isOfflineMode}
-								pendingCount={pendingCount}
-								onOpenTranslation={() => {
-									triggerHaptic('light');
-									setShowTranslationSheet(true);
-								}}
-							/>
-
-							{/* Download / Delete icon button */}
-							<QuickBookOfflineAction
-								isOfflineMode={isOfflineMode}
-								isDownloaded={isDownloaded}
-								onDownload={handleDownloadBook}
-								onDeleteOffline={handleDeleteOfflineBook}
-							/>
-
-							{/* Close modal button */}
-							<motion.button
-								whileTap={{ scale: 0.88 }}
-								onClick={() => {
-									triggerHaptic('light');
-									onClose();
-								}}
-								className="w-8 h-8 rounded-full bg-white/10 border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.4)] text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer"
-								title="Đóng"
-								aria-label="Đóng"
-							>
-								<X size={17} />
-							</motion.button>
-						</div>
-					</div>
-
-					{/* Row 2: Progress Stat & Bar */}
-					<div className="flex items-center justify-between text-[10px] font-mono text-on-surface-variant/80">
-						<span>
-							Đã dịch:{' '}
-							<b className="text-on-surface">
-								{book.totalTranslated}/{book.chapterCount}
-							</b>{' '}
-							ch ({percent}%)
-						</span>
-						<div className="w-16 bg-white/10 border border-white/15 h-1 rounded-full overflow-hidden ml-2 shrink-0">
-							<div className="bg-primary h-full rounded-full transition-all duration-300" style={{ width: `${percent}%` }} />
-						</div>
-					</div>
-
-					{/* Row 3: Tags List (Wrapping flex, zero horizontal scroll) */}
-					<QuickBookTags tags={book.tags} />
-
-					{/* Row 4: Mobile-optimized Search Bar */}
-					<div className="relative pt-0.5">
-						<Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/60 pointer-events-none" />
-						<input
-							type="text"
-							placeholder="Tìm nhanh số hoặc tên chương..."
-							value={search}
-							onChange={handleSearchChange}
-							className="w-full pl-9 pr-8 py-2 rounded-xl bg-white/10 border border-white/15 text-sm sm:text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 font-medium transition-all"
-						/>
-						{search && (
-							<motion.button
-								whileTap={{ scale: 0.85 }}
-								type="button"
-								onClick={() => {
-									triggerHaptic('light');
-									setSearch('');
-									loadInitialChapters('');
-								}}
-								className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface"
-								title="Xóa tìm kiếm"
-							>
-								<X size={13} />
-							</motion.button>
-						)}
-					</div>
-				</div>
-
-				{/* Inline Chapter List Container with 2-way Infinite Scroll */}
 				<div
 					ref={scrollContainerRef}
 					onScroll={handleScroll}
 					className="p-3 pb-8 overflow-y-auto hide-scrollbar overscroll-contain flex-1 min-h-0 space-y-1.5"
 				>
-					{/* Scroll Up Top Loading Indicator */}
 					<QuickBookTopLoading loadingTop={loadingTop} />
 
 					<QuickBookChapterList
@@ -604,12 +112,10 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 						onSelectChapter={handleSelectChapter}
 					/>
 
-					{/* Scroll Down Bottom Loading Indicator */}
 					<QuickBookBottomLoading loadingBottom={loadingBottom} />
 				</div>
 			</BottomSheet>
 
-			{/* Batch AI Translation Modal Sheet */}
 			{showTranslationSheet && (
 				<TranslationSheet
 					currentBookId={book.bookId}

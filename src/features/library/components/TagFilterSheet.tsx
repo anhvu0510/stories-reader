@@ -1,5 +1,5 @@
 import { X, Search, Check, Tag, RotateCcw } from 'lucide-react';
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 import { BottomSheet } from '@/components/BottomSheet';
 import { TagRepository } from '@/repositories/TagRepository';
@@ -12,62 +12,17 @@ interface TagFilterSheetProps {
 	onClose: () => void;
 }
 
-export function TagFilterSheet({ isOpen, selectedTags, onApply, onClose }: TagFilterSheetProps) {
-	const [categories, setCategories] = useState<TagCategory[]>([]);
-	const [draftTags, setDraftTags] = useState<string[]>(selectedTags);
-	const [searchQuery, setSearchQuery] = useState('');
-	const [isLoading, setIsLoading] = useState(false);
-
-	// Fetch latest categories from backend when component mounts or opens
-	useEffect(() => {
-		if (!isOpen) return;
-		setIsLoading(true);
-		TagRepository.getTags()
-			.then((res) => {
-				if (res && Array.isArray(res.categories)) {
-					setCategories(res.categories);
-				}
-			})
-			.finally(() => {
-				setIsLoading(false);
-			});
-	}, [isOpen]);
-
-	// Sync draftTags whenever the sheet opens or external selectedTags changes
-	useEffect(() => {
-		if (isOpen) {
-			setDraftTags(selectedTags);
-			setSearchQuery('');
-		}
-	}, [isOpen, selectedTags]);
-
-	const toggleTag = (tag: string) => {
-		setDraftTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
-	};
-
-	const handleClearAll = () => {
-		setDraftTags([]);
-	};
-
-	const handleApply = () => {
-		onApply(draftTags);
-		onClose();
-	};
-
-	// Filter categories and tags based on search query
-	const filteredCategories = useMemo(() => {
-		if (!searchQuery.trim()) return categories;
-		const q = searchQuery.toLowerCase();
-		return categories
-			.map((category) => ({
-				...category,
-				tags: category.tags.filter((t) => t.toLowerCase().includes(q)),
-			}))
-			.filter((category) => category.tags.length > 0);
-	}, [categories, searchQuery]);
-
+function TagFilterHeaderAndSearch({
+	searchQuery,
+	onSearchChange,
+	onClose,
+}: {
+	searchQuery: string;
+	onSearchChange: (val: string) => void;
+	onClose: () => void;
+}) {
 	return (
-		<BottomSheet isOpen={isOpen} onClose={onClose} ariaLabel="Bộ lọc Thể loại & Tags" maxHeight="max-h-[88vh]">
+		<>
 			{/* Header */}
 			<div className="flex items-center justify-between px-4 py-2 border-b border-blue-500/20 dark:border-blue-400/20 flex-shrink-0">
 				<div className="flex items-center gap-2">
@@ -98,13 +53,13 @@ export function TagFilterSheet({ isOpen, selectedTags, onApply, onClose }: TagFi
 						type="text"
 						placeholder="Tìm nhanh tag..."
 						value={searchQuery}
-						onChange={(e) => setSearchQuery(e.target.value)}
+						onChange={(e) => onSearchChange(e.target.value)}
 						className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-white/5 dark:bg-white/5 border border-blue-500/20 dark:border-blue-400/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3),_inset_0_-1px_0.5px_rgba(0,0,0,0.3)] text-xs text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/60 transition-all"
 						data-testid="tag-search-input"
 					/>
 					{searchQuery && (
 						<button
-							onClick={() => setSearchQuery('')}
+							onClick={() => onSearchChange('')}
 							className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-on-surface-variant/60 hover:text-on-surface"
 						>
 							<X size={12} />
@@ -112,79 +67,171 @@ export function TagFilterSheet({ isOpen, selectedTags, onApply, onClose }: TagFi
 					)}
 				</div>
 			</div>
+		</>
+	);
+}
 
-			{/* Selected Tags Preview Bar */}
-			{draftTags.length > 0 && (
-				<div className="px-3.5 py-2 border-b border-blue-500/20 dark:border-blue-400/20 bg-primary/10 flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar flex-shrink-0">
-					<div className="flex items-center gap-1.5 flex-nowrap">
-						<span className="text-[11px] font-semibold text-primary shrink-0">Đã chọn ({draftTags.length}):</span>
-						{draftTags.map((tag) => (
-							<span
-								key={tag}
-								className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-bold bg-primary text-on-primary border border-primary/70 shrink-0 shadow-xs"
-							>
-								{tag}
-								<button onClick={() => toggleTag(tag)} className="hover:opacity-80 active:scale-90" aria-label={`Bỏ chọn ${tag}`}>
-									<X size={11} />
-								</button>
-							</span>
-						))}
+function SelectedTagsPreviewBar({
+	draftTags,
+	onToggleTag,
+	onClearAll,
+}: {
+	draftTags: string[];
+	onToggleTag: (tag: string) => void;
+	onClearAll: () => void;
+}) {
+	if (draftTags.length === 0) return null;
+	return (
+		<div className="px-3.5 py-2 border-b border-blue-500/20 dark:border-blue-400/20 bg-primary/10 flex items-center justify-between gap-2 overflow-x-auto hide-scrollbar flex-shrink-0">
+			<div className="flex items-center gap-1.5 flex-nowrap">
+				<span className="text-[11px] font-semibold text-primary shrink-0">Đã chọn ({draftTags.length}):</span>
+				{draftTags.map((tag) => (
+					<span
+						key={tag}
+						className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-bold bg-primary text-on-primary border border-primary/70 shrink-0 shadow-xs"
+					>
+						{tag}
+						<button onClick={() => onToggleTag(tag)} className="hover:opacity-80 active:scale-90" aria-label={`Bỏ chọn ${tag}`}>
+							<X size={11} />
+						</button>
+					</span>
+				))}
+			</div>
+
+			<button
+				onClick={onClearAll}
+				className="text-[10.5px] font-bold text-rose-400 hover:underline shrink-0 flex items-center gap-0.5 ml-1"
+			>
+				<RotateCcw size={10} />
+				Xóa hết
+			</button>
+		</div>
+	);
+}
+
+function TagCategoriesScrollList({
+	isLoading,
+	hasCategories,
+	filteredCategories,
+	searchQuery,
+	draftTags,
+	onToggleTag,
+}: {
+	isLoading: boolean;
+	hasCategories: boolean;
+	filteredCategories: TagCategory[];
+	searchQuery: string;
+	draftTags: string[];
+	onToggleTag: (tag: string) => void;
+}) {
+	if (isLoading && !hasCategories) {
+		return <div className="py-12 text-center text-xs text-on-surface-variant/60 animate-pulse">Đang tải danh mục tags từ hệ thống...</div>;
+	}
+	if (filteredCategories.length === 0) {
+		return (
+			<div className="py-8 text-center text-xs text-on-surface-variant/60">
+				{searchQuery ? `Không tìm thấy tag phù hợp với từ khóa "${searchQuery}"` : 'Chưa có dữ liệu tags'}
+			</div>
+		);
+	}
+	return (
+		<>
+			{filteredCategories.map((category) => (
+				<div key={category.name} className="space-y-2">
+					<div className="flex items-center justify-between">
+						<h3 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{category.name}</h3>
+						<span className="text-[10px] text-on-surface-variant/50">{category.tags.length} tags</span>
 					</div>
 
-					<button
-						onClick={handleClearAll}
-						className="text-[10.5px] font-bold text-rose-400 hover:underline shrink-0 flex items-center gap-0.5 ml-1"
-					>
-						<RotateCcw size={10} />
-						Xóa hết
-					</button>
+					<div className="flex flex-wrap gap-1.5">
+						{category.tags.map((tag) => {
+							const isSelected = draftTags.includes(tag);
+							return (
+								<button
+									key={tag}
+									type="button"
+									onClick={() => onToggleTag(tag)}
+									className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs border transition-all active:scale-95 ${isSelected ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary shadow-[0_4px_16px_var(--primary),_inset_0_1px_1px_rgba(255,255,255,0.6)] font-extrabold' : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 text-on-surface font-medium'}`}
+									data-testid={`tag-chip-${tag}`}
+								>
+									{isSelected && <Check size={12} className="shrink-0 stroke-[2.5]" />}
+									{tag}
+								</button>
+							);
+						})}
+					</div>
 				</div>
-			)}
+			))}
+		</>
+	);
+}
 
-			{/* Categories and Tag List (Scrollable Area) */}
+export function TagFilterSheet({ isOpen, selectedTags, onApply, onClose }: TagFilterSheetProps) {
+	const [categories, setCategories] = useState<TagCategory[]>([]);
+	const [draftTags, setDraftTags] = useState<string[]>(selectedTags);
+	const [searchQuery, setSearchQuery] = useState('');
+	const [isLoading, setIsLoading] = useState(false);
+
+	useEffect(() => {
+		if (!isOpen) return;
+		setIsLoading(true);
+		TagRepository.getTags()
+			.then((res) => {
+				if (res && Array.isArray(res.categories)) {
+					setCategories(res.categories);
+				}
+			})
+			.finally(() => {
+				setIsLoading(false);
+			});
+	}, [isOpen]);
+
+	useEffect(() => {
+		if (isOpen) {
+			setDraftTags(selectedTags);
+			setSearchQuery('');
+		}
+	}, [isOpen, selectedTags]);
+
+	const toggleTag = (tag: string) => {
+		setDraftTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+	};
+
+	const handleClearAll = () => {
+		setDraftTags([]);
+	};
+
+	const handleApply = () => {
+		onApply(draftTags);
+		onClose();
+	};
+
+	const filteredCategories = useMemo(() => {
+		if (!searchQuery.trim()) return categories;
+		const q = searchQuery.toLowerCase();
+		return categories
+			.map((category) => ({
+				...category,
+				tags: category.tags.filter((t) => t.toLowerCase().includes(q)),
+			}))
+			.filter((category) => category.tags.length > 0);
+	}, [categories, searchQuery]);
+
+	return (
+		<BottomSheet isOpen={isOpen} onClose={onClose} ariaLabel="Bộ lọc Thể loại & Tags" maxHeight="max-h-[88vh]">
+			<TagFilterHeaderAndSearch searchQuery={searchQuery} onSearchChange={setSearchQuery} onClose={onClose} />
+
+			<SelectedTagsPreviewBar draftTags={draftTags} onToggleTag={toggleTag} onClearAll={handleClearAll} />
+
 			<div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 min-h-0 hide-scrollbar">
-				{(() => {
-					if (isLoading && categories.length === 0) {
-						return (
-							<div className="py-12 text-center text-xs text-on-surface-variant/60 animate-pulse">
-								Đang tải danh mục tags từ hệ thống...
-							</div>
-						);
-					}
-					if (filteredCategories.length === 0) {
-						return (
-							<div className="py-8 text-center text-xs text-on-surface-variant/60">
-								{searchQuery ? `Không tìm thấy tag phù hợp với từ khóa "${searchQuery}"` : 'Chưa có dữ liệu tags'}
-							</div>
-						);
-					}
-					return filteredCategories.map((category) => (
-						<div key={category.name} className="space-y-2">
-							<div className="flex items-center justify-between">
-								<h3 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{category.name}</h3>
-								<span className="text-[10px] text-on-surface-variant/50">{category.tags.length} tags</span>
-							</div>
-
-							<div className="flex flex-wrap gap-1.5">
-								{category.tags.map((tag) => {
-									const isSelected = draftTags.includes(tag);
-									return (
-										<button
-											key={tag}
-											type="button"
-											onClick={() => toggleTag(tag)}
-											className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs border transition-all active:scale-95 ${isSelected ? 'bg-primary/20 hover:bg-primary/25 backdrop-blur-md border-2 border-primary text-primary shadow-[0_4px_16px_var(--primary),_inset_0_1px_1px_rgba(255,255,255,0.6)] font-extrabold' : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border-2 border-outline-variant/60 hover:border-primary/80 text-on-surface font-medium'}`}
-											data-testid={`tag-chip-${tag}`}
-										>
-											{isSelected && <Check size={12} className="shrink-0 stroke-[2.5]" />}
-											{tag}
-										</button>
-									);
-								})}
-							</div>
-						</div>
-					));
-				})()}
+				<TagCategoriesScrollList
+					isLoading={isLoading}
+					hasCategories={categories.length > 0}
+					filteredCategories={filteredCategories}
+					searchQuery={searchQuery}
+					draftTags={draftTags}
+					onToggleTag={toggleTag}
+				/>
 			</div>
 
 			{/* Footer Actions */}

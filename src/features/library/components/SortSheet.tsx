@@ -16,6 +16,50 @@ interface SortSheetProps {
 	onClose: () => void;
 }
 
+function SortOptionsList({
+	currentOptionId,
+	onSelect,
+}: {
+	currentOptionId: string;
+	onSelect: (sortBy: SortByField, sortOrder: SortOrderDirection) => void;
+}) {
+	return (
+		<div className="p-3.5 space-y-2 overflow-y-auto hide-scrollbar flex-1 overscroll-contain">
+			{SORT_OPTIONS.map((opt) => {
+				const isSelected = currentOptionId === opt.id;
+				return (
+					<button
+						key={opt.id}
+						type="button"
+						onClick={() => onSelect(opt.sortBy, opt.sortOrder)}
+						className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all active:scale-[0.99] text-left ${isSelected ? 'bg-primary/20 hover:bg-primary/25 border-2 border-primary text-primary shadow-xs' : 'bg-surface-container hover:bg-surface-container-high border-2 border-outline-variant/50 hover:border-primary/60 text-on-surface'}`}
+					>
+						<div className="flex items-center gap-3">
+							<div
+								className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-primary/30 border border-primary/70 text-primary font-extrabold' : 'bg-primary/10 border border-primary/30 text-primary'}`}
+							>
+								{opt.icon}
+							</div>
+							<div>
+								<div className={`text-xs font-extrabold leading-snug ${isSelected ? 'text-primary' : 'text-on-surface'}`}>{opt.label}</div>
+								<div className={`text-[10px] mt-0.5 ${isSelected ? 'text-primary/90 font-medium' : 'text-on-surface-variant/70'}`}>
+									{opt.description}
+								</div>
+							</div>
+						</div>
+
+						<div
+							className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-primary/30 border border-primary/70 text-primary font-bold' : 'border border-outline-variant/60'}`}
+						>
+							{isSelected && <Check size={12} strokeWidth={3} />}
+						</div>
+					</button>
+				);
+			})}
+		</div>
+	);
+}
+
 export function SortSheet({
 	isOpen,
 	currentSortBy,
@@ -92,41 +136,7 @@ export function SortSheet({
 			</div>
 
 			{/* Options List */}
-			<div className="p-3.5 space-y-2 overflow-y-auto hide-scrollbar flex-1 overscroll-contain">
-				{SORT_OPTIONS.map((opt) => {
-					const isSelected = currentOptionId === opt.id;
-					return (
-						<button
-							key={opt.id}
-							type="button"
-							onClick={() => handleSelect(opt.sortBy, opt.sortOrder)}
-							className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all active:scale-[0.99] text-left ${isSelected ? 'bg-primary/20 hover:bg-primary/25 border-2 border-primary text-primary shadow-xs' : 'bg-surface-container hover:bg-surface-container-high border-2 border-outline-variant/50 hover:border-primary/60 text-on-surface'}`}
-						>
-							<div className="flex items-center gap-3">
-								<div
-									className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-primary/30 border border-primary/70 text-primary font-extrabold' : 'bg-primary/10 border border-primary/30 text-primary'}`}
-								>
-									{opt.icon}
-								</div>
-								<div>
-									<div className={`text-xs font-extrabold leading-snug ${isSelected ? 'text-primary' : 'text-on-surface'}`}>
-										{opt.label}
-									</div>
-									<div className={`text-[10px] mt-0.5 ${isSelected ? 'text-primary/90 font-medium' : 'text-on-surface-variant/70'}`}>
-										{opt.description}
-									</div>
-								</div>
-							</div>
-
-							<div
-								className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-primary/30 border border-primary/70 text-primary font-bold' : 'border border-outline-variant/60'}`}
-							>
-								{isSelected && <Check size={12} strokeWidth={3} />}
-							</div>
-						</button>
-					);
-				})}
-			</div>
+			<SortOptionsList currentOptionId={currentOptionId} onSelect={handleSelect} />
 
 			{/* Footer Action */}
 			<div className="p-3.5 border-t border-outline-variant/30 bg-surface-container-high flex items-center gap-2 flex-shrink-0">

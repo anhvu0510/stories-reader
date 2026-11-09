@@ -100,6 +100,35 @@ const commitBack = (el: HTMLElement | null | undefined, onBack: () => void): voi
 	}, 200);
 };
 
+const applySwipeTranslate = (containerRef: RefObject<HTMLElement | null> | undefined, x: number, transition = 'none'): void => {
+	const el = containerRef?.current;
+	if (!el) return;
+	el.style.transition = transition;
+	el.style.transform = `translate3d(${x}px, 0, 0)`;
+	if (x > 0) {
+		el.style.boxShadow = '-12px 0 28px rgba(0, 0, 0, 0.22)';
+	}
+};
+
+const resetSwipeTranslate = (containerRef: RefObject<HTMLElement | null> | undefined, animated = true): void => {
+	const el = containerRef?.current;
+	if (!el) return;
+	if (!animated) {
+		el.style.transition = '';
+		el.style.transform = '';
+		el.style.boxShadow = '';
+		return;
+	}
+	el.style.transition = 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)';
+	el.style.transform = 'translate3d(0px, 0, 0)';
+	setTimeout(() => {
+		if (!containerRef?.current) return;
+		containerRef.current.style.boxShadow = '';
+		containerRef.current.style.transform = '';
+		containerRef.current.style.transition = '';
+	}, 280);
+};
+
 /**
  * Hook cung cấp cử chỉ vuốt từ mép trái màn hình (iOS Cupertino Edge-Swipe Back)
  * Giúp người dùng lùi trang mượt mà bằng cử chỉ vuốt 1:1 theo ngón tay.
@@ -124,44 +153,8 @@ export function useCupertinoSwipeBack({
 	useEffect(() => {
 		if (typeof window === 'undefined' || disabled) return;
 
-		const applyTranslate = (x: number, transition = 'none') => {
-			if (!containerRef?.current) return;
-			const el = containerRef.current;
-			el.style.transition = transition;
-			el.style.transform = `translate3d(${x}px, 0, 0)`;
-			if (x > 0) {
-				el.style.boxShadow = '-12px 0 28px rgba(0, 0, 0, 0.22)';
-			}
-		};
-
-		const resetTranslate = (animated = true) => {
-			if (!containerRef?.current) return;
-			const el = containerRef.current;
-			if (animated) {
-				el.style.transition = 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)';
-				el.style.transform = 'translate3d(0px, 0, 0)';
-				setTimeout(() => {
-					if (containerRef.current) {
-						containerRef.current.style.boxShadow = '';
-						containerRef.current.style.transform = '';
-						containerRef.current.style.transition = '';
-					}
-				}, 280);
-			} else {
-				el.style.transition = '';
-				el.style.transform = '';
-				el.style.boxShadow = '';
-			}
-		};
-
 		const handleTouchStart = (e: TouchEvent) => {
-			if (!e.touches || e.touches.length !== 1) {
-				touchStateRef.current = null;
-				return;
-			}
-
-			// Không kích hoạt nếu đang có modal hoặc bottom sheet hiển thị
-			if (isModalOrSheetActive()) {
+			if (!e.touches || e.touches.length !== 1 || isModalOrSheetActive()) {
 				touchStateRef.current = null;
 				return;
 			}
@@ -196,7 +189,7 @@ export function useCupertinoSwipeBack({
 			if (state.lockDirection === 'none' && !resolveLockDirection(state, deltaX, absX, absY)) return;
 
 			if (state.lockDirection === 'horizontal' && state.isDragging && deltaX >= 0) {
-				applyTranslate(deltaX);
+				applySwipeTranslate(containerRef, deltaX);
 				callbacksRef.current.onSwipeProgress?.(deltaX);
 			}
 		};
@@ -211,7 +204,7 @@ export function useCupertinoSwipeBack({
 			}
 
 			if (!e.changedTouches || e.changedTouches.length === 0) {
-				resetTranslate(true);
+				resetSwipeTranslate(containerRef, true);
 				callbacksRef.current.onSwipeCancel?.();
 				return;
 			}
@@ -224,19 +217,18 @@ export function useCupertinoSwipeBack({
 			if (shouldCommitBack(deltaX, velocity, threshold, minVelocity)) {
 				commitBack(containerRef?.current, callbacksRef.current.onBack);
 			} else {
-				resetTranslate(true);
+				resetSwipeTranslate(containerRef, true);
 				callbacksRef.current.onSwipeCancel?.();
 			}
 		};
 
 		const handleTouchCancel = () => {
 			const state = touchStateRef.current;
-			if (state) {
-				touchStateRef.current = null;
-				if (state.isDragging) {
-					resetTranslate(true);
-					callbacksRef.current.onSwipeCancel?.();
-				}
+			if (!state) return;
+			touchStateRef.current = null;
+			if (state.isDragging) {
+				resetSwipeTranslate(containerRef, true);
+				callbacksRef.current.onSwipeCancel?.();
 			}
 		};
 
@@ -250,7 +242,7 @@ export function useCupertinoSwipeBack({
 			window.removeEventListener('touchmove', handleTouchMove);
 			window.removeEventListener('touchend', handleTouchEnd);
 			window.removeEventListener('touchcancel', handleTouchCancel);
-			resetTranslate(false);
+			resetSwipeTranslate(containerRef, false);
 		};
 	}, [containerRef, edgeWidth, threshold, minVelocity, disabled]);
 }

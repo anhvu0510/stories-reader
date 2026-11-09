@@ -110,6 +110,45 @@ function CenterPageIndicator({ page, totalPages, total, onClick }: CenterPageInd
 	);
 }
 
+function PagePickerPresets({
+	totalPages,
+	targetPage,
+	presets,
+	onSelectPreset,
+}: {
+	totalPages: number;
+	targetPage: number;
+	presets: number[];
+	onSelectPreset: (presetNum: number) => void;
+}) {
+	if (totalPages <= 1) return null;
+	return (
+		<div className="space-y-1">
+			<span className="text-[10px] font-mono font-bold text-on-surface-variant/60 uppercase tracking-wider px-1">⚡ Mốc nhanh</span>
+			<div className="grid grid-cols-5 gap-1.5">
+				{presets.map((presetNum) => {
+					const isSelected = targetPage === presetNum;
+					const label = getPresetLabel(presetNum, totalPages);
+
+					return (
+						<motion.button
+							key={presetNum}
+							whileTap={{ scale: 0.92 }}
+							onClick={() => {
+								triggerHaptic('selection');
+								onSelectPreset(presetNum);
+							}}
+							className={`py-2 px-1 rounded-xl text-[10px] font-mono font-extrabold border transition-all text-center truncate cursor-pointer ${isSelected ? 'bg-primary/25 border-2 border-primary text-primary shadow-[0_2px_10px_rgba(0,0,0,0.2)]' : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border border-outline-variant/60 text-on-surface-variant hover:text-on-surface'}`}
+						>
+							{label}
+						</motion.button>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
 interface PagePickerSheetProps {
 	isOpen: boolean;
 	onClose: () => void;
@@ -215,31 +254,7 @@ function PagePickerSheet({ isOpen, onClose, totalPages, currentPage, onSelectPag
 			</div>
 
 			{/* Quick Jump Presets (Mốc nhanh) */}
-			{totalPages > 1 && (
-				<div className="space-y-1">
-					<span className="text-[10px] font-mono font-bold text-on-surface-variant/60 uppercase tracking-wider px-1">⚡ Mốc nhanh</span>
-					<div className="grid grid-cols-5 gap-1.5">
-						{presets.map((presetNum) => {
-							const isSelected = targetPage === presetNum;
-							const label = getPresetLabel(presetNum, totalPages);
-
-							return (
-								<motion.button
-									key={presetNum}
-									whileTap={{ scale: 0.92 }}
-									onClick={() => {
-										triggerHaptic('selection');
-										setTargetPage(presetNum);
-									}}
-									className={`py-2 px-1 rounded-xl text-[10px] font-mono font-extrabold border transition-all text-center truncate cursor-pointer ${isSelected ? 'bg-primary/25 border-2 border-primary text-primary shadow-[0_2px_10px_rgba(0,0,0,0.2)]' : 'bg-white/[0.025] hover:bg-white/[0.08] backdrop-blur-md border border-outline-variant/60 text-on-surface-variant hover:text-on-surface'}`}
-								>
-									{label}
-								</motion.button>
-							);
-						})}
-					</div>
-				</div>
-			)}
+			<PagePickerPresets totalPages={totalPages} targetPage={targetPage} presets={presets} onSelectPreset={setTargetPage} />
 
 			{/* Primary Action Button */}
 			<motion.button

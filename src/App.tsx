@@ -55,6 +55,118 @@ function AppContent() {
 	);
 }
 
+interface ApplicationSetupViewProps {
+	nameInput: string;
+	domainInput: string;
+	isTesting: boolean;
+	showPasscodeModal: boolean;
+	onNameChange: (val: string) => void;
+	onDomainChange: (val: string) => void;
+	onSave: () => void;
+	onOpenPasscode: () => void;
+	onClosePasscode: () => void;
+	onPasscodeSuccess: (server: SecretServerConfig) => void;
+	onEnterOfflineMode: () => void;
+}
+
+function ApplicationSetupView({
+	nameInput,
+	domainInput,
+	isTesting,
+	showPasscodeModal,
+	onNameChange,
+	onDomainChange,
+	onSave,
+	onOpenPasscode,
+	onClosePasscode,
+	onPasscodeSuccess,
+	onEnterOfflineMode,
+}: ApplicationSetupViewProps) {
+	return (
+		<div className="min-h-screen bg-background text-on-background flex flex-col justify-center p-5 sm:p-6 font-sans relative overflow-hidden select-none">
+			{/* Ambient Background Glow for theme immersion */}
+			<div className="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/20 blur-[130px] pointer-events-none rounded-full" />
+			<div className="absolute -bottom-32 right-1/4 w-80 h-80 bg-primary/10 blur-[120px] pointer-events-none rounded-full" />
+
+			<div className="w-full max-w-[400px] mx-auto flex flex-col gap-8 relative z-10">
+				<div className="flex flex-col items-center text-center gap-4">
+					<div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/25 to-primary/5 text-primary flex items-center justify-center mb-2 shadow-[0_8px_24px_rgba(0,0,0,0.25),_inset_0_1.5px_1px_rgba(255,255,255,0.4)] border border-primary/30 backdrop-blur-md">
+						<BookOpen size={28} strokeWidth={2.5} className="drop-shadow-sm" />
+					</div>
+					<div>
+						<h1 className="text-3xl sm:text-4xl font-black text-on-surface tracking-tight mb-2">Stories Reader</h1>
+						<p className="text-[14px] text-on-surface-variant max-w-[280px] mx-auto leading-relaxed">
+							Thiết lập máy chủ trích xuất và đọc truyện của bạn để bắt đầu.
+						</p>
+					</div>
+				</div>
+
+				<div className="bg-surface/50 dark:bg-surface/40 backdrop-blur-2xl p-6 sm:p-7 rounded-[32px] shadow-[0_16px_40px_rgba(0,0,0,0.4),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.3)] border border-white/20 dark:border-white/15 flex flex-col gap-6 relative z-10">
+					<div className="flex flex-col gap-5">
+						<div className="flex flex-col gap-2">
+							<label className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider ml-1">
+								Tên máy chủ <span className="normal-case font-normal opacity-70">(Tùy chọn)</span>
+							</label>
+							<input
+								type="text"
+								value={nameInput}
+								onChange={(e) => onNameChange(e.target.value)}
+								placeholder="Ví dụ: Server Nhà, Ngrok..."
+								className="w-full h-12 px-4 rounded-2xl bg-surface-container-high/40 hover:bg-surface-container-high/60 focus:bg-surface-container-high/80 backdrop-blur-md border border-outline-variant/60 focus:border-primary/80 focus:ring-2 focus:ring-primary/20 text-[14px] font-medium text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none transition-all shadow-[inset_0_1.5px_1px_rgba(0,0,0,0.15)]"
+							/>
+						</div>
+
+						<div className="flex flex-col gap-2">
+							<label className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider ml-1">
+								URL Máy chủ API <span className="text-error">*</span>
+							</label>
+							<input
+								type="text"
+								value={domainInput}
+								onChange={(e) => onDomainChange(e.target.value)}
+								placeholder="https://..."
+								className="w-full h-12 px-4 rounded-2xl bg-surface-container-high/40 hover:bg-surface-container-high/60 focus:bg-surface-container-high/80 backdrop-blur-md border border-outline-variant/60 focus:border-primary/80 focus:ring-2 focus:ring-primary/20 text-[14px] font-medium text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none transition-all shadow-[inset_0_1.5px_1px_rgba(0,0,0,0.15)]"
+							/>
+						</div>
+					</div>
+
+					<button
+						onClick={onSave}
+						disabled={isTesting || !domainInput.trim()}
+						className="w-full h-12 rounded-2xl bg-primary text-on-primary font-bold text-[14px] shadow-[0_4px_16px_rgba(0,0,0,0.25),_inset_0_1.5px_1px_rgba(255,255,255,0.45)] hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
+					>
+						{isTesting ? 'Đang kiểm tra...' : 'Kết nối & Bắt đầu'}
+					</button>
+
+					<div className="flex items-center gap-3">
+						<div className="flex-1 h-px bg-outline-variant/40" />
+						<span className="text-[12px] text-on-surface-variant font-medium">hoặc</span>
+						<div className="flex-1 h-px bg-outline-variant/40" />
+					</div>
+
+					<button
+						type="button"
+						onClick={onOpenPasscode}
+						className="w-full h-12 rounded-2xl bg-primary/15 hover:bg-primary/25 border border-primary/40 text-primary font-bold text-[14px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]"
+					>
+						<KeyRound size={16} />
+						Mở khóa nhanh bằng Passcode
+					</button>
+
+					<button
+						onClick={onEnterOfflineMode}
+						className="w-full h-10 rounded-2xl bg-surface-container-high/30 hover:bg-surface-container-high/60 border border-outline-variant/40 text-on-surface-variant font-semibold text-[13px] backdrop-blur-md transition-all cursor-pointer"
+					>
+						Vào Chế độ Ngoại tuyến (Offline Mode)
+					</button>
+				</div>
+
+				<PasscodeModal isOpen={showPasscodeModal} onClose={onClosePasscode} onSuccess={onPasscodeSuccess} />
+			</div>
+		</div>
+	);
+}
+
 function ApplicationGate({ children }: { children: React.ReactNode }) {
 	const [showSettings, setShowSettings] = useState(() => {
 		useAppStore.getState().loadAppConfig();
@@ -118,90 +230,22 @@ function ApplicationGate({ children }: { children: React.ReactNode }) {
 
 	if (showSettings) {
 		return (
-			<div className="min-h-screen bg-background text-on-background flex flex-col justify-center p-5 sm:p-6 font-sans relative overflow-hidden select-none">
-				{/* Ambient Background Glow for theme immersion */}
-				<div className="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/20 blur-[130px] pointer-events-none rounded-full" />
-				<div className="absolute -bottom-32 right-1/4 w-80 h-80 bg-primary/10 blur-[120px] pointer-events-none rounded-full" />
-
-				<div className="w-full max-w-[400px] mx-auto flex flex-col gap-8 relative z-10">
-					<div className="flex flex-col items-center text-center gap-4">
-						<div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/25 to-primary/5 text-primary flex items-center justify-center mb-2 shadow-[0_8px_24px_rgba(0,0,0,0.25),_inset_0_1.5px_1px_rgba(255,255,255,0.4)] border border-primary/30 backdrop-blur-md">
-							<BookOpen size={28} strokeWidth={2.5} className="drop-shadow-sm" />
-						</div>
-						<div>
-							<h1 className="text-3xl sm:text-4xl font-black text-on-surface tracking-tight mb-2">Stories Reader</h1>
-							<p className="text-[14px] text-on-surface-variant max-w-[280px] mx-auto leading-relaxed">
-								Thiết lập máy chủ trích xuất và đọc truyện của bạn để bắt đầu.
-							</p>
-						</div>
-					</div>
-
-					<div className="bg-surface/50 dark:bg-surface/40 backdrop-blur-2xl p-6 sm:p-7 rounded-[32px] shadow-[0_16px_40px_rgba(0,0,0,0.4),_inset_0_1.5px_1.5px_0_rgba(255,255,255,0.3)] border border-white/20 dark:border-white/15 flex flex-col gap-6 relative z-10">
-						<div className="flex flex-col gap-5">
-							<div className="flex flex-col gap-2">
-								<label className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider ml-1">
-									Tên máy chủ <span className="normal-case font-normal opacity-70">(Tùy chọn)</span>
-								</label>
-								<input
-									type="text"
-									value={nameInput}
-									onChange={(e) => setNameInput(e.target.value)}
-									placeholder="Ví dụ: Server Nhà, Ngrok..."
-									className="w-full h-12 px-4 rounded-2xl bg-surface-container-high/40 hover:bg-surface-container-high/60 focus:bg-surface-container-high/80 backdrop-blur-md border border-outline-variant/60 focus:border-primary/80 focus:ring-2 focus:ring-primary/20 text-[14px] font-medium text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none transition-all shadow-[inset_0_1.5px_1px_rgba(0,0,0,0.15)]"
-								/>
-							</div>
-
-							<div className="flex flex-col gap-2">
-								<label className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider ml-1">
-									URL Máy chủ API <span className="text-error">*</span>
-								</label>
-								<input
-									type="text"
-									value={domainInput}
-									onChange={(e) => setDomainInput(e.target.value)}
-									placeholder="https://..."
-									className="w-full h-12 px-4 rounded-2xl bg-surface-container-high/40 hover:bg-surface-container-high/60 focus:bg-surface-container-high/80 backdrop-blur-md border border-outline-variant/60 focus:border-primary/80 focus:ring-2 focus:ring-primary/20 text-[14px] font-medium text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none transition-all shadow-[inset_0_1.5px_1px_rgba(0,0,0,0.15)]"
-								/>
-							</div>
-						</div>
-
-						<button
-							onClick={handleSave}
-							disabled={isTesting || !domainInput.trim()}
-							className="w-full h-12 rounded-2xl bg-primary text-on-primary font-bold text-[14px] shadow-[0_4px_16px_rgba(0,0,0,0.25),_inset_0_1.5px_1px_rgba(255,255,255,0.45)] hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
-						>
-							{isTesting ? 'Đang kiểm tra...' : 'Kết nối & Bắt đầu'}
-						</button>
-
-						<div className="flex items-center gap-3">
-							<div className="flex-1 h-px bg-outline-variant/40" />
-							<span className="text-[12px] text-on-surface-variant font-medium">hoặc</span>
-							<div className="flex-1 h-px bg-outline-variant/40" />
-						</div>
-
-						<button
-							type="button"
-							onClick={() => setShowPasscodeModal(true)}
-							className="w-full h-12 rounded-2xl bg-primary/15 hover:bg-primary/25 border border-primary/40 text-primary font-bold text-[14px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]"
-						>
-							<KeyRound size={16} />
-							Mở khóa nhanh bằng Passcode
-						</button>
-
-						<button
-							onClick={() => {
-								useAppStore.getState().setOfflineMode(true);
-								setShowSettings(false);
-							}}
-							className="w-full h-10 rounded-2xl bg-surface-container-high/30 hover:bg-surface-container-high/60 border border-outline-variant/40 text-on-surface-variant font-semibold text-[13px] backdrop-blur-md transition-all cursor-pointer"
-						>
-							Vào Chế độ Ngoại tuyến (Offline Mode)
-						</button>
-					</div>
-
-					<PasscodeModal isOpen={showPasscodeModal} onClose={() => setShowPasscodeModal(false)} onSuccess={handlePasscodeSuccess} />
-				</div>
-			</div>
+			<ApplicationSetupView
+				nameInput={nameInput}
+				domainInput={domainInput}
+				isTesting={isTesting}
+				showPasscodeModal={showPasscodeModal}
+				onNameChange={setNameInput}
+				onDomainChange={setDomainInput}
+				onSave={handleSave}
+				onOpenPasscode={() => setShowPasscodeModal(true)}
+				onClosePasscode={() => setShowPasscodeModal(false)}
+				onPasscodeSuccess={handlePasscodeSuccess}
+				onEnterOfflineMode={() => {
+					useAppStore.getState().setOfflineMode(true);
+					setShowSettings(false);
+				}}
+			/>
 		);
 	}
 

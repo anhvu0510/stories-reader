@@ -1,61 +1,25 @@
-interface HighlightLike {
-	priority?: number;
-}
-
-interface HighlightRegistryLike {
-	set(name: string, highlight: unknown): void;
-	delete(name: string): boolean;
-}
-
-interface HighlightConstructorLike {
-	new (...ranges: Range[]): HighlightLike;
-}
-
-interface CachedLineItem {
-	rect: DOMRect;
-	startOffset: number;
-	endOffset: number;
-}
-
-interface CachedLineLayout {
-	lines: CachedLineItem[];
-	textLength: number;
-}
+import {
+	buildLineItems,
+	computeMergedRects,
+	createTextRange,
+	CSS_LINE_HIGHLIGHT_NAME,
+	CSS_UTTERANCE_HIGHLIGHT_NAME,
+	CSS_WORD_HIGHLIGHT_NAME,
+	ensureHighlightStyleSheet,
+	getHighlightConstructor,
+	getHighlightRegistry,
+	LINE_Y_TOLERANCE,
+	unionRects,
+	type CachedLineLayout,
+	type HighlightConstructorLike,
+	type HighlightRegistryLike,
+} from './dom-highlighter/domHighlighterHelpers';
 
 export interface ReadAloudHighlightGeometry {
 	line: DOMRect;
 	word: DOMRect;
 	utteranceChanged?: boolean;
 	lineChanged?: boolean;
-}
-
-const CSS_WORD_HIGHLIGHT_NAME = 'stories-tts-word';
-const CSS_LINE_HIGHLIGHT_NAME = 'stories-tts-line';
-const CSS_UTTERANCE_HIGHLIGHT_NAME = 'stories-tts-utterance';
-const LINE_Y_TOLERANCE = 4;
-const HIGHLIGHT_STYLE_ID = 'stories-tts-highlight-styles';
-
-function ensureHighlightStyleSheet(): void {
-	if (typeof document === 'undefined') return;
-	if (document.getElementById(HIGHLIGHT_STYLE_ID)) return;
-
-	const style = document.createElement('style');
-	style.id = HIGHLIGHT_STYLE_ID;
-	style.textContent = `
-::highlight(stories-tts-line) {
-		background-color: rgba(147, 197, 253, 0.16);
-	color: inherit;
-}
-::highlight(stories-tts-utterance) {
-		background-color: rgba(147, 197, 253, 0.16);
-	color: inherit;
-}
-::highlight(stories-tts-word) {
-		background-color: rgba(234, 179, 8, 0.32);
-		color: inherit;
-}
-`;
-	document.head.appendChild(style);
 }
 
 export class DomWordHighlighter {
@@ -82,8 +46,8 @@ export class DomWordHighlighter {
 	}
 
 	private applyWordHighlight(wordRange: Range): DOMRect[] {
-		const registry = this.getHighlightRegistry();
-		const HighlightConstructor = this.getHighlightConstructor();
+		const registry = getHighlightRegistry();
+		const HighlightConstructor = getHighlightConstructor();
 		if (registry && HighlightConstructor) {
 			const wordHighlight = new HighlightConstructor(wordRange);
 			wordHighlight.priority = 2;
@@ -105,8 +69,8 @@ export class DomWordHighlighter {
 	}
 
 	private applyLineHighlight(lineRange: Range | null, documentLineRect: DOMRect): void {
-		const registry = this.getHighlightRegistry();
-		const HighlightConstructor = this.getHighlightConstructor();
+		const registry = getHighlightRegistry();
+		const HighlightConstructor = getHighlightConstructor();
 		if (registry && HighlightConstructor && lineRange) {
 			const lineHighlight = new HighlightConstructor(lineRange);
 			lineHighlight.priority = 1;
@@ -120,7 +84,7 @@ export class DomWordHighlighter {
 	private getDocumentWordRect(visibleWordRects: DOMRect[]): { documentWordRect: DOMRect; scrollX: number; scrollY: number } {
 		const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
 		const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
-		const viewportWordRect = this.unionRects(visibleWordRects);
+		const viewportWordRect = unionRects(visibleWordRects);
 		const documentWordRect = new DOMRect(
 			viewportWordRect.left + scrollX,
 			viewportWordRect.top + scrollY,
@@ -138,7 +102,7 @@ export class DomWordHighlighter {
 
 		this.clearFallbackMarks();
 
-		const wordRange = this.createTextRange(rootElement, startOffset, length);
+		const wordRange = createTextRange(rootElement, startOffset, length);
 		if (!wordRange) {
 			this.clear();
 			return null;
@@ -173,13 +137,13 @@ export class DomWordHighlighter {
 	): ReadAloudHighlightGeometry | null {
 		if (utteranceLength <= 0 || wordLength <= 0) return null;
 
-		const registry = this.getHighlightRegistry();
-		const HighlightConstructor = this.getHighlightConstructor();
+		const registry = getHighlightRegistry();
+		const HighlightConstructor = getHighlightConstructor();
 		if (!registry || !HighlightConstructor) {
 			return this.highlightFallbackUtterance(rootElement, utteranceStart, utteranceLength, wordStart, wordLength);
 		}
 
-		const wordRange = this.createTextRange(rootElement, wordStart, wordLength);
+		const wordRange = createTextRange(rootElement, wordStart, wordLength);
 		if (!wordRange) return null;
 
 		const utteranceKey = `${utteranceStart}:${utteranceLength}`;
@@ -218,7 +182,7 @@ export class DomWordHighlighter {
 		registry: HighlightRegistryLike,
 		HighlightConstructor: HighlightConstructorLike
 	): void {
-		const range = this.createTextRange(rootElement, start, length);
+		const range = createTextRange(rootElement, start, length);
 		if (!range) return;
 		const highlight = new HighlightConstructor(range);
 		highlight.priority = 1;
@@ -232,7 +196,7 @@ export class DomWordHighlighter {
 		const rects = typeof range.getClientRects === 'function' ? Array.from(range.getClientRects()) : [];
 		const visibleRects = rects.filter((rect) => rect.width > 0 && rect.height > 0);
 		if (visibleRects.length === 0) return null;
-		const rect = this.unionRects(visibleRects);
+		const rect = unionRects(visibleRects);
 		const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
 		const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
 		return new DOMRect(rect.left + scrollX, rect.top + scrollY, rect.width, rect.height);
@@ -245,7 +209,7 @@ export class DomWordHighlighter {
 
 	/** Keep the reading line in place while the next audio is buffering. */
 	public clearActiveWord(): void {
-		this.getHighlightRegistry()?.delete(CSS_WORD_HIGHLIGHT_NAME);
+		getHighlightRegistry()?.delete(CSS_WORD_HIGHLIGHT_NAME);
 		this.clearFallbackMarks();
 	}
 
@@ -256,52 +220,6 @@ export class DomWordHighlighter {
 		}
 		this.resizeObserver?.disconnect();
 		this.observedRoot = null;
-	}
-
-	private getHighlightRegistry(): HighlightRegistryLike | null {
-		const css = globalThis.CSS as typeof CSS & { highlights?: HighlightRegistryLike };
-		return css?.highlights ?? null;
-	}
-
-	private getHighlightConstructor(): HighlightConstructorLike | null {
-		return (globalThis as typeof globalThis & { Highlight?: HighlightConstructorLike }).Highlight ?? null;
-	}
-
-	private createTextRange(rootElement: HTMLElement, startOffset: number, length: number): Range | null {
-		const walker = document.createTreeWalker(rootElement, NodeFilter.SHOW_TEXT, null);
-		const endOffset = startOffset + length;
-		let currentOffset = 0;
-		let startNode: Text | null = null;
-		let endNode: Text | null = null;
-		let rangeStart = 0;
-		let rangeEnd = 0;
-		let node: Node | null;
-
-		while ((node = walker.nextNode())) {
-			const textNode = node as Text;
-			const nodeEnd = currentOffset + textNode.data.length;
-			if (!startNode && nodeEnd > startOffset) {
-				startNode = textNode;
-				rangeStart = Math.max(0, startOffset - currentOffset);
-			}
-			if (startNode && nodeEnd >= endOffset) {
-				endNode = textNode;
-				rangeEnd = Math.max(0, Math.min(textNode.data.length, endOffset - currentOffset));
-				break;
-			}
-			currentOffset = nodeEnd;
-		}
-
-		if (!startNode) return null;
-		if (!endNode) {
-			endNode = startNode;
-			rangeEnd = Math.min(startNode.data.length, rangeStart + length);
-		}
-
-		const range = document.createRange();
-		range.setStart(startNode, rangeStart);
-		range.setEnd(endNode, rangeEnd);
-		return range;
 	}
 
 	private wrapRangeForFallback(range: Range): void {
@@ -325,7 +243,7 @@ export class DomWordHighlighter {
 	}
 
 	private clearWordHighlight(): void {
-		const registry = this.getHighlightRegistry();
+		const registry = getHighlightRegistry();
 		registry?.delete(CSS_WORD_HIGHLIGHT_NAME);
 		registry?.delete(CSS_LINE_HIGHLIGHT_NAME);
 		registry?.delete(CSS_UTTERANCE_HIGHLIGHT_NAME);
@@ -335,34 +253,6 @@ export class DomWordHighlighter {
 		this.currentUtteranceKey = null;
 		this.currentUtteranceRoot = null;
 		this.currentUtteranceRect = null;
-	}
-
-	private computeMergedRects(rootElement: HTMLElement, scrollX: number, scrollY: number): DOMRect[] {
-		const contentRange = document.createRange();
-		contentRange.selectNodeContents(rootElement);
-		const documentRects = Array.from(contentRange.getClientRects())
-			.filter((rect) => rect.width > 0 && rect.height > 0)
-			.map((rect) => new DOMRect(rect.left + scrollX, rect.top + scrollY, rect.width, rect.height));
-
-		const mergedRects = this.mergeLineFragments(documentRects);
-		mergedRects.sort((a, b) => a.top - b.top);
-		return mergedRects;
-	}
-
-	private buildLineItems(rootElement: HTMLElement, mergedRects: DOMRect[], textLength: number, scrollY: number): CachedLineItem[] {
-		if (mergedRects.length <= 1) {
-			const rect = mergedRects[0] ?? new DOMRect(0, 0, 0, 0);
-			return [{ rect, startOffset: 0, endOffset: textLength }];
-		}
-		const lineItems: CachedLineItem[] = [];
-		let prevBoundary = 0;
-		for (let i = 0; i < mergedRects.length - 1; i++) {
-			const boundary = this.findBoundaryOffset(rootElement, mergedRects[i], mergedRects[i + 1], prevBoundary, textLength, scrollY);
-			lineItems.push({ rect: mergedRects[i], startOffset: prevBoundary, endOffset: boundary });
-			prevBoundary = boundary;
-		}
-		lineItems.push({ rect: mergedRects[mergedRects.length - 1], startOffset: prevBoundary, endOffset: textLength });
-		return lineItems;
 	}
 
 	private updateResizeObserver(rootElement: HTMLElement): void {
@@ -379,8 +269,8 @@ export class DomWordHighlighter {
 			return cachedLayout;
 		}
 
-		const mergedRects = this.computeMergedRects(rootElement, scrollX, scrollY);
-		const lineItems = this.buildLineItems(rootElement, mergedRects, textLength, scrollY);
+		const mergedRects = computeMergedRects(rootElement, scrollX, scrollY);
+		const lineItems = buildLineItems(rootElement, mergedRects, textLength, scrollY);
 
 		cachedLayout = {
 			lines: lineItems,
@@ -389,68 +279,6 @@ export class DomWordHighlighter {
 		this.lineLayoutCache.set(rootElement, cachedLayout);
 		this.updateResizeObserver(rootElement);
 		return cachedLayout;
-	}
-
-	private getNextCharTop(rootElement: HTMLElement, offset: number, maxOffset: number): number | null {
-		if (offset + 1 >= maxOffset) return null;
-		const nextRange = this.createTextRange(rootElement, offset + 1, 1);
-		const nextRects = nextRange?.getClientRects();
-		if (nextRects && nextRects.length > 0 && nextRects[0].width > 0) {
-			return nextRects[0].top;
-		}
-		return null;
-	}
-
-	private getCharEffectiveY(rootElement: HTMLElement, offset: number, maxOffset: number, scrollY: number): number | null {
-		const range = this.createTextRange(rootElement, offset, 1);
-		if (!range) return null;
-
-		const rects = range.getClientRects();
-		const rect = rects.length > 0 ? rects[0] : range.getBoundingClientRect();
-		if (rect && rect.height > 0 && rect.width > 0) {
-			return rect.top + scrollY;
-		}
-
-		const nextTop = this.getNextCharTop(rootElement, offset, maxOffset);
-		if (nextTop !== null) {
-			return nextTop + scrollY;
-		}
-
-		return (rect && rect.height > 0 ? rect.top : 0) + scrollY;
-	}
-
-	private findBoundaryOffset(
-		rootElement: HTMLElement,
-		_currentLine: DOMRect,
-		nextLine: DOMRect,
-		minOffset: number,
-		maxOffset: number,
-		scrollY: number
-	): number {
-		let low = minOffset;
-		let high = maxOffset;
-		let boundary = maxOffset;
-		const targetY = nextLine.top - LINE_Y_TOLERANCE;
-
-		while (low <= high) {
-			const mid = Math.floor((low + high) / 2);
-			if (mid >= maxOffset) break;
-
-			const effectiveY = this.getCharEffectiveY(rootElement, mid, maxOffset, scrollY);
-			if (effectiveY === null) break;
-
-			if (effectiveY >= targetY) {
-				boundary = mid;
-				high = mid - 1;
-			} else {
-				low = mid + 1;
-			}
-		}
-
-		if (boundary <= minOffset || boundary > maxOffset) {
-			return Math.min(maxOffset, Math.max(minOffset, Math.round((minOffset + maxOffset) / 2)));
-		}
-		return boundary;
 	}
 
 	private findLineLayout(
@@ -477,27 +305,8 @@ export class DomWordHighlighter {
 			return { lineRect: wordRect, lineRange: null };
 		}
 
-		const lineRange = this.createTextRange(rootElement, lineItem.startOffset, Math.max(1, lineItem.endOffset - lineItem.startOffset));
+		const lineRange = createTextRange(rootElement, lineItem.startOffset, Math.max(1, lineItem.endOffset - lineItem.startOffset));
 		return { lineRect: lineItem.rect, lineRange };
-	}
-
-	private mergeLineFragments(rects: DOMRect[]): DOMRect[] {
-		const lines: DOMRect[] = [];
-		rects.forEach((rect) => {
-			const index = lines.findIndex((line) => Math.abs(line.top - rect.top) <= LINE_Y_TOLERANCE);
-			if (index === -1) {
-				lines.push(rect);
-				return;
-			}
-
-			const line = lines[index];
-			const left = Math.min(line.left, rect.left);
-			const top = Math.min(line.top, rect.top);
-			const right = Math.max(line.right, rect.right);
-			const bottom = Math.max(line.bottom, rect.bottom);
-			lines[index] = new DOMRect(left, top, right - left, bottom - top);
-		});
-		return lines;
 	}
 
 	private updateLineHighlight(lineRect: DOMRect): void {
@@ -511,20 +320,6 @@ export class DomWordHighlighter {
 		this.lineHighlight.style.transform = `translate3d(${lineRect.left}px, ${lineRect.top}px, 0)`;
 		this.lineHighlight.style.width = `${lineRect.width}px`;
 		this.lineHighlight.style.height = `${lineRect.height}px`;
-	}
-
-	private unionRects(rects: DOMRect[]): DOMRect {
-		let left = Number.POSITIVE_INFINITY;
-		let top = Number.POSITIVE_INFINITY;
-		let right = Number.NEGATIVE_INFINITY;
-		let bottom = Number.NEGATIVE_INFINITY;
-		rects.forEach((rect) => {
-			left = Math.min(left, rect.left);
-			top = Math.min(top, rect.top);
-			right = Math.max(right, rect.right);
-			bottom = Math.max(bottom, rect.bottom);
-		});
-		return new DOMRect(left, top, right - left, bottom - top);
 	}
 
 	private removeLineHighlight(): void {

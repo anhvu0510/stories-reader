@@ -2,79 +2,12 @@ import { create } from 'zustand';
 
 import { SettingsRepository } from '@/repositories/SettingsRepository';
 
+import { getInitialSettings, parseSettingsValue, persistReaderConfig, SETTINGS_KEY } from './readerConfigHelpers';
 import { useAppStore } from './useAppStore';
 
 import type { EdgeBufferMode, FontType, ReaderConfig, ThemeType } from '@/shared/types';
 
 export type { ReaderConfig };
-
-const SETTINGS_KEY = 'stories.ui.config';
-
-function parseSettingsValue(res: unknown): unknown {
-	if (!res) return null;
-	const apiValue = (res as { value?: unknown }).value ?? res;
-	if (typeof apiValue !== 'string') return apiValue;
-	try {
-		return JSON.parse(apiValue);
-	} catch {
-		return null;
-	}
-}
-
-const defaultSettings: ReaderConfig = {
-	theme: 'default',
-	font: 'default',
-	fontSize: 18,
-	lineHeight: 1.4,
-	groupLines: 1,
-	batchChapterSize: 1,
-	isEnabledReplace: true,
-	voiceUri: '',
-	speechRate: 1.8,
-	bookLimit: 20,
-	chapterLimit: 50,
-	ttsEngine: 'vieneu',
-	vieneuServerUrl: '',
-	vieneuModel: '',
-	vieneuTemperature: 0.8,
-	vieneuTopK: 25,
-	vieneuTopP: 0.95,
-	vieneuMaxNewFrames: 300,
-	vieneuRepetitionPenalty: 1.2,
-	vieneuRepetitionWindow: 80,
-	vieneuSteps: 8,
-	vieneuCfg: 2.0,
-	vieneuSway: -1.0,
-	vieneuMaxChars: 140,
-	vieneuDenoise: true,
-	vieneuUseRefCodes: true,
-	vieneuApplyWatermark: true,
-	vieneuOutputSampleRate: 0,
-	edgeVoiceUri: 'vi-VN-HoaiMyNeural',
-	edgeBufferMode: 'file',
-	showTTSControlOnReader: true,
-	bgmEnabled: true,
-	bgmVolume: 0.2,
-	bgmAudioUrl: '/audio/ambient-bgm.mp3',
-	bgmFadeInMs: 500,
-	bgmFadeOutMs: 800,
-	bgmStopDelayMs: 1500,
-	bgmOnlyOnEdgeReadAloud: true,
-	isBgmPreviewing: false,
-};
-
-function getInitialSettings(isOffline: boolean): ReaderConfig {
-	const key = isOffline ? `${SETTINGS_KEY}.offline` : SETTINGS_KEY;
-	try {
-		const local = localStorage.getItem(key);
-		if (local) {
-			return { ...defaultSettings, ...JSON.parse(local) };
-		}
-	} catch {
-		// intentionally empty — localStorage may be unavailable in private mode
-	}
-	return defaultSettings;
-}
 
 interface ReaderConfigStore extends ReaderConfig {
 	setTheme: (theme: ThemeType) => void;
@@ -106,18 +39,17 @@ interface ReaderConfigStore extends ReaderConfig {
 	fetchServerConfig: () => Promise<void>;
 }
 
-let debounceTimeout: NodeJS.Timeout | null = null;
+type SetReaderConfig = (partial: Partial<ReaderConfigStore> | ((state: ReaderConfigStore) => Partial<ReaderConfigStore>)) => void;
 
-const syncWithApi = (next: ReaderConfig) => {
-	const isOffline = useAppStore.getState().isOfflineMode;
-	if (isOffline) return;
-
-	if (debounceTimeout) clearTimeout(debounceTimeout);
-	debounceTimeout = setTimeout(() => {
-		const { voiceUri: _voiceUri, speechRate: _speechRate, ...apiSync } = next;
-		SettingsRepository.updateSettings(SETTINGS_KEY, apiSync);
-	}, 800);
-};
+function createFieldSetter<K extends keyof ReaderConfig>(set: SetReaderConfig, key: K) {
+	return (value: ReaderConfig[K]) => {
+		set((state) => {
+			const next = { ...state, [key]: value };
+			persistReaderConfig(next);
+			return { [key]: value } as Partial<ReaderConfigStore>;
+		});
+	};
+}
 
 export const useReaderConfigStore = create<ReaderConfigStore>((set) => {
 	const initial = getInitialSettings(useAppStore.getState().isOfflineMode);
@@ -127,182 +59,64 @@ export const useReaderConfigStore = create<ReaderConfigStore>((set) => {
 		document.documentElement.setAttribute('data-theme', initial.theme);
 	}
 
-	const persist = (next: ReaderConfig) => {
-		const isOffline = useAppStore.getState().isOfflineMode;
-		const storageKey = isOffline ? `${SETTINGS_KEY}.offline` : SETTINGS_KEY;
-		localStorage.setItem(storageKey, JSON.stringify(next));
-		if (typeof document !== 'undefined') {
-			document.documentElement.setAttribute('data-theme', next.theme);
-		}
-		syncWithApi(next);
-	};
-
 	return {
 		...initial,
 
-		setTheme: (theme) => {
-			set((state) => {
-				const next = { ...state, theme };
-				persist(next);
-				return { theme };
-			});
-		},
-		setFont: (font) => {
-			set((state) => {
-				const next = { ...state, font };
-				persist(next);
-				return { font };
-			});
-		},
-		setFontSize: (fontSize) => {
-			set((state) => {
-				const next = { ...state, fontSize };
-				persist(next);
-				return { fontSize };
-			});
-		},
-		setLineHeight: (lineHeight) => {
-			set((state) => {
-				const next = { ...state, lineHeight };
-				persist(next);
-				return { lineHeight };
-			});
-		},
-		setGroupLines: (groupLines) => {
-			set((state) => {
-				const next = { ...state, groupLines };
-				persist(next);
-				return { groupLines };
-			});
-		},
+		setTheme: createFieldSetter(set, 'theme'),
+		setFont: createFieldSetter(set, 'font'),
+		setFontSize: createFieldSetter(set, 'fontSize'),
+		setLineHeight: createFieldSetter(set, 'lineHeight'),
+		setGroupLines: createFieldSetter(set, 'groupLines'),
 		setBatchChapterSize: (batchChapterSize) => {
 			const sanitized = Math.max(1, Math.min(20, Math.floor(batchChapterSize) || 1));
 			set((state) => {
 				const next = { ...state, batchChapterSize: sanitized };
-				persist(next);
+				persistReaderConfig(next);
 				return { batchChapterSize: sanitized };
 			});
 		},
-		setIsEnabledReplace: (isEnabledReplace) => {
-			set((state) => {
-				const next = { ...state, isEnabledReplace };
-				persist(next);
-				return { isEnabledReplace };
-			});
-		},
-		setVoiceUri: (voiceUri) => {
-			set((state) => {
-				const next = { ...state, voiceUri };
-				persist(next);
-				return { voiceUri };
-			});
-		},
-		setSpeechRate: (speechRate) => {
-			set((state) => {
-				const next = { ...state, speechRate };
-				persist(next);
-				return { speechRate };
-			});
-		},
-		setTTSEngine: (ttsEngine) => {
-			set((state) => {
-				const next = { ...state, ttsEngine };
-				persist(next);
-				return { ttsEngine };
-			});
-		},
-		setVieneuServerUrl: (vieneuServerUrl) => {
-			set((state) => {
-				const next = { ...state, vieneuServerUrl };
-				persist(next);
-				return { vieneuServerUrl };
-			});
-		},
-		setVieneuModel: (vieneuModel) => {
-			set((state) => {
-				const next = { ...state, vieneuModel };
-				persist(next);
-				return { vieneuModel };
-			});
-		},
+		setIsEnabledReplace: createFieldSetter(set, 'isEnabledReplace'),
+		setVoiceUri: createFieldSetter(set, 'voiceUri'),
+		setSpeechRate: createFieldSetter(set, 'speechRate'),
+		setTTSEngine: createFieldSetter(set, 'ttsEngine'),
+		setVieneuServerUrl: createFieldSetter(set, 'vieneuServerUrl'),
+		setVieneuModel: createFieldSetter(set, 'vieneuModel'),
 		setVieneuParameter: (key, value) => {
 			set((state) => {
 				const next = { ...state, [key]: value };
-				persist(next);
+				persistReaderConfig(next);
 				return { [key]: value } as Partial<ReaderConfig>;
 			});
 		},
-		setEdgeVoiceUri: (edgeVoiceUri) => {
-			set((state) => {
-				const next = { ...state, edgeVoiceUri };
-				persist(next);
-				return { edgeVoiceUri };
-			});
-		},
-		setEdgeBufferMode: (edgeBufferMode) => {
-			set((state) => {
-				const next = { ...state, edgeBufferMode };
-				persist(next);
-				return { edgeBufferMode };
-			});
-		},
-		setShowTTSControlOnReader: (showTTSControlOnReader) => {
-			set((state) => {
-				const next = { ...state, showTTSControlOnReader };
-				persist(next);
-				return { showTTSControlOnReader };
-			});
-		},
+		setEdgeVoiceUri: createFieldSetter(set, 'edgeVoiceUri'),
+		setEdgeBufferMode: createFieldSetter(set, 'edgeBufferMode'),
+		setShowTTSControlOnReader: createFieldSetter(set, 'showTTSControlOnReader'),
 		setIsBgmPreviewing: (isBgmPreviewing) => {
 			set({ isBgmPreviewing });
 		},
-		setBgmEnabled: (bgmEnabled) => {
-			set((state) => {
-				const next = { ...state, bgmEnabled };
-				persist(next);
-				return { bgmEnabled };
-			});
-		},
+		setBgmEnabled: createFieldSetter(set, 'bgmEnabled'),
 		setBgmVolume: (bgmVolume) => {
 			const sanitized = Math.max(0, Math.min(1, bgmVolume));
 			set((state) => {
 				const next = { ...state, bgmVolume: sanitized };
-				persist(next);
+				persistReaderConfig(next);
 				return { bgmVolume: sanitized };
 			});
 		},
-		setBgmAudioUrl: (bgmAudioUrl) => {
-			set((state) => {
-				const next = { ...state, bgmAudioUrl };
-				persist(next);
-				return { bgmAudioUrl };
-			});
-		},
+		setBgmAudioUrl: createFieldSetter(set, 'bgmAudioUrl'),
 		setBgmParameter: (key, value) => {
 			set((state) => {
 				const next = { ...state, [key]: value };
-				persist(next);
+				persistReaderConfig(next);
 				return { [key]: value } as Partial<ReaderConfig>;
 			});
 		},
-		setBookLimit: (bookLimit) => {
-			set((state) => {
-				const next = { ...state, bookLimit };
-				persist(next);
-				return { bookLimit };
-			});
-		},
-		setChapterLimit: (chapterLimit) => {
-			set((state) => {
-				const next = { ...state, chapterLimit };
-				persist(next);
-				return { chapterLimit };
-			});
-		},
+		setBookLimit: createFieldSetter(set, 'bookLimit'),
+		setChapterLimit: createFieldSetter(set, 'chapterLimit'),
 		updateSettings: (partial) => {
 			set((state) => {
 				const next = { ...state, ...partial };
-				persist(next);
+				persistReaderConfig(next);
 				return partial;
 			});
 		},

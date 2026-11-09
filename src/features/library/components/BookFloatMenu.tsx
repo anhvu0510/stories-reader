@@ -41,6 +41,37 @@ export interface BookFloatMenuProps {
 	onOpenNewTab: () => void;
 }
 
+function FloatMenuTile({
+	onClick,
+	iconBgClass,
+	labelHoverClass,
+	label,
+	children,
+}: {
+	onClick: (e: React.MouseEvent) => void;
+	iconBgClass: string;
+	labelHoverClass: string;
+	label: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+		>
+			<div
+				className={`w-11 h-11 rounded-2xl border flex items-center justify-center group-hover:scale-105 transition-transform mb-1 shadow-xs ${iconBgClass}`}
+			>
+				{children}
+			</div>
+			<span className={`text-[11px] font-semibold text-on-surface-variant ${labelHoverClass} transition-colors truncate max-w-full`}>
+				{label}
+			</span>
+		</button>
+	);
+}
+
 interface BookFloatMenuGridProps {
 	isDownloaded: boolean;
 	isOfflineMode: boolean;
@@ -80,130 +111,134 @@ function BookFloatMenuGrid({
 
 	return (
 		<div className="grid grid-cols-4 gap-y-3 gap-x-1.5 sm:gap-x-2">
-			{/* 1. Mục lục */}
-			<button
-				type="button"
+			<FloatMenuTile
 				onClick={() => onAction(onOpenQuickSheet)}
-				className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+				iconBgClass="bg-white/10 hover:bg-white/15 border-white/15 text-on-surface"
+				labelHoverClass="group-hover:text-on-surface"
+				label="Mục lục"
 			>
-				<div className="w-11 h-11 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 flex items-center justify-center text-on-surface group-hover:scale-105 transition-transform mb-1 shadow-xs">
-					<ListTree size={19} />
-				</div>
-				<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-on-surface transition-colors truncate max-w-full">
-					Mục lục
-				</span>
-			</button>
+				<ListTree size={19} />
+			</FloatMenuTile>
 
-			{/* 2. Mở tab mới */}
-			<button
-				type="button"
+			<FloatMenuTile
 				onClick={() => onAction(onOpenNewTab)}
-				className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+				iconBgClass="bg-sky-500/15 hover:bg-sky-500/20 border-sky-500/30 text-sky-400"
+				labelHoverClass="group-hover:text-sky-400"
+				label="Tab mới"
 			>
-				<div className="w-11 h-11 rounded-2xl bg-sky-500/15 hover:bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
-					<ExternalLink size={19} />
-				</div>
-				<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-sky-400 transition-colors truncate max-w-full">
-					Tab mới
-				</span>
-			</button>
+				<ExternalLink size={19} />
+			</FloatMenuTile>
 
-			{/* 3. Tải về / Đồng bộ lại */}
-			<button
-				type="button"
+			<FloatMenuTile
 				onClick={() => onAction(onDownloadBook)}
-				className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+				iconBgClass={downloadBgClass}
+				labelHoverClass="group-hover:text-emerald-400"
+				label={isDownloaded ? 'Đồng bộ lại' : 'Tải về'}
 			>
-				<div
-					className={`w-11 h-11 rounded-2xl border flex items-center justify-center group-hover:scale-105 transition-transform mb-1 shadow-xs ${downloadBgClass}`}
-				>
-					{isDownloaded ? <RefreshCw size={18} /> : <Download size={19} />}
-				</div>
-				<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-emerald-400 transition-colors truncate max-w-full">
-					{isDownloaded ? 'Đồng bộ lại' : 'Tải về'}
-				</span>
-			</button>
+				{isDownloaded ? <RefreshCw size={18} /> : <Download size={19} />}
+			</FloatMenuTile>
 
-			{/* 4. Yêu thích */}
-			<button
-				type="button"
+			<FloatMenuTile
 				onClick={(e) => {
 					triggerHaptic('selection');
 					onToggleFavorite(e);
 				}}
-				className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+				iconBgClass={favBgClass}
+				labelHoverClass="group-hover:text-rose-400"
+				label={isFavorite ? 'Đã thích' : 'Yêu thích'}
 			>
-				<div
-					className={`w-11 h-11 rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform mb-1 border shadow-xs ${favBgClass}`}
-				>
-					<Heart size={19} className={isFavorite ? 'fill-rose-500' : ''} />
-				</div>
-				<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-rose-400 transition-colors truncate max-w-full">
-					{isFavorite ? 'Đã thích' : 'Yêu thích'}
-				</span>
-			</button>
+				<Heart size={19} className={isFavorite ? 'fill-rose-500' : ''} />
+			</FloatMenuTile>
 
-			{/* 5. Dịch AI */}
-			<button
-				type="button"
+			<FloatMenuTile
 				onClick={() => onAction(onOpenTranslationSheet)}
-				className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+				iconBgClass="bg-indigo-500/15 hover:bg-indigo-500/20 border-indigo-500/30 text-indigo-400"
+				labelHoverClass="group-hover:text-indigo-400"
+				label="Dịch AI"
 			>
-				<div className="w-11 h-11 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
-					<Sparkles size={19} />
-				</div>
-				<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-indigo-400 transition-colors truncate max-w-full">
-					Dịch AI
-				</span>
-			</button>
+				<Sparkles size={19} />
+			</FloatMenuTile>
 
-			{/* 6. Dịch tiêu đề */}
 			{!isOfflineMode && (
-				<button
-					type="button"
-					onClick={onTranslateTitles}
-					className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
-				>
-					<div className="w-11 h-11 rounded-2xl bg-amber-500/15 hover:bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
+				<>
+					<FloatMenuTile
+						onClick={onTranslateTitles}
+						iconBgClass="bg-amber-500/15 hover:bg-amber-500/20 border-amber-500/30 text-amber-400"
+						labelHoverClass="group-hover:text-amber-400"
+						label="Dịch tiêu đề"
+					>
 						<Languages size={19} />
-					</div>
-					<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-amber-400 transition-colors truncate max-w-full">
-						Dịch tiêu đề
-					</span>
-				</button>
-			)}
+					</FloatMenuTile>
 
-			{/* 7. Dịch tên */}
-			{!isOfflineMode && (
-				<button
-					type="button"
-					onClick={onDetectProperNouns}
-					className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
-				>
-					<div className="w-11 h-11 rounded-2xl bg-teal-500/15 hover:bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
+					<FloatMenuTile
+						onClick={onDetectProperNouns}
+						iconBgClass="bg-teal-500/15 hover:bg-teal-500/20 border-teal-500/30 text-teal-400"
+						labelHoverClass="group-hover:text-teal-400"
+						label="Dịch tên"
+					>
 						<Users size={19} />
-					</div>
-					<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-teal-400 transition-colors truncate max-w-full">
-						Dịch tên
-					</span>
-				</button>
-			)}
+					</FloatMenuTile>
 
-			{/* 8. Dịch POV */}
-			{!isOfflineMode && (
+					<FloatMenuTile
+						onClick={onDetectTagsAndPov}
+						iconBgClass="bg-violet-500/15 hover:bg-violet-500/20 border-violet-500/30 text-violet-400"
+						labelHoverClass="group-hover:text-violet-400"
+						label="Dịch POV"
+					>
+						<Tags size={19} />
+					</FloatMenuTile>
+				</>
+			)}
+		</div>
+	);
+}
+
+function BookFloatMenuHeader({
+	bookName,
+	isOfflineMode,
+	onClose,
+	onDeleteOnline,
+}: {
+	bookName: string;
+	isOfflineMode: boolean;
+	onClose: () => void;
+	onDeleteOnline: () => void;
+}) {
+	return (
+		<div className="flex items-center justify-between px-4 py-2.5 border-b border-outline-variant/30 flex-shrink-0 bg-white/[0.02]">
+			<div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+				<div className="w-7 h-7 rounded-lg bg-primary/20 border border-primary/50 text-primary flex items-center justify-center p-0.5 shrink-0 shadow-xs">
+					<BookOpen size={14} />
+				</div>
+				<h3 className="text-sm font-bold text-on-surface truncate leading-tight">{bookName}</h3>
+			</div>
+
+			<div className="flex items-center gap-1.5 shrink-0">
+				{!isOfflineMode && (
+					<button
+						type="button"
+						onClick={onDeleteOnline}
+						className="w-7 h-7 rounded-full bg-rose-500/10 border border-rose-500/25 shadow-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 transition-all flex items-center justify-center cursor-pointer active:scale-90"
+						title="Xóa truyện khỏi hệ thống"
+						aria-label="Xóa truyện khỏi hệ thống"
+					>
+						<Trash2 size={13} />
+					</button>
+				)}
+
 				<button
 					type="button"
-					onClick={onDetectTagsAndPov}
-					className="flex flex-col items-center justify-center p-1.5 rounded-2xl hover:bg-white/[0.06] active:scale-90 transition-all cursor-pointer group text-center"
+					onClick={() => {
+						triggerHaptic('light');
+						onClose();
+					}}
+					className="w-7 h-7 rounded-full bg-white/10 border border-white/20 shadow-xs text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all flex items-center justify-center cursor-pointer active:scale-90"
+					title="Đóng"
+					aria-label="Đóng"
 				>
-					<div className="w-11 h-11 rounded-2xl bg-violet-500/15 hover:bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 group-hover:scale-105 transition-transform mb-1 shadow-xs">
-						<Tags size={19} />
-					</div>
-					<span className="text-[11px] font-semibold text-on-surface-variant group-hover:text-violet-400 transition-colors truncate max-w-full">
-						Dịch POV
-					</span>
+					<X size={15} />
 				</button>
-			)}
+			</div>
 		</div>
 	);
 }
@@ -231,7 +266,6 @@ export const BookFloatMenu = React.memo(function BookFloatMenu({
 		action();
 	};
 
-	// 1. Dịch tiêu đề
 	const handleTranslateTitles = () => {
 		triggerHaptic('selection');
 		onClose();
@@ -241,7 +275,6 @@ export const BookFloatMenu = React.memo(function BookFloatMenu({
 		});
 	};
 
-	// 2. Dịch tên
 	const handleDetectProperNouns = () => {
 		triggerHaptic('selection');
 		onClose();
@@ -251,7 +284,6 @@ export const BookFloatMenu = React.memo(function BookFloatMenu({
 		});
 	};
 
-	// 3. Dịch POV
 	const handleDetectTagsAndPov = () => {
 		triggerHaptic('selection');
 		onClose();
@@ -270,48 +302,14 @@ export const BookFloatMenu = React.memo(function BookFloatMenu({
 			className="p-0"
 		>
 			<div className="flex flex-col text-on-surface">
-				{/* Header mini thanh thoát */}
-				<div className="flex items-center justify-between px-4 py-2.5 border-b border-outline-variant/30 flex-shrink-0 bg-white/[0.02]">
-					<div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
-						<div className="w-7 h-7 rounded-lg bg-primary/20 border border-primary/50 text-primary flex items-center justify-center p-0.5 shrink-0 shadow-xs">
-							<BookOpen size={14} />
-						</div>
-						<h3 className="text-sm font-bold text-on-surface truncate leading-tight">{book.bookName}</h3>
-					</div>
+				<BookFloatMenuHeader
+					bookName={book.bookName}
+					isOfflineMode={isOfflineMode}
+					onClose={onClose}
+					onDeleteOnline={() => handleAction(onOpenDeleteOnline)}
+				/>
 
-					<div className="flex items-center gap-1.5 shrink-0">
-						{/* Nút xóa truyện cạnh nút tắt */}
-						{!isOfflineMode && (
-							<button
-								type="button"
-								onClick={() => handleAction(onOpenDeleteOnline)}
-								className="w-7 h-7 rounded-full bg-rose-500/10 border border-rose-500/25 shadow-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 transition-all flex items-center justify-center cursor-pointer active:scale-90"
-								title="Xóa truyện khỏi hệ thống"
-								aria-label="Xóa truyện khỏi hệ thống"
-							>
-								<Trash2 size={13} />
-							</button>
-						)}
-
-						{/* Nút tắt / đóng */}
-						<button
-							type="button"
-							onClick={() => {
-								triggerHaptic('light');
-								onClose();
-							}}
-							className="w-7 h-7 rounded-full bg-white/10 border border-white/20 shadow-xs text-on-surface-variant hover:text-on-surface hover:bg-white/20 transition-all flex items-center justify-center cursor-pointer active:scale-90"
-							title="Đóng"
-							aria-label="Đóng"
-						>
-							<X size={15} />
-						</button>
-					</div>
-				</div>
-
-				{/* Nội dung menu nhỏ gọn: 1 Hero Action + Lưới 4 nút / hàng */}
 				<div className="p-3 sm:p-4">
-					{/* Hero Bar: Đọc Tiếp */}
 					<button
 						type="button"
 						onClick={() => handleAction(onReadContinue)}
@@ -331,7 +329,6 @@ export const BookFloatMenu = React.memo(function BookFloatMenu({
 						<ChevronRight size={15} className="text-primary/70 group-hover:translate-x-0.5 transition-transform shrink-0" />
 					</button>
 
-					{/* Lưới chuẩn 4 nút / hàng (Không lồng hộp thô cứng, chỉ gồm Icon squircle + Title) */}
 					<BookFloatMenuGrid
 						isDownloaded={isDownloaded}
 						isOfflineMode={isOfflineMode}

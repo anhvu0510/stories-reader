@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 
-import { EdgeTTSNativeStreamService, type NativeChunkStartEvent } from '@/services/edgeTtsNativeStream';
+import { EdgeTTSNativeStreamService, type NativeChunkStartEvent, type WordBoundaryEvent } from '@/services/edgeTtsNativeStream';
 import { type NativeTTSStreamService } from '@/services/nativeTtsStream';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 
@@ -58,7 +58,8 @@ export function useNativeReadingEvents(options: NativeReadingOptions) {
 			saveChunkPosition(cursor, resume, idx, sourceOffset, event);
 		});
 
-		const unsubWord = activeNativeStream.onWordBoundary((event) => {
+		const unsubWord = activeNativeStream.onWordBoundary((rawEvent) => {
+			const event = rawEvent as WordBoundaryEvent;
 			if (!current.current.cursor.playing.current) return;
 			if (
 				current.current.cursor.pendingUtterance.current !== null &&

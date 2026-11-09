@@ -79,30 +79,9 @@ export function usePullToRefresh({
 	const native = useNativePullToRefresh({ onRefresh, enabled, disabled, threshold, containerRef, targetRef });
 	const nativeGestures = hasNativeReaderGestures();
 	const [isFullscreen, setIsFullscreen] = useState(isBrowserFullscreen);
+	useFullscreenTracking(setIsFullscreen);
 
-	useEffect(() => {
-		if (typeof document === 'undefined') return;
-		const handler = () => {
-			setIsFullscreen(isBrowserFullscreen());
-		};
-		document.addEventListener('fullscreenchange', handler);
-		document.addEventListener('webkitfullscreenchange', handler);
-		document.addEventListener('mozfullscreenchange', handler);
-		document.addEventListener('MSFullscreenChange', handler);
-		return () => {
-			document.removeEventListener('fullscreenchange', handler);
-			document.removeEventListener('webkitfullscreenchange', handler);
-			document.removeEventListener('mozfullscreenchange', handler);
-			document.removeEventListener('MSFullscreenChange', handler);
-		};
-	}, []);
-
-	const resolveSupported = () => {
-		if (enabled !== undefined) return enabled;
-		if (disabled) return false;
-		return isAndroidApp() || isFullscreen;
-	};
-	const isSupported = !nativeGestures && resolveSupported();
+	const isSupported = !nativeGestures && resolveSupportedFlag(enabled, disabled, isFullscreen);
 	const [pullDistance, setPullDistance] = useState(0);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [isPulling, setIsPulling] = useState(false);
@@ -135,20 +114,10 @@ export function usePullToRefresh({
 
 		const target = targetRef?.current || containerRef?.current || window;
 
-		const getScrollTop = (): number => {
-			if (containerRef?.current) {
-				return containerRef.current.scrollTop;
-			}
-			return window.scrollY || document.documentElement?.scrollTop || 0;
-		};
-
 		const handleTouchStart = (e: TouchEvent) => {
 			if (!isSupported || isRefreshingRef.current) return;
-			const touch = e.touches?.[0];
-			if (!touch || e.touches.length !== 1) return;
-
-			const targetEl = e.target as HTMLElement | null;
-			if (!canInitiatePull(targetEl, getScrollTop(), touch.clientX)) {
+			const touch = getSingleTouchIfEligible(e, getContainerScrollTop(containerRef));
+			if (!touch) {
 				canPullRef.current = false;
 				return;
 			}
@@ -175,13 +144,12 @@ export function usePullToRefresh({
 			const deltaX = Math.abs(touch.clientX - touchStartXRef.current);
 
 			if (!isPullingRef.current) {
-				// Nếu vuốt ngang hoặc không phải hướng vuốt xuống dọc dứt khoát -> hủy pull
-				if (shouldCancelPullOnMove(deltaX, deltaY)) {
+				const pullStep = evaluateInitialPullMove(deltaX, deltaY);
+				if (pullStep === 'cancel') {
 					canPullRef.current = false;
 					return;
 				}
-				// Touch slop chuẩn mobile (14px) và yêu cầu hướng kéo chủ đạo là chiều dọc
-				if (shouldStartPulling(deltaX, deltaY)) {
+				if (pullStep === 'start') {
 					isPullingRef.current = true;
 					setIsPulling(true);
 				}
@@ -209,46 +177,21 @@ export function usePullToRefresh({
 			isPullingRef.current = false;
 			setIsPulling(false);
 
-			if (wasOverThreshold && !isRefreshingRef.current) {
-				setIsRefreshing(true);
-				setPullDistance(Math.min(threshold, 56));
-				triggerHaptic('medium');
-
-				const startTime = Date.now();
-				try {
-					await Promise.resolve(onRefresh());
-				} catch (err) {
-					console.error('[usePullToRefresh] onRefresh error:', err);
-				} finally {
-					const elapsed = Date.now() - startTime;
-					if (minDisplayTime > 0 && elapsed < minDisplayTime) {
-						await new Promise((r) => setTimeout(r, minDisplayTime - elapsed));
-					}
-					setIsRefreshing(false);
-					setPullDistance(0);
-					setHasTriggeredThreshold(false);
-					hasTriggeredHapticRef.current = false;
-				}
-			} else {
-				setPullDistance(0);
-				setHasTriggeredThreshold(false);
-				hasTriggeredHapticRef.current = false;
-			}
+			await completePullCycle(
+				wasOverThreshold,
+				isRefreshingRef.current,
+				threshold,
+				minDisplayTime,
+				onRefresh,
+				setIsRefreshing,
+				setPullDistance,
+				setHasTriggeredThreshold,
+				hasTriggeredHapticRef
+			);
 		};
 
 		const options: AddEventListenerOptions = { passive: false };
-
-		target.addEventListener('touchstart', handleTouchStart as EventListener, options);
-		target.addEventListener('touchmove', handleTouchMove as EventListener, options);
-		target.addEventListener('touchend', handleTouchEnd as EventListener, options);
-		target.addEventListener('touchcancel', handleTouchEnd as EventListener, options);
-
-		return () => {
-			target.removeEventListener('touchstart', handleTouchStart as EventListener);
-			target.removeEventListener('touchmove', handleTouchMove as EventListener);
-			target.removeEventListener('touchend', handleTouchEnd as EventListener);
-			target.removeEventListener('touchcancel', handleTouchEnd as EventListener);
-		};
+		return attachPullTouchListeners(target, handleTouchStart, handleTouchMove, handleTouchEnd, options);
 	}, [isSupported, onRefresh, threshold, maxPull, minDisplayTime, containerRef, targetRef, reset]);
 
 	const progress = Math.min(1, pullDistance / threshold);
@@ -262,6 +205,77 @@ export function usePullToRefresh({
 		progress,
 		reset,
 	};
+}
+
+function useFullscreenTracking(setIsFullscreen: (val: boolean) => void): void {
+	useEffect(() => {
+		if (typeof document === 'undefined') return;
+		const handler = () => {
+			setIsFullscreen(isBrowserFullscreen());
+		};
+		document.addEventListener('fullscreenchange', handler);
+		document.addEventListener('webkitfullscreenchange', handler);
+		document.addEventListener('mozfullscreenchange', handler);
+		document.addEventListener('MSFullscreenChange', handler);
+		return () => {
+			document.removeEventListener('fullscreenchange', handler);
+			document.removeEventListener('webkitfullscreenchange', handler);
+			document.removeEventListener('mozfullscreenchange', handler);
+			document.removeEventListener('MSFullscreenChange', handler);
+		};
+	}, [setIsFullscreen]);
+}
+
+function resolveSupportedFlag(enabled: boolean | undefined, disabled: boolean, isFullscreen: boolean): boolean {
+	if (enabled !== undefined) return enabled;
+	if (disabled) return false;
+	return isAndroidApp() || isFullscreen;
+}
+
+function getContainerScrollTop(containerRef?: RefObject<HTMLElement | null>): number {
+	if (containerRef?.current) {
+		return containerRef.current.scrollTop;
+	}
+	return window.scrollY || document.documentElement?.scrollTop || 0;
+}
+
+async function completePullCycle(
+	wasOverThreshold: boolean,
+	isCurrentlyRefreshing: boolean,
+	threshold: number,
+	minDisplayTime: number,
+	onRefresh: () => Promise<void> | void,
+	setIsRefreshing: (val: boolean) => void,
+	setPullDistance: (val: number) => void,
+	setHasTriggeredThreshold: (val: boolean) => void,
+	hasTriggeredHapticRef: { current: boolean }
+): Promise<void> {
+	if (!wasOverThreshold || isCurrentlyRefreshing) {
+		setPullDistance(0);
+		setHasTriggeredThreshold(false);
+		hasTriggeredHapticRef.current = false;
+		return;
+	}
+
+	setIsRefreshing(true);
+	setPullDistance(Math.min(threshold, 56));
+	triggerHaptic('medium');
+
+	const startTime = Date.now();
+	try {
+		await Promise.resolve(onRefresh());
+	} catch (err) {
+		console.error('[usePullToRefresh] onRefresh error:', err);
+	} finally {
+		const elapsed = Date.now() - startTime;
+		if (minDisplayTime > 0 && elapsed < minDisplayTime) {
+			await new Promise((r) => setTimeout(r, minDisplayTime - elapsed));
+		}
+		setIsRefreshing(false);
+		setPullDistance(0);
+		setHasTriggeredThreshold(false);
+		hasTriggeredHapticRef.current = false;
+	}
 }
 
 function isPullMoveInactive(canPull: boolean, isRefreshing: boolean, isSupported: boolean): boolean {
@@ -316,6 +330,13 @@ function canInitiatePull(targetEl: HTMLElement | null, scrollTop: number, client
 	return !isNearEdge(clientX);
 }
 
+function getSingleTouchIfEligible(e: TouchEvent, scrollTop: number): Touch | null {
+	const touch = e.touches?.[0];
+	if (!touch || e.touches.length !== 1) return null;
+	if (!canInitiatePull(e.target as HTMLElement | null, scrollTop, touch.clientX)) return null;
+	return touch;
+}
+
 function shouldCancelPullOnMove(deltaX: number, deltaY: number): boolean {
 	if (deltaX >= deltaY && deltaX > 8) return true;
 	return deltaY <= 0;
@@ -323,6 +344,32 @@ function shouldCancelPullOnMove(deltaX: number, deltaY: number): boolean {
 
 function shouldStartPulling(deltaX: number, deltaY: number): boolean {
 	return deltaY >= 14 && deltaY > deltaX * 1.3;
+}
+
+function evaluateInitialPullMove(deltaX: number, deltaY: number): 'cancel' | 'start' | 'wait' {
+	if (shouldCancelPullOnMove(deltaX, deltaY)) return 'cancel';
+	if (shouldStartPulling(deltaX, deltaY)) return 'start';
+	return 'wait';
+}
+
+function attachPullTouchListeners(
+	target: HTMLElement | Window,
+	onStart: (e: TouchEvent) => void,
+	onMove: (e: TouchEvent) => void,
+	onEnd: () => Promise<void>,
+	options: AddEventListenerOptions
+): () => void {
+	target.addEventListener('touchstart', onStart as EventListener, options);
+	target.addEventListener('touchmove', onMove as EventListener, options);
+	target.addEventListener('touchend', onEnd as EventListener, options);
+	target.addEventListener('touchcancel', onEnd as EventListener, options);
+
+	return () => {
+		target.removeEventListener('touchstart', onStart as EventListener);
+		target.removeEventListener('touchmove', onMove as EventListener);
+		target.removeEventListener('touchend', onEnd as EventListener);
+		target.removeEventListener('touchcancel', onEnd as EventListener);
+	};
 }
 
 function updateHapticThreshold(

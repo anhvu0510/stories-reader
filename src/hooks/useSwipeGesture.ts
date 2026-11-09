@@ -65,27 +65,7 @@ export function useSwipeGesture({
 	useEffect(() => {
 		if (typeof window === 'undefined' || disabled) return;
 		if (hasNativeReaderGestures()) {
-			let dragging = false;
-			const removeHitTest = registerNativeGestureHitTest('swipe', owner, (x, y) => Boolean(eligibleNativeTarget(x, y)));
-			const unsubscribe = onNativeReaderGesture((gesture) => {
-				if (gesture.kind === 'swipe-move') {
-					if (!dragging) callbacksRef.current.onDragStart?.();
-					dragging = true;
-					callbacksRef.current.onDragMove?.(gesture.offset);
-					return;
-				}
-				if (gesture.kind !== 'swipe-end') return;
-				dragging = false;
-				dispatchSwipeEnd(callbacksRef.current, gesture.settled);
-			});
-			const effectiveThreshold = threshold ?? Math.max(120, Math.round(window.innerWidth * 0.35));
-			configureNativeSwipe({ enabled: true, owner, threshold: effectiveThreshold, minVelocity, maxDuration, edgeIgnoreWidth });
-			return () => {
-				unsubscribe();
-				removeHitTest();
-				configureNativeSwipe({ enabled: false, owner, threshold: effectiveThreshold, minVelocity, edgeIgnoreWidth });
-				if (dragging) callbacksRef.current.onDragEnd?.('cancel');
-			};
+			return bindNativeSwipeGesture(owner, callbacksRef, threshold, minVelocity, maxDuration, edgeIgnoreWidth);
 		}
 
 		const handleTouchStart = (e: TouchEvent) => {
@@ -152,11 +132,10 @@ export function useSwipeGesture({
 
 		const handleTouchCancel = () => {
 			const state = touchStateRef.current;
-			if (state) {
-				touchStateRef.current = null;
-				if (state.isDragging) {
-					callbacksRef.current.onDragEnd?.('cancel');
-				}
+			if (!state) return;
+			touchStateRef.current = null;
+			if (state.isDragging) {
+				callbacksRef.current.onDragEnd?.('cancel');
 			}
 		};
 
@@ -172,6 +151,45 @@ export function useSwipeGesture({
 			window.removeEventListener('touchcancel', handleTouchCancel);
 		};
 	}, [threshold, minVelocity, maxDuration, edgeIgnoreWidth, disabled, owner]);
+}
+
+function bindNativeSwipeGesture(
+	owner: string,
+	callbacksRef: {
+		current: {
+			onSwipeLeft?: () => void;
+			onSwipeRight?: () => void;
+			onDragStart?: () => void;
+			onDragMove?: (offset: number) => void;
+			onDragEnd?: (settled: 'left' | 'right' | 'cancel') => void;
+		};
+	},
+	threshold: number | undefined,
+	minVelocity: number,
+	maxDuration: number | undefined,
+	edgeIgnoreWidth: number
+): () => void {
+	let dragging = false;
+	const removeHitTest = registerNativeGestureHitTest('swipe', owner, (x, y) => Boolean(eligibleNativeTarget(x, y)));
+	const unsubscribe = onNativeReaderGesture((gesture) => {
+		if (gesture.kind === 'swipe-move') {
+			if (!dragging) callbacksRef.current.onDragStart?.();
+			dragging = true;
+			callbacksRef.current.onDragMove?.(gesture.offset);
+			return;
+		}
+		if (gesture.kind !== 'swipe-end') return;
+		dragging = false;
+		dispatchSwipeEnd(callbacksRef.current, gesture.settled);
+	});
+	const effectiveThreshold = threshold ?? Math.max(120, Math.round(window.innerWidth * 0.35));
+	configureNativeSwipe({ enabled: true, owner, threshold: effectiveThreshold, minVelocity, maxDuration, edgeIgnoreWidth });
+	return () => {
+		unsubscribe();
+		removeHitTest();
+		configureNativeSwipe({ enabled: false, owner, threshold: effectiveThreshold, minVelocity, edgeIgnoreWidth });
+		if (dragging) callbacksRef.current.onDragEnd?.('cancel');
+	};
 }
 
 function dispatchSwipeEnd(

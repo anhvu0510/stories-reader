@@ -73,6 +73,10 @@ rtk npm test
 
 | Rule | Violation | Fix |
 |---|---|---|
+| `max-lines` (`350`) | File exceeds 350 code lines (God file) | Split into 3-tier cohesive modules (`Container` + `hooks/` + `components/` or `utils/`) |
+| `max-lines-per-function` (`120`) | Function / Component exceeds 120 code lines | Extract cohesive custom hook, sub-component, or pure helper function |
+| `sonarjs/no-identical-functions` | Duplicated function bodies across/within files | Consolidate into `src/shared/` or feature-level shared utility |
+| `sonarjs/no-identical-expressions` | Identical expressions on both sides of operator | Fix copy-paste typo or simplify expression |
 | `no-else-return` | `if (x) { return a; } else { return b; }` | Remove `else`, use early return |
 | `unicorn/no-negated-condition` | `if (!x) { A } else { B }` | Flip: `if (x) { B } else { A }` |
 | `no-nested-ternary` | `a ? b ? c : d : e` | Extract to `if/return` helper |
@@ -80,6 +84,19 @@ rtk npm test
 | `no-empty` | `catch {}` or `catch (e) {}` | Log with `console.warn('[fn] ...', err)` |
 | `no-explicit-any` | `(data: any)` | Use specific type or `unknown` |
 | `max-depth: 3` | 4+ levels of nesting | Extract helper function |
+
+## Modular Architecture & Anti-God-File Standard
+
+1. **Agent-Readable File Size (`<= 350` code lines, target `150–250` lines)**:
+   - No production file in `src/` may exceed 350 lines of code (excluding blanks and comments).
+   - No function or React component may exceed 120 lines of code.
+2. **3-Tier Cohesive Decomposition**:
+   - **Tier 1 — Container / Facade (`<= 250` lines)**: Top-level screen, sheet, or service entry file (`ReaderScreen.tsx`, `LibraryScreen.tsx`, `TranslationSheet.tsx`, `gaplessTtsPlayer.ts`). Preserves existing public exports so callers and tests never break.
+   - **Tier 2 — Feature Hooks (`hooks/`)**: Stateful orchestration, browser/media listeners, and derived view-models (`80–220` lines).
+   - **Tier 3 — Sub-Components & Pure Helpers (`components/`, `utils/`)**: Focused UI sections (`80–250` lines) and stateless domain/formatting helpers.
+3. **Zero Shallow Junk Files & Zero Duplication**:
+   - Do not create trivial 15-line pass-through files just to satisfy line limits. Group related pure helpers or closely coupled sub-elements into a single cohesive module.
+   - Check `src/shared/` and `src/components/` before creating new helpers or UI primitives; consolidate any logic/UI repeated across `>= 2` features.
 
 Use explicit types at component, hook, repository, and API boundaries. Do not
 add `any`, unchecked assertions, or untyped events/refs. Model nullable,

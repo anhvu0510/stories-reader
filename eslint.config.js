@@ -124,6 +124,24 @@ export default tseslint.config(
 			// BAD: if (true) {} else { dead code here }
 			'sonarjs/no-redundant-boolean': 'error',
 
+			// Chống trùng lặp hàm và biểu thức khi tách module
+			'sonarjs/no-identical-functions': 'error',
+			'sonarjs/no-identical-expressions': 'error',
+
+			// ── Anti-God-File & Function Size Gate ────────────────────────────────
+			// Giới hạn tối đa 350 dòng code thực tế / file (bỏ qua dòng trống & comment)
+			// để AI Agent luôn đọc trọn file trong 1 lần read_file và giữ module đơn nhiệm
+			'max-lines': [
+				'error',
+				{ max: 350, skipBlankLines: true, skipComments: true },
+			],
+
+			// Giới hạn tối đa 120 dòng code thực tế / hàm hoặc React component
+			'max-lines-per-function': [
+				'error',
+				{ max: 120, skipBlankLines: true, skipComments: true },
+			],
+
 			// Complexity cyclomatic (backup)
 			complexity: ['warn', 10],
 
@@ -186,7 +204,10 @@ export default tseslint.config(
 			'@typescript-eslint/no-unused-vars': 'off',
 			'no-console': 'off',
 			'max-depth': ['warn', 4],
+			'max-lines': 'off',
+			'max-lines-per-function': 'off',
 			'sonarjs/cognitive-complexity': 'off',
+			'sonarjs/no-identical-functions': 'off',
 			'unicorn/no-negated-condition': 'off',
 		},
 	},

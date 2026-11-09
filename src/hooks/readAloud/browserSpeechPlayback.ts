@@ -28,29 +28,31 @@ interface BrowserSpeechOptions {
 	playChunk: (index: number, offset: number) => void;
 }
 export function createBrowserSpeechPlayback(options: BrowserSpeechOptions) {
-	const {
-		chunks,
-		synth,
-		voiceUri,
-		speechRateRef,
-		isPlayingRef,
-		isPausedRef,
-		playSessionIdRef,
-		currentChunkIdxRef,
-		charIndexRef,
-		charLengthRef,
-		utteranceRef,
-		ownsBrowserSpeechQueueRef,
-		wordHighlighterRef,
-		setCurrentChunkIndex,
-		setIsLoading,
-		setIsPlaying,
-		clearResumePosition,
-		stopReading,
-		updateWordHighlight,
-		playChunk,
-	} = options;
-	const playNativeChunk = (index: number, startOffset: number, sessionId: number) => {
+	const playNativeChunk = (
+		index: number,
+		startOffset: number,
+		sessionId: number,
+		playChunkViaBrowser: (idx: number, offset: number, sId: number) => void
+	) => {
+		const {
+			chunks,
+			voiceUri,
+			speechRateRef,
+			isPlayingRef,
+			isPausedRef,
+			playSessionIdRef,
+			currentChunkIdxRef,
+			charIndexRef,
+			charLengthRef,
+			wordHighlighterRef,
+			setCurrentChunkIndex,
+			setIsLoading,
+			setIsPlaying,
+			clearResumePosition,
+			stopReading,
+			updateWordHighlight,
+			playChunk,
+		} = options;
 		if (!isPlayingRef.current || playSessionIdRef.current !== sessionId) return;
 		if (index >= chunks.length) {
 			clearResumePosition();
@@ -64,9 +66,7 @@ export function createBrowserSpeechPlayback(options: BrowserSpeechOptions) {
 		charLengthRef.current = 0;
 		wordHighlighterRef.current?.clear();
 
-		const chunk = chunks[index];
-		const textToSpeak = startOffset > 0 ? chunk.text.substring(startOffset) : chunk.text;
-
+		const textToSpeak = getChunkText(chunks[index], startOffset);
 		if (!textToSpeak.trim()) {
 			playChunkViaBrowser(index + 1, 0, sessionId);
 			return;
@@ -90,31 +90,39 @@ export function createBrowserSpeechPlayback(options: BrowserSpeechOptions) {
 			},
 			onDone: () => {
 				if (playSessionIdRef.current !== sessionId) return;
-				if (index >= chunks.length - 1) {
-					clearResumePosition();
-				}
-				if (isPlayingRef.current && !isPausedRef.current) {
-					playChunk(index + 1, 0);
-				}
+				if (index >= chunks.length - 1) clearResumePosition();
+				if (isPlayingRef.current && !isPausedRef.current) playChunk(index + 1, 0);
 			},
 			onError: (err) => {
 				if (playSessionIdRef.current !== sessionId) return;
 				console.warn('[NativeTTS] Playback error:', err);
-				if (isPlayingRef.current && !isPausedRef.current) {
-					playChunk(index + 1, 0);
-				}
+				if (isPlayingRef.current && !isPausedRef.current) playChunk(index + 1, 0);
 			},
 		}).catch((err) => {
 			if (playSessionIdRef.current !== sessionId) return;
 			console.warn('[NativeTTS] Speak exception:', err);
-			if (isPlayingRef.current && !isPausedRef.current) {
-				playChunk(index + 1, 0);
-			}
+			if (isPlayingRef.current && !isPausedRef.current) playChunk(index + 1, 0);
 		});
 	};
 
 	const playChunkViaBrowser = (index: number, startOffset: number = 0, sessionId: number) => {
-		if (NativeTTSService.isNative()) return playNativeChunk(index, startOffset, sessionId);
+		if (NativeTTSService.isNative()) return playNativeChunk(index, startOffset, sessionId, playChunkViaBrowser);
+		const {
+			chunks,
+			synth,
+			voiceUri,
+			speechRateRef,
+			isPlayingRef,
+			playSessionIdRef,
+			currentChunkIdxRef,
+			charIndexRef,
+			charLengthRef,
+			utteranceRef,
+			ownsBrowserSpeechQueueRef,
+			wordHighlighterRef,
+			setCurrentChunkIndex,
+			stopReading,
+		} = options;
 		if (shouldAbortBrowserPlayback(synth, isPlayingRef.current, playSessionIdRef.current, sessionId)) return;
 		if (index >= chunks.length) {
 			stopReading();
@@ -133,50 +141,72 @@ export function createBrowserSpeechPlayback(options: BrowserSpeechOptions) {
 			return;
 		}
 
-		const utterance = createBrowserUtterance(synth, textToSpeak, voiceUri, speechRateRef.current ?? 1.8);
-
-		utterance.onstart = () => {
-			if (playSessionIdRef.current === sessionId && isPlayingRef.current) {
-				setIsLoading(false);
-				setIsPlaying(true);
-			}
-		};
-
-		utterance.onboundary = (event) => {
-			if (playSessionIdRef.current !== sessionId || event.name !== 'word') return;
-			updateWordHighlight(index, startOffset + event.charIndex, wordLength(textToSpeak, event.charIndex, event.charLength || 0));
-		};
-
-		utterance.onend = () => {
-			if (playSessionIdRef.current !== sessionId) return;
-			if (utteranceRef.current === utterance) {
-				utteranceRef.current = null;
-				ownsBrowserSpeechQueueRef.current = false;
-			}
-			if (isPlayingRef.current && !isPausedRef.current) {
-				playChunk(index + 1, 0);
-			}
-		};
-
-		utterance.onerror = (e) => {
-			if (playSessionIdRef.current !== sessionId) return;
-			if (utteranceRef.current === utterance) {
-				utteranceRef.current = null;
-				ownsBrowserSpeechQueueRef.current = false;
-			}
-			if (e.error === 'canceled') return;
-			console.warn('Browser SpeechSynthesis error:', e.error);
-			if (isPlayingRef.current && !isPausedRef.current) {
-				playChunk(index + 1, 0);
-			}
-		};
+		const utterance = createBrowserUtterance(synth!, textToSpeak, voiceUri, speechRateRef.current ?? 1.8);
+		bindBrowserUtteranceCallbacks(utterance, options, index, startOffset, sessionId, textToSpeak);
 
 		utteranceRef.current = utterance;
 		ownsBrowserSpeechQueueRef.current = true;
-		synth.speak(utterance);
+		synth!.speak(utterance);
 	};
 
 	return playChunkViaBrowser;
+}
+
+function bindBrowserUtteranceCallbacks(
+	utterance: SpeechSynthesisUtterance,
+	options: BrowserSpeechOptions,
+	index: number,
+	startOffset: number,
+	sessionId: number,
+	textToSpeak: string
+): void {
+	const {
+		playSessionIdRef,
+		isPlayingRef,
+		isPausedRef,
+		utteranceRef,
+		ownsBrowserSpeechQueueRef,
+		setIsLoading,
+		setIsPlaying,
+		updateWordHighlight,
+		playChunk,
+	} = options;
+
+	utterance.onstart = () => {
+		if (playSessionIdRef.current === sessionId && isPlayingRef.current) {
+			setIsLoading(false);
+			setIsPlaying(true);
+		}
+	};
+
+	utterance.onboundary = (event) => {
+		if (playSessionIdRef.current !== sessionId || event.name !== 'word') return;
+		updateWordHighlight(index, startOffset + event.charIndex, wordLength(textToSpeak, event.charIndex, event.charLength || 0));
+	};
+
+	utterance.onend = () => {
+		if (playSessionIdRef.current !== sessionId) return;
+		if (utteranceRef.current === utterance) {
+			utteranceRef.current = null;
+			ownsBrowserSpeechQueueRef.current = false;
+		}
+		if (isPlayingRef.current && !isPausedRef.current) {
+			playChunk(index + 1, 0);
+		}
+	};
+
+	utterance.onerror = (e) => {
+		if (playSessionIdRef.current !== sessionId) return;
+		if (utteranceRef.current === utterance) {
+			utteranceRef.current = null;
+			ownsBrowserSpeechQueueRef.current = false;
+		}
+		if (e.error === 'canceled') return;
+		console.warn('Browser SpeechSynthesis error:', e.error);
+		if (isPlayingRef.current && !isPausedRef.current) {
+			playChunk(index + 1, 0);
+		}
+	};
 }
 
 function wordLength(text: string, offset: number, reportedLength: number): number {

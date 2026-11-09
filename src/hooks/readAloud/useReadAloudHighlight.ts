@@ -118,9 +118,6 @@ export function useReadAloudHighlight(chunks: SentenceChunk[], cursor: Highlight
 	};
 
 	useEffect(() => {
-		const onInteraction = () => {
-			scrollFollowerRef.current?.notifyUserInteraction();
-		};
 		if (hasNativeReaderGestures() && scrollFollowerRef.current) {
 			const unsubscribe = bindNativeReadingInteraction(scrollFollowerRef.current, () => {});
 			return () => {
@@ -128,46 +125,51 @@ export function useReadAloudHighlight(chunks: SentenceChunk[], cursor: Highlight
 				scrollFollowerRef.current?.cancel();
 			};
 		}
-		const onHold = () => scrollFollowerRef.current?.beginUserInteraction();
-		const onRelease = () => scrollFollowerRef.current?.endUserInteraction();
-		const onPointerHold = (event: PointerEvent) => {
-			if (event.pointerType === 'touch') return;
-			onHold();
-		};
-		const onPointerRelease = (event: PointerEvent) => {
-			if (event.pointerType === 'touch') return;
-			onRelease();
-		};
-		const onScroll = () => scrollFollowerRef.current?.notifyViewportScroll();
-		const onSelection = () => scrollFollowerRef.current?.notifySelectionChange();
-		document.addEventListener('selectionchange', onSelection);
-		window.addEventListener('wheel', onInteraction, { passive: true });
-		window.addEventListener('touchmove', onInteraction, { passive: true });
-		window.addEventListener('touchstart', onHold, { passive: true });
-		window.addEventListener('pointerdown', onPointerHold, { passive: true });
-		window.addEventListener('pointerup', onPointerRelease, { passive: true });
-		window.addEventListener('pointercancel', onPointerRelease, { passive: true });
-		window.addEventListener('touchend', onRelease, { passive: true });
-		window.addEventListener('touchcancel', onRelease, { passive: true });
-		window.addEventListener('scroll', onScroll, { passive: true });
-		window.addEventListener('keydown', onInteraction, { passive: true });
-		return () => {
-			document.removeEventListener('selectionchange', onSelection);
-			window.removeEventListener('wheel', onInteraction);
-			window.removeEventListener('touchmove', onInteraction);
-			window.removeEventListener('touchstart', onHold);
-			window.removeEventListener('pointerdown', onPointerHold);
-			window.removeEventListener('pointerup', onPointerRelease);
-			window.removeEventListener('pointercancel', onPointerRelease);
-			window.removeEventListener('touchend', onRelease);
-			window.removeEventListener('touchcancel', onRelease);
-			window.removeEventListener('scroll', onScroll);
-			window.removeEventListener('keydown', onInteraction);
-			scrollFollowerRef.current?.cancel();
-		};
+		return bindWebReadingInteraction(scrollFollowerRef);
 	}, []);
 
 	return { wordHighlighterRef, scrollFollowerRef, updateWordHighlight, updateMedia3Highlight };
+}
+
+function bindWebReadingInteraction(scrollFollowerRef: RefObject<ReadAloudScrollFollower | null>): () => void {
+	const onInteraction = () => scrollFollowerRef.current?.notifyUserInteraction();
+	const onHold = () => scrollFollowerRef.current?.beginUserInteraction();
+	const onRelease = () => scrollFollowerRef.current?.endUserInteraction();
+	const onPointerHold = (event: PointerEvent) => {
+		if (event.pointerType === 'touch') return;
+		onHold();
+	};
+	const onPointerRelease = (event: PointerEvent) => {
+		if (event.pointerType === 'touch') return;
+		onRelease();
+	};
+	const onScroll = () => scrollFollowerRef.current?.notifyViewportScroll();
+	const onSelection = () => scrollFollowerRef.current?.notifySelectionChange();
+	document.addEventListener('selectionchange', onSelection);
+	window.addEventListener('wheel', onInteraction, { passive: true });
+	window.addEventListener('touchmove', onInteraction, { passive: true });
+	window.addEventListener('touchstart', onHold, { passive: true });
+	window.addEventListener('pointerdown', onPointerHold, { passive: true });
+	window.addEventListener('pointerup', onPointerRelease, { passive: true });
+	window.addEventListener('pointercancel', onPointerRelease, { passive: true });
+	window.addEventListener('touchend', onRelease, { passive: true });
+	window.addEventListener('touchcancel', onRelease, { passive: true });
+	window.addEventListener('scroll', onScroll, { passive: true });
+	window.addEventListener('keydown', onInteraction, { passive: true });
+	return () => {
+		document.removeEventListener('selectionchange', onSelection);
+		window.removeEventListener('wheel', onInteraction);
+		window.removeEventListener('touchmove', onInteraction);
+		window.removeEventListener('touchstart', onHold);
+		window.removeEventListener('pointerdown', onPointerHold);
+		window.removeEventListener('pointerup', onPointerRelease);
+		window.removeEventListener('pointercancel', onPointerRelease);
+		window.removeEventListener('touchend', onRelease);
+		window.removeEventListener('touchcancel', onRelease);
+		window.removeEventListener('scroll', onScroll);
+		window.removeEventListener('keydown', onInteraction);
+		scrollFollowerRef.current?.cancel();
+	};
 }
 
 function followLineIfChanged(geometry: ReturnType<DomWordHighlighter['highlight']>, scrollFollower: ReadAloudScrollFollower | null): void {

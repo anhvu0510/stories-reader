@@ -102,6 +102,48 @@ function ReadAloudHandle({
 	);
 }
 
+function computeFrameBounds(frame: HTMLDivElement | null, currentOffset: number): { minimum: number; maximum: number } | null {
+	if (!frame) return null;
+	const rect = frame.getBoundingClientRect();
+	if (!rect.height) return null;
+	const viewport = window.visualViewport;
+	const viewportTop = viewport?.offsetTop ?? 0;
+	const viewportBottom = viewportTop + (viewport?.height ?? window.innerHeight);
+	const style = getComputedStyle(frame);
+	const safeTop = Number.parseFloat(style.getPropertyValue('--reader-control-safe-top')) || 0;
+	const safeBottom = Number.parseFloat(style.getPropertyValue('--reader-control-safe-bottom')) || 0;
+	const baseTop = rect.top - currentOffset;
+	const minimum = viewportTop + TOP_CLEARANCE + safeTop - baseTop;
+	const maximum = Math.max(minimum, viewportBottom - BOTTOM_CLEARANCE - safeBottom - rect.height - baseTop);
+	return { minimum, maximum };
+}
+
+function syncNativeControlGeometry(
+	nativeGestures: boolean,
+	active: boolean,
+	isVisible: boolean,
+	bounds: { minimum: number; maximum: number } | null,
+	rect: DOMRect | undefined,
+	currentOffset: number
+): void {
+	if (!nativeGestures) return;
+	const enabled = active && isVisible && Boolean(bounds && rect) && !hasNativeGestureBlocker();
+	if (!enabled || !bounds || !rect) {
+		configureNativeControl({ enabled: false });
+		return;
+	}
+	configureNativeControl({
+		enabled: true,
+		viewportWidth: window.innerWidth,
+		left: rect.left,
+		top: rect.top,
+		right: rect.right,
+		bottom: rect.bottom,
+		offset: currentOffset,
+		...bounds,
+	});
+}
+
 export function ReadAloudControlFrame({ active, isVisible, children }: ReadAloudControlFrameProps) {
 	const frameRef = useRef<HTMLDivElement>(null);
 	const handleRef = useRef<HTMLButtonElement>(null);
@@ -109,22 +151,7 @@ export function ReadAloudControlFrame({ active, isVisible, children }: ReadAloud
 	const drag = useRef<VerticalDrag | null>(null);
 	const nativeGestures = hasNativeReaderGestures();
 
-	const getBounds = useCallback(() => {
-		const frame = frameRef.current;
-		if (!frame) return null;
-		const rect = frame.getBoundingClientRect();
-		if (!rect.height) return null;
-		const viewport = window.visualViewport;
-		const viewportTop = viewport?.offsetTop ?? 0;
-		const viewportBottom = viewportTop + (viewport?.height ?? window.innerHeight);
-		const style = getComputedStyle(frame);
-		const safeTop = Number.parseFloat(style.getPropertyValue('--reader-control-safe-top')) || 0;
-		const safeBottom = Number.parseFloat(style.getPropertyValue('--reader-control-safe-bottom')) || 0;
-		const baseTop = rect.top - offset.current;
-		const minimum = viewportTop + TOP_CLEARANCE + safeTop - baseTop;
-		const maximum = Math.max(minimum, viewportBottom - BOTTOM_CLEARANCE - safeBottom - rect.height - baseTop);
-		return { minimum, maximum };
-	}, []);
+	const getBounds = useCallback(() => computeFrameBounds(frameRef.current, offset.current), []);
 
 	const applyOffset = useCallback((next: number) => {
 		const frame = frameRef.current;
@@ -142,24 +169,7 @@ export function ReadAloudControlFrame({ active, isVisible, children }: ReadAloud
 	}, []);
 
 	const publishNativeGeometry = useCallback(() => {
-		if (!nativeGestures) return;
-		const bounds = getBounds();
-		const rect = handleRef.current?.getBoundingClientRect();
-		const enabled = active && isVisible && Boolean(bounds && rect) && !hasNativeGestureBlocker();
-		if (!enabled || !bounds || !rect) {
-			configureNativeControl({ enabled: false });
-			return;
-		}
-		configureNativeControl({
-			enabled: true,
-			viewportWidth: window.innerWidth,
-			left: rect.left,
-			top: rect.top,
-			right: rect.right,
-			bottom: rect.bottom,
-			offset: offset.current,
-			...bounds,
-		});
+		syncNativeControlGeometry(nativeGestures, active, isVisible, getBounds(), handleRef.current?.getBoundingClientRect(), offset.current);
 	}, [nativeGestures, active, isVisible, getBounds]);
 
 	useLayoutEffect(() => {

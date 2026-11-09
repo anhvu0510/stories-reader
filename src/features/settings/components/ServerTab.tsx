@@ -190,6 +190,38 @@ function ServerUpdateProgress({ isUpdating, statusMessage, progress }: { isUpdat
 	);
 }
 
+function useServerUpdateActions(showToast: (msg: string, type?: 'success' | 'error' | 'info') => void) {
+	const { appInfo, isChecking, isUpdating, progress, statusMessage, checkForUpdate, applyUpdate } = useAppUpdate({ autoCheck: false });
+
+	const handleCheckAndDownloadUpdate = async () => {
+		try {
+			const manifest = await checkForUpdate();
+			if (!manifest) {
+				showToast(`Ứng dụng đang ở phiên bản mới nhất (v${appInfo.version})`, 'success');
+				return;
+			}
+			showToast(`Tìm thấy bản cập nhật mới v${manifest.version}. Đang tải về...`, 'info');
+			const success = await applyUpdate(manifest);
+			showToast(
+				success ? 'Cập nhật hoàn tất! Ứng dụng đang khởi động lại...' : 'Tải bản cập nhật mới thất bại',
+				success ? 'success' : 'error'
+			);
+		} catch (err) {
+			console.error('[ServerTab] Check update error:', err);
+			showToast('Kiểm tra bản cập nhật thất bại', 'error');
+		}
+	};
+
+	return {
+		isChecking,
+		isUpdating,
+		progress,
+		statusMessage,
+		updateStatusLabel: getUpdateStatusLabel(isUpdating, isChecking, progress),
+		handleCheckAndDownloadUpdate,
+	};
+}
+
 export function ServerTab() {
 	const { domains, activeDomainId, isOfflineMode, setOfflineMode, setDomains, setActiveDomainId, addDomain, removeDomain } = useAppStore();
 	const showToast = useToastStore((state) => state.showToast);
@@ -201,42 +233,19 @@ export function ServerTab() {
 	const [domainUrl, setDomainUrl] = useState('');
 	const [testingId, setTestingId] = useState<string | null>(null);
 
+	const { isChecking, isUpdating, progress, statusMessage, updateStatusLabel, handleCheckAndDownloadUpdate } =
+		useServerUpdateActions(showToast);
+
 	const handlePasscodeSuccess = (server: SecretServerConfig) => {
 		const existing = domains.find((d) => d.url === server.url);
 		if (existing) {
 			setActiveDomainId(existing.id);
 		} else {
 			const newId = Date.now().toString();
-			addDomain({
-				id: newId,
-				name: server.name,
-				url: server.url,
-			});
+			addDomain({ id: newId, name: server.name, url: server.url });
 			setActiveDomainId(newId);
 		}
 		window.location.reload();
-	};
-
-	const { appInfo, isChecking, isUpdating, progress, statusMessage, checkForUpdate, applyUpdate } = useAppUpdate({ autoCheck: false });
-
-	const handleCheckAndDownloadUpdate = async () => {
-		try {
-			const manifest = await checkForUpdate();
-			if (manifest) {
-				showToast(`Tìm thấy bản cập nhật mới v${manifest.version}. Đang tải về...`, 'info');
-				const success = await applyUpdate(manifest);
-				if (success) {
-					showToast('Cập nhật hoàn tất! Ứng dụng đang khởi động lại...', 'success');
-				} else {
-					showToast('Tải bản cập nhật mới thất bại', 'error');
-				}
-			} else {
-				showToast(`Ứng dụng đang ở phiên bản mới nhất (v${appInfo.version})`, 'success');
-			}
-		} catch (err) {
-			console.error('[ServerTab] Check update error:', err);
-			showToast('Kiểm tra bản cập nhật thất bại', 'error');
-		}
 	};
 
 	const handleSelectDomain = async (id: string) => {
@@ -246,11 +255,8 @@ export function ServerTab() {
 			setTestingId(null);
 			return;
 		}
-
 		try {
-			const res = await fetch(domain.url, {
-				headers: { 'ngrok-skip-browser-warning': 'true' },
-			});
+			const res = await fetch(domain.url, { headers: { 'ngrok-skip-browser-warning': 'true' } });
 			if (res.ok) {
 				setActiveDomainId(id);
 				showToast('Đã kết nối với máy chủ', 'success');
@@ -267,34 +273,18 @@ export function ServerTab() {
 
 	const handleSave = () => {
 		if (!domainUrl.trim()) return;
-
 		if (editingId) {
 			const updated = domains.map((d) => (d.id === editingId ? { ...d, name: domainName.trim() || 'Server', url: domainUrl.trim() } : d));
 			setDomains(updated);
 			showToast('Cập nhật máy chủ thành công', 'success');
 		} else {
-			const newDomain: ApiDomain = {
-				id: Date.now().toString(),
-				name: domainName.trim() || 'Server Mặc định',
-				url: domainUrl.trim(),
-			};
-			addDomain(newDomain);
+			addDomain({ id: Date.now().toString(), name: domainName.trim() || 'Server Mặc định', url: domainUrl.trim() });
 			showToast('Thêm máy chủ mới thành công', 'success');
 		}
-
 		setShowForm(false);
 		setEditingId(null);
 		setDomainName('');
 		setDomainUrl('');
-	};
-
-	const updateStatusLabel = getUpdateStatusLabel(isUpdating, isChecking, progress);
-
-	const handleEditDomain = (domain: ApiDomain) => {
-		setEditingId(domain.id);
-		setDomainName(domain.name);
-		setDomainUrl(domain.url);
-		setShowForm(true);
 	};
 
 	return (
@@ -321,7 +311,6 @@ export function ServerTab() {
 				}}
 			/>
 
-			{/* Progress bar during OTA download */}
 			<ServerUpdateProgress isUpdating={isUpdating} statusMessage={statusMessage} progress={progress} />
 
 			{showForm && (
@@ -345,7 +334,12 @@ export function ServerTab() {
 						isTesting={domain.id === testingId}
 						canRemove={domains.length > 1}
 						onSelect={handleSelectDomain}
-						onEdit={handleEditDomain}
+						onEdit={(d) => {
+							setEditingId(d.id);
+							setDomainName(d.name);
+							setDomainUrl(d.url);
+							setShowForm(true);
+						}}
 						onRemove={removeDomain}
 					/>
 				))}

@@ -81,27 +81,7 @@ function resolveBottomSheetProps(props: BottomSheetProps) {
 	};
 }
 
-export function BottomSheet(props: BottomSheetProps) {
-	const {
-		isOpen,
-		onClose,
-		children,
-		className,
-		contentClassName,
-		showDragHandle,
-		maxHeight,
-		zIndex,
-		ariaLabel,
-		disableDrag,
-		glassmorphic,
-		testId,
-	} = resolveBottomSheetProps(props);
-
-	useBodyScrollLock(isOpen);
-
-	const sheetCardRef = useRef<HTMLDivElement>(null);
-	const nativeGestures = hasNativeReaderGestures();
-	useNativeSheetGesture(isOpen, disableDrag, sheetCardRef, onClose);
+function useBottomSheetTouchDrag(disableDrag: boolean, sheetCardRef: React.RefObject<HTMLDivElement | null>, onClose: () => void) {
 	const touchStartRef = useRef<{
 		startY: number;
 		startX: number;
@@ -113,19 +93,6 @@ export function BottomSheet(props: BottomSheetProps) {
 	} | null>(null);
 	const currentDragYRef = useRef(0);
 	const isDismissingRef = useRef(false);
-
-	useEffect(() => {
-		if (!isOpen) return;
-
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') {
-				onClose();
-			}
-		};
-
-		window.addEventListener('keydown', handleKeyDown);
-		return () => window.removeEventListener('keydown', handleKeyDown);
-	}, [isOpen, onClose]);
 
 	// Xử lý cử chỉ vuốt kéo xuống (Swipe-Down-To-Dismiss) mượt mà chuẩn UX native
 	const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -224,6 +191,45 @@ export function BottomSheet(props: BottomSheetProps) {
 			}, 250);
 		}
 	};
+
+	return { handleTouchStart, handleTouchMove, handleTouchEnd };
+}
+
+export function BottomSheet(props: BottomSheetProps) {
+	const {
+		isOpen,
+		onClose,
+		children,
+		className,
+		contentClassName,
+		showDragHandle,
+		maxHeight,
+		zIndex,
+		ariaLabel,
+		disableDrag,
+		glassmorphic,
+		testId,
+	} = resolveBottomSheetProps(props);
+
+	useBodyScrollLock(isOpen);
+
+	const sheetCardRef = useRef<HTMLDivElement>(null);
+	const nativeGestures = hasNativeReaderGestures();
+	useNativeSheetGesture(isOpen, disableDrag, sheetCardRef, onClose);
+	const { handleTouchStart, handleTouchMove, handleTouchEnd } = useBottomSheetTouchDrag(disableDrag, sheetCardRef, onClose);
+
+	useEffect(() => {
+		if (!isOpen) return;
+
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				onClose();
+			}
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	}, [isOpen, onClose]);
 
 	const sheetContent = (
 		<AnimatePresence>
