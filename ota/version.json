@@ -1,7 +1,7 @@
 {
-  "version": "1.0.375",
+  "version": "1.0.376",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "ec9d4d018f915053000331117c7750d9f62717d0e5f8ea086a3fc7d6ab3c8ed1",
-  "releaseNotes": "update",
-  "updatedAt": "2026-11-09T02:51:17Z"
+  "checksum": "ee29097a9bbb41f57fb18984f522e4f63f6469448f5604d7ad7b7e6717cfdc46",
+  "releaseNotes": "feat: update GlobalSettingsSheet and GlobalFullscreenButton components for improved accessibility and styling; add TypeScript types for React and ReactDOM",
+  "updatedAt": "2026-11-09T03:25:39Z"
 }
