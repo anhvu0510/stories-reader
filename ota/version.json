@@ -1,7 +1,7 @@
 {
-  "version": "1.0.373",
+  "version": "1.0.374",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "4fb5f4d481bb7e8a9c39a86f326ab587a322bd2da339d78f933f09f85f4708e7",
-  "releaseNotes": "feat: add global fullscreen button component and update overflow handling",
-  "updatedAt": "2026-11-08T18:17:47Z"
+  "checksum": "38ef18c6ff295103ddba83b0f09f5be1029a9b2a3546de4ca2141c8e6abfb850",
+  "releaseNotes": "refactor: refactor codebase to adhere to modular architecture and anti-god-file standards",
+  "updatedAt": "2026-11-09T01:32:28Z"
 }
