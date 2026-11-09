@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as readerContentViews from '@/features/reader/components/ReaderContentViews';
 import { ReaderScreen } from '@/features/reader/ReaderScreen';
 import * as edgeBgmModule from '@/hooks/useEdgeReadAloudBgm';
+import * as fullscreenModule from '@/hooks/useFullscreen';
 import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
 
@@ -161,6 +162,58 @@ describe('ReaderScreen Scroll Visibility & Dock Auto-Hide', () => {
 
 		await waitFor(() => {
 			expect(getDock()?.classList.contains('translate-y-16')).toBe(true);
+		});
+	});
+
+	it('QC-3: Ở mode fullscreen, thanh menu dọc ẩn hiện đồng bộ chung với thanh menu ngang', async () => {
+		vi.spyOn(fullscreenModule, 'useFullscreen').mockReturnValue({
+			isFullscreen: true,
+			isSupported: true,
+			enterFullscreen: vi.fn(),
+			exitFullscreen: vi.fn(),
+			toggleFullscreen: vi.fn(),
+		});
+		vi.spyOn(edgeBgmModule, 'isEdgeReadAloudActive').mockReturnValue(true);
+
+		render(
+			<MemoryRouter initialEntries={['/books/b1/chapters/c1']}>
+				<Routes>
+					<Route path="/books/:bookId/chapters/:chapterId" element={<ReaderScreen />} />
+				</Routes>
+			</MemoryRouter>
+		);
+
+		await waitFor(() => {
+			expect(screen.getAllByText('Chương 1: Mở đầu').length).toBeGreaterThan(0);
+		});
+
+		const getHorizontalDock = () => document.querySelector('.fixed.bottom-\\[max\\(1rem\\,env\\(safe-area-inset-bottom\\)\\)\\]');
+		const getVerticalDock = () => document.querySelector('.fixed.bottom-\\[100px\\]');
+
+		// Ban đầu cả 2 thanh menu đều đang hiện
+		expect(getHorizontalDock()?.classList.contains('translate-y-0')).toBe(true);
+		expect(getVerticalDock()?.classList.contains('translate-x-0')).toBe(true);
+
+		// Cuộn xuống (scroll down) -> Cả 2 thanh menu dọc & ngang đều phải ẩn chung
+		act(() => {
+			Object.defineProperty(window, 'scrollY', { value: 150, writable: true });
+			fireEvent.scroll(window);
+		});
+
+		await waitFor(() => {
+			expect(getHorizontalDock()?.classList.contains('translate-y-16')).toBe(true);
+			expect(getVerticalDock()?.classList.contains('-translate-x-14')).toBe(true);
+		});
+
+		// Cuộn lên (scroll up) -> Cả 2 thanh menu dọc & ngang đều phải hiện lại chung
+		act(() => {
+			Object.defineProperty(window, 'scrollY', { value: 30, writable: true });
+			fireEvent.scroll(window);
+		});
+
+		await waitFor(() => {
+			expect(getHorizontalDock()?.classList.contains('translate-y-0')).toBe(true);
+			expect(getVerticalDock()?.classList.contains('translate-x-0')).toBe(true);
 		});
 	});
 });

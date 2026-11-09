@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { TranslationSheet } from '@/components/TranslationSheet';
 import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
+import { useFullscreen } from '@/hooks/useFullscreen';
 
 import { checkNavDockVisible, computeChapterDisplayLabel, resolveViewingMetadata } from '../utils/readerHelpers';
 
@@ -219,6 +220,7 @@ export interface ReaderActiveViewProps {
 }
 
 export function ReaderActiveView(props: ReaderActiveViewProps) {
+	const { isFullscreen } = useFullscreen();
 	const { chapter, navigation } = props.contentData;
 	const { currentViewingTitle, currentViewingNumber } = resolveViewingMetadata(chapter, props.activeChapter);
 	const chapterDisplayLabel = computeChapterDisplayLabel(props.displayChapters);
@@ -227,7 +229,8 @@ export function ReaderActiveView(props: ReaderActiveViewProps) {
 		props.zen.showZenControls,
 		props.config.showTTSControlOnReader,
 		props.tts.isTTSActive,
-		props.hasEdgeReadAloud
+		props.hasEdgeReadAloud,
+		isFullscreen
 	);
 	const activeChapterId = props.activeChapter?.chapterId;
 	const safeBookId = props.bookId || '';
