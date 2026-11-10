@@ -1,7 +1,7 @@
 {
-  "version": "1.0.378",
+  "version": "1.0.379",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "d5604e336703655ee243c58d4d11966ed2f2b04e85e3ef4101127576e2ee1fca",
-  "releaseNotes": "feat: synchronize vertical and horizontal navigation dock visibility in fullscreen mode",
-  "updatedAt": "2026-11-09T10:01:18Z"
+  "checksum": "e836ee5c42b4060a0a12db60616fd5c2c09f8cbd866aa12f2a099320c6b5dbeb",
+  "releaseNotes": "feat: disable swipe navigation on web browsers and add edge browser support tests",
+  "updatedAt": "2026-11-10T01:18:26Z"
 }
