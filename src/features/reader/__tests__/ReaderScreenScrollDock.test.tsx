@@ -29,6 +29,9 @@ describe('ReaderScreen Scroll Visibility & Dock Auto-Hide', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		window.scrollTo = vi.fn();
+		Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
+		Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 2000 });
+		Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 });
 		vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
 			cb(performance.now());
 			return 1;
@@ -64,7 +67,7 @@ describe('ReaderScreen Scroll Visibility & Dock Auto-Hide', () => {
 		cleanup();
 	});
 
-	it('QC-1: Tự động ẩn thanh dock điều khiển khi scroll down và hiện lại khi scroll up', async () => {
+	it('QC-1: Tự động ẩn thanh dock điều khiển và menu dọc khi scroll down và hiện lại khi scroll up', async () => {
 		render(
 			<MemoryRouter initialEntries={['/books/b1/chapters/c1']}>
 				<Routes>
@@ -78,7 +81,9 @@ describe('ReaderScreen Scroll Visibility & Dock Auto-Hide', () => {
 		});
 
 		const getDock = () => document.querySelector('.fixed.bottom-\\[max\\(1rem\\,env\\(safe-area-inset-bottom\\)\\)\\]');
+		const getVerticalDock = () => document.querySelector('.fixed.bottom-\\[100px\\]');
 		expect(getDock()?.classList.contains('translate-y-0')).toBe(true);
+		expect(getVerticalDock()?.classList.contains('translate-x-0')).toBe(true);
 
 		// Giả lập cuộn xuống (scroll down 120px)
 		act(() => {
@@ -86,9 +91,10 @@ describe('ReaderScreen Scroll Visibility & Dock Auto-Hide', () => {
 			fireEvent.scroll(window);
 		});
 
-		// Dock ẩn đi khi scroll down
+		// Dock và menu dọc ẩn đi khi scroll down
 		await waitFor(() => {
 			expect(getDock()?.classList.contains('translate-y-16')).toBe(true);
+			expect(getVerticalDock()?.classList.contains('-translate-x-14')).toBe(true);
 		});
 
 		// Giả lập cuộn ngược lên (scroll up)
@@ -97,9 +103,10 @@ describe('ReaderScreen Scroll Visibility & Dock Auto-Hide', () => {
 			fireEvent.scroll(window);
 		});
 
-		// Dock hiện lại khi scroll up
+		// Dock và menu dọc hiện lại khi scroll up
 		await waitFor(() => {
 			expect(getDock()?.classList.contains('translate-y-0')).toBe(true);
+			expect(getVerticalDock()?.classList.contains('translate-x-0')).toBe(true);
 		});
 	});
 
@@ -134,7 +141,7 @@ describe('ReaderScreen Scroll Visibility & Dock Auto-Hide', () => {
 		expect(ChapterRepository.getChapterContent).toHaveBeenCalledTimes(1);
 	});
 
-	it('QC-2: Khi Edge Read Aloud đang active, double-tap vẫn ẩn/hiện thanh dock không bị chặn', async () => {
+	it('QC-2: Khi Edge Read Aloud đang active, double-tap ẩn/hiện đồng bộ cả thanh dock và menu dọc', async () => {
 		// Mock Edge Read Aloud active
 		vi.spyOn(edgeBgmModule, 'isEdgeReadAloudActive').mockReturnValue(true);
 
@@ -151,17 +158,33 @@ describe('ReaderScreen Scroll Visibility & Dock Auto-Hide', () => {
 		});
 
 		const getDock = () => document.querySelector('.fixed.bottom-\\[max\\(1rem\\,env\\(safe-area-inset-bottom\\)\\)\\]');
+		const getVerticalDock = () => document.querySelector('.fixed.bottom-\\[100px\\]');
 		expect(getDock()?.classList.contains('translate-y-0')).toBe(true);
+		expect(getVerticalDock()?.classList.contains('translate-x-0')).toBe(true);
 
 		const mainContainer = document.querySelector('article') || document.body;
 
-		// Double click vào vùng đọc
+		// Double click vào vùng đọc để ẩn cả 2 dock
 		act(() => {
 			fireEvent.doubleClick(mainContainer);
 		});
 
 		await waitFor(() => {
 			expect(getDock()?.classList.contains('translate-y-16')).toBe(true);
+			expect(getVerticalDock()?.classList.contains('-translate-x-14')).toBe(true);
+		});
+
+		// Chờ qua ngưỡng throttle 400ms của toggleZenControls
+		await new Promise((resolve) => setTimeout(resolve, 450));
+
+		// Double click lại để hiện lại cả 2 dock
+		act(() => {
+			fireEvent.doubleClick(mainContainer);
+		});
+
+		await waitFor(() => {
+			expect(getDock()?.classList.contains('translate-y-0')).toBe(true);
+			expect(getVerticalDock()?.classList.contains('translate-x-0')).toBe(true);
 		});
 	});
 

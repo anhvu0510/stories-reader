@@ -244,16 +244,10 @@ export function checkNavDockVisible(
 	showTTSControl: boolean,
 	isTTSActive: boolean,
 	hasEdgeReadAloud: boolean,
-	isFullscreen = false
+	_isFullscreen = false
 ): boolean {
-	if (isFullscreen) {
-		if (!showZenControls) return false;
-		if (isTTSActive || hasEdgeReadAloud) return true;
-		return showTTSControl;
-	}
-
-	if (isTTSActive || hasEdgeReadAloud) return true;
 	if (!showZenControls) return false;
+	if (isTTSActive || hasEdgeReadAloud) return true;
 	return showTTSControl;
 }
 
