@@ -1,7 +1,7 @@
 {
-  "version": "1.0.381",
-  "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "b4a227335d4ed1ee35d0845799bcbb5ae44f63ceaaf845cc208a33d06ba65064",
-  "releaseNotes": "chore: bump version to 1.0.5 and trigger deploy",
-  "updatedAt": "2026-11-10T01:46:32Z"
+  "version": "1.0.383",
+  "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
+  "checksum": "e42cf3051a535506bdcf104ea57e496b1f2138245a029cf50cb51fc6718fab10",
+  "releaseNotes": "fix(deploy): add .nojekyll to prevent jekyll processing and ensure clean pages deploy",
+  "updatedAt": "2026-11-10T02:09:50Z"
 }
