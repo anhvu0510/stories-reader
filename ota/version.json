@@ -1,7 +1,7 @@
 {
-  "version": "1.0.384",
+  "version": "1.0.385",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "3ac6b32536415f82f750ba581a7ce334b9ee80dc380385af6d73fe2015215eea",
-  "releaseNotes": "feat(reader): synchronize vertical menu and control dock visibility across all modes",
-  "updatedAt": "2026-11-10T05:28:01Z"
+  "checksum": "072f004900792aff18ac7b8cb530f501456938d95f2019b1fd92cebf59f15b95",
+  "releaseNotes": "refactor: change article/div elements to div/p semantic tags in reader components",
+  "updatedAt": "2026-11-10T09:42:40Z"
 }
