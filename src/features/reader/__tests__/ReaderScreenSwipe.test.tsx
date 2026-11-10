@@ -213,7 +213,7 @@ describe('ReaderScreen - Swipe Gesture Chapter Navigation', () => {
 			vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(false);
 		});
 
-		it('swiping left navigates to the next chapter on the web reader', async () => {
+		it('disables swiping left on web browser and does not navigate', async () => {
 			const openNextSpy = vi.spyOn(openChapterUtils, 'openNextChapter').mockImplementation(() => {});
 
 			vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
@@ -257,10 +257,10 @@ describe('ReaderScreen - Swipe Gesture Chapter Navigation', () => {
 				);
 			});
 
-			expect(openNextSpy).toHaveBeenCalledWith('b1', 'chap-1', 'chap-2');
+			expect(openNextSpy).not.toHaveBeenCalled();
 		});
 
-		it('swiping right navigates to the previous chapter on the web reader', async () => {
+		it('disables swiping right on web browser and does not navigate', async () => {
 			const openPrevSpy = vi.spyOn(openChapterUtils, 'openPrevChapter').mockImplementation(() => {});
 
 			vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
@@ -304,49 +304,7 @@ describe('ReaderScreen - Swipe Gesture Chapter Navigation', () => {
 				);
 			});
 
-			expect(openPrevSpy).toHaveBeenCalledWith('b1', 'chap-2', 'chap-1');
-		});
-
-		it('keeps reader content renders bounded while dragging across multiple touch updates', async () => {
-			vi.mocked(ChapterRepository.getChapterContent).mockResolvedValue({
-				chapter: {
-					chapterId: 'chap-1',
-					chapterNumber: 1,
-					title: 'Chương 1',
-					bookName: 'Test Book',
-					content: ['<p>Nội dung chương 1</p>'],
-				},
-				navigation: {
-					prev: null,
-					next: { chapterId: 'chap-2', chapterNumber: 2, title: 'Chương 2' },
-				},
-			} as any);
-
-			const activeViewSpy = vi.spyOn(readerContentViews, 'ReaderActiveView');
-
-			render(
-				<MemoryRouter initialEntries={['/book/b1/chapter/chap-1']}>
-					<Routes>
-						<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
-					</Routes>
-				</MemoryRouter>
-			);
-
-			await waitFor(() => {
-				expect(screen.getByText('Nội dung chương 1')).toBeDefined();
-			});
-			activeViewSpy.mockClear();
-
-			act(() => {
-				window.dispatchEvent(new TouchEvent('touchstart', { touches: [{ clientX: 250, clientY: 200 } as any] }));
-			});
-			[220, 190, 160, 130].forEach((clientX) => {
-				act(() => {
-					window.dispatchEvent(new TouchEvent('touchmove', { touches: [{ clientX, clientY: 205 } as any] }));
-				});
-			});
-
-			expect(activeViewSpy).toHaveBeenCalledTimes(1);
+			expect(openPrevSpy).not.toHaveBeenCalled();
 		});
 	});
 });

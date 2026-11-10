@@ -16,6 +16,7 @@ import {
 	getSwipeCommitThreshold,
 	hasTextSelection,
 	isTouchMoved,
+	isWebBrowser,
 	resolvePendingTitleHint,
 } from '../utils/readerHelpers';
 
@@ -175,7 +176,7 @@ function resolveDragDirection(offset: number): 'left' | 'right' | null {
 }
 
 function isSwipeDisabled(loading: boolean, isRefreshing: boolean): boolean {
-	return loading || isRefreshing;
+	return loading || isRefreshing || isWebBrowser();
 }
 
 interface UseReaderSwipeProps {

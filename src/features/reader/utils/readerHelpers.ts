@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core';
+
 import { isEdgeReadAloudActive } from '@/hooks/useEdgeReadAloudBgm';
 import { offlineDb } from '@/lib/offlineDb';
 import { BookRepository } from '@/repositories/BookRepository';
@@ -274,4 +276,21 @@ export function shouldShowReaderLoading(loading: boolean, hasContent: boolean): 
 
 export function shouldShowReaderError(error: string | null, hasContent: boolean): boolean {
 	return Boolean(error || !hasContent);
+}
+
+/**
+ * Phát hiện trình duyệt Microsoft Edge (Desktop Edg/, Android EdgA/, iOS EdgiOS/, hoặc Edge Legacy Edge/).
+ */
+export function isEdgeBrowser(ua?: string): boolean {
+	if (typeof navigator === 'undefined' && !ua) return false;
+	const userAgent = ua ?? navigator?.userAgent ?? '';
+	if (!userAgent) return false;
+	return /\b(?:Edg|Edge|EdgA|EdgiOS)\//i.test(userAgent);
+}
+
+/**
+ * Kiểm tra xem môi trường hiện tại có phải là trình duyệt web hay không (không phải ứng dụng native Capacitor).
+ */
+export function isWebBrowser(): boolean {
+	return !Capacitor.isNativePlatform();
 }
