@@ -208,10 +208,12 @@ export function useReaderSwipeNavigation({ bookId, chapterId, contentData, loadi
 	const prevChapterId = nav?.prev?.chapterId;
 
 	const handleSwipeNext = useCallback(() => {
+		if (isWebBrowser()) return;
 		navigateNextIfAvailable(bookId, chapterId, nextChapterId, () => setSwipeDirection('left'));
 	}, [bookId, chapterId, nextChapterId]);
 
 	const handleSwipePrev = useCallback(() => {
+		if (isWebBrowser()) return;
 		navigatePrevIfAvailable(
 			bookId,
 			chapterId,
@@ -222,6 +224,7 @@ export function useReaderSwipeNavigation({ bookId, chapterId, contentData, loadi
 	}, [bookId, chapterId, prevChapterId, navigate]);
 
 	const handleDragStart = useCallback(() => {
+		if (isWebBrowser()) return;
 		if (readerContentRef.current) {
 			readerContentRef.current.style.transition = 'none';
 		}
@@ -230,6 +233,7 @@ export function useReaderSwipeNavigation({ bookId, chapterId, contentData, loadi
 
 	const handleDragMove = useCallback(
 		(offset: number) => {
+			if (isWebBrowser()) return;
 			const contentEl = readerContentRef.current;
 			if (!contentEl) return;
 			const effectiveOffset = computeDragMoveOffset(offset, contentData?.navigation);
