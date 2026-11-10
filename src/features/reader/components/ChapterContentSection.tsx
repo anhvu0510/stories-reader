@@ -55,7 +55,7 @@ function ChapterParagraphs({
 	);
 
 	return (
-		<article className="px-4 sm:px-6 md:px-8 select-text" style={{ fontSize: `${fontSize}px`, lineHeight }}>
+		<div className="px-4 sm:px-6 md:px-8 select-text" style={{ fontSize: `${fontSize}px`, lineHeight }}>
 			{items.map((item) => {
 				const isTTSActive = (isPlaying || isPaused) && currentParagraphIndex === item.index;
 				return (
@@ -69,7 +69,7 @@ function ChapterParagraphs({
 					/>
 				);
 			})}
-		</article>
+		</div>
 	);
 }
 
