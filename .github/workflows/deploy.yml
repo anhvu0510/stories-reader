@@ -8,12 +8,21 @@ on:
     paths-ignore:
       - 'README.md'
 
+concurrency:
+  group: 'pages'
+  cancel-in-progress: false
+
 jobs:
   deploy-all:
     name: Deploy to GitHub Pages & Publish OTA
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     env:
       VPS_HOST: ${{ secrets.VPS_HOST }}
 
@@ -45,26 +54,38 @@ jobs:
           echo "🚀 Building Stories Reader v${VERSION}..."
           VITE_APP_VERSION="${VERSION}" npm run build
 
-          # Prepare OTA folder inside dist so it deploys to GitHub Pages CDN
-          mkdir -p dist/ota
-          (cd dist && zip -r -q ota/bundle.zip . -x "ota/*")
-          CHECKSUM=$(sha256sum dist/ota/bundle.zip | cut -d ' ' -f 1)
+          # Prepare OTA folder outside dist to keep web deployment bundle lightweight
+          mkdir -p dist-ota
+          (cd dist && zip -r -q ../dist-ota/bundle.zip . -x "ota/*")
+          CHECKSUM=$(sha256sum dist-ota/bundle.zip | cut -d ' ' -f 1)
 
-          cat <<EOF > dist/ota/version.json
+          cat <<EOF > dist-ota/version.json
           {
             "version": "${VERSION}",
-            "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
+            "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
             "checksum": "${CHECKSUM}",
             "releaseNotes": "${COMMIT_MSG}",
             "updatedAt": "${TIMESTAMP}"
           }
           EOF
 
-          mkdir -p dist-ota
-          cp dist/ota/* dist-ota/
+          mkdir -p dist/ota
+          cp dist-ota/version.json dist/ota/version.json
 
           echo "APP_VERSION=${VERSION}" >> $GITHUB_ENV
           echo "COMMIT_MSG=${COMMIT_MSG}" >> $GITHUB_ENV
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
       - name: Deploy to GitHub Pages branch
         uses: peaceiris/actions-gh-pages@v3
