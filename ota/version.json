@@ -1,7 +1,7 @@
 {
-  "version": "1.0.379",
+  "version": "1.0.380",
   "bundleUrl": "https://anhvu0510.github.io/stories-reader/ota/bundle.zip",
-  "checksum": "e836ee5c42b4060a0a12db60616fd5c2c09f8cbd866aa12f2a099320c6b5dbeb",
-  "releaseNotes": "feat: disable swipe navigation on web browsers and add edge browser support tests",
-  "updatedAt": "2026-11-10T01:18:26Z"
+  "checksum": "8542fda2ded1a75f16d32cfb9d53899f59104ae9680fa45ea6ab3e13ab5ad296",
+  "releaseNotes": "fix: disable swipe and drag interactions in web browser for reader",
+  "updatedAt": "2026-11-10T01:34:40Z"
 }
