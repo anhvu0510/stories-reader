@@ -1,7 +1,7 @@
 {
-  "version": "1.0.383",
+  "version": "1.0.384",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "e42cf3051a535506bdcf104ea57e496b1f2138245a029cf50cb51fc6718fab10",
-  "releaseNotes": "fix(deploy): add .nojekyll to prevent jekyll processing and ensure clean pages deploy",
-  "updatedAt": "2026-11-10T02:09:50Z"
+  "checksum": "3ac6b32536415f82f750ba581a7ce334b9ee80dc380385af6d73fe2015215eea",
+  "releaseNotes": "feat(reader): synchronize vertical menu and control dock visibility across all modes",
+  "updatedAt": "2026-11-10T05:28:01Z"
 }
