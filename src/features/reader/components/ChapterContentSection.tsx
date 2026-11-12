@@ -55,7 +55,7 @@ function ChapterParagraphs({
 	);
 
 	return (
-		<div className="px-4 sm:px-6 md:px-8 select-text" style={{ fontSize: `${fontSize}px`, lineHeight }}>
+		<article className="px-4 sm:px-6 md:px-8 select-text" style={{ fontSize: `${fontSize}px`, lineHeight }}>
 			{items.map((item) => {
 				const isTTSActive = (isPlaying || isPaused) && currentParagraphIndex === item.index;
 				return (
@@ -69,7 +69,7 @@ function ChapterParagraphs({
 					/>
 				);
 			})}
-		</div>
+		</article>
 	);
 }
 
@@ -111,7 +111,7 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 						className="chapter-block-section scroll-mt-16 mb-0"
 					>
 						{chapIdx > 0 && (
-							<div className="mt-8 mb-6 px-4 sm:px-6 md:px-8 flex items-center gap-3 select-none">
+							<div aria-hidden="true" className="mt-8 mb-6 px-4 sm:px-6 md:px-8 flex items-center gap-3 select-none">
 								<div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white/30 dark:via-white/20 to-transparent" />
 								<div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(59,130,246,0.8)] border border-white/40" />
 								<div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white/30 dark:via-white/20 to-transparent" />
@@ -120,8 +120,11 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 
 						<div className="px-4 sm:px-6 md:px-8 mb-3 pt-0.5">
 							<h2 className="text-base sm:text-lg font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2">
-								<span className="w-1 h-4 rounded-full bg-primary inline-block shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
-								<p>{chapterTitleText}</p>
+								<span
+									aria-hidden="true"
+									className="w-1 h-4 rounded-full bg-primary inline-block shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+								/>
+								<span>{chapterTitleText}</span>
 							</h2>
 						</div>
 

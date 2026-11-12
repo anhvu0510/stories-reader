@@ -29,4 +29,20 @@ describe('ParagraphView', () => {
 		expect(paragraph?.className).not.toContain('p-3');
 		expect(paragraph?.className).not.toContain('shadow-md');
 	});
+
+	it('cleans invisible sentence delimiters and nested block tags for Edge Read Aloud', () => {
+		const rawContent = '<p>Đoạn mở đầu.\u2063 Câu thứ hai.</p>';
+		const { container } = render(<ParagraphView content={rawContent} index={1} />);
+		const paragraph = container.querySelector('[data-paragraph-index="1"]');
+
+		expect(paragraph).not.toBeNull();
+		expect(paragraph?.textContent).toBe('Đoạn mở đầu. Câu thứ hai.');
+		expect(paragraph?.innerHTML).not.toContain('\u2063');
+		expect(paragraph?.querySelectorAll('p').length).toBe(0);
+	});
+
+	it('returns null and renders no DOM element when content is empty or only whitespace/empty tags', () => {
+		const { container } = render(<ParagraphView content="<p>  </p>" index={2} />);
+		expect(container.firstChild).toBeNull();
+	});
 });

@@ -288,3 +288,16 @@ export function isEdgeBrowser(ua?: string): boolean {
 export function isWebBrowser(): boolean {
 	return !Capacitor.isNativePlatform();
 }
+
+/**
+ * Chuẩn hóa HTML đoạn văn tối ưu cho trình đọc Edge Read Aloud:
+ * 1. Loại bỏ ký tự phân cách vô hình \u2063 (INVISIBLE_SENTENCE_DELIMITER) gây lệch offset đồng bộ từ ngữ.
+ * 2. Bóc bỏ các thẻ block lồng nhau (<p>, </p>, <div>, </div>) để tránh phá vỡ cấu trúc DOM của thẻ <p> cha.
+ * 3. Chuẩn hóa khoảng trắng dư thừa, giữ lại các thẻ định dạng inline (<b>, <i>, <em>, <strong>, <span>, <br>).
+ */
+export function sanitizeParagraphHtml(rawHtml?: string): string {
+	if (!rawHtml || typeof rawHtml !== 'string') return '';
+	const withoutInvisible = rawHtml.replace(/\u2063/g, '');
+	const withoutBlocks = withoutInvisible.replace(/<\/?(p|div)\b[^>]*>/gi, ' ');
+	return withoutBlocks.replace(/\s+/g, ' ').trim();
+}

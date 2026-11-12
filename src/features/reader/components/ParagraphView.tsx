@@ -1,4 +1,6 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
+
+import { sanitizeParagraphHtml } from '../utils/readerHelpers';
 
 interface ParagraphViewProps {
 	content: string;
@@ -10,11 +12,15 @@ interface ParagraphViewProps {
 
 export const ParagraphView = memo(
 	function ParagraphView({ content, index }: ParagraphViewProps) {
+		const cleanHtml = useMemo(() => sanitizeParagraphHtml(content), [content]);
+
+		if (!cleanHtml) return null;
+
 		return (
 			<p
 				data-paragraph-index={index}
 				className="mb-4 sm:mb-5 last:mb-2 text-justify leading-relaxed tracking-normal w-full text-on-background/95 font-medium hyphens-auto break-words select-text cursor-text selection:bg-primary/25 selection:text-primary"
-				dangerouslySetInnerHTML={{ __html: content }}
+				dangerouslySetInnerHTML={{ __html: cleanHtml }}
 			/>
 		);
 	},
