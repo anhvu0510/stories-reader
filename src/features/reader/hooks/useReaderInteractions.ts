@@ -112,15 +112,18 @@ export function useZenControls() {
 		[toggleZenControls]
 	);
 
-	return {
-		showZenControls,
-		setShowZenControls,
-		ripple,
-		setRipple,
-		handleTouchStart,
-		handleTouchEnd,
-		handleDoubleClick,
-	};
+	return useMemo(
+		() => ({
+			showZenControls,
+			setShowZenControls,
+			ripple,
+			setRipple,
+			handleTouchStart,
+			handleTouchEnd,
+			handleDoubleClick,
+		}),
+		[showZenControls, ripple, handleTouchStart, handleTouchEnd, handleDoubleClick]
+	);
 }
 
 function navigateNextIfAvailable(bookId?: string, chapterId?: string, nextChapterId?: string, onSwipe?: () => void) {

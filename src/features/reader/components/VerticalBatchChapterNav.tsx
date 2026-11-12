@@ -318,7 +318,7 @@ export function VerticalBatchChapterNav(props: VerticalBatchChapterNavProps) {
 
 	return (
 		<div
-			aria-hidden={!isVisible}
+			aria-hidden={!isVisible || hasEdgeReadAloud}
 			inert={!isVisible}
 			className={`fixed bottom-[100px] left-0 right-0 z-40 w-full max-w-4xl lg:max-w-5xl mx-auto px-4 pointer-events-none box-border transition-all duration-300 cubic-bezier(0.16,1,0.3,1) transform-gpu ${containerClass}`}
 		>

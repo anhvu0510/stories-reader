@@ -420,3 +420,24 @@ select {
 	background-size: 200% 100%;
 	animation: shimmer 1.5s ease-in-out infinite;
 }
+
+/* Edge Read Aloud Native Highlight Styling & Text Isolation */
+.msreadout-line-highlight:not(.msreadout-inactive-highlight) {
+	background: linear-gradient(90deg, rgba(254, 240, 138, 0.22), rgba(253, 224, 71, 0.12)) !important;
+	border-radius: 4px !important;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
+}
+
+.msreadout-word-highlight {
+	background-color: rgba(234, 179, 8, 0.45) !important;
+	color: inherit !important;
+	border-radius: 2px !important;
+	padding: 0 2px !important;
+}
+
+#main-story-content [data-paragraph-index] {
+	-webkit-user-select: text !important;
+	user-select: text !important;
+	pointer-events: auto !important;
+	word-spacing: 0px !important;
+}

@@ -92,6 +92,21 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 	return (
 		<main
 			id="main-story-content"
+			role="main"
+			onClick={(e) => {
+				const target = e.target as HTMLElement | null;
+				if (target?.closest('[data-paragraph-index]')) {
+					if (target.closest('a, button, select, input')) return;
+					e.stopPropagation();
+				}
+			}}
+			onPointerUp={(e) => {
+				const target = e.target as HTMLElement | null;
+				if (target?.closest('[data-paragraph-index]')) {
+					if (target.closest('a, button, select, input')) return;
+					e.stopPropagation();
+				}
+			}}
 			onDoubleClick={onDoubleClick}
 			onTouchStart={onTouchStart}
 			onTouchEnd={onTouchEnd}
@@ -147,7 +162,7 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 	);
 });
 
-export function ReaderScrollContent({
+export const ReaderScrollContent = memo(function ReaderScrollContent({
 	swipe,
 	isChapterLoading,
 	chapterId,
@@ -203,4 +218,4 @@ export function ReaderScrollContent({
 			</div>
 		</div>
 	);
-}
+});
