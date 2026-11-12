@@ -171,7 +171,7 @@ export function ReaderScrollContent({
 	zen: ReturnType<typeof useZenControls>;
 }) {
 	return (
-		<div className="relative w-full max-w-4xl lg:max-w-5xl mx-auto overflow-hidden">
+		<div className="relative w-full max-w-4xl lg:max-w-5xl mx-auto">
 			{swipe.isDragging && (
 				<div
 					aria-hidden="true"
@@ -181,25 +181,24 @@ export function ReaderScrollContent({
 				</div>
 			)}
 
-			<div ref={swipe.readerContentRef} className="w-full will-change-transform relative z-10 bg-background">
+			<div ref={swipe.readerContentRef} className={`w-full relative z-10 bg-background ${swipe.isDragging ? 'will-change-transform' : ''}`}>
 				{isChapterLoading ? (
 					<div key={`loading-skeleton-${chapterId}`} className="w-full bg-background">
 						<ReaderChapterSkeleton titleHint={swipe.pendingTitleHint} />
 					</div>
 				) : (
-					<div key={`${chapter.chapterId}-${domResetKey}`} className="w-full">
-						<ChapterContentSection
-							chapters={displayChapters}
-							fontSize={fontSize}
-							lineHeight={lineHeight}
-							isPlaying={tts.isPlaying}
-							isPaused={tts.isPaused}
-							currentParagraphIndex={tts.activeParagraphIndex}
-							onDoubleClick={zen.handleDoubleClick}
-							onTouchStart={zen.handleTouchStart}
-							onTouchEnd={zen.handleTouchEnd}
-						/>
-					</div>
+					<ChapterContentSection
+						key={`${chapter.chapterId}-${domResetKey}`}
+						chapters={displayChapters}
+						fontSize={fontSize}
+						lineHeight={lineHeight}
+						isPlaying={tts.isPlaying}
+						isPaused={tts.isPaused}
+						currentParagraphIndex={tts.activeParagraphIndex}
+						onDoubleClick={zen.handleDoubleClick}
+						onTouchStart={zen.handleTouchStart}
+						onTouchEnd={zen.handleTouchEnd}
+					/>
 				)}
 			</div>
 		</div>

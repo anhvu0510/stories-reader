@@ -299,5 +299,10 @@ export function sanitizeParagraphHtml(rawHtml?: string): string {
 	if (!rawHtml || typeof rawHtml !== 'string') return '';
 	const withoutInvisible = rawHtml.replace(/\u2063/g, '');
 	const withoutBlocks = withoutInvisible.replace(/<\/?(p|div)\b[^>]*>/gi, ' ');
-	return withoutBlocks.replace(/\s+/g, ' ').trim();
+	const normalized = withoutBlocks.replace(/\s+/g, ' ').trim();
+	// Chuẩn hóa chữ cái đầu sau dấu phẩy thành chữ thường nếu không phải tên riêng 2 từ (giúp Edge TTS không bị khựng giữa câu)
+	return normalized.replace(
+		/,(\s*)([A-ZÀ-Ỹ][a-zà-ỹ]+)(\s+)([a-zà-ỹ]+)/gu,
+		(_, s1, w1, s2, w2) => `,${s1}${w1.charAt(0).toLowerCase()}${w1.slice(1)}${s2}${w2}`
+	);
 }

@@ -50,6 +50,11 @@ describe('sanitizeParagraphHtml helper', () => {
 		expect(sanitizeParagraphHtml(raw)).toBe('Chữ <strong>đậm</strong> và <em>nghiêng</em>.');
 	});
 
+	it('normalizes uppercase character after comma if not followed by a capitalized second word', () => {
+		const raw = 'Thời khắc này, Hiện trường bỗng nhiên yên tĩnh. Rất nhanh, Lâm Phong mới xuất hiện.';
+		expect(sanitizeParagraphHtml(raw)).toBe('Thời khắc này, hiện trường bỗng nhiên yên tĩnh. Rất nhanh, Lâm Phong mới xuất hiện.');
+	});
+
 	it('returns empty string when input is empty, null or undefined', () => {
 		expect(sanitizeParagraphHtml('')).toBe('');
 		expect(sanitizeParagraphHtml('   ')).toBe('');
