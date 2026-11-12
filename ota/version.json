@@ -1,7 +1,7 @@
 {
-  "version": "1.0.389",
+  "version": "1.0.390",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "ee29956fc16ee907126372de7a925a1e7d55fdcf266c420d7be23d8dd6082b0e",
-  "releaseNotes": "refactor(reader): replace all span elements with div for edge read aloud compatibility",
-  "updatedAt": "2026-11-12T04:42:51Z"
+  "checksum": "bb13174e24d802af5066989c75594e976da97dd2a5f80f52f076b88b8ab1881b",
+  "releaseNotes": "fix(reader): isolate UI with aria-hidden, role main, memoized scroll content, and event stopPropagation for edge read aloud",
+  "updatedAt": "2026-11-12T04:58:56Z"
 }
