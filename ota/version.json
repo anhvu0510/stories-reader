@@ -1,7 +1,7 @@
 {
-  "version": "1.0.390",
+  "version": "1.0.391",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "bb13174e24d802af5066989c75594e976da97dd2a5f80f52f076b88b8ab1881b",
-  "releaseNotes": "fix(reader): isolate UI with aria-hidden, role main, memoized scroll content, and event stopPropagation for edge read aloud",
-  "updatedAt": "2026-11-12T04:58:56Z"
+  "checksum": "70f186d6c656b20cab02006e834e7d880aee174f8041e65a45e3a7844e571371",
+  "releaseNotes": "style: remove horizontal padding from highlighted story paragraphs",
+  "updatedAt": "2026-11-12T05:25:57Z"
 }
