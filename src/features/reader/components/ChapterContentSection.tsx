@@ -14,6 +14,8 @@ interface ChapterContentSectionProps {
 	isPlaying: boolean;
 	isPaused: boolean;
 	currentParagraphIndex: number;
+	contentRef?: React.Ref<HTMLElement>;
+	isDragging?: boolean;
 	onDoubleClick: (e: React.MouseEvent) => void;
 	onTouchStart?: (e: React.TouchEvent) => void;
 	onTouchEnd?: (e: React.TouchEvent) => void;
@@ -76,6 +78,8 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 	isPlaying,
 	isPaused,
 	currentParagraphIndex,
+	contentRef,
+	isDragging,
 	onDoubleClick,
 	onTouchStart,
 	onTouchEnd,
@@ -89,6 +93,7 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 		<main
 			id="main-story-content"
 			role="main"
+			ref={contentRef}
 			onClick={(e) => {
 				const target = e.target as HTMLElement | null;
 				if (target?.closest('[data-paragraph-index]')) {
@@ -106,7 +111,7 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 			onDoubleClick={onDoubleClick}
 			onTouchStart={onTouchStart}
 			onTouchEnd={onTouchEnd}
-			className="pt-[calc(max(env(safe-area-inset-top),0.75rem)+4.25rem)] sm:pt-24 pb-24 select-text relative z-10"
+			className={`w-full relative z-10 bg-background pt-[calc(max(env(safe-area-inset-top),0.75rem)+4.25rem)] sm:pt-24 pb-24 select-text ${isDragging ? 'will-change-transform' : ''}`}
 		>
 			{chapters.map((chap, chapIdx) => {
 				const chapterTitleText = chap.title?.toLowerCase().startsWith('chương')
@@ -130,15 +135,13 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 							</div>
 						)}
 
-						<div className="mb-3 pt-0.5">
-							<h2 className="text-base sm:text-lg font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2">
-								<div
-									aria-hidden="true"
-									className="w-1 h-4 rounded-full bg-primary inline-block shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.6)]"
-								/>
-								<div>{chapterTitleText}</div>
-							</h2>
-						</div>
+						<h2 className="mb-3 pt-0.5 text-base sm:text-lg font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2">
+							<div
+								aria-hidden="true"
+								className="w-1 h-4 rounded-full bg-primary inline-block shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+							/>
+							<div>{chapterTitleText}</div>
+						</h2>
 
 						<ChapterParagraphs
 							chapterId={chap.chapterId}
@@ -191,26 +194,30 @@ export const ReaderScrollContent = memo(function ReaderScrollContent({
 				</div>
 			)}
 
-			<div ref={swipe.readerContentRef} className={`w-full relative z-10 bg-background ${swipe.isDragging ? 'will-change-transform' : ''}`}>
-				{isChapterLoading ? (
-					<div key={`loading-skeleton-${chapterId}`} className="w-full bg-background">
-						<ReaderChapterSkeleton titleHint={swipe.pendingTitleHint} />
-					</div>
-				) : (
-					<ChapterContentSection
-						key={`${chapter.chapterId}-${domResetKey}`}
-						chapters={displayChapters}
-						fontSize={fontSize}
-						lineHeight={lineHeight}
-						isPlaying={tts.isPlaying}
-						isPaused={tts.isPaused}
-						currentParagraphIndex={tts.activeParagraphIndex}
-						onDoubleClick={zen.handleDoubleClick}
-						onTouchStart={zen.handleTouchStart}
-						onTouchEnd={zen.handleTouchEnd}
-					/>
-				)}
-			</div>
+			{isChapterLoading ? (
+				<div
+					key={`loading-skeleton-${chapterId}`}
+					ref={swipe.readerContentRef as React.Ref<HTMLDivElement>}
+					className={`w-full relative z-10 bg-background ${swipe.isDragging ? 'will-change-transform' : ''}`}
+				>
+					<ReaderChapterSkeleton titleHint={swipe.pendingTitleHint} />
+				</div>
+			) : (
+				<ChapterContentSection
+					key={`${chapter.chapterId}-${domResetKey}`}
+					chapters={displayChapters}
+					fontSize={fontSize}
+					lineHeight={lineHeight}
+					isPlaying={tts.isPlaying}
+					isPaused={tts.isPaused}
+					currentParagraphIndex={tts.activeParagraphIndex}
+					contentRef={swipe.readerContentRef}
+					isDragging={swipe.isDragging}
+					onDoubleClick={zen.handleDoubleClick}
+					onTouchStart={zen.handleTouchStart}
+					onTouchEnd={zen.handleTouchEnd}
+				/>
+			)}
 		</div>
 	);
 });

@@ -156,7 +156,7 @@ function navigatePrevIfAvailable(
 	openPrevChapter(bookId, chapterId, prevChapterId);
 }
 
-function resetSwipeState(contentEl: HTMLDivElement | null) {
+function resetSwipeState(contentEl: HTMLElement | null) {
 	if (contentEl) {
 		contentEl.style.transition = 'none';
 		contentEl.style.transform = 'translate3d(0px, 0, 0)';
@@ -196,7 +196,7 @@ export function useReaderSwipeNavigation({ bookId, chapterId, contentData, loadi
 	const [isDragging, setIsDragging] = useState(false);
 	const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
 	const dragDirectionRef = useRef<'left' | 'right' | null>(null);
-	const readerContentRef = useRef<HTMLDivElement | null>(null);
+	const readerContentRef = useRef<HTMLElement | null>(null);
 
 	useEffect(() => {
 		setSwipeDirection(null);

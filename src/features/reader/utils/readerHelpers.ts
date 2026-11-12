@@ -162,7 +162,7 @@ export function resolvePendingTitleHint(
 	return undefined;
 }
 
-export function applySettledDragTransform(contentEl: HTMLDivElement | null, settled?: 'left' | 'right' | 'cancel') {
+export function applySettledDragTransform(contentEl: HTMLElement | null, settled?: 'left' | 'right' | 'cancel') {
 	if (!contentEl) return;
 	if (settled === 'left') {
 		contentEl.style.transition = 'transform 200ms cubic-bezier(0.2, 0, 0, 1)';
