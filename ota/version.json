@@ -1,7 +1,7 @@
 {
-  "version": "1.0.395",
+  "version": "1.0.396",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "c783bf5b437030b2bfb63cacf9fb8f0fec93fd7b1f7ce4cdcf2210241adeeced",
-  "releaseNotes": "perf(reader): elevate main content to 1 level below reader screen root",
-  "updatedAt": "2026-11-12T09:37:55Z"
+  "checksum": "9a66e6e52007da56b303b58b93697bd0d2e2db4c8066e2cd3e9ef29b3e68be64",
+  "releaseNotes": "perf(reader): replace repetitive inline utility classes with unified semantic story-paragraph class",
+  "updatedAt": "2026-11-12T10:24:58Z"
 }
