@@ -23,8 +23,6 @@ interface ChapterParagraphsProps {
 	chapterId: string;
 	content: string[];
 	offset: number;
-	fontSize: number;
-	lineHeight: number;
 	isPlaying: boolean;
 	isPaused: boolean;
 	currentParagraphIndex: number;
@@ -36,8 +34,6 @@ function ChapterParagraphs({
 	chapterId,
 	content,
 	offset,
-	fontSize,
-	lineHeight,
 	isPlaying,
 	isPaused,
 	currentParagraphIndex,
@@ -55,7 +51,7 @@ function ChapterParagraphs({
 	);
 
 	return (
-		<div className="px-4 sm:px-6 md:px-8 select-text" style={{ fontSize: `${fontSize}px`, lineHeight }}>
+		<>
 			{items.map((item) => {
 				const isTTSActive = (isPlaying || isPaused) && currentParagraphIndex === item.index;
 				return (
@@ -69,7 +65,7 @@ function ChapterParagraphs({
 					/>
 				);
 			})}
-		</div>
+		</>
 	);
 }
 
@@ -123,17 +119,18 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 						data-chapter-id={chap.chapterId}
 						data-chapter-number={chap.chapterNumber}
 						data-chapter-title={chap.title}
-						className="chapter-block-section scroll-mt-16 mb-0"
+						className="chapter-block-section scroll-mt-16 mb-0 px-4 sm:px-6 md:px-8 select-text"
+						style={{ fontSize: `${fontSize}px`, lineHeight }}
 					>
 						{chapIdx > 0 && (
-							<div aria-hidden="true" className="mt-8 mb-6 px-4 sm:px-6 md:px-8 flex items-center gap-3 select-none">
+							<div aria-hidden="true" className="mt-8 mb-6 flex items-center gap-3 select-none">
 								<div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white/30 dark:via-white/20 to-transparent" />
 								<div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(59,130,246,0.8)] border border-white/40" />
 								<div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white/30 dark:via-white/20 to-transparent" />
 							</div>
 						)}
 
-						<div className="px-4 sm:px-6 md:px-8 mb-3 pt-0.5">
+						<div className="mb-3 pt-0.5">
 							<h2 className="text-base sm:text-lg font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2">
 								<div
 									aria-hidden="true"
@@ -147,8 +144,6 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 							chapterId={chap.chapterId}
 							content={chap.content}
 							offset={paragraphOffsets[chapIdx]}
-							fontSize={fontSize}
-							lineHeight={lineHeight}
 							isPlaying={isPlaying}
 							isPaused={isPaused}
 							currentParagraphIndex={currentParagraphIndex}

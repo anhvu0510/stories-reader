@@ -43,14 +43,12 @@ function AppContent() {
 	}, [location.pathname]);
 
 	return (
-		<div className="min-h-dvh w-full max-w-full overflow-x-clip bg-background text-on-background flex flex-col box-border hide-scrollbar no-scrollbar">
-			<div className="flex-1 flex flex-col w-full">
-				<Routes location={location}>
-					<Route path="/" element={<LibraryScreen />} />
-					<Route path="/book/:bookId" element={<ChapterListScreen />} />
-					<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
-				</Routes>
-			</div>
+		<div className="min-h-dvh w-full max-w-full overflow-x-clip bg-background text-on-background flex flex-col flex-1 box-border hide-scrollbar no-scrollbar">
+			<Routes location={location}>
+				<Route path="/" element={<LibraryScreen />} />
+				<Route path="/book/:bookId" element={<ChapterListScreen />} />
+				<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+			</Routes>
 		</div>
 	);
 }
