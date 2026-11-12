@@ -120,11 +120,11 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 
 						<div className="px-4 sm:px-6 md:px-8 mb-3 pt-0.5">
 							<h2 className="text-base sm:text-lg font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2">
-								<span
+								<div
 									aria-hidden="true"
 									className="w-1 h-4 rounded-full bg-primary inline-block shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.6)]"
 								/>
-								<span>{chapterTitleText}</span>
+								<div>{chapterTitleText}</div>
 							</h2>
 						</div>
 

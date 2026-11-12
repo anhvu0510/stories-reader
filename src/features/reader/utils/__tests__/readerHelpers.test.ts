@@ -40,8 +40,8 @@ describe('sanitizeParagraphHtml helper', () => {
 		expect(sanitizeParagraphHtml(raw)).toBe('Câu một. Câu hai. Câu ba.');
 	});
 
-	it('strips nested or wrapping <p> and <div> block tags preventing DOM fragmentation', () => {
-		const raw = '<p>Đoạn văn bắt đầu.</p><div>Đoạn tiếp theo.</div>';
+	it('strips nested or wrapping <p>, <div>, and <span> tags preventing DOM fragmentation', () => {
+		const raw = '<p>Đoạn văn bắt đầu.</p><div><span>Đoạn tiếp theo.</span></div>';
 		expect(sanitizeParagraphHtml(raw)).toBe('Đoạn văn bắt đầu. Đoạn tiếp theo.');
 	});
 

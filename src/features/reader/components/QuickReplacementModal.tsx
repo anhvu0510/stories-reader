@@ -63,7 +63,7 @@ export function QuickReplacementModal({ matchText, bookId, chapterId, onClose, o
 				</div>
 
 				<div className="p-3 rounded-xl bg-surface-container border border-outline-variant/20 flex items-center justify-between text-xs">
-					<span className="font-semibold text-on-surface">{matchText}</span>
+					<div className="font-semibold text-on-surface">{matchText}</div>
 					<ArrowRight size={14} className="text-on-surface-variant/50" />
 					<input
 						type="text"

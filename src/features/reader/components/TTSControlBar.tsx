@@ -20,10 +20,10 @@ export function TTSControlBar({ onPlay, onPause, onStop, onPrev, onNext }: TTSCo
 		<div className="fixed bottom-20 left-0 right-0 z-40 w-full max-w-4xl lg:max-w-5xl mx-auto px-4 animate-in slide-in-from-bottom-5 duration-200 pointer-events-none">
 			<div className="bg-surface-container-high/95 backdrop-blur-md border border-outline-variant/30 px-4 py-2 rounded-full shadow-2xl flex items-center justify-between pointer-events-auto transform-gpu transition-colors duration-200">
 				<div className="flex items-center gap-2">
-					<span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-					<span className="text-[11px] font-mono font-extrabold text-primary">
+					<div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+					<div className="text-[11px] font-mono font-extrabold text-primary">
 						ĐOẠN {currentParagraphIndex >= 0 ? currentParagraphIndex + 1 : 1}
-					</span>
+					</div>
 				</div>
 
 				<div className="flex items-center gap-2">

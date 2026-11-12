@@ -121,7 +121,7 @@ export function ReaderErrorView({
 						className="px-4 py-2 rounded-full bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-sm"
 					>
 						<RotateCcw size={14} />
-						<span>Thử tải lại</span>
+						<div>Thử tải lại</div>
 					</button>
 
 					<button
@@ -129,7 +129,7 @@ export function ReaderErrorView({
 						className="px-4 py-2 rounded-full bg-surface-container border border-outline-variant/30 text-on-surface text-xs font-bold hover:bg-surface-container-high transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
 					>
 						<Home size={14} />
-						<span>Về Trang chủ</span>
+						<div>Về Trang chủ</div>
 					</button>
 				</div>
 			</div>
@@ -329,7 +329,7 @@ export function ReaderActiveView(props: ReaderActiveViewProps) {
 			<SelectionSpeakerTooltip isTTSActive={props.tts.isTTSActive} onSpeak={props.tts.jumpToContent} />
 
 			{props.zen.ripple && (
-				<span
+				<div
 					key={props.zen.ripple.id}
 					onAnimationEnd={() => props.zen.setRipple(null)}
 					className="pointer-events-none fixed z-[99999] w-14 h-14 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/60 bg-primary/20 animate-ripple"

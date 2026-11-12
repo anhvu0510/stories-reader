@@ -292,13 +292,13 @@ export function isWebBrowser(): boolean {
 /**
  * Chuẩn hóa HTML đoạn văn tối ưu cho trình đọc Edge Read Aloud:
  * 1. Loại bỏ ký tự phân cách vô hình \u2063 (INVISIBLE_SENTENCE_DELIMITER) gây lệch offset đồng bộ từ ngữ.
- * 2. Bóc bỏ các thẻ block lồng nhau (<p>, </p>, <div>, </div>) để tránh phá vỡ cấu trúc DOM của thẻ <p> cha.
- * 3. Chuẩn hóa khoảng trắng dư thừa, giữ lại các thẻ định dạng inline (<b>, <i>, <em>, <strong>, <span>, <br>).
+ * 2. Bóc bỏ các thẻ block lồng nhau (<p>, </p>, <div>, </div>) và các thẻ <span> để DOM thẻ đọc phẳng và sạch.
+ * 3. Chuẩn hóa khoảng trắng dư thừa, giữ lại các thẻ định dạng inline an toàn (<b>, <i>, <em>, <strong>, <br>).
  */
 export function sanitizeParagraphHtml(rawHtml?: string): string {
 	if (!rawHtml || typeof rawHtml !== 'string') return '';
 	const withoutInvisible = rawHtml.replace(/\u2063/g, '');
-	const withoutBlocks = withoutInvisible.replace(/<\/?(p|div)\b[^>]*>/gi, ' ');
+	const withoutBlocks = withoutInvisible.replace(/<\/?(p|div|span)\b[^>]*>/gi, ' ');
 	const normalized = withoutBlocks.replace(/\s+/g, ' ').trim();
 	// Chuẩn hóa chữ cái đầu sau dấu phẩy thành chữ thường nếu không phải tên riêng 2 từ (giúp Edge TTS không bị khựng giữa câu)
 	return normalized.replace(

@@ -41,9 +41,9 @@ const FONT_STYLE_MAP: Record<string, string> = {
 function FontSizeControlRow({ fontSize, setFontSize }: { fontSize: number; setFontSize: (size: number) => void }) {
 	return (
 		<div className="flex items-center justify-between gap-2 bg-white/10 p-2 px-3 rounded-xl border border-white/20 shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.3)]">
-			<span className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider flex items-center gap-1">
-				<Type size={11} className="text-primary" /> CỠ CHỮ: <span className="text-primary font-black">{fontSize}px</span>
-			</span>
+			<div className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider flex items-center gap-1">
+				<Type size={11} className="text-primary" /> CỠ CHỮ: <div className="text-primary font-black inline-block">{fontSize}px</div>
+			</div>
 			<div className="flex items-center gap-1.5 shrink-0">
 				<motion.button
 					whileTap={{ scale: 0.9 }}
@@ -98,9 +98,9 @@ function ThemeSwatchesRow({
 			<div className="flex items-center justify-between gap-2 bg-white/5 p-1.5 px-3 rounded-xl border border-white/10">
 				<div className="flex items-center gap-1 shrink-0">
 					<Palette size={11} className="text-primary" />
-					<span className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider">
-						MÀU NỀN: <span className="text-primary font-black">{currentThemeObj.name}</span>
-					</span>
+					<div className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider">
+						MÀU NỀN: <div className="text-primary font-black inline-block">{currentThemeObj.name}</div>
+					</div>
 				</div>
 
 				<div className="flex items-center gap-2 shrink-0">
@@ -169,9 +169,10 @@ function TypographySteppersAndReplaceSection({
 		<>
 			<div className="grid grid-cols-2 gap-2">
 				<div className="bg-white/5 p-2 rounded-xl border border-white/10 flex items-center justify-between gap-1">
-					<span className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider flex items-center gap-1">
-						<AlignJustify size={11} className="text-primary" /> DÒNG: <span className="text-primary font-black">{lineHeight}</span>
-					</span>
+					<div className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider flex items-center gap-1">
+						<AlignJustify size={11} className="text-primary" /> DÒNG:{' '}
+						<div className="text-primary font-black inline-block">{lineHeight}</div>
+					</div>
 					<div className="flex items-center gap-1.5 shrink-0">
 						<motion.button
 							type="button"
@@ -203,9 +204,9 @@ function TypographySteppersAndReplaceSection({
 				</div>
 
 				<div className="bg-white/5 p-2 rounded-xl border border-white/10 flex items-center justify-between gap-1">
-					<span className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider flex items-center gap-1">
-						<Layers size={11} className="text-primary" /> GỘP: <span className="text-primary font-black">{groupLines}</span>
-					</span>
+					<div className="text-[10px] font-mono font-bold text-on-surface-variant/80 uppercase tracking-wider flex items-center gap-1">
+						<Layers size={11} className="text-primary" /> GỘP: <div className="text-primary font-black inline-block">{groupLines}</div>
+					</div>
 					<div className="flex items-center gap-1.5 shrink-0">
 						<motion.button
 							type="button"
@@ -240,7 +241,7 @@ function TypographySteppersAndReplaceSection({
 			<div className="bg-white/5 p-2.5 px-3 rounded-xl border border-white/10 flex items-center justify-between gap-2">
 				<div className="flex items-center gap-1.5">
 					<Sliders size={14} className="text-primary shrink-0" />
-					<span className="text-xs font-bold text-on-surface">Bộ Thay Thế Từ Ngữ</span>
+					<div className="text-xs font-bold text-on-surface">Bộ Thay Thế Từ Ngữ</div>
 				</div>
 
 				<motion.button

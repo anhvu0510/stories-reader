@@ -160,7 +160,7 @@ function QuickControlCenterGroup({
 								className={`w-full py-1 px-0.5 rounded-full text-[10.5px] font-mono font-black tracking-tight flex items-center justify-center transition-all duration-150 cursor-pointer truncate ${activeClass}`}
 								title={getChapterButtonTitle(chap.title, chap.chapterNumber)}
 							>
-								<span className="truncate">{chap.chapterNumber}</span>
+								<div className="truncate">{chap.chapterNumber}</div>
 							</motion.button>
 						);
 					})}
@@ -181,8 +181,8 @@ function QuickControlCenterGroup({
 			title="Mở danh sách tất cả các chương"
 		>
 			<List size={14} strokeWidth={2.5} />
-			<span>Ch. {currentChapterNumber ?? '-'}</span>
-			{totalChapters ? <span className="text-[10px] opacity-70">/{totalChapters}</span> : null}
+			<div>Ch. {currentChapterNumber ?? '-'}</div>
+			{totalChapters ? <div className="text-[10px] opacity-70">/{totalChapters}</div> : null}
 		</motion.button>
 	);
 }

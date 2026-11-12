@@ -23,7 +23,7 @@ export const ReaderChapterSkeleton = memo(function ReaderChapterSkeleton({ class
 			{/* Tiêu đề chương khớp 100% với ChapterContentSection */}
 			<div className="px-4 sm:px-6 md:px-8 mb-5 pt-0.5">
 				<h2 className="text-base sm:text-lg font-bold tracking-tight leading-snug flex items-center gap-2">
-					<span className="w-1 h-4 rounded-full bg-primary/70 inline-block shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.35)]" />
+					<div className="w-1 h-4 rounded-full bg-primary/70 inline-block shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.35)]" />
 					{titleHint ? (
 						<p className="line-clamp-1 text-on-surface/70 text-sm sm:text-base font-semibold">{titleHint}</p>
 					) : (

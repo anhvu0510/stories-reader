@@ -101,10 +101,10 @@ function HistoryBookCard({ book, isPinned, onSwap }: HistoryBookCardProps) {
 			className={theme.cardClass}
 		>
 			<div className={theme.badgeClass}>
-				<span className="text-[7px] font-extrabold uppercase tracking-wider leading-none flex items-center gap-0.5 text-primary/80">
+				<div className="text-[7px] font-extrabold uppercase tracking-wider leading-none flex items-center gap-0.5 text-primary/80">
 					<Layers size={8} /> TỔNG
-				</span>
-				<span className="text-xs font-black leading-none mt-0.5 text-primary">{book.chapterCount}</span>
+				</div>
+				<div className="text-xs font-black leading-none mt-0.5 text-primary">{book.chapterCount}</div>
 			</div>
 
 			<div className="flex-1 min-w-0 space-y-1">
@@ -112,10 +112,10 @@ function HistoryBookCard({ book, isPinned, onSwap }: HistoryBookCardProps) {
 
 				{book.lastReadChapter?.chapterId && (
 					<div className="flex items-center gap-1.5 text-xs min-w-0 overflow-hidden">
-						<span className={theme.chapterBadgeClass}>Ch.{book.lastReadChapter.chapterNumber}</span>
+						<div className={theme.chapterBadgeClass}>Ch.{book.lastReadChapter.chapterNumber}</div>
 						{book.lastReadChapter.title && (
 							<div className="flex-1 min-w-0 overflow-hidden">
-								<span className={theme.chapterTitleClass}>{book.lastReadChapter.title}</span>
+								<div className={theme.chapterTitleClass}>{book.lastReadChapter.title}</div>
 							</div>
 						)}
 					</div>
@@ -124,18 +124,18 @@ function HistoryBookCard({ book, isPinned, onSwap }: HistoryBookCardProps) {
 				<div className="flex items-center gap-1.5 text-[9.5px] font-mono whitespace-nowrap flex-nowrap shrink-0 overflow-hidden pt-0.5">
 					<div className={theme.dateRowClass}>
 						<Clock size={10} className={theme.dateIconClass} />
-						<span>{formattedDate}</span>
+						<div>{formattedDate}</div>
 					</div>
 
-					<span className={theme.readCountClass}>
+					<div className={theme.readCountClass}>
 						<BookOpen size={10} className={theme.readCountIconClass} />
-						<span>{readCount}</span>
-					</span>
+						<div>{readCount}</div>
+					</div>
 
-					<span className={theme.translatedClass}>
+					<div className={theme.translatedClass}>
 						<Sparkles size={10} className="text-primary" />
-						<span>{book.totalTranslated}</span>
-					</span>
+						<div>{book.totalTranslated}</div>
+					</div>
 				</div>
 			</div>
 		</motion.div>
@@ -175,8 +175,8 @@ function HistoryResultsSection({
 	return (
 		<div className="space-y-2">
 			<div className="flex items-center justify-between text-[10px] font-mono font-extrabold text-on-surface-variant/70 uppercase tracking-widest px-1">
-				<span>{isSearching ? 'KẾT QUẢ TÌM KIẾM' : 'DANH SÁCH LỊCH SỬ'}</span>
-				<span>{displayBooks.length} truyện</span>
+				<div>{isSearching ? 'KẾT QUẢ TÌM KIẾM' : 'DANH SÁCH LỊCH SỬ'}</div>
+				<div>{displayBooks.length} truyện</div>
 			</div>
 			<div className="space-y-3">
 				{displayBooks.map((b) => (
@@ -185,8 +185,8 @@ function HistoryResultsSection({
 			</div>
 			{loadingMore && (
 				<div className="py-2.5 text-center text-xs text-primary font-medium flex items-center justify-center gap-2">
-					<span className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-					<span>Đang tải thêm...</span>
+					<div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+					<div>Đang tải thêm...</div>
 				</div>
 			)}
 		</div>
