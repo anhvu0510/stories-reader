@@ -432,7 +432,7 @@ select {
 	background-color: rgba(234, 179, 8, 0.45) !important;
 	color: inherit !important;
 	border-radius: 2px !important;
-	padding: 0 2px !important;
+	padding: 0 0px !important;
 }
 
 #main-story-content [data-paragraph-index] {
