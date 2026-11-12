@@ -111,7 +111,7 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 			onDoubleClick={onDoubleClick}
 			onTouchStart={onTouchStart}
 			onTouchEnd={onTouchEnd}
-			className={`w-full relative z-10 bg-background pt-[calc(max(env(safe-area-inset-top),0.75rem)+4.25rem)] sm:pt-24 pb-24 select-text ${isDragging ? 'will-change-transform' : ''}`}
+			className={`w-full max-w-4xl lg:max-w-5xl mx-auto relative z-10 bg-background pt-[calc(max(env(safe-area-inset-top),0.75rem)+4.25rem)] sm:pt-24 pb-24 select-text ${isDragging ? 'will-change-transform' : ''}`}
 		>
 			{chapters.map((chap, chapIdx) => {
 				const chapterTitleText = chap.title?.toLowerCase().startsWith('chương')
@@ -184,11 +184,11 @@ export const ReaderScrollContent = memo(function ReaderScrollContent({
 	zen: ReturnType<typeof useZenControls>;
 }) {
 	return (
-		<div className="relative w-full max-w-4xl lg:max-w-5xl mx-auto">
+		<>
 			{swipe.isDragging && (
 				<div
 					aria-hidden="true"
-					className="absolute inset-0 pointer-events-none select-none z-0 overflow-hidden opacity-90 transition-opacity duration-150"
+					className="absolute inset-0 pointer-events-none select-none z-0 overflow-hidden opacity-90 transition-opacity duration-150 max-w-4xl lg:max-w-5xl mx-auto"
 				>
 					<ReaderChapterSkeleton titleHint={swipe.pendingTitleHint} />
 				</div>
@@ -198,7 +198,7 @@ export const ReaderScrollContent = memo(function ReaderScrollContent({
 				<div
 					key={`loading-skeleton-${chapterId}`}
 					ref={swipe.readerContentRef as React.Ref<HTMLDivElement>}
-					className={`w-full relative z-10 bg-background ${swipe.isDragging ? 'will-change-transform' : ''}`}
+					className={`w-full max-w-4xl lg:max-w-5xl mx-auto relative z-10 bg-background ${swipe.isDragging ? 'will-change-transform' : ''}`}
 				>
 					<ReaderChapterSkeleton titleHint={swipe.pendingTitleHint} />
 				</div>
@@ -218,6 +218,6 @@ export const ReaderScrollContent = memo(function ReaderScrollContent({
 					onTouchEnd={zen.handleTouchEnd}
 				/>
 			)}
-		</div>
+		</>
 	);
 });
