@@ -162,7 +162,7 @@ describe('ReaderScreen Scroll Visibility & Dock Auto-Hide', () => {
 		expect(getDock()?.classList.contains('translate-y-0')).toBe(true);
 		expect(getVerticalDock()?.classList.contains('translate-x-0')).toBe(true);
 
-		const mainContainer = document.querySelector('article') || document.body;
+		const mainContainer = document.getElementById('main-story-content') || document.body;
 
 		// Double click vào vùng đọc để ẩn cả 2 dock
 		act(() => {

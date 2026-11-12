@@ -17,7 +17,7 @@ export const ParagraphView = memo(
 		if (!cleanHtml) return null;
 
 		return (
-			<p
+			<div
 				data-paragraph-index={index}
 				className="mb-4 sm:mb-5 last:mb-2 text-justify leading-relaxed tracking-normal w-full text-on-background/95 font-medium hyphens-auto break-words select-text cursor-text selection:bg-primary/25 selection:text-primary"
 				dangerouslySetInnerHTML={{ __html: cleanHtml }}

@@ -36,6 +36,7 @@ describe('ParagraphView', () => {
 		const paragraph = container.querySelector('[data-paragraph-index="1"]');
 
 		expect(paragraph).not.toBeNull();
+		expect(paragraph?.tagName.toLowerCase()).toBe('div');
 		expect(paragraph?.textContent).toBe('Đoạn mở đầu. Câu thứ hai.');
 		expect(paragraph?.innerHTML).not.toContain('\u2063');
 		expect(paragraph?.querySelectorAll('p').length).toBe(0);
