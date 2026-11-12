@@ -1,7 +1,7 @@
 {
-  "version": "1.0.388",
+  "version": "1.0.389",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "de0d3f167f1139d0777ce5f2fc872dcd769b4666e34c54f6f8a433f42f45b3da",
-  "releaseNotes": "fix(reader): optimize DOM structure and comma capitalization for edge read aloud",
-  "updatedAt": "2026-11-12T03:55:20Z"
+  "checksum": "ee29956fc16ee907126372de7a925a1e7d55fdcf266c420d7be23d8dd6082b0e",
+  "releaseNotes": "refactor(reader): replace all span elements with div for edge read aloud compatibility",
+  "updatedAt": "2026-11-12T04:42:51Z"
 }
