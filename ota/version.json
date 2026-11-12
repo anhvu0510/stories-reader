@@ -1,7 +1,7 @@
 {
-  "version": "1.0.393",
+  "version": "1.0.394",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "29bf416472956d3599cbb72e1ba6f313874c912eb4c452af0d4e2a7a82dd6772",
-  "releaseNotes": "perf(reader): flatten DOM tree by eliminating redundant wrappers around paragraphs and app routes",
-  "updatedAt": "2026-11-12T09:17:57Z"
+  "checksum": "8d7b5a3f329b5f6e179b98ab0b14d0f38298e7b2b0207a72e98879bfdf023d55",
+  "releaseNotes": "perf(reader): eliminate swipe wrapper div and heading wrapper div to streamline reading DOM",
+  "updatedAt": "2026-11-12T09:32:05Z"
 }
