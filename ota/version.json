@@ -1,7 +1,7 @@
 {
-  "version": "1.0.385",
+  "version": "1.0.386",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "072f004900792aff18ac7b8cb530f501456938d95f2019b1fd92cebf59f15b95",
-  "releaseNotes": "refactor: change article/div elements to div/p semantic tags in reader components",
-  "updatedAt": "2026-11-10T09:42:40Z"
+  "checksum": "b8521686898227cb17b78004639f05bb4d91c133677cf73998ea0fe09c037595",
+  "releaseNotes": "refactor: sanitize paragraph HTML and improve reader accessibility markup",
+  "updatedAt": "2026-11-12T03:15:00Z"
 }
