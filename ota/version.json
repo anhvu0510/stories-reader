@@ -1,7 +1,7 @@
 {
-  "version": "1.0.391",
+  "version": "1.0.392",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "70f186d6c656b20cab02006e834e7d880aee174f8041e65a45e3a7844e571371",
-  "releaseNotes": "style: remove horizontal padding from highlighted story paragraphs",
-  "updatedAt": "2026-11-12T05:25:57Z"
+  "checksum": "12860122cfcac4fb131290c01a7f51d79731b5136487bd7b90b5e0036d5b9a35",
+  "releaseNotes": "perf(reader): memoize useReaderSwipeNavigation return to protect reader content from scroll re-renders",
+  "updatedAt": "2026-11-12T08:03:43Z"
 }
