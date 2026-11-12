@@ -441,3 +441,38 @@ select {
 	pointer-events: auto !important;
 	word-spacing: 0px !important;
 }
+
+/* Story paragraph unified semantic styling */
+.story-paragraph {
+	display: block;
+	width: 100%;
+	margin-bottom: 1rem;
+	text-align: justify;
+	line-height: inherit;
+	letter-spacing: normal;
+	font-weight: 500;
+	-webkit-hyphens: auto;
+	hyphens: auto;
+	overflow-wrap: break-word;
+	word-break: break-word;
+	-webkit-user-select: text !important;
+	user-select: text !important;
+	cursor: text;
+	color: color-mix(in srgb, var(--on-bg) 95%, transparent);
+	word-spacing: 0px !important;
+}
+
+@media (min-width: 640px) {
+	.story-paragraph {
+		margin-bottom: 1.25rem;
+	}
+}
+
+.story-paragraph:last-child {
+	margin-bottom: 0.5rem;
+}
+
+.story-paragraph::selection {
+	background-color: color-mix(in srgb, var(--primary) 25%, transparent);
+	color: var(--primary);
+}
