@@ -275,11 +275,14 @@ export function useReaderSwipeNavigation({ bookId, chapterId, contentData, loadi
 		disabled: swipeDisabled,
 	});
 
-	return {
-		readerContentRef,
-		isDragging,
-		pendingTitleHint,
-	};
+	return useMemo(
+		() => ({
+			readerContentRef,
+			isDragging,
+			pendingTitleHint,
+		}),
+		[isDragging, pendingTitleHint]
+	);
 }
 
 interface UseReaderAudioProps {
