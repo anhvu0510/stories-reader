@@ -4,6 +4,7 @@ import React from 'react';
 
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { cn } from '@/lib/utils';
+import { formatModelDisplayName } from '@/shared/utils/modelFormatters';
 
 import { DEFAULT_VERTEX_MODELS, getTabButtonClass, type PoolStatus, type TranslationOptions } from './translationHelpers';
 
@@ -123,10 +124,7 @@ function AIConfigDropdown({ options, setOptions, setPoolStatus }: AIConfigDropdo
 				<div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto hide-scrollbar p-0.5">
 					{cleanModels.map((m) => {
 						const isSelected = options.model === m;
-						const formattedName = String(m)
-							.replace(/^gemini-/, '')
-							.replace(/-/g, ' ')
-							.toUpperCase();
+						const formattedName = formatModelDisplayName(String(m));
 
 						return (
 							<button

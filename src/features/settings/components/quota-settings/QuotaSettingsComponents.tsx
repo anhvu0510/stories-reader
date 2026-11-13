@@ -1,6 +1,8 @@
 import { Edit2, Trash2, Check } from 'lucide-react';
 import React from 'react';
 
+import { formatModelDisplayName } from '@/shared/utils/modelFormatters';
+
 import { AIPlatformSheetHeader } from '../AIPlatformSheetHeader';
 
 import type { AIQuota } from '@/shared/types';
@@ -133,11 +135,7 @@ export function QuotaItemCard({
 		return <QuotaEditor formData={formData} setFormData={setFormData} onSave={onSave} onCancel={onCancel} />;
 	}
 
-	const modelTitle =
-		quota.model
-			.replace(/^gemini-/, '')
-			.replace(/-/g, ' ')
-			.toUpperCase() || quota.model;
+	const modelTitle = formatModelDisplayName(quota.model) || quota.model;
 
 	return (
 		<div

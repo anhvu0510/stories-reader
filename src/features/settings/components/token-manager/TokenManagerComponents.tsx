@@ -1,6 +1,8 @@
 import { Edit2, Trash2, Check, PlayCircle, PauseCircle } from 'lucide-react';
 import React from 'react';
 
+import { formatModelDisplayName } from '@/shared/utils/modelFormatters';
+
 import { AIPlatformSheetHeader } from '../AIPlatformSheetHeader';
 
 import type { AIToken } from '@/shared/types';
@@ -41,10 +43,7 @@ function TokenUsageItem({
 		usageToday?: { rpd?: number; rpdPercent?: number; rpm?: number };
 	};
 }) {
-	const modelLabel = item.model
-		.replace(/^gemini-/, '')
-		.replace(/-/g, ' ')
-		.toUpperCase();
+	const modelLabel = formatModelDisplayName(item.model);
 
 	return (
 		<div className="bg-surface-container flex items-center justify-between p-2 rounded-lg">
