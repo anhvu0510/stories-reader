@@ -1,7 +1,7 @@
 {
-  "version": "1.0.398",
+  "version": "1.0.399",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "8e89eb1a2dad94fb8c6ec40f1d64b18d1693f2b09b2817b47fe41ac204f581aa",
-  "releaseNotes": "fix(ui): pass and detect DEPLOYAI platform for DeepSeek models",
-  "updatedAt": "2026-11-13T10:07:00Z"
+  "checksum": "d1d98137460c6fd6afa953eb673734b7e258a997c9b700b53f052acc2f7bae20",
+  "releaseNotes": "fix(translation-sheet): pass DEPLOYAI platform for deepseek models on detect proper nouns",
+  "updatedAt": "2026-11-13T16:38:52Z"
 }
