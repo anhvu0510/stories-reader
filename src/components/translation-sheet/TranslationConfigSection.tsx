@@ -6,38 +6,9 @@ import { triggerHaptic } from '@/hooks/useHaptic';
 import { cn } from '@/lib/utils';
 import { formatModelDisplayName, formatPlatformDisplayName, getPlatformBadgeClass } from '@/shared/utils/modelFormatters';
 
-import { buildModelPlatformList, getTabButtonClass, type PoolStatus, type TranslationOptions } from './translationHelpers';
+import { buildModelPlatformList, type PoolStatus, type TranslationOptions } from './translationHelpers';
 
 import type { AIQuota } from '@/shared/types';
-
-export function TabButton({
-	active,
-	children,
-	onClick,
-	disabled,
-}: {
-	active: boolean;
-	children: React.ReactNode;
-	onClick: () => void;
-	disabled?: boolean;
-}) {
-	const btnClass = getTabButtonClass(active, disabled);
-	return (
-		<motion.button
-			whileTap={disabled ? undefined : { scale: 0.94 }}
-			onClick={() => {
-				if (!disabled) {
-					triggerHaptic('selection');
-					onClick();
-				}
-			}}
-			disabled={disabled}
-			className={`flex-1 py-1.5 min-h-[32px] text-xs font-bold rounded-md transition-all duration-200 flex items-center justify-center ${btnClass}`}
-		>
-			{children}
-		</motion.button>
-	);
-}
 
 function PoolStatusBadge({ poolStatus }: { poolStatus: PoolStatus }) {
 	const isRemainPositive = poolStatus.remain > 0;
@@ -60,77 +31,124 @@ interface AIConfigDropdownProps {
 	quotas?: AIQuota[];
 }
 
+function AIWordsAndTempInputs({
+	options,
+	setOptions,
+}: {
+	options: TranslationOptions;
+	setOptions: React.Dispatch<React.SetStateAction<TranslationOptions>>;
+}) {
+	return (
+		<div className="grid grid-cols-2 gap-2">
+			<div className="flex flex-col gap-1">
+				<label className="text-[9px] font-bold text-on-surface-variant/70 uppercase px-0.5">GIỚI HẠN TỪ</label>
+				<div className="flex items-center bg-surface-container-highest rounded-lg p-0.5">
+					<input
+						type="number"
+						value={options.minWords}
+						onChange={(e) => setOptions({ ...options, minWords: Number(e.target.value) })}
+						className="w-full bg-transparent text-[11px] font-bold text-center focus:outline-none"
+					/>
+					<span className="text-on-surface-variant/30 text-[10px]">-</span>
+					<input
+						type="number"
+						value={options.maxWords}
+						onChange={(e) => setOptions({ ...options, maxWords: Number(e.target.value) })}
+						className="w-full bg-transparent text-[11px] font-bold text-center focus:outline-none"
+					/>
+				</div>
+			</div>
+
+			<div className="flex flex-col gap-1">
+				<div className="flex justify-between items-center px-0.5">
+					<label className="text-[9px] font-bold text-on-surface-variant/70 uppercase">SÁNG TẠO</label>
+					<span className="text-[10px] font-bold text-primary">{Number(options.temperature).toFixed(1)}</span>
+				</div>
+				<div className="bg-surface-container-highest rounded-lg p-1 px-2 h-full flex items-center">
+					<input
+						type="range"
+						min="0"
+						max="1"
+						step="0.1"
+						value={options.temperature}
+						onChange={(e) => setOptions({ ...options, temperature: Number(e.target.value) })}
+						className="w-full accent-primary h-1 bg-outline-variant/20 rounded-full appearance-none cursor-pointer"
+					/>
+				</div>
+			</div>
+		</div>
+	);
+}
+
 function AIConfigDropdown({ options, setOptions, setPoolStatus, quotas = [] }: AIConfigDropdownProps) {
 	const modelList = buildModelPlatformList(quotas, options.availableModels);
+	const availablePlatforms = React.useMemo(() => {
+		return Array.from(new Set(modelList.map((m) => m.platform).filter(Boolean)));
+	}, [modelList]);
+
+	const [activePlatform, setActivePlatform] = React.useState<string>(() => {
+		if (options.platform && availablePlatforms.includes(options.platform)) {
+			return options.platform;
+		}
+		return availablePlatforms[0] || '';
+	});
+
+	React.useEffect(() => {
+		if (options.platform && availablePlatforms.includes(options.platform)) {
+			setActivePlatform(options.platform);
+		} else if (availablePlatforms.length > 0 && !availablePlatforms.includes(activePlatform)) {
+			setActivePlatform(availablePlatforms[0]);
+		}
+	}, [options.platform, availablePlatforms, activePlatform]);
+
+	const displayedModels = React.useMemo(() => {
+		if (!activePlatform) return modelList;
+		return modelList.filter((m) => m.platform === activePlatform);
+	}, [modelList, activePlatform]);
 
 	return (
 		<div className="px-3 p-3 flex flex-col gap-2.5 max-h-[35vh] overflow-y-auto hide-scrollbar">
-			<div className="grid grid-cols-2 gap-2">
-				<div className="flex flex-col gap-1">
-					<label className="text-[9px] font-bold text-on-surface-variant/70 uppercase px-0.5">GIỚI HẠN TỪ</label>
-					<div className="flex items-center bg-surface-container-highest rounded-lg p-0.5">
-						<input
-							type="number"
-							value={options.minWords}
-							onChange={(e) =>
-								setOptions({
-									...options,
-									minWords: Number(e.target.value),
-								})
-							}
-							className="w-full bg-transparent text-[11px] font-bold text-center focus:outline-none"
-						/>
-						<span className="text-on-surface-variant/30 text-[10px]">-</span>
-						<input
-							type="number"
-							value={options.maxWords}
-							onChange={(e) =>
-								setOptions({
-									...options,
-									maxWords: Number(e.target.value),
-								})
-							}
-							className="w-full bg-transparent text-[11px] font-bold text-center focus:outline-none"
-						/>
-					</div>
-				</div>
+			<AIWordsAndTempInputs options={options} setOptions={setOptions} />
 
-				<div className="flex flex-col gap-1">
-					<div className="flex justify-between items-center px-0.5">
-						<label className="text-[9px] font-bold text-on-surface-variant/70 uppercase">SÁNG TẠO</label>
-						<span className="text-[10px] font-bold text-primary">{Number(options.temperature).toFixed(1)}</span>
-					</div>
-					<div className="bg-surface-container-highest rounded-lg p-1 px-2 h-full flex items-center">
-						<input
-							type="range"
-							min="0"
-							max="1"
-							step="0.1"
-							value={options.temperature}
-							onChange={(e) =>
-								setOptions({
-									...options,
-									temperature: Number(e.target.value),
-								})
-							}
-							className="w-full accent-primary h-1 bg-outline-variant/20 rounded-full appearance-none cursor-pointer"
-						/>
-					</div>
-				</div>
-			</div>
 			<div className="space-y-2 pt-1">
 				<div className="flex items-center justify-between">
 					<span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Mô hình AI:</span>
 				</div>
 
-				{modelList.length === 0 ? (
+				{availablePlatforms.length > 1 && (
+					<div className="flex bg-white/5 p-1 rounded-xl border border-white/10 gap-1 overflow-x-auto hide-scrollbar">
+						{availablePlatforms.map((plat) => {
+							const isPlatActive = activePlatform === plat;
+							return (
+								<button
+									key={plat}
+									type="button"
+									onClick={() => {
+										triggerHaptic('selection');
+										setActivePlatform(plat);
+									}}
+									className={cn(
+										'px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer',
+										isPlatActive
+											? 'bg-primary/20 text-primary border border-primary/50 shadow-xs'
+											: 'text-on-surface-variant/70 hover:text-on-surface'
+									)}
+								>
+									{formatPlatformDisplayName(plat)}
+								</button>
+							);
+						})}
+					</div>
+				)}
+
+				{displayedModels.length === 0 ? (
 					<div className="py-3 px-2 text-center text-on-surface-variant bg-white/[0.02] border border-white/5 rounded-xl">
 						<p className="font-bold text-xs text-amber-400/90">Chưa có mô hình AI từ máy chủ</p>
 						<p className="text-[10px] mt-0.5 text-on-surface-variant/60">Vui lòng kiểm tra Quota ở Cài đặt</p>
 					</div>
 				) : (
 					<div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto hide-scrollbar p-0.5">
-						{modelList.map((item) => {
+						{displayedModels.map((item) => {
 							const isSelected = options.model === item.model && (options.platform ? options.platform === item.platform : true);
 							const formattedName = formatModelDisplayName(item.model);
 							const badgeClass = getPlatformBadgeClass(item.platform);

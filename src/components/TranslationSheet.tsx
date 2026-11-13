@@ -5,10 +5,11 @@ import { useState } from 'react';
 import { triggerHaptic } from '@/hooks/useHaptic';
 
 import { BottomSheet } from './BottomSheet';
-import { TabButton, TranslationSheetActionButtons, TranslationSheetConfigBar } from './translation-sheet/TranslationConfigSection';
+import { TranslationSheetActionButtons, TranslationSheetConfigBar } from './translation-sheet/TranslationConfigSection';
 import {
 	getAsyncButtonLabel,
 	getSyncButtonLabel,
+	getTabButtonClass,
 	resolveTranslationSheetProps,
 	type Tab,
 	type TranslationSheetProps,
@@ -16,6 +17,35 @@ import {
 import { BatchChapterList, ChapterBatchControls, CurrentTabContent, StoryTabContent } from './translation-sheet/TranslationTabViews';
 import { useBatchSelectionHandlers, useTranslationActions } from './translation-sheet/useTranslationActions';
 import { useTranslationBatchPagination, useTranslationOptions } from './translation-sheet/useTranslationSheet';
+
+function TabButton({
+	active,
+	children,
+	onClick,
+	disabled,
+}: {
+	active: boolean;
+	children: React.ReactNode;
+	onClick: () => void;
+	disabled?: boolean;
+}) {
+	const btnClass = getTabButtonClass(active, disabled);
+	return (
+		<motion.button
+			whileTap={disabled ? undefined : { scale: 0.94 }}
+			onClick={() => {
+				if (!disabled) {
+					triggerHaptic('selection');
+					onClick();
+				}
+			}}
+			disabled={disabled}
+			className={`flex-1 py-1.5 min-h-[32px] text-xs font-bold rounded-md transition-all duration-200 flex items-center justify-center ${btnClass}`}
+		>
+			{children}
+		</motion.button>
+	);
+}
 
 function TranslationSheetHeader({
 	activeTab,

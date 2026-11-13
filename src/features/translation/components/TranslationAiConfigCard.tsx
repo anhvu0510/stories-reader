@@ -1,6 +1,6 @@
-import { Check, ChevronDown, ChevronUp, Heading, Sparkles, UserCheck } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import {
 	buildModelPlatformList,
@@ -27,8 +27,6 @@ interface TranslationAiConfigCardProps {
 	poolStatus: PoolStatus | null;
 	setPoolStatus: React.Dispatch<React.SetStateAction<PoolStatus | null>>;
 	quotas?: AIQuota[];
-	onDetectProperNouns: () => void;
-	onTranslateChineseTitles: () => void;
 }
 
 function PlatformFilterTabs({
@@ -43,10 +41,13 @@ function PlatformFilterTabs({
 	if (platforms.length <= 1) return null;
 
 	return (
-		<div className="flex bg-white/5 p-1 rounded-xl border border-white/10 gap-1 overflow-x-auto hide-scrollbar">
+		<div
+			data-testid="platform-filter-tabs"
+			className="flex bg-white/5 p-1 rounded-xl border border-white/10 gap-1 overflow-x-auto hide-scrollbar"
+		>
 			{platforms.map((plat) => {
 				const isActive = activePlatform === plat;
-				const label = plat === 'ALL' ? 'Tất cả' : formatPlatformDisplayName(plat);
+				const label = formatPlatformDisplayName(plat);
 				return (
 					<button
 						key={plat}
@@ -140,16 +141,28 @@ function AIModelPicker({
 	const modelList = useMemo(() => buildModelPlatformList(quotas, options.availableModels), [quotas, options.availableModels]);
 
 	const availablePlatforms = useMemo(() => {
-		const platforms = Array.from(new Set(modelList.map((m) => m.platform).filter(Boolean)));
-		return platforms.length > 1 ? ['ALL', ...platforms] : platforms;
+		return Array.from(new Set(modelList.map((m) => m.platform).filter(Boolean)));
 	}, [modelList]);
 
-	const [activePlatform, setActivePlatform] = useState<string>('ALL');
+	const [activePlatform, setActivePlatform] = useState<string>(() => {
+		if (options.platform && availablePlatforms.includes(options.platform)) {
+			return options.platform;
+		}
+		return availablePlatforms[0] || '';
+	});
+
+	useEffect(() => {
+		if (options.platform && availablePlatforms.includes(options.platform)) {
+			setActivePlatform(options.platform);
+		} else if (availablePlatforms.length > 0 && !availablePlatforms.includes(activePlatform)) {
+			setActivePlatform(availablePlatforms[0]);
+		}
+	}, [options.platform, availablePlatforms, activePlatform]);
 
 	const displayedModels = useMemo(() => {
-		if (activePlatform === 'ALL' || availablePlatforms.length <= 1) return modelList;
+		if (!activePlatform) return modelList;
 		return modelList.filter((m) => m.platform === activePlatform);
-	}, [modelList, activePlatform, availablePlatforms.length]);
+	}, [modelList, activePlatform]);
 
 	return (
 		<div className="space-y-2">
@@ -226,46 +239,6 @@ function AIParameterControls({
 	);
 }
 
-function QuickUtilityActions({
-	onDetectProperNouns,
-	onTranslateChineseTitles,
-}: {
-	onDetectProperNouns: () => void;
-	onTranslateChineseTitles: () => void;
-}) {
-	return (
-		<div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
-			<motion.button
-				type="button"
-				whileTap={{ scale: 0.95 }}
-				onClick={() => {
-					triggerHaptic('light');
-					onDetectProperNouns();
-				}}
-				className="h-8 px-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-on-surface text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
-				title="Phát hiện xưng hô / danh từ riêng"
-			>
-				<UserCheck size={13} className="text-primary shrink-0" />
-				<span className="truncate">Quét xưng hô</span>
-			</motion.button>
-
-			<motion.button
-				type="button"
-				whileTap={{ scale: 0.95 }}
-				onClick={() => {
-					triggerHaptic('light');
-					onTranslateChineseTitles();
-				}}
-				className="h-8 px-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-on-surface text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
-				title="Dịch tiêu đề tiếng Trung"
-			>
-				<Heading size={13} className="text-amber-400 shrink-0" />
-				<span className="truncate">Dịch tiêu đề</span>
-			</motion.button>
-		</div>
-	);
-}
-
 function ConfigCardHeader({
 	modelLabel,
 	platformLabel,
@@ -325,8 +298,6 @@ export function TranslationAiConfigCard({
 	poolStatus,
 	setPoolStatus,
 	quotas = [],
-	onDetectProperNouns,
-	onTranslateChineseTitles,
 }: TranslationAiConfigCardProps) {
 	const modelLabel = formatModelDisplayName(options.model) || options.model || 'Chưa chọn model AI';
 	const platformLabel = options.platform ? formatPlatformDisplayName(options.platform) : '';
@@ -360,7 +331,6 @@ export function TranslationAiConfigCard({
 					>
 						<AIModelPicker options={options} setOptions={setOptions} setPoolStatus={setPoolStatus} quotas={quotas} />
 						<AIParameterControls options={options} setOptions={setOptions} />
-						<QuickUtilityActions onDetectProperNouns={onDetectProperNouns} onTranslateChineseTitles={onTranslateChineseTitles} />
 					</motion.div>
 				)}
 			</AnimatePresence>

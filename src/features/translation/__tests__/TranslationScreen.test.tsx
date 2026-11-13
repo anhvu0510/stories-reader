@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, cleanup, within } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -190,13 +190,30 @@ describe('TranslationScreen Full-Screen Implementation', () => {
 		const configToggle = await screen.findByText('2.5 FLASH');
 		fireEvent.click(configToggle);
 
-		// AI Studio and DeployAI exist in mock quotas
-		expect(await screen.findByRole('button', { name: 'AI Studio' })).toBeDefined();
-		expect(screen.getByRole('button', { name: 'DeployAI' })).toBeDefined();
+		const platformTabs = await screen.findByTestId('platform-filter-tabs');
+		expect(within(platformTabs).getByRole('button', { name: 'AI Studio' })).toBeDefined();
+		expect(within(platformTabs).getByRole('button', { name: 'DeployAI' })).toBeDefined();
+
+		// "Tất cả" tab should NOT exist
+		expect(within(platformTabs).queryByRole('button', { name: 'Tất cả' })).toBeNull();
 
 		// Unsupported platforms like Vertex AI, OpenAI should NOT be displayed
-		expect(screen.queryByRole('button', { name: 'Vertex AI' })).toBeNull();
-		expect(screen.queryByRole('button', { name: 'OpenAI' })).toBeNull();
+		expect(within(platformTabs).queryByRole('button', { name: 'Vertex AI' })).toBeNull();
+		expect(within(platformTabs).queryByRole('button', { name: 'OpenAI' })).toBeNull();
+	});
+
+	it('renders standalone quick tools outside AI config card and triggers handlers', async () => {
+		renderScreen();
+
+		const properNounsBtn = await screen.findByRole('button', { name: /Phát hiện xưng hô/i });
+		expect(properNounsBtn).toBeDefined();
+		fireEvent.click(properNounsBtn);
+		expect(AIRepository.detectProperNouns).toHaveBeenCalled();
+
+		const translateTitlesBtn = screen.getByRole('button', { name: /Dịch tiêu đề tiếng Trung/i });
+		expect(translateTitlesBtn).toBeDefined();
+		fireEvent.click(translateTitlesBtn);
+		expect(AIRepository.translateChineseTitles).toHaveBeenCalled();
 	});
 
 	it('shows empty state and disables translate button when BE returns no models', async () => {

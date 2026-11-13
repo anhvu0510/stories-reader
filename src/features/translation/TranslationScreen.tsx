@@ -7,6 +7,7 @@ import { TranslationActionDock } from './components/TranslationActionDock';
 import { TranslationAiConfigCard } from './components/TranslationAiConfigCard';
 import { TranslationBatchSection } from './components/TranslationBatchSection';
 import { TranslationHeader } from './components/TranslationHeader';
+import { TranslationQuickTools } from './components/TranslationQuickTools';
 import { TranslationStorySection } from './components/TranslationStorySection';
 import { useTranslationScreenState } from './hooks/useTranslationScreenState';
 
@@ -46,8 +47,12 @@ export function TranslationScreen() {
 					poolStatus={state.poolStatus}
 					setPoolStatus={state.setPoolStatus}
 					quotas={state.quotas}
+				/>
+
+				<TranslationQuickTools
 					onDetectProperNouns={state.actions.handleDetectProperNouns}
 					onTranslateChineseTitles={state.actions.handleTranslateChineseTitles}
+					disabled={!state.options.model}
 				/>
 
 				{state.activeTab === 'batch_chapter' && (
