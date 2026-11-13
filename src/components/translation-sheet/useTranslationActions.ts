@@ -95,7 +95,11 @@ export function useTranslationActions({
 			return;
 		}
 		showToast('Đã gửi yêu cầu xử lý', 'success');
-		AIRepository.detectProperNouns({ bookId: targetBookId, model: options.model }).catch((e: unknown) => {
+		AIRepository.detectProperNouns({
+			bookId: targetBookId,
+			model: options.model,
+			platform: options.platform || (options.model?.includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO'),
+		}).catch((e: unknown) => {
 			console.warn('detectProperNouns bg error:', e);
 		});
 	};

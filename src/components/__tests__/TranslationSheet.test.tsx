@@ -215,6 +215,34 @@ describe('TranslationSheet Requirements', () => {
 		});
 	});
 
+	it('triggers detectProperNouns with DEPLOYAI platform when deepseek model is selected', async () => {
+		vi.mocked(SettingsRepository.getSettings).mockResolvedValueOnce({
+			value: JSON.stringify({ model: 'deepseek-ai/deepseek-v4.1-flash' }),
+		});
+		const { fireEvent } = await import('@testing-library/react');
+		render(<TranslationSheet {...defaultProps} />);
+
+		const detectBtn = screen.getByRole('button', {
+			name: /Phát hiện xưng hô \/ danh từ riêng/i,
+		});
+
+		await waitFor(() => {
+			expect(SettingsRepository.getSettings).toHaveBeenCalled();
+		});
+
+		fireEvent.click(detectBtn);
+
+		await waitFor(() => {
+			expect(AIRepository.detectProperNouns).toHaveBeenCalledWith(
+				expect.objectContaining({
+					bookId: 'book-123',
+					model: 'deepseek-ai/deepseek-v4.1-flash',
+					platform: 'DEPLOYAI',
+				})
+			);
+		});
+	});
+
 	it('triggers translateChineseTitles API when clicking translate titles button', async () => {
 		const { fireEvent } = await import('@testing-library/react');
 		render(<TranslationSheet {...defaultProps} />);

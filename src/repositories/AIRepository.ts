@@ -36,7 +36,7 @@ export class AIRepository {
 		return apiClient.delete(`/api/quota/${id}`);
 	}
 
-	static async detectProperNouns(params: { bookId: string; model?: string; maxChars?: number }): Promise<unknown> {
+	static async detectProperNouns(params: { bookId: string; model?: string; maxChars?: number; platform?: string }): Promise<unknown> {
 		return apiClient.post('/stories/detect-proper-nouns', params);
 	}
 
