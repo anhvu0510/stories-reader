@@ -1,7 +1,7 @@
 {
-  "version": "1.0.400",
+  "version": "1.0.401",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "10f8f5767ef7f1cbe730932986ce5cc874866618e8a061c0a8b471b02b06ad93",
-  "releaseNotes": "feat: add TranslationScreen feature and navigation routes",
-  "updatedAt": "2026-11-13T16:46:10Z"
+  "checksum": "ca33dbdb20877aa9c89562fb73795c795f98b2bdf7382df9ebbbbf5609ffc567",
+  "releaseNotes": "refactor: improve translation sheet AI model selection and platform handling",
+  "updatedAt": "2026-11-13T17:06:39Z"
 }
