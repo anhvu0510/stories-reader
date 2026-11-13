@@ -1,7 +1,7 @@
 {
-  "version": "1.0.396",
+  "version": "1.0.397",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "9a66e6e52007da56b303b58b93697bd0d2e2db4c8066e2cd3e9ef29b3e68be64",
-  "releaseNotes": "perf(reader): replace repetitive inline utility classes with unified semantic story-paragraph class",
-  "updatedAt": "2026-11-12T10:24:58Z"
+  "checksum": "15072486432aae5f7961fac4a17623b226bcccead81d3200bbad443da1ce7ced",
+  "releaseNotes": "feat(ui): format AI model names into concise shortnames across settings and translation sheet",
+  "updatedAt": "2026-11-13T09:47:48Z"
 }
