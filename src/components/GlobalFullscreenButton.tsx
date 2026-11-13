@@ -29,7 +29,7 @@ export const GlobalFullscreenButton = memo(function GlobalFullscreenButton() {
 		return () => window.removeEventListener('scroll', handleScroll);
 	}, [isLibrary]);
 
-	if (isAndroidApp() || !isSupported || isFullscreen) {
+	if (isAndroidApp() || !isSupported || isFullscreen || location.pathname.includes('/translate')) {
 		return null;
 	}
 

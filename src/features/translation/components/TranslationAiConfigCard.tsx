@@ -1,11 +1,21 @@
 import { Check, ChevronDown, ChevronUp, Heading, Sparkles, UserCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 
-import { DEFAULT_VERTEX_MODELS, type PoolStatus, type TranslationOptions } from '@/components/translation-sheet/translationHelpers';
+import {
+	buildModelPlatformList,
+	type ModelPlatformOption,
+	type PoolStatus,
+	type TranslationOptions,
+} from '@/components/translation-sheet/translationHelpers';
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { cn } from '@/lib/utils';
-import { formatModelDisplayName } from '@/shared/utils/modelFormatters';
+import {
+	formatCompactNumber,
+	formatModelDisplayName,
+	formatPlatformDisplayName,
+	getPlatformBadgeClass,
+} from '@/shared/utils/modelFormatters';
 
 import type { AIQuota } from '@/shared/types';
 
@@ -21,6 +31,101 @@ interface TranslationAiConfigCardProps {
 	onTranslateChineseTitles: () => void;
 }
 
+function PlatformFilterTabs({
+	platforms,
+	activePlatform,
+	onSelect,
+}: {
+	platforms: string[];
+	activePlatform: string;
+	onSelect: (plat: string) => void;
+}) {
+	if (platforms.length <= 1) return null;
+
+	return (
+		<div className="flex bg-white/5 p-1 rounded-xl border border-white/10 gap-1 overflow-x-auto hide-scrollbar">
+			{platforms.map((plat) => {
+				const isActive = activePlatform === plat;
+				const label = plat === 'ALL' ? 'Tất cả' : formatPlatformDisplayName(plat);
+				return (
+					<button
+						key={plat}
+						type="button"
+						onClick={() => {
+							triggerHaptic('selection');
+							onSelect(plat);
+						}}
+						className={cn(
+							'px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer',
+							isActive
+								? 'bg-primary/20 text-primary border border-primary/50 shadow-xs'
+								: 'text-on-surface-variant/70 hover:text-on-surface'
+						)}
+					>
+						{label}
+					</button>
+				);
+			})}
+		</div>
+	);
+}
+
+function AIModelGrid({
+	models,
+	selectedModel,
+	selectedPlatform,
+	onSelect,
+}: {
+	models: ModelPlatformOption[];
+	selectedModel: string;
+	selectedPlatform?: string;
+	onSelect: (item: ModelPlatformOption) => void;
+}) {
+	if (models.length === 0) {
+		return (
+			<div className="py-4 px-2 text-center text-on-surface-variant bg-white/[0.02] border border-white/5 rounded-xl">
+				<p className="font-bold text-xs text-amber-400/90">Chưa có mô hình AI từ máy chủ</p>
+				<p className="text-[10px] mt-1 text-on-surface-variant/60">Vui lòng kiểm tra lại cấu hình Quota ở Cài đặt</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto hide-scrollbar p-0.5">
+			{models.map((item) => {
+				const isSelected = selectedModel === item.model && (selectedPlatform ? selectedPlatform === item.platform : true);
+				const formattedName = formatModelDisplayName(item.model);
+				const badgeClass = getPlatformBadgeClass(item.platform);
+				const platName = formatPlatformDisplayName(item.platform);
+
+				return (
+					<button
+						key={`${item.platform}:::${item.model}`}
+						type="button"
+						onClick={() => onSelect(item)}
+						className={cn(
+							'p-2 rounded-xl text-left border transition-all flex flex-col justify-between active:scale-95 cursor-pointer min-h-[54px]',
+							isSelected
+								? 'bg-primary/20 border-primary text-primary font-black shadow-xs'
+								: 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface font-medium'
+						)}
+					>
+						<div className="flex items-center justify-between w-full gap-1 mb-1">
+							<span className={cn('text-[9px] font-bold px-1.5 py-0.2 rounded border font-mono tracking-wider', badgeClass)}>
+								{platName}
+							</span>
+							{isSelected && <Check size={13} className="text-primary shrink-0 font-bold" />}
+						</div>
+						<div className="font-mono font-bold text-[11px] truncate w-full" title={item.model}>
+							{formattedName || item.model}
+						</div>
+					</button>
+				);
+			})}
+		</div>
+	);
+}
+
 function AIModelPicker({
 	options,
 	setOptions,
@@ -32,49 +137,42 @@ function AIModelPicker({
 	setPoolStatus: React.Dispatch<React.SetStateAction<PoolStatus | null>>;
 	quotas?: AIQuota[];
 }) {
-	const rawModels = options.availableModels || DEFAULT_VERTEX_MODELS;
-	const cleanModels = [...new Set(rawModels.map((m) => (typeof m === 'string' ? m.replace(/\s*\([VA]\)$/i, '').trim() : m)))] as string[];
+	const modelList = useMemo(() => buildModelPlatformList(quotas, options.availableModels), [quotas, options.availableModels]);
+
+	const availablePlatforms = useMemo(() => {
+		const platforms = Array.from(new Set(modelList.map((m) => m.platform).filter(Boolean)));
+		return platforms.length > 1 ? ['ALL', ...platforms] : platforms;
+	}, [modelList]);
+
+	const [activePlatform, setActivePlatform] = useState<string>('ALL');
+
+	const displayedModels = useMemo(() => {
+		if (activePlatform === 'ALL' || availablePlatforms.length <= 1) return modelList;
+		return modelList.filter((m) => m.platform === activePlatform);
+	}, [modelList, activePlatform, availablePlatforms.length]);
 
 	return (
-		<div className="space-y-1.5">
-			<span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Mô hình AI:</span>
-			<div className="grid grid-cols-2 gap-1.5 max-h-44 overflow-y-auto hide-scrollbar p-0.5">
-				{cleanModels.map((m) => {
-					const isSelected = options.model === m;
-					const formattedName = formatModelDisplayName(String(m));
-
-					return (
-						<button
-							key={m}
-							type="button"
-							onClick={() => {
-								triggerHaptic('selection');
-								const matched = quotas.find((q) => q.model === m);
-								const targetPlatform = matched?.platform || (m.toLowerCase().includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO');
-								setOptions({
-									...options,
-									model: m,
-									platform: targetPlatform,
-								});
-								setPoolStatus(null);
-							}}
-							className={cn(
-								'px-2.5 py-2 rounded-xl text-left border transition-all flex items-center justify-between active:scale-95 cursor-pointer',
-								isSelected
-									? 'bg-primary/20 border-primary text-primary font-black shadow-xs'
-									: 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface font-medium'
-							)}
-						>
-							<div className="min-w-0 pr-1 flex-1">
-								<div className={`font-mono font-bold text-[11px] truncate ${isSelected ? 'text-primary font-black' : 'text-on-surface'}`}>
-									{formattedName || m}
-								</div>
-							</div>
-							{isSelected && <Check size={13} className="text-primary shrink-0 font-bold ml-1" />}
-						</button>
-					);
-				})}
+		<div className="space-y-2">
+			<div className="flex items-center justify-between">
+				<span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Mô hình AI theo Platform:</span>
 			</div>
+
+			<PlatformFilterTabs platforms={availablePlatforms} activePlatform={activePlatform} onSelect={setActivePlatform} />
+
+			<AIModelGrid
+				models={displayedModels}
+				selectedModel={options.model}
+				selectedPlatform={options.platform}
+				onSelect={(item) => {
+					triggerHaptic('selection');
+					setOptions({
+						...options,
+						model: item.model,
+						platform: item.platform,
+					});
+					setPoolStatus(null);
+				}}
+			/>
 		</div>
 	);
 }
@@ -88,7 +186,6 @@ function AIParameterControls({
 }) {
 	return (
 		<div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
-			{/* Giới hạn từ */}
 			<div className="flex flex-col gap-1">
 				<label className="text-[9px] font-bold text-on-surface-variant/70 uppercase">GIỚI HẠN TỪ</label>
 				<div className="flex items-center bg-white/5 rounded-lg p-0.5 border border-white/10">
@@ -108,7 +205,6 @@ function AIParameterControls({
 				</div>
 			</div>
 
-			{/* Sáng tạo (Temperature) */}
 			<div className="flex flex-col gap-1">
 				<div className="flex justify-between items-center px-0.5">
 					<label className="text-[9px] font-bold text-on-surface-variant/70 uppercase">SÁNG TẠO</label>
@@ -130,6 +226,97 @@ function AIParameterControls({
 	);
 }
 
+function QuickUtilityActions({
+	onDetectProperNouns,
+	onTranslateChineseTitles,
+}: {
+	onDetectProperNouns: () => void;
+	onTranslateChineseTitles: () => void;
+}) {
+	return (
+		<div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
+			<motion.button
+				type="button"
+				whileTap={{ scale: 0.95 }}
+				onClick={() => {
+					triggerHaptic('light');
+					onDetectProperNouns();
+				}}
+				className="h-8 px-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-on-surface text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+				title="Phát hiện xưng hô / danh từ riêng"
+			>
+				<UserCheck size={13} className="text-primary shrink-0" />
+				<span className="truncate">Quét xưng hô</span>
+			</motion.button>
+
+			<motion.button
+				type="button"
+				whileTap={{ scale: 0.95 }}
+				onClick={() => {
+					triggerHaptic('light');
+					onTranslateChineseTitles();
+				}}
+				className="h-8 px-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-on-surface text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+				title="Dịch tiêu đề tiếng Trung"
+			>
+				<Heading size={13} className="text-amber-400 shrink-0" />
+				<span className="truncate">Dịch tiêu đề</span>
+			</motion.button>
+		</div>
+	);
+}
+
+function ConfigCardHeader({
+	modelLabel,
+	platformLabel,
+	platformBadge,
+	poolStatus,
+	showPool,
+	showConfig,
+	onToggle,
+}: {
+	modelLabel: string;
+	platformLabel: string;
+	platformBadge: string;
+	poolStatus: PoolStatus | null;
+	showPool: boolean;
+	showConfig: boolean;
+	onToggle: () => void;
+}) {
+	return (
+		<div
+			onClick={onToggle}
+			className="flex items-center justify-between p-2.5 px-3 hover:bg-white/5 transition-colors cursor-pointer select-none gap-2"
+		>
+			<div className="flex items-center gap-2 min-w-0 flex-1">
+				<div className="w-6 h-6 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0 border border-primary/30">
+					<Sparkles size={13} />
+				</div>
+				<div className="min-w-0 flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+					<span className="text-xs font-mono font-bold text-on-surface truncate">{modelLabel}</span>
+					{platformLabel && (
+						<span className={cn('text-[9px] font-bold px-1.5 py-0.2 rounded border font-mono tracking-wider shrink-0', platformBadge)}>
+							{platformLabel}
+						</span>
+					)}
+				</div>
+			</div>
+
+			<div className="flex items-center gap-1.5 shrink-0">
+				{showPool && poolStatus && (
+					<span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/15 border border-primary/30 text-primary shrink-0 flex items-center gap-1 font-mono">
+						<span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+						RPD: {formatCompactNumber(poolStatus.remain)}/{formatCompactNumber(poolStatus.total)}
+					</span>
+				)}
+				<div className="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors">
+					{showConfig ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+				</div>
+			</div>
+		</div>
+	);
+}
+
 export function TranslationAiConfigCard({
 	options,
 	setOptions,
@@ -141,76 +328,25 @@ export function TranslationAiConfigCard({
 	onDetectProperNouns,
 	onTranslateChineseTitles,
 }: TranslationAiConfigCardProps) {
-	const modelLabel = formatModelDisplayName(options.model) || options.model || 'Gemini Flash';
+	const modelLabel = formatModelDisplayName(options.model) || options.model || 'Chưa chọn model AI';
+	const platformLabel = options.platform ? formatPlatformDisplayName(options.platform) : '';
+	const platformBadge = getPlatformBadgeClass(options.platform);
 	const showPool = Boolean(poolStatus && poolStatus.model === options.model);
 
 	return (
 		<div className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden transition-all shadow-xs">
-			{/* Top Bar: Clickable header */}
-			<div
-				onClick={() => {
+			<ConfigCardHeader
+				modelLabel={modelLabel}
+				platformLabel={platformLabel}
+				platformBadge={platformBadge}
+				poolStatus={poolStatus}
+				showPool={showPool}
+				showConfig={showConfig}
+				onToggle={() => {
 					triggerHaptic('light');
 					setShowConfig(!showConfig);
 				}}
-				className="flex items-center justify-between p-2.5 px-3 hover:bg-white/5 transition-colors cursor-pointer select-none"
-			>
-				<div className="flex items-center gap-2 min-w-0">
-					<div className="w-6 h-6 rounded-lg bg-primary/20 text-primary flex items-center justify-center shrink-0 border border-primary/30">
-						<Sparkles size={13} />
-					</div>
-					<div className="min-w-0 flex items-center gap-1.5">
-						<span className="text-xs font-mono font-bold text-on-surface truncate">{modelLabel}</span>
-						{showPool && poolStatus && (
-							<span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/15 border border-primary/30 text-primary shrink-0 flex items-center gap-1">
-								<span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-								RPD: {poolStatus.remain.toLocaleString()}/{poolStatus.total.toLocaleString()}
-							</span>
-						)}
-					</div>
-				</div>
-
-				<div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-					<motion.button
-						type="button"
-						whileTap={{ scale: 0.88 }}
-						onClick={() => {
-							triggerHaptic('light');
-							onDetectProperNouns();
-						}}
-						className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-on-surface-variant hover:text-on-surface flex items-center justify-center cursor-pointer transition-colors shadow-2xs"
-						title="Phát hiện xưng hô / danh từ riêng"
-						aria-label="Phát hiện xưng hô / danh từ riêng"
-					>
-						<UserCheck size={13} />
-					</motion.button>
-
-					<motion.button
-						type="button"
-						whileTap={{ scale: 0.88 }}
-						onClick={() => {
-							triggerHaptic('light');
-							onTranslateChineseTitles();
-						}}
-						className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-on-surface-variant hover:text-on-surface flex items-center justify-center cursor-pointer transition-colors shadow-2xs"
-						title="Dịch tiêu đề tiếng Trung"
-						aria-label="Dịch tiêu đề tiếng Trung"
-					>
-						<Heading size={13} />
-					</motion.button>
-
-					<button
-						type="button"
-						onClick={() => {
-							triggerHaptic('light');
-							setShowConfig(!showConfig);
-						}}
-						className="w-7 h-7 rounded-lg hover:bg-white/10 text-on-surface-variant hover:text-on-surface flex items-center justify-center cursor-pointer transition-colors"
-						aria-label={showConfig ? 'Thu gọn cấu hình' : 'Mở rộng cấu hình'}
-					>
-						{showConfig ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-					</button>
-				</div>
-			</div>
+			/>
 
 			{/* Expandable Configuration Body */}
 			<AnimatePresence>
@@ -224,6 +360,7 @@ export function TranslationAiConfigCard({
 					>
 						<AIModelPicker options={options} setOptions={setOptions} setPoolStatus={setPoolStatus} quotas={quotas} />
 						<AIParameterControls options={options} setOptions={setOptions} />
+						<QuickUtilityActions onDetectProperNouns={onDetectProperNouns} onTranslateChineseTitles={onTranslateChineseTitles} />
 					</motion.div>
 				)}
 			</AnimatePresence>

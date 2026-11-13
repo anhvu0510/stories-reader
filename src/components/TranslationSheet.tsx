@@ -60,6 +60,17 @@ function TranslationSheetHeader({
 	);
 }
 
+function computeSheetLabels(
+	actions: { isSubmitting: boolean; submittingType: 'sync' | 'async' | null; selectedBooks: Set<string> },
+	activeTab: Tab,
+	selectedChaptersCount: number
+) {
+	return {
+		sync: getSyncButtonLabel(actions.isSubmitting, actions.submittingType, activeTab, selectedChaptersCount, actions.selectedBooks.size),
+		async: getAsyncButtonLabel(actions.isSubmitting, actions.submittingType, activeTab, selectedChaptersCount, actions.selectedBooks.size),
+	};
+}
+
 export function TranslationSheet(props: TranslationSheetProps) {
 	const {
 		onClose,
@@ -97,20 +108,7 @@ export function TranslationSheet(props: TranslationSheetProps) {
 		actions.setSelectedBooks(next);
 	};
 
-	const syncButtonLabel = getSyncButtonLabel(
-		actions.isSubmitting,
-		actions.submittingType,
-		activeTab,
-		batch.selectedChapters.size,
-		actions.selectedBooks.size
-	);
-	const asyncButtonLabel = getAsyncButtonLabel(
-		actions.isSubmitting,
-		actions.submittingType,
-		activeTab,
-		batch.selectedChapters.size,
-		actions.selectedBooks.size
-	);
+	const labels = computeSheetLabels(actions, activeTab, batch.selectedChapters.size);
 
 	return (
 		<BottomSheet
@@ -183,8 +181,9 @@ export function TranslationSheet(props: TranslationSheetProps) {
 			<TranslationSheetActionButtons
 				isSubmitting={actions.isSubmitting}
 				submittingType={actions.submittingType}
-				syncButtonLabel={syncButtonLabel}
-				asyncButtonLabel={asyncButtonLabel}
+				syncButtonLabel={labels.sync}
+				asyncButtonLabel={labels.async}
+				disabled={!options.model}
 				onSubmit={actions.handleSubmit}
 			/>
 		</BottomSheet>

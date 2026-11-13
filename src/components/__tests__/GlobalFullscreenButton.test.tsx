@@ -103,4 +103,12 @@ describe('GlobalFullscreenButton Component', () => {
 		renderButton('/');
 		expect(screen.queryByTestId('global-fullscreen-btn')).toBeNull();
 	});
+
+	it('does not render on translate routes to prevent layout overlapping', () => {
+		renderButton('/book/book-123/translate');
+		expect(screen.queryByTestId('global-fullscreen-btn')).toBeNull();
+
+		renderButton('/translate');
+		expect(screen.queryByTestId('global-fullscreen-btn')).toBeNull();
+	});
 });

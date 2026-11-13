@@ -23,7 +23,14 @@ vi.mock('../../repositories/ChapterRepository', () => ({
 
 vi.mock('../../repositories/AIRepository', () => ({
 	AIRepository: {
-		getQuotas: vi.fn().mockResolvedValue({ quotas: [], currentConfig: {} }),
+		getQuotas: vi.fn().mockResolvedValue({
+			quotas: [
+				{ model: 'gemini-2.5-flash-lite', platform: 'AI_STUDIO', isActive: true },
+				{ model: 'deepseek-ai/deepseek-v4.1-flash', platform: 'DEPLOYAI', isActive: true },
+			],
+			availableModels: ['gemini-2.5-flash-lite', 'deepseek-ai/deepseek-v4.1-flash'],
+			currentConfig: { model: 'gemini-2.5-flash-lite', platform: 'AI_STUDIO' },
+		}),
 		detectProperNouns: vi.fn().mockResolvedValue({ success: true }),
 		translateChineseTitles: vi.fn().mockResolvedValue({ success: true }),
 	},
@@ -160,9 +167,12 @@ describe('TranslationSheet Requirements', () => {
 			<TranslationSheet {...defaultProps} initialSelectedChapters={['chap-15']} onSuccess={onSuccessMock} currentChapterNumber={15} />
 		);
 
-		const syncBtn = screen.getByRole('button', { name: /^Dịch \(/i });
-		expect(syncBtn).toBeDefined();
+		await waitFor(() => {
+			const syncBtn = screen.getByRole('button', { name: /^Dịch \(/i }) as HTMLButtonElement;
+			expect(syncBtn.disabled).toBe(false);
+		});
 
+		const syncBtn = screen.getByRole('button', { name: /^Dịch \(/i });
 		fireEvent.click(syncBtn);
 
 		await waitFor(() => {
@@ -180,9 +190,12 @@ describe('TranslationSheet Requirements', () => {
 		const { fireEvent } = await import('@testing-library/react');
 		render(<TranslationSheet {...defaultProps} initialSelectedChapters={['chap-15']} currentChapterNumber={15} />);
 
-		const asyncBtn = screen.getByRole('button', { name: /Dịch Batch/i });
-		expect(asyncBtn).toBeDefined();
+		await waitFor(() => {
+			const asyncBtn = screen.getByRole('button', { name: /Dịch Batch/i }) as HTMLButtonElement;
+			expect(asyncBtn.disabled).toBe(false);
+		});
 
+		const asyncBtn = screen.getByRole('button', { name: /Dịch Batch/i });
 		fireEvent.click(asyncBtn);
 
 		await waitFor(() => {

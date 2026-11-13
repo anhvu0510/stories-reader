@@ -10,6 +10,7 @@ interface TranslationActionDockProps {
 	asyncButtonLabel: string;
 	selectedCount: number;
 	onSubmit: (sync: boolean) => void;
+	hasModel?: boolean;
 }
 
 export function TranslationActionDock({
@@ -19,10 +20,11 @@ export function TranslationActionDock({
 	asyncButtonLabel,
 	selectedCount,
 	onSubmit,
+	hasModel = true,
 }: TranslationActionDockProps) {
 	const isSyncSubmitting = isSubmitting && submittingType === 'sync';
 	const isAsyncSubmitting = isSubmitting && submittingType === 'async';
-	const isDisabled = isSubmitting || selectedCount === 0;
+	const isDisabled = isSubmitting || selectedCount === 0 || !hasModel;
 
 	return (
 		<div className="fixed bottom-0 left-0 right-0 z-30 max-w-md mx-auto p-3 sm:p-4 border-t border-white/10 bg-surface/90 dark:bg-surface/90 backdrop-blur-xl pb-safe shadow-[0_-8px_24px_rgba(0,0,0,0.3)]">

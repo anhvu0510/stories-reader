@@ -127,7 +127,7 @@ export function useTranslationActions({
 		setSubmittingType(isSync ? 'sync' : 'async');
 
 		const chapterIdToUse = initialSelectedChapters[0] || currentChapterId;
-		const validationError = validateSubmitParams(activeTab, chapterIdToUse, batch.selectedChapters.size, selectedBooks.size);
+		const validationError = validateSubmitParams(activeTab, chapterIdToUse, batch.selectedChapters.size, selectedBooks.size, options.model);
 		if (validationError) {
 			showToast(validationError, 'error');
 			setIsSubmitting(false);

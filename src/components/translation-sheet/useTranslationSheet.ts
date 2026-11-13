@@ -5,6 +5,7 @@ import { ChapterRepository } from '@/repositories/ChapterRepository';
 import { SettingsRepository } from '@/repositories/SettingsRepository';
 
 import {
+	buildModelPlatformList,
 	defaultOptions,
 	extractConfig,
 	extractRawQuotas,
@@ -75,20 +76,28 @@ export function useTranslationOptions(activeTab: Tab) {
 				const rawQuotas = extractRawQuotas(res);
 				setQuotas(rawQuotas as AIQuota[]);
 				const cfg = extractConfig(res);
-				if (cfg) {
-					setOptions((prev) => {
-						const newOptions = { ...prev, ...cfg };
-						const uniqueModels = extractUniqueModels(rawQuotas);
-						if (uniqueModels.length > 0) newOptions.availableModels = uniqueModels;
-						const matched = (rawQuotas as AIQuota[]).find((q) => q.model === newOptions.model);
-						if (matched?.platform) {
-							newOptions.platform = matched.platform;
-						} else if (newOptions.model?.includes('deepseek')) {
-							newOptions.platform = 'DEPLOYAI';
-						}
-						return newOptions;
-					});
-				}
+				const modelList = buildModelPlatformList(rawQuotas, extractUniqueModels(rawQuotas));
+
+				setOptions((prev) => {
+					const newOptions = { ...prev, ...(cfg || {}) };
+					if (prev.model) {
+						newOptions.model = prev.model;
+						newOptions.platform = prev.platform;
+					}
+					newOptions.availableModels = modelList.map((m) => m.model);
+
+					const matched = modelList.find((m) => m.model === newOptions.model);
+					if (matched) {
+						newOptions.platform = matched.platform;
+					} else if (modelList.length > 0) {
+						newOptions.model = modelList[0].model;
+						newOptions.platform = modelList[0].platform;
+					} else {
+						newOptions.model = '';
+						newOptions.platform = '';
+					}
+					return newOptions;
+				});
 				setIsOptionsLoaded(true);
 			})
 			.catch((err) => {
@@ -96,7 +105,22 @@ export function useTranslationOptions(activeTab: Tab) {
 				SettingsRepository.updateSettings('stories.ui.translate', defaultOptions)
 					.then(() => AIRepository.getQuotas())
 					.then((res) => {
-						if (active && res) setQuotas(extractRawQuotas(res) as AIQuota[]);
+						if (!active || !res) return;
+						const rawQuotas = extractRawQuotas(res);
+						setQuotas(rawQuotas as AIQuota[]);
+						const modelList = buildModelPlatformList(rawQuotas, extractUniqueModels(rawQuotas));
+						setOptions((prev) => {
+							const newOptions = { ...prev };
+							newOptions.availableModels = modelList.map((m) => m.model);
+							if (modelList.length > 0) {
+								newOptions.model = modelList[0].model;
+								newOptions.platform = modelList[0].platform;
+							} else {
+								newOptions.model = '';
+								newOptions.platform = '';
+							}
+							return newOptions;
+						});
 					})
 					.catch(() => {})
 					.finally(() => {

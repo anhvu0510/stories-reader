@@ -79,6 +79,7 @@ export function TranslationScreen() {
 				asyncButtonLabel={state.asyncButtonLabel}
 				selectedCount={selectedCount}
 				onSubmit={state.actions.handleSubmit}
+				hasModel={Boolean(state.options.model)}
 			/>
 		</div>
 	);

@@ -32,17 +32,66 @@ export interface QuotasPayload {
 	config?: { platform?: string; [key: string]: unknown };
 }
 
-export const DEFAULT_VERTEX_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-flash'];
+export const DEFAULT_VERTEX_MODELS: string[] = [];
+
+export interface ModelPlatformOption {
+	model: string;
+	platform: string;
+	rpdLimit?: number;
+	rpmLimit?: number;
+}
+
+export const DEFAULT_PLATFORM_MODELS: ModelPlatformOption[] = [];
+
+function parseQuotaItem(raw: unknown): ModelPlatformOption | null {
+	if (!raw || typeof raw !== 'object') return null;
+	const item = raw as { model?: string; platform?: string; rpdLimit?: number; rpmLimit?: number; isActive?: boolean };
+	if (item.isActive === false || !item.model) return null;
+	const cleanModel = item.model.replace(/\s*\([VA]\)$/i, '').trim();
+	const platform = item.platform || (cleanModel.toLowerCase().includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO');
+	return { model: cleanModel, platform, rpdLimit: item.rpdLimit, rpmLimit: item.rpmLimit };
+}
+
+function parseAvailableModelItem(raw: unknown): ModelPlatformOption | null {
+	if (!raw) return null;
+	const cleanModel = String(raw)
+		.replace(/\s*\([VA]\)$/i, '')
+		.trim();
+	const platform = cleanModel.toLowerCase().includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO';
+	return { model: cleanModel, platform };
+}
+
+export function buildModelPlatformList(quotas?: unknown[], availableModels?: string[]): ModelPlatformOption[] {
+	const items: ModelPlatformOption[] = [];
+	const seen = new Set<string>();
+
+	const appendIfNew = (item: ModelPlatformOption | null) => {
+		if (!item) return;
+		const key = `${item.platform}:::${item.model}`;
+		if (seen.has(key)) return;
+		seen.add(key);
+		items.push(item);
+	};
+
+	if (Array.isArray(quotas)) {
+		quotas.forEach((q) => appendIfNew(parseQuotaItem(q)));
+	}
+	if (items.length === 0 && Array.isArray(availableModels)) {
+		availableModels.forEach((m) => appendIfNew(parseAvailableModelItem(m)));
+	}
+
+	return items;
+}
 
 export const defaultOptions: TranslationOptions = {
-	model: 'gemini-2.5-flash-lite',
-	platform: 'AI_STUDIO',
+	model: '',
+	platform: '',
 	minWords: 100,
 	maxWords: 500,
 	temperature: 0.7,
 	forceRetranslate: false,
 	batchingGroup: true,
-	availableModels: DEFAULT_VERTEX_MODELS,
+	availableModels: [],
 };
 
 export interface TranslationSheetProps {
@@ -107,8 +156,12 @@ export function validateSubmitParams(
 	activeTab: Tab,
 	chapterIdToUse: string | undefined,
 	selectedChaptersCount: number,
-	selectedBooksCount: number
+	selectedBooksCount: number,
+	model?: string
 ): string | null {
+	if (!model) {
+		return 'Chưa có mô hình AI khả dụng từ máy chủ';
+	}
 	if (activeTab === 'current' && !chapterIdToUse) {
 		return 'Không xác định được chương hiện tại';
 	}

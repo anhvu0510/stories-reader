@@ -4,9 +4,9 @@ import React from 'react';
 
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { cn } from '@/lib/utils';
-import { formatModelDisplayName } from '@/shared/utils/modelFormatters';
+import { formatModelDisplayName, formatPlatformDisplayName, getPlatformBadgeClass } from '@/shared/utils/modelFormatters';
 
-import { DEFAULT_VERTEX_MODELS, getTabButtonClass, type PoolStatus, type TranslationOptions } from './translationHelpers';
+import { buildModelPlatformList, getTabButtonClass, type PoolStatus, type TranslationOptions } from './translationHelpers';
 
 import type { AIQuota } from '@/shared/types';
 
@@ -61,8 +61,7 @@ interface AIConfigDropdownProps {
 }
 
 function AIConfigDropdown({ options, setOptions, setPoolStatus, quotas = [] }: AIConfigDropdownProps) {
-	const rawModels = options.availableModels || DEFAULT_VERTEX_MODELS;
-	const cleanModels = [...new Set(rawModels.map((m) => (typeof m === 'string' ? m.replace(/\s*\([VA]\)$/i, '').trim() : m)))] as string[];
+	const modelList = buildModelPlatformList(quotas, options.availableModels);
 
 	return (
 		<div className="px-3 p-3 flex flex-col gap-2.5 max-h-[35vh] overflow-y-auto hide-scrollbar">
@@ -124,41 +123,53 @@ function AIConfigDropdown({ options, setOptions, setPoolStatus, quotas = [] }: A
 					<span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Mô hình AI:</span>
 				</div>
 
-				<div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto hide-scrollbar p-0.5">
-					{cleanModels.map((m) => {
-						const isSelected = options.model === m;
-						const formattedName = formatModelDisplayName(String(m));
+				{modelList.length === 0 ? (
+					<div className="py-3 px-2 text-center text-on-surface-variant bg-white/[0.02] border border-white/5 rounded-xl">
+						<p className="font-bold text-xs text-amber-400/90">Chưa có mô hình AI từ máy chủ</p>
+						<p className="text-[10px] mt-0.5 text-on-surface-variant/60">Vui lòng kiểm tra Quota ở Cài đặt</p>
+					</div>
+				) : (
+					<div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto hide-scrollbar p-0.5">
+						{modelList.map((item) => {
+							const isSelected = options.model === item.model && (options.platform ? options.platform === item.platform : true);
+							const formattedName = formatModelDisplayName(item.model);
+							const badgeClass = getPlatformBadgeClass(item.platform);
+							const platName = formatPlatformDisplayName(item.platform);
 
-						return (
-							<button
-								key={m}
-								onClick={() => {
-									const matched = quotas.find((q) => q.model === m);
-									const targetPlatform = matched?.platform || (m.toLowerCase().includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO');
-									setOptions({
-										...options,
-										model: m,
-										platform: targetPlatform,
-									});
-									setPoolStatus(null);
-								}}
-								className={cn(
-									'px-3 py-2 rounded-xl text-left border transition-all flex items-center justify-between active:scale-95',
-									isSelected
-										? 'bg-primary/20 hover:bg-primary/25 border-2 border-primary text-primary font-black shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]'
-										: 'bg-white/5 hover:bg-white/10 border border-white/10 text-on-surface font-medium'
-								)}
-							>
-								<div className="min-w-0 pr-1 flex-1">
-									<div className={`font-mono font-bold text-[11px] truncate ${isSelected ? 'text-primary font-black' : 'text-on-surface'}`}>
-										{formattedName || m}
+							return (
+								<button
+									key={`${item.platform}:::${item.model}`}
+									type="button"
+									onClick={() => {
+										triggerHaptic('selection');
+										setOptions({
+											...options,
+											model: item.model,
+											platform: item.platform,
+										});
+										setPoolStatus(null);
+									}}
+									className={cn(
+										'px-2.5 py-2 rounded-xl text-left border transition-all flex flex-col justify-between active:scale-95 cursor-pointer min-h-[54px]',
+										isSelected
+											? 'bg-primary/20 hover:bg-primary/25 border-2 border-primary text-primary font-black shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]'
+											: 'bg-white/5 hover:bg-white/10 border border-white/10 text-on-surface font-medium'
+									)}
+								>
+									<div className="flex items-center justify-between w-full gap-1 mb-1">
+										<span className={cn('text-[9px] font-bold px-1.5 py-0.2 rounded border font-mono tracking-wider', badgeClass)}>
+											{platName}
+										</span>
+										{isSelected && <Check size={13} className="text-primary shrink-0 font-bold" />}
 									</div>
-								</div>
-								{isSelected && <Check size={13} className="text-primary shrink-0 font-bold ml-1" />}
-							</button>
-						);
-					})}
-				</div>
+									<div className="font-mono font-bold text-[11px] truncate w-full" title={item.model}>
+										{formattedName || item.model}
+									</div>
+								</button>
+							);
+						})}
+					</div>
+				)}
 			</div>
 		</div>
 	);
@@ -200,6 +211,16 @@ export function TranslationSheetConfigBar({
 				<div className="flex items-center gap-2">
 					<Settings2 size={13} />
 					<span>Cấu hình AI</span>
+					{options.platform && (
+						<span
+							className={cn(
+								'text-[9px] font-bold px-1.5 py-0.2 rounded border font-mono tracking-wider',
+								getPlatformBadgeClass(options.platform)
+							)}
+						>
+							{formatPlatformDisplayName(options.platform)}
+						</span>
+					)}
 					{showPoolStatus && poolStatus && <PoolStatusBadge poolStatus={poolStatus} />}
 				</div>
 				<div className="flex items-center gap-2">
@@ -244,6 +265,7 @@ interface TranslationSheetActionButtonsProps {
 	submittingType: 'sync' | 'async' | null;
 	syncButtonLabel: string;
 	asyncButtonLabel: string;
+	disabled?: boolean;
 	onSubmit: (sync: boolean) => void;
 }
 
@@ -252,17 +274,19 @@ export function TranslationSheetActionButtons({
 	submittingType,
 	syncButtonLabel,
 	asyncButtonLabel,
+	disabled = false,
 	onSubmit,
 }: TranslationSheetActionButtonsProps) {
 	const isSyncSubmitting = isSubmitting && submittingType === 'sync';
 	const isAsyncSubmitting = isSubmitting && submittingType === 'async';
+	const isDisabled = isSubmitting || disabled;
 
 	return (
 		<div className="flex-shrink-0 p-3 sm:p-4 border-t border-outline-variant/20 bg-white/[0.03] dark:bg-white/[0.03] backdrop-blur-md pb-safe">
 			<div className="flex items-center gap-2 sm:gap-3">
 				<button
 					onClick={() => onSubmit(true)}
-					disabled={isSubmitting}
+					disabled={isDisabled}
 					className="flex-1 py-3 sm:py-3.5 bg-primary/25 hover:bg-primary/35 backdrop-blur-md border-2 border-primary/70 text-primary rounded-xl sm:rounded-2xl text-xs sm:text-sm font-extrabold font-sans flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] disabled:opacity-60 disabled:cursor-not-allowed"
 				>
 					{isSyncSubmitting ? (
@@ -275,7 +299,7 @@ export function TranslationSheetActionButtons({
 
 				<button
 					onClick={() => onSubmit(false)}
-					disabled={isSubmitting}
+					disabled={isDisabled}
 					className="flex-1 py-3 sm:py-3.5 bg-white/10 hover:bg-white/15 backdrop-blur-md border-2 border-outline-variant/60 text-on-surface rounded-xl sm:rounded-2xl text-xs sm:text-sm font-extrabold font-sans flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(0,0,0,0.3),_inset_0_1.5px_1.5px_rgba(255,255,255,0.4)] disabled:opacity-60 disabled:cursor-not-allowed"
 				>
 					{isAsyncSubmitting ? (

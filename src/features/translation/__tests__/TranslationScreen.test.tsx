@@ -56,7 +56,20 @@ vi.mock('@/repositories/BookRepository', () => ({
 
 vi.mock('@/repositories/AIRepository', () => ({
 	AIRepository: {
-		getQuotas: vi.fn().mockResolvedValue({ quotas: [], currentConfig: { model: 'gemini-2.5-flash' } }),
+		getQuotas: vi.fn().mockResolvedValue({
+			availableModels: [
+				{ model: 'gemini-2.5-flash', platform: 'AI_STUDIO', isActive: true },
+				{ model: 'deepseek-chat', platform: 'DEPLOYAI', isActive: true },
+			],
+			currentConfig: {
+				model: 'gemini-2.5-flash',
+				platform: 'AI_STUDIO',
+				minWords: 100,
+				maxWords: 500,
+				temperature: 0.7,
+				forceRetranslate: false,
+			},
+		}),
 		detectProperNouns: vi.fn().mockResolvedValue({ success: true }),
 		translateChineseTitles: vi.fn().mockResolvedValue({ success: true }),
 	},
@@ -168,5 +181,52 @@ describe('TranslationScreen Full-Screen Implementation', () => {
 		await waitFor(() => {
 			expect(ChapterRepository.translate).toHaveBeenCalled();
 		});
+	});
+
+	it('displays dynamic platform pills and hides unsupported platforms', async () => {
+		renderScreen();
+
+		// Click to expand AI config card
+		const configToggle = await screen.findByText('2.5 FLASH');
+		fireEvent.click(configToggle);
+
+		// AI Studio and DeployAI exist in mock quotas
+		expect(await screen.findByRole('button', { name: 'AI Studio' })).toBeDefined();
+		expect(screen.getByRole('button', { name: 'DeployAI' })).toBeDefined();
+
+		// Unsupported platforms like Vertex AI, OpenAI should NOT be displayed
+		expect(screen.queryByRole('button', { name: 'Vertex AI' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'OpenAI' })).toBeNull();
+	});
+
+	it('shows empty state and disables translate button when BE returns no models', async () => {
+		// Mock empty quotas from BE
+		vi.mocked(AIRepository.getQuotas).mockResolvedValueOnce({
+			availableModels: [],
+			currentConfig: {
+				model: '',
+				platform: '',
+				minWords: 100,
+				maxWords: 500,
+				temperature: 0.7,
+				forceRetranslate: false,
+			},
+		});
+
+		renderScreen();
+
+		// Wait for load and select chapters
+		await screen.findByText('Chương 2: Biến cố');
+		const pendingBtn = screen.getByRole('button', { name: 'Chưa dịch' });
+		fireEvent.click(pendingBtn);
+
+		// Action dock should be disabled because hasModel is false
+		const syncBtn = screen.getByRole('button', { name: /Dịch \(2\)/i }) as HTMLButtonElement;
+		expect(syncBtn.disabled).toBe(true);
+
+		// Open config card to verify empty state message
+		const configCard = screen.getByText('Chưa chọn model AI');
+		fireEvent.click(configCard);
+		expect(await screen.findByText(/Chưa có mô hình AI từ máy chủ/i)).toBeDefined();
 	});
 });
