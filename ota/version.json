@@ -1,7 +1,7 @@
 {
-  "version": "1.0.399",
+  "version": "1.0.400",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "d1d98137460c6fd6afa953eb673734b7e258a997c9b700b53f052acc2f7bae20",
-  "releaseNotes": "fix(translation-sheet): pass DEPLOYAI platform for deepseek models on detect proper nouns",
-  "updatedAt": "2026-11-13T16:38:52Z"
+  "checksum": "10f8f5767ef7f1cbe730932986ce5cc874866618e8a061c0a8b471b02b06ad93",
+  "releaseNotes": "feat: add TranslationScreen feature and navigation routes",
+  "updatedAt": "2026-11-13T16:46:10Z"
 }
