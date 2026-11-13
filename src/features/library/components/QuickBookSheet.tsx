@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { BottomSheet } from '@/components/BottomSheet';
-import { TranslationSheet } from '@/components/TranslationSheet';
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { downloadManager } from '@/lib/DownloadManager';
 import { offlineDb } from '@/lib/offlineDb';
@@ -26,12 +26,12 @@ interface QuickBookSheetProps {
 }
 
 export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
+	const navigate = useNavigate();
 	const showToast = useToastStore((state) => state.showToast);
 	const isOfflineMode = useAppStore((state) => state.isOfflineMode);
 	const configChapterLimit = useReaderConfigStore((state) => state.chapterLimit || 50);
 
 	const [isDownloaded, setIsDownloaded] = useState(false);
-	const [showTranslationSheet, setShowTranslationSheet] = useState(false);
 
 	const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 	const activeItemRef = useRef<HTMLDivElement | null>(null);
@@ -84,7 +84,8 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 					search={search}
 					onOpenTranslation={() => {
 						triggerHaptic('light');
-						setShowTranslationSheet(true);
+						onClose();
+						navigate(`/book/${book.bookId}/translate`);
 					}}
 					onDownload={handleDownloadBook}
 					onDeleteOffline={handleDeleteOfflineBook}
@@ -115,16 +116,6 @@ export function QuickBookSheet({ book, onClose }: QuickBookSheetProps) {
 					<QuickBookBottomLoading loadingBottom={loadingBottom} />
 				</div>
 			</BottomSheet>
-
-			{showTranslationSheet && (
-				<TranslationSheet
-					currentBookId={book.bookId}
-					currentBookName={book.bookName}
-					initialTab="batch_chapter"
-					disableCurrent={true}
-					onClose={() => setShowTranslationSheet(false)}
-				/>
-			)}
 		</>
 	);
 }

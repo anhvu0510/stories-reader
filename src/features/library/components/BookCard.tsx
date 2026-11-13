@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-import { TranslationSheet } from '@/components/TranslationSheet';
 import { triggerHaptic } from '@/hooks/useHaptic';
 import { useLongPress } from '@/hooks/useLongPress';
 import { downloadManager } from '@/lib/DownloadManager';
@@ -43,9 +43,9 @@ interface BookCardProps {
 }
 
 function useBookCardState(book: Book, activeTab?: string, isSelectionMode?: boolean, onSelect?: (bookId: string) => void) {
+	const navigate = useNavigate();
 	const [showQuickSheet, setShowQuickSheet] = useState(false);
 	const [showActionSheet, setShowActionSheet] = useState(false);
-	const [showTranslationSheet, setShowTranslationSheet] = useState(false);
 	const [isDownloaded, setIsDownloaded] = useState(false);
 	const [deleteConfirmType, setDeleteConfirmType] = useState<'ONLINE' | 'OFFLINE' | null>(null);
 	const [isDeleting, setIsDeleting] = useState(false);
@@ -89,7 +89,7 @@ function useBookCardState(book: Book, activeTab?: string, isSelectionMode?: bool
 			return;
 		}
 		if (activeTab === 'AI') {
-			setShowTranslationSheet(true);
+			navigate(`/book/${book.bookId}/translate`);
 			return;
 		}
 		setShowQuickSheet(true);
@@ -101,6 +101,10 @@ function useBookCardState(book: Book, activeTab?: string, isSelectionMode?: bool
 		} else {
 			setShowQuickSheet(true);
 		}
+	};
+
+	const handleOpenTranslation = () => {
+		navigate(`/book/${book.bookId}/translate`);
 	};
 
 	const handleOpenNewTab = () => {
@@ -142,8 +146,6 @@ function useBookCardState(book: Book, activeTab?: string, isSelectionMode?: bool
 		setShowQuickSheet,
 		showActionSheet,
 		setShowActionSheet,
-		showTranslationSheet,
-		setShowTranslationSheet,
 		isDownloaded,
 		deleteConfirmType,
 		setDeleteConfirmType,
@@ -151,6 +153,7 @@ function useBookCardState(book: Book, activeTab?: string, isSelectionMode?: bool
 		handleToggleFavorite,
 		handleCardClick,
 		handleReadContinue,
+		handleOpenTranslation,
 		handleOpenNewTab,
 		handleDownloadBook,
 		handleConfirmDelete,
@@ -166,8 +169,6 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
 		setShowQuickSheet,
 		showActionSheet,
 		setShowActionSheet,
-		showTranslationSheet,
-		setShowTranslationSheet,
 		isDownloaded,
 		deleteConfirmType,
 		setDeleteConfirmType,
@@ -175,6 +176,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
 		handleToggleFavorite,
 		handleCardClick,
 		handleReadContinue,
+		handleOpenTranslation,
 		handleOpenNewTab,
 		handleDownloadBook,
 		handleConfirmDelete,
@@ -226,7 +228,7 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
 				unTranslatedCount={unTranslatedCount}
 				onReadContinue={handleReadContinue}
 				onOpenQuickSheet={() => setShowQuickSheet(true)}
-				onOpenTranslationSheet={() => setShowTranslationSheet(true)}
+				onOpenTranslationSheet={handleOpenTranslation}
 				onDownloadBook={handleDownloadBook}
 				onOpenDeleteOffline={() => setDeleteConfirmType('OFFLINE')}
 				onOpenDeleteOnline={() => setDeleteConfirmType('ONLINE')}
@@ -235,16 +237,6 @@ export const BookCard = React.memo(function BookCard({ book, activeTab, onSelect
 			/>
 
 			{showQuickSheet && <QuickBookSheet book={book} onClose={() => setShowQuickSheet(false)} />}
-
-			{showTranslationSheet && (
-				<TranslationSheet
-					currentBookId={book.bookId}
-					currentBookName={book.bookName}
-					initialTab="batch_chapter"
-					disableCurrent={true}
-					onClose={() => setShowTranslationSheet(false)}
-				/>
-			)}
 
 			<BookDeleteConfirmModal
 				confirmType={deleteConfirmType}

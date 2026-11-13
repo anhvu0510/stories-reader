@@ -80,6 +80,11 @@ export function ChapterListScreen() {
 					triggerHaptic('light');
 					fetchChapters(1, search, filterState, sortOrder, false);
 				}}
+				onOpenTranslate={() => {
+					if (!bookId) return;
+					triggerHaptic('light');
+					navigate(`/book/${bookId}/translate`);
+				}}
 				onSearchChange={handleSearchChange}
 				onFilterStateChange={(val) => {
 					triggerHaptic('selection');

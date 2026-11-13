@@ -1,4 +1,4 @@
-import { ArrowLeft, Search, RefreshCw, Download, Heart } from 'lucide-react';
+import { ArrowLeft, Search, RefreshCw, Download, Heart, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import React from 'react';
 
@@ -138,9 +138,10 @@ interface HeaderActionsProps {
 	onToggleFavorite: () => void;
 	onDownload: () => void;
 	onRefresh: () => void;
+	onOpenTranslate?: () => void;
 }
 
-function ChapterHeaderActions({ book, isFav, loading, onToggleFavorite, onDownload, onRefresh }: HeaderActionsProps) {
+function ChapterHeaderActions({ book, isFav, loading, onToggleFavorite, onDownload, onRefresh, onOpenTranslate }: HeaderActionsProps) {
 	const favBtnClass = isFav
 		? 'bg-rose-500/15 border-rose-500/40 text-rose-500 shadow-xs'
 		: 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-rose-400';
@@ -150,6 +151,18 @@ function ChapterHeaderActions({ book, isFav, loading, onToggleFavorite, onDownlo
 		<div className="flex items-center gap-1.5">
 			{book && (
 				<>
+					{onOpenTranslate && (
+						<motion.button
+							type="button"
+							whileTap={{ scale: 0.88 }}
+							onClick={onOpenTranslate}
+							className="w-9 h-9 rounded-full bg-surface-container border border-outline-variant/30 text-emerald-400 hover:text-emerald-300 transition-colors flex items-center justify-center cursor-pointer shadow-xs"
+							title="Mở màn hình Dịch AI"
+							aria-label="Mở Dịch AI"
+						>
+							<Sparkles size={15} />
+						</motion.button>
+					)}
 					<motion.button
 						type="button"
 						whileTap={{ scale: 0.88 }}
@@ -244,6 +257,7 @@ export interface ChapterHeaderProps {
 	onToggleFavorite: () => void;
 	onDownload: () => void;
 	onRefresh: () => void;
+	onOpenTranslate?: () => void;
 	onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 	onFilterStateChange: (val: string) => void;
 	onToggleSort: () => void;
@@ -263,6 +277,7 @@ export function ChapterHeader({
 	onToggleFavorite,
 	onDownload,
 	onRefresh,
+	onOpenTranslate,
 	onSearchChange,
 	onFilterStateChange,
 	onToggleSort,
@@ -295,6 +310,7 @@ export function ChapterHeader({
 					onToggleFavorite={onToggleFavorite}
 					onDownload={onDownload}
 					onRefresh={onRefresh}
+					onOpenTranslate={onOpenTranslate}
 				/>
 			</div>
 

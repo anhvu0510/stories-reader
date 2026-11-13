@@ -12,6 +12,7 @@ import { ToastContainer } from './components/Toast';
 import { ChapterListScreen } from './features/chapter-list/ChapterListScreen';
 import { LibraryScreen } from './features/library/LibraryScreen';
 import { ReaderScreen } from './features/reader/ReaderScreen';
+import { TranslationScreen } from './features/translation/TranslationScreen';
 import { useAppLockListener } from './hooks/useAppLockListener';
 import { useAppUpdate } from './hooks/useAppUpdate';
 import { useRouteRestoration } from './hooks/useRouteRestoration';
@@ -47,6 +48,8 @@ function AppContent() {
 			<Route path="/" element={<LibraryScreen />} />
 			<Route path="/book/:bookId" element={<ChapterListScreen />} />
 			<Route path="/book/:bookId/chapter/:chapterId" element={<ReaderScreen />} />
+			<Route path="/book/:bookId/translate" element={<TranslationScreen />} />
+			<Route path="/translate" element={<TranslationScreen />} />
 		</Routes>
 	);
 }
