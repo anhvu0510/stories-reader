@@ -110,7 +110,7 @@ export function useTranslationActions({
 		AIRepository.translateChineseTitles({
 			bookId: targetBookId,
 			model: options.model,
-			platform: options.platform,
+			platform: options.platform || (options.model?.includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO'),
 		}).catch((e: unknown) => {
 			console.warn('translateChineseTitles bg error:', e);
 		});
@@ -132,7 +132,7 @@ export function useTranslationActions({
 			return;
 		}
 
-		const platform = options.platform || 'VERTEX_API';
+		const platform = options.platform || (options.model?.includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO');
 		try {
 			if (isSync) {
 				await executeSyncTranslate(

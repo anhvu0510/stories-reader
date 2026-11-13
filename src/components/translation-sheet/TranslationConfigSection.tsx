@@ -8,6 +8,8 @@ import { formatModelDisplayName } from '@/shared/utils/modelFormatters';
 
 import { DEFAULT_VERTEX_MODELS, getTabButtonClass, type PoolStatus, type TranslationOptions } from './translationHelpers';
 
+import type { AIQuota } from '@/shared/types';
+
 export function TabButton({
 	active,
 	children,
@@ -55,9 +57,10 @@ interface AIConfigDropdownProps {
 	options: TranslationOptions;
 	setOptions: React.Dispatch<React.SetStateAction<TranslationOptions>>;
 	setPoolStatus: React.Dispatch<React.SetStateAction<PoolStatus | null>>;
+	quotas?: AIQuota[];
 }
 
-function AIConfigDropdown({ options, setOptions, setPoolStatus }: AIConfigDropdownProps) {
+function AIConfigDropdown({ options, setOptions, setPoolStatus, quotas = [] }: AIConfigDropdownProps) {
 	const rawModels = options.availableModels || DEFAULT_VERTEX_MODELS;
 	const cleanModels = [...new Set(rawModels.map((m) => (typeof m === 'string' ? m.replace(/\s*\([VA]\)$/i, '').trim() : m)))] as string[];
 
@@ -130,10 +133,12 @@ function AIConfigDropdown({ options, setOptions, setPoolStatus }: AIConfigDropdo
 							<button
 								key={m}
 								onClick={() => {
+									const matched = quotas.find((q) => q.model === m);
+									const targetPlatform = matched?.platform || (m.toLowerCase().includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO');
 									setOptions({
 										...options,
 										model: m,
-										platform: 'AI_STUDIO',
+										platform: targetPlatform,
 									});
 									setPoolStatus(null);
 								}}
@@ -169,6 +174,7 @@ interface TranslationConfigBarProps {
 	options: TranslationOptions;
 	setOptions: React.Dispatch<React.SetStateAction<TranslationOptions>>;
 	setPoolStatus: React.Dispatch<React.SetStateAction<PoolStatus | null>>;
+	quotas?: AIQuota[];
 }
 
 export function TranslationSheetConfigBar({
@@ -181,6 +187,7 @@ export function TranslationSheetConfigBar({
 	options,
 	setOptions,
 	setPoolStatus,
+	quotas,
 }: TranslationConfigBarProps) {
 	const showPoolStatus = Boolean(poolStatus && poolStatus.model === currentModel);
 
@@ -227,7 +234,7 @@ export function TranslationSheetConfigBar({
 				</div>
 			</div>
 
-			{showConfig && <AIConfigDropdown options={options} setOptions={setOptions} setPoolStatus={setPoolStatus} />}
+			{showConfig && <AIConfigDropdown options={options} setOptions={setOptions} setPoolStatus={setPoolStatus} quotas={quotas} />}
 		</div>
 	);
 }

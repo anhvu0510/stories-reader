@@ -72,7 +72,7 @@ export interface Replacement {
 export interface AIQuota {
 	_id: string;
 	model: string;
-	platform: 'AI_STUDIO' | 'VERTEX_API';
+	platform: 'AI_STUDIO' | 'VERTEX_API' | 'DEPLOYAI' | 'OPENAI_COMPAT';
 	rpmLimit: number;
 	tpmLimit: number;
 	rpdLimit: number;
@@ -88,7 +88,7 @@ export interface AIToken {
 	_id: string;
 	name: string;
 	email: string;
-	platform: 'AI_STUDIO' | 'VERTEX_API';
+	platform: 'AI_STUDIO' | 'VERTEX_API' | 'DEPLOYAI' | 'OPENAI_COMPAT';
 	model: string;
 	status: 'active' | 'paused' | 'banned';
 	priority: number;

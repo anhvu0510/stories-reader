@@ -97,6 +97,9 @@ export function extractConfig(res: unknown) {
 	if (!cfg || typeof cfg !== 'object') return null;
 	let loadedPlatform = cfg.platform;
 	if (loadedPlatform === 'VERTEX_API' || !loadedPlatform) loadedPlatform = 'AI_STUDIO';
+	if (typeof cfg.model === 'string' && cfg.model.includes('deepseek')) {
+		loadedPlatform = 'DEPLOYAI';
+	}
 	return { ...cfg, platform: loadedPlatform };
 }
 

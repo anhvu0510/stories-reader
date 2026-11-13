@@ -17,18 +17,23 @@ import {
 import type { AIQuota } from '@/shared/types';
 import type React from 'react';
 
+function parseSavedSettings(settingVal: unknown): Record<string, unknown> | null {
+	if (!settingVal) return null;
+	const parsed = typeof settingVal === 'string' ? JSON.parse(settingVal) : settingVal;
+	if (!parsed || typeof parsed !== 'object') return null;
+	const opts = parsed as Record<string, unknown>;
+	if (opts.platform === 'VERTEX_API') opts.platform = 'AI_STUDIO';
+	if (typeof opts.model === 'string' && opts.model.includes('deepseek')) opts.platform = 'DEPLOYAI';
+	return opts;
+}
+
 function loadSavedTranslationSettings(isActive: () => boolean, setOptions: React.Dispatch<React.SetStateAction<TranslationOptions>>) {
 	SettingsRepository.getSettings<{ value?: unknown }>('stories.ui.translate', true)
 		.then((savedSettings) => {
 			if (!isActive() || !savedSettings?.value) return;
 			try {
-				const settingVal = savedSettings.value;
-				const parsed = typeof settingVal === 'string' ? JSON.parse(settingVal) : settingVal;
-				if (parsed && typeof parsed === 'object') {
-					const opts = parsed as Record<string, unknown>;
-					if (opts.platform === 'VERTEX_API') opts.platform = 'AI_STUDIO';
-					setOptions((prev) => ({ ...prev, ...opts }));
-				}
+				const opts = parseSavedSettings(savedSettings.value);
+				if (opts) setOptions((prev) => ({ ...prev, ...opts }));
 			} catch (err) {
 				console.warn('[TranslationSheet] Parse saved settings error:', err);
 			}
@@ -47,7 +52,8 @@ export function useTranslationOptions(activeTab: Tab) {
 	useEffect(() => {
 		let active = true;
 		if (options.model && isOptionsLoaded) {
-			const platform = options.platform || 'AI_STUDIO';
+			const matched = quotas.find((q) => q.model === options.model);
+			const platform = options.platform || matched?.platform || (options.model.includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO');
 			ChapterRepository.getPoolStatus(options.model, platform)
 				.then((res) => {
 					if (active && res) setPoolStatus(res as PoolStatus);
@@ -74,6 +80,12 @@ export function useTranslationOptions(activeTab: Tab) {
 						const newOptions = { ...prev, ...cfg };
 						const uniqueModels = extractUniqueModels(rawQuotas);
 						if (uniqueModels.length > 0) newOptions.availableModels = uniqueModels;
+						const matched = (rawQuotas as AIQuota[]).find((q) => q.model === newOptions.model);
+						if (matched?.platform) {
+							newOptions.platform = matched.platform;
+						} else if (newOptions.model?.includes('deepseek')) {
+							newOptions.platform = 'DEPLOYAI';
+						}
 						return newOptions;
 					});
 				}
@@ -126,6 +138,7 @@ export function useTranslationOptions(activeTab: Tab) {
 		setShowConfig,
 		poolStatus,
 		setPoolStatus,
+		quotas,
 	};
 }
 

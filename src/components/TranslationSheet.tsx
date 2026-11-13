@@ -75,7 +75,7 @@ export function TranslationSheet(props: TranslationSheetProps) {
 	} = resolveTranslationSheetProps(props);
 
 	const [activeTab, setActiveTab] = useState<Tab>(initialTab);
-	const { options, setOptions, showConfig, setShowConfig, poolStatus, setPoolStatus } = useTranslationOptions(activeTab);
+	const { options, setOptions, showConfig, setShowConfig, poolStatus, setPoolStatus, quotas } = useTranslationOptions(activeTab);
 
 	const batch = useTranslationBatchPagination(activeTab, currentBookId, currentChapterNumber, initialSelectedChapters);
 	const actions = useTranslationActions({
@@ -132,6 +132,7 @@ export function TranslationSheet(props: TranslationSheetProps) {
 				options={options}
 				setOptions={setOptions}
 				setPoolStatus={setPoolStatus}
+				quotas={quotas}
 			/>
 
 			<div className="flex-1 overflow-y-auto hide-scrollbar p-4 sm:p-5 flex flex-col min-h-0">
