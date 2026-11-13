@@ -1,7 +1,7 @@
 {
-  "version": "1.0.397",
+  "version": "1.0.398",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "15072486432aae5f7961fac4a17623b226bcccead81d3200bbad443da1ce7ced",
-  "releaseNotes": "feat(ui): format AI model names into concise shortnames across settings and translation sheet",
-  "updatedAt": "2026-11-13T09:47:48Z"
+  "checksum": "8e89eb1a2dad94fb8c6ec40f1d64b18d1693f2b09b2817b47fe41ac204f581aa",
+  "releaseNotes": "fix(ui): pass and detect DEPLOYAI platform for DeepSeek models",
+  "updatedAt": "2026-11-13T10:07:00Z"
 }
