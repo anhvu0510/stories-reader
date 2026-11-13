@@ -1,7 +1,7 @@
 {
-  "version": "1.0.401",
+  "version": "1.0.402",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "ca33dbdb20877aa9c89562fb73795c795f98b2bdf7382df9ebbbbf5609ffc567",
-  "releaseNotes": "refactor: improve translation sheet AI model selection and platform handling",
-  "updatedAt": "2026-11-13T17:06:39Z"
+  "checksum": "74f4949970d8b290e4785146f8cfec072f5e22aa6be18be117ae3058158e867d",
+  "releaseNotes": "refactor: extract TranslationQuickTools component and refactor translation config UI",
+  "updatedAt": "2026-11-13T17:31:25Z"
 }
