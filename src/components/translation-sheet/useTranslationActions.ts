@@ -88,36 +88,36 @@ export function useTranslationActions({
 
 	useTabDataSync(activeTab, currentBookId, searchBook, batch.loadInitialChapters, setBooks);
 
-	const handleDetectProperNouns = () => {
+	const dispatchBookAiTool = (
+		toolName: string,
+		requestFn: (params: { bookId: string; model?: string; platform?: string }) => Promise<unknown>,
+		toastMessage = 'Đã gửi yêu cầu xử lý'
+	) => {
 		const targetBookId = resolveTargetBookId(activeTab, selectedBooks, currentBookId);
 		if (!targetBookId) {
 			showToast('Vui lòng chọn truyện trước khi thực hiện', 'error');
 			return;
 		}
-		showToast('Đã gửi yêu cầu xử lý', 'success');
-		AIRepository.detectProperNouns({
+		showToast(toastMessage, 'success');
+		requestFn({
 			bookId: targetBookId,
 			model: options.model,
 			platform: options.platform || (options.model?.includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO'),
 		}).catch((e: unknown) => {
-			console.warn('detectProperNouns bg error:', e);
+			console.warn(`${toolName} bg error:`, e);
 		});
 	};
 
+	const handleDetectProperNouns = () => {
+		dispatchBookAiTool('detectProperNouns', (params) => AIRepository.detectProperNouns(params));
+	};
+
 	const handleTranslateChineseTitles = () => {
-		const targetBookId = resolveTargetBookId(activeTab, selectedBooks, currentBookId);
-		if (!targetBookId) {
-			showToast('Vui lòng chọn truyện trước khi thực hiện', 'error');
-			return;
-		}
-		showToast('Đã gửi yêu cầu xử lý', 'success');
-		AIRepository.translateChineseTitles({
-			bookId: targetBookId,
-			model: options.model,
-			platform: options.platform || (options.model?.includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO'),
-		}).catch((e: unknown) => {
-			console.warn('translateChineseTitles bg error:', e);
-		});
+		dispatchBookAiTool('translateChineseTitles', (params) => AIRepository.translateChineseTitles(params));
+	};
+
+	const handleDetectTagsAndPov = () => {
+		dispatchBookAiTool('detectTagsAndPov', (params) => AIRepository.detectTagsAndPov(params), 'Đã gửi yêu cầu dịch POV');
 	};
 
 	const handleSubmit = async (isSync = false) => {
@@ -186,6 +186,7 @@ export function useTranslationActions({
 		submittingType,
 		handleDetectProperNouns,
 		handleTranslateChineseTitles,
+		handleDetectTagsAndPov,
 		handleSubmit,
 	};
 }

@@ -1,8 +1,6 @@
 import { AlertCircle, Home, RotateCcw } from 'lucide-react';
-import { useMemo } from 'react';
 
 import { PullToRefresh } from '@/components/PullToRefresh';
-import { TranslationSheet } from '@/components/TranslationSheet';
 import { GlobalSettingsSheet } from '@/features/settings/GlobalSettingsSheet';
 import { useFullscreen } from '@/hooks/useFullscreen';
 
@@ -29,29 +27,18 @@ interface ReaderModalsProps {
 	bookId?: string;
 	chapterId?: string;
 	activeChapter: { chapterId: string; chapterNumber: number; title: string } | null;
-	chapterTitle: string;
 	chapterNumber: number;
-	displayChapters: ChapterDetailItem[];
 	showTypographySheet: boolean;
 	showChapterSelectSheet: boolean;
 	showHistorySheet: boolean;
-	showTranslateSheet: boolean;
 	onCloseTypography: () => void;
 	onCloseChapterSelect: () => void;
 	onCloseHistory: () => void;
-	onCloseTranslate: () => void;
-	onTranslateSuccess: () => void;
 }
 
 function ReaderModals(props: ReaderModalsProps) {
 	const currentChapId = props.activeChapter?.chapterId || props.chapterId;
 	const currentChapNum = props.activeChapter?.chapterNumber ?? props.chapterNumber;
-
-	const selectedChapters = useMemo(() => {
-		if (props.displayChapters.length > 0) return props.displayChapters.map((c) => c.chapterId);
-		if (props.chapterId) return [props.chapterId];
-		return [];
-	}, [props.displayChapters, props.chapterId]);
 
 	return (
 		<div aria-hidden="true">
@@ -66,18 +53,6 @@ function ReaderModals(props: ReaderModalsProps) {
 				/>
 			)}
 			{props.showHistorySheet && <QuickBookHistorySheet currentBookId={props.bookId} onClose={props.onCloseHistory} />}
-			{props.showTranslateSheet && (
-				<TranslationSheet
-					currentBookId={props.bookId}
-					currentChapterId={props.chapterId}
-					currentChapterName={props.chapterTitle}
-					currentChapterNumber={props.chapterNumber}
-					initialTab="batch_chapter"
-					initialSelectedChapters={selectedChapters}
-					onClose={props.onCloseTranslate}
-					onSuccess={props.onTranslateSuccess}
-				/>
-			)}
 		</div>
 	);
 }
@@ -200,7 +175,6 @@ export interface ReaderActiveViewProps {
 	zen: ReturnType<typeof useZenControls>;
 	swipe: ReturnType<typeof useReaderSwipeNavigation>;
 	domResetKey: number;
-	showTranslateSheet: boolean;
 	showTypographySheet: boolean;
 	showChapterSelectSheet: boolean;
 	showHistorySheet: boolean;
@@ -212,11 +186,9 @@ export interface ReaderActiveViewProps {
 	onOpenTranslation: () => void;
 	onTitleClick: () => void;
 	onTitleDoubleClick: () => Promise<void>;
-	onCloseTranslate: () => void;
 	onCloseTypography: () => void;
 	onCloseChapterSelect: () => void;
 	onCloseHistory: () => void;
-	onTranslateSuccess: () => void;
 }
 
 export function ReaderActiveView(props: ReaderActiveViewProps) {
@@ -312,18 +284,13 @@ export function ReaderActiveView(props: ReaderActiveViewProps) {
 				bookId={props.bookId}
 				chapterId={props.chapterId}
 				activeChapter={props.activeChapter}
-				chapterTitle={chapter.title}
 				chapterNumber={chapter.chapterNumber}
-				displayChapters={props.displayChapters}
 				showTypographySheet={props.showTypographySheet}
 				showChapterSelectSheet={props.showChapterSelectSheet}
 				showHistorySheet={props.showHistorySheet}
-				showTranslateSheet={props.showTranslateSheet}
 				onCloseTypography={props.onCloseTypography}
 				onCloseChapterSelect={props.onCloseChapterSelect}
 				onCloseHistory={props.onCloseHistory}
-				onCloseTranslate={props.onCloseTranslate}
-				onTranslateSuccess={props.onTranslateSuccess}
 			/>
 
 			<SelectionSpeakerTooltip isTTSActive={props.tts.isTTSActive} onSpeak={props.tts.jumpToContent} />

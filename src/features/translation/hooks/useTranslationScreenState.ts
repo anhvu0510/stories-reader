@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 
 import { getAsyncButtonLabel, getSyncButtonLabel, type Tab } from '@/components/translation-sheet/translationHelpers';
 import { useBatchSelectionHandlers, useTranslationActions } from '@/components/translation-sheet/useTranslationActions';
@@ -9,14 +9,15 @@ import { BookRepository } from '@/repositories/BookRepository';
 
 import type { Book } from '@/shared/types';
 
-export function useTranslationScreenState() {
-	const { bookId } = useParams<{ bookId?: string }>();
-	const navigate = useNavigate();
+interface TranslationRouteState {
+	currentChapterId?: string;
+	currentChapterNumber?: number;
+	initialSelectedChapters?: string[];
+}
 
+function useTranslationBookLoader(bookId?: string) {
 	const [book, setBook] = useState<Book | null>(null);
 	const [loadingBook, setLoadingBook] = useState(false);
-	const [activeTab, setActiveTab] = useState<Tab>(bookId ? 'batch_chapter' : 'story');
-	const [chapterSearch, setChapterSearch] = useState('');
 
 	useEffect(() => {
 		if (!bookId) {
@@ -40,23 +41,71 @@ export function useTranslationScreenState() {
 		};
 	}, [bookId]);
 
+	return { book, loadingBook };
+}
+
+function useBookSelectionHandlers(
+	bookId: string | undefined,
+	books: Book[],
+	selectedBooks: Set<string>,
+	setSelectedBooks: (next: Set<string>) => void
+) {
+	const toggleBook = useCallback(
+		(id: string) => {
+			triggerHaptic('selection');
+			const next = new Set(selectedBooks);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			setSelectedBooks(next);
+		},
+		[selectedBooks, setSelectedBooks]
+	);
+
+	const handleSelectAllBooks = useCallback(() => {
+		triggerHaptic('selection');
+		// Nếu mở màn hình theo bookId cụ thể, nút "Tất cả" chỉ chọn đúng truyện đó để tránh dịch nhầm toàn bộ thư viện
+		const scopedBooks = bookId ? books.filter((b) => b.bookId === bookId) : books;
+		const allIds = new Set(scopedBooks.map((b) => b.bookId));
+		setSelectedBooks(allIds);
+	}, [books, bookId, setSelectedBooks]);
+
+	const handleClearBooks = useCallback(() => {
+		triggerHaptic('selection');
+		setSelectedBooks(new Set());
+	}, [setSelectedBooks]);
+
+	return { toggleBook, handleSelectAllBooks, handleClearBooks };
+}
+
+export function useTranslationScreenState() {
+	const { bookId } = useParams<{ bookId?: string }>();
+	const navigate = useNavigate();
+	const location = useLocation();
+	const routeState = (location.state as TranslationRouteState | null) ?? null;
+	const initialSelectedChapters = useMemo(() => routeState?.initialSelectedChapters ?? [], [routeState?.initialSelectedChapters]);
+
+	const { book, loadingBook } = useTranslationBookLoader(bookId);
+	const [activeTab, setActiveTab] = useState<Tab>(bookId ? 'batch_chapter' : 'story');
+	const [chapterSearch, setChapterSearch] = useState('');
+
 	const handleBack = useCallback(() => {
 		triggerHaptic('light');
-		if (window.history.length > 1) {
+		if (location.key !== 'default' || window.history.length > 1) {
 			navigate(-1);
-		} else {
-			navigate('/');
+			return;
 		}
-	}, [navigate]);
+		navigate('/');
+	}, [location.key, navigate]);
 
 	const { options, setOptions, showConfig, setShowConfig, poolStatus, setPoolStatus, quotas } = useTranslationOptions(activeTab);
 
-	const batch = useTranslationBatchPagination(activeTab, bookId, undefined, undefined);
+	const batch = useTranslationBatchPagination(activeTab, bookId, routeState?.currentChapterNumber, initialSelectedChapters);
 
 	const actions = useTranslationActions({
 		activeTab,
 		currentBookId: bookId,
-		initialSelectedChapters: [],
+		currentChapterId: routeState?.currentChapterId,
+		initialSelectedChapters,
 		options,
 		batch,
 		onClose: handleBack,
@@ -68,6 +117,12 @@ export function useTranslationScreenState() {
 	});
 
 	const selection = useBatchSelectionHandlers(bookId, batch, actions.setIsSubmitting);
+	const { toggleBook, handleSelectAllBooks, handleClearBooks } = useBookSelectionHandlers(
+		bookId,
+		actions.books,
+		actions.selectedBooks,
+		actions.setSelectedBooks
+	);
 
 	const handleRefresh = useCallback(() => {
 		triggerHaptic('light');
@@ -75,30 +130,6 @@ export function useTranslationScreenState() {
 			batch.loadInitialChapters();
 		}
 	}, [activeTab, batch]);
-
-	const toggleBook = useCallback(
-		(id: string) => {
-			triggerHaptic('selection');
-			const next = new Set(actions.selectedBooks);
-			if (next.has(id)) next.delete(id);
-			else next.add(id);
-			actions.setSelectedBooks(next);
-		},
-		[actions]
-	);
-
-	const handleSelectAllBooks = useCallback(() => {
-		triggerHaptic('selection');
-		// Nếu mở màn hình theo bookId cụ thể, nút "Tất cả" chỉ chọn đúng truyện đó để tránh dịch nhầm toàn bộ thư viện
-		const scopedBooks = bookId ? actions.books.filter((b) => b.bookId === bookId) : actions.books;
-		const allIds = new Set(scopedBooks.map((b) => b.bookId));
-		actions.setSelectedBooks(allIds);
-	}, [actions, bookId]);
-
-	const handleClearBooks = useCallback(() => {
-		triggerHaptic('selection');
-		actions.setSelectedBooks(new Set());
-	}, [actions]);
 
 	const syncButtonLabel = getSyncButtonLabel(
 		actions.isSubmitting,

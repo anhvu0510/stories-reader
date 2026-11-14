@@ -27,6 +27,12 @@ import {
 	shouldShowReaderLoading,
 } from './utils/readerHelpers';
 
+function resolveInitialSelectedChapters(chapters: { chapterId: string }[], fallbackChapterId?: string): string[] {
+	if (chapters.length > 0) return chapters.map((c) => c.chapterId);
+	if (fallbackChapterId) return [fallbackChapterId];
+	return [];
+}
+
 export function ReaderScreen() {
 	const { bookId, chapterId } = useParams<{ bookId: string; chapterId: string }>();
 	const navigate = useNavigate();
@@ -87,6 +93,21 @@ export function ReaderScreen() {
 		await loadChapter(true);
 	}, [tts, handleStopTTS, loadChapter]);
 
+	const handleOpenTranslation = useCallback(() => {
+		if (!bookId) return;
+		const currentChapId = activeChapter?.chapterId || chapterId;
+		const currentChapNum = activeChapter?.chapterNumber ?? contentData?.chapter.chapterNumber;
+		const initialSelectedChapters = resolveInitialSelectedChapters(displayChapters, currentChapId);
+
+		navigate(`/book/${bookId}/translate`, {
+			state: {
+				currentChapterId: currentChapId,
+				currentChapterNumber: currentChapNum,
+				initialSelectedChapters,
+			},
+		});
+	}, [activeChapter, bookId, chapterId, contentData, displayChapters, navigate]);
+
 	const swipe = useReaderSwipeNavigation({ bookId, chapterId, contentData, loading, isRefreshingLatest });
 	const pullDisabled = isReaderPullDisabled(loading, isRefreshingLatest, tts.isTTSActive);
 
@@ -125,7 +146,6 @@ export function ReaderScreen() {
 			zen={zen}
 			swipe={swipe}
 			domResetKey={domResetKey}
-			showTranslateSheet={sheets.showTranslateSheet}
 			showTypographySheet={sheets.showTypographySheet}
 			showChapterSelectSheet={sheets.showChapterSelectSheet}
 			showHistorySheet={sheets.showHistorySheet}
@@ -134,14 +154,12 @@ export function ReaderScreen() {
 			onToggleBgm={handleToggleBgm}
 			onOpenHistory={sheets.handleOpenHistory}
 			onOpenChapterSelect={sheets.handleOpenChapterSelect}
-			onOpenTranslation={sheets.handleOpenTranslation}
+			onOpenTranslation={handleOpenTranslation}
 			onTitleClick={handleTitleSingleClick}
 			onTitleDoubleClick={handleTitleDoubleClick}
-			onCloseTranslate={sheets.handleCloseTranslation}
 			onCloseTypography={sheets.handleCloseTypography}
 			onCloseChapterSelect={sheets.handleCloseChapterSelect}
 			onCloseHistory={sheets.handleCloseHistory}
-			onTranslateSuccess={loadChapter}
 		/>
 	);
 }

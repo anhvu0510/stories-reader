@@ -224,30 +224,24 @@ export function useChapterLoader(chapterId: string | undefined, config: ReturnTy
 }
 
 export function useReaderSheets() {
-	const [showTranslateSheet, setShowTranslateSheet] = useState(false);
 	const [showTypographySheet, setShowTypographySheet] = useState(false);
 	const [showChapterSelectSheet, setShowChapterSelectSheet] = useState(false);
 	const [showHistorySheet, setShowHistorySheet] = useState(false);
 
 	const handleOpenHistory = useCallback(() => setShowHistorySheet(true), []);
 	const handleOpenChapterSelect = useCallback(() => setShowChapterSelectSheet(true), []);
-	const handleOpenTranslation = useCallback(() => setShowTranslateSheet(true), []);
 	const handleCloseHistory = useCallback(() => setShowHistorySheet(false), []);
 	const handleCloseChapterSelect = useCallback(() => setShowChapterSelectSheet(false), []);
-	const handleCloseTranslation = useCallback(() => setShowTranslateSheet(false), []);
 	const handleCloseTypography = useCallback(() => setShowTypographySheet(false), []);
 
 	return {
-		showTranslateSheet,
 		showTypographySheet,
 		showChapterSelectSheet,
 		showHistorySheet,
 		handleOpenHistory,
 		handleOpenChapterSelect,
-		handleOpenTranslation,
 		handleCloseHistory,
 		handleCloseChapterSelect,
-		handleCloseTranslation,
 		handleCloseTypography,
 	};
 }

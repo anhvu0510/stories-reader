@@ -72,6 +72,7 @@ vi.mock('@/repositories/AIRepository', () => ({
 		}),
 		detectProperNouns: vi.fn().mockResolvedValue({ success: true }),
 		translateChineseTitles: vi.fn().mockResolvedValue({ success: true }),
+		detectTagsAndPov: vi.fn().mockResolvedValue({ success: true }),
 	},
 }));
 
@@ -275,6 +276,19 @@ describe('TranslationScreen Full-Screen Implementation', () => {
 		await waitFor(() => {
 			expect(screen.getByText(/Đã chọn: 2\/2 truyện/i)).toBeDefined();
 			expect(screen.getByRole('button', { name: /Dịch \(2\)/i })).toBeDefined();
+		});
+	});
+
+	it('renders "Dịch POV" quick tool and triggers AIRepository.detectTagsAndPov', async () => {
+		renderScreen('/book/book-456/translate');
+
+		const povBtn = await screen.findByRole('button', { name: /Dịch POV/i });
+		fireEvent.click(povBtn);
+
+		expect(AIRepository.detectTagsAndPov).toHaveBeenCalledWith({
+			bookId: 'book-456',
+			model: 'gemini-2.5-flash',
+			platform: 'AI_STUDIO',
 		});
 	});
 });

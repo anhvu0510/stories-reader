@@ -52,6 +52,7 @@ export function TranslationScreen() {
 				<TranslationQuickTools
 					onDetectProperNouns={state.actions.handleDetectProperNouns}
 					onTranslateChineseTitles={state.actions.handleTranslateChineseTitles}
+					onDetectTagsAndPov={state.actions.handleDetectTagsAndPov}
 					disabled={!state.options.model}
 				/>
 
