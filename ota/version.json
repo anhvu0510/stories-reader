@@ -1,7 +1,7 @@
 {
-  "version": "1.0.404",
+  "version": "1.0.405",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "c8e0a5f3ff9a575e71e31c76dd92490b63c13e8629faecfa1e930dcb71f38ce2",
-  "releaseNotes": "refactor: navigate to dedicated TranslationScreen instead of sheet in ReaderScreen",
-  "updatedAt": "2026-11-14T02:00:45Z"
+  "checksum": "ac878e1c072bdda840f93b5573272696c95e45dbeb4456cbd23b740050a0fe5a",
+  "releaseNotes": "refactor: update translation AI config card with compact model layout and quota metadata",
+  "updatedAt": "2026-11-14T02:12:33Z"
 }
