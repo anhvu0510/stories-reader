@@ -1,7 +1,7 @@
 {
-  "version": "1.0.405",
+  "version": "1.0.406",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "ac878e1c072bdda840f93b5573272696c95e45dbeb4456cbd23b740050a0fe5a",
-  "releaseNotes": "refactor: update translation AI config card with compact model layout and quota metadata",
-  "updatedAt": "2026-11-14T02:12:33Z"
+  "checksum": "8ff786579de39c394b4f94dc7eb5ae6035fd4844a608ef7442ce4c8f0f919fd0",
+  "releaseNotes": "refactor: update AI model selection grid to a 2-column compact layout",
+  "updatedAt": "2026-11-14T02:17:22Z"
 }
