@@ -1,7 +1,7 @@
 {
-  "version": "1.0.402",
+  "version": "1.0.403",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "74f4949970d8b290e4785146f8cfec072f5e22aa6be18be117ae3058158e867d",
-  "releaseNotes": "refactor: extract TranslationQuickTools component and refactor translation config UI",
-  "updatedAt": "2026-11-13T17:31:25Z"
+  "checksum": "9c741a738af066f6389354d46d84501d5a09692401815f673b7fef46d7ed19ad",
+  "releaseNotes": "feat: restrict select all books to current bookId when routed via book translation",
+  "updatedAt": "2026-11-14T00:43:21Z"
 }
