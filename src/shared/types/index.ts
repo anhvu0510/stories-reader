@@ -29,6 +29,8 @@ export interface Chapter {
 	state: 'SUCCEEDED' | 'PENDING' | 'FAILED';
 	updatedAt: string;
 	bookId?: string;
+	model?: string;
+	isContinuation?: boolean;
 }
 
 export interface ChapterNavigation {

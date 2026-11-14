@@ -1,3 +1,4 @@
+import { Sparkles } from 'lucide-react';
 import React, { memo, useMemo } from 'react';
 
 import { ParagraphView } from './ParagraphView';
@@ -156,6 +157,33 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 					</div>
 				);
 			})}
+
+			<div className="mt-12 mb-8 px-4 sm:px-6 md:px-8 text-center select-none">
+				<div className="p-5 rounded-2xl bg-surface-container/60 border border-outline-variant/30 backdrop-blur-xs space-y-3 max-w-md mx-auto shadow-md">
+					<div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center">
+						<Sparkles size={18} />
+					</div>
+					<div>
+						<h3 className="text-xs font-bold text-on-surface">Đã đến trang cuối chương này</h3>
+						<p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
+							Khám phá các hồi truyện tiếp theo hoặc nhánh rẽ What-If độc đáo tại Studio Viết Tiếp.
+						</p>
+					</div>
+					<button
+						type="button"
+						onClick={() => {
+							const currentBookId = chapters[0]?.bookId;
+							if (currentBookId && typeof window !== 'undefined') {
+								window.location.hash = `#/book/${currentBookId}/continuation`;
+							}
+						}}
+						className="w-full py-2.5 px-4 rounded-xl bg-primary text-on-primary text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md hover:bg-primary/90 transition-all"
+					>
+						<Sparkles size={14} />
+						<span>Mở Studio Viết Tiếp AI</span>
+					</button>
+				</div>
+			</div>
 		</main>
 	);
 });

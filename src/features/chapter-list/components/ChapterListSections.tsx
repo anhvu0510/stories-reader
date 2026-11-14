@@ -1,4 +1,4 @@
-import { ArrowLeft, Search, RefreshCw, Download, Heart, Sparkles } from 'lucide-react';
+import { ArrowLeft, Search, RefreshCw, Download, Heart, Sparkles, Feather } from 'lucide-react';
 import { motion } from 'motion/react';
 import React from 'react';
 
@@ -139,9 +139,19 @@ interface HeaderActionsProps {
 	onDownload: () => void;
 	onRefresh: () => void;
 	onOpenTranslate?: () => void;
+	onOpenContinuation?: () => void;
 }
 
-function ChapterHeaderActions({ book, isFav, loading, onToggleFavorite, onDownload, onRefresh, onOpenTranslate }: HeaderActionsProps) {
+function ChapterHeaderActions({
+	book,
+	isFav,
+	loading,
+	onToggleFavorite,
+	onDownload,
+	onRefresh,
+	onOpenTranslate,
+	onOpenContinuation,
+}: HeaderActionsProps) {
 	const favBtnClass = isFav
 		? 'bg-rose-500/15 border-rose-500/40 text-rose-500 shadow-xs'
 		: 'bg-surface-container border-outline-variant/30 text-on-surface-variant hover:text-rose-400';
@@ -151,6 +161,18 @@ function ChapterHeaderActions({ book, isFav, loading, onToggleFavorite, onDownlo
 		<div className="flex items-center gap-1.5">
 			{book && (
 				<>
+					{onOpenContinuation && (
+						<motion.button
+							type="button"
+							whileTap={{ scale: 0.88 }}
+							onClick={onOpenContinuation}
+							className="w-9 h-9 rounded-full bg-surface-container border border-outline-variant/30 text-amber-400 hover:text-amber-300 transition-colors flex items-center justify-center cursor-pointer shadow-xs"
+							title="Mở Studio Viết Tiếp AI"
+							aria-label="Mở Studio Viết Tiếp"
+						>
+							<Feather size={15} />
+						</motion.button>
+					)}
 					{onOpenTranslate && (
 						<motion.button
 							type="button"
@@ -258,6 +280,7 @@ export interface ChapterHeaderProps {
 	onDownload: () => void;
 	onRefresh: () => void;
 	onOpenTranslate?: () => void;
+	onOpenContinuation?: () => void;
 	onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 	onFilterStateChange: (val: string) => void;
 	onToggleSort: () => void;
@@ -278,6 +301,7 @@ export function ChapterHeader({
 	onDownload,
 	onRefresh,
 	onOpenTranslate,
+	onOpenContinuation,
 	onSearchChange,
 	onFilterStateChange,
 	onToggleSort,
@@ -311,6 +335,7 @@ export function ChapterHeader({
 					onDownload={onDownload}
 					onRefresh={onRefresh}
 					onOpenTranslate={onOpenTranslate}
+					onOpenContinuation={onOpenContinuation}
 				/>
 			</div>
 

@@ -102,12 +102,20 @@ export const ChapterItem = forwardRef<HTMLDivElement, ChapterItemProps>(
 
 				{/* Middle Content */}
 				<div className="flex-1 min-w-0 space-y-0.5">
-					<div className="flex items-center gap-2">
+					<div className="flex items-center gap-1.5">
 						<h4
 							className={`text-xs leading-snug transition-colors break-words whitespace-normal ${pick(isActive, 'text-primary font-black tracking-tight drop-shadow-xs', 'font-bold text-on-surface group-hover:text-primary')}`}
 						>
 							{chapter.title || `Chương ${chapter.chapterNumber}`}
 						</h4>
+						{(chapter.model?.toLowerCase().includes('deepseek') || chapter.isContinuation) && (
+							<span
+								className="px-1.5 py-0.5 rounded text-[9px] font-mono font-black uppercase tracking-wider bg-violet-500/20 text-violet-300 border border-violet-400/40 flex-shrink-0"
+								title="Chương viết tiếp bằng AI Autopilot"
+							>
+								AI
+							</span>
+						)}
 					</div>
 
 					{formattedDate && (
