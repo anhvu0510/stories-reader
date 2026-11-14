@@ -1,7 +1,7 @@
 {
-  "version": "1.0.406",
+  "version": "1.0.407",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "8ff786579de39c394b4f94dc7eb5ae6035fd4844a608ef7442ce4c8f0f919fd0",
-  "releaseNotes": "refactor: update AI model selection grid to a 2-column compact layout",
-  "updatedAt": "2026-11-14T02:17:22Z"
+  "checksum": "f89b9b1cb0e3878cadf381bc010cee7c864301eba94031d480fd999b395f8e3f",
+  "releaseNotes": "feat(ui): add Continuation Studio screen, autopilot console, and reader touchpoints",
+  "updatedAt": "2026-11-14T18:47:59Z"
 }
