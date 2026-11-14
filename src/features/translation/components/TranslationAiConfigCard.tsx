@@ -71,6 +71,27 @@ function PlatformFilterTabs({
 	);
 }
 
+function ModelQuotaMeta({ rpmLimit, rpdLimit }: { rpmLimit?: number; rpdLimit?: number }) {
+	const hasRpm = typeof rpmLimit === 'number' && rpmLimit > 0;
+	const hasRpd = typeof rpdLimit === 'number' && rpdLimit > 0;
+	if (!hasRpm && !hasRpd) return null;
+
+	return (
+		<div className="flex flex-col items-end gap-0.5 shrink-0">
+			{hasRpm && (
+				<span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-white/[0.06] text-on-surface-variant border border-white/10 leading-none">
+					{formatCompactNumber(rpmLimit)} RPM
+				</span>
+			)}
+			{hasRpd && (
+				<span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-white/[0.06] text-on-surface-variant border border-white/10 leading-none">
+					{formatCompactNumber(rpdLimit)} RPD
+				</span>
+			)}
+		</div>
+	);
+}
+
 function AIModelGrid({
 	models,
 	selectedModel,
@@ -92,12 +113,12 @@ function AIModelGrid({
 	}
 
 	return (
-		<div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto hide-scrollbar p-0.5">
+		<div data-testid="ai-model-grid" className="flex flex-col gap-1.5 max-h-52 overflow-y-auto hide-scrollbar p-0.5">
 			{models.map((item) => {
 				const isSelected = selectedModel === item.model && (selectedPlatform ? selectedPlatform === item.platform : true);
 				const formattedName = formatModelDisplayName(item.model);
-				const badgeClass = getPlatformBadgeClass(item.platform);
-				const platName = formatPlatformDisplayName(item.platform);
+				const displayTitle = formattedName || item.model;
+				const showRawModelId = Boolean(formattedName && item.model !== formattedName);
 
 				return (
 					<button
@@ -105,20 +126,30 @@ function AIModelGrid({
 						type="button"
 						onClick={() => onSelect(item)}
 						className={cn(
-							'p-2 rounded-xl text-left border transition-all flex flex-col justify-between active:scale-95 cursor-pointer min-h-[54px]',
+							'w-full px-3 py-2 rounded-xl text-left border transition-all flex items-center justify-between gap-2.5 active:scale-[0.99] cursor-pointer',
 							isSelected
-								? 'bg-primary/20 border-primary text-primary font-black shadow-xs'
-								: 'bg-white/5 hover:bg-white/10 border-white/10 text-on-surface font-medium'
+								? 'bg-primary/15 border-primary/70 text-on-surface shadow-xs'
+								: 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-on-surface'
 						)}
 					>
-						<div className="flex items-center justify-between w-full gap-1 mb-1">
-							<span className={cn('text-[9px] font-bold px-1.5 py-0.2 rounded border font-mono tracking-wider', badgeClass)}>
-								{platName}
-							</span>
-							{isSelected && <Check size={13} className="text-primary shrink-0 font-bold" />}
+						<div className="min-w-0 flex-1 space-y-0.5">
+							<div className={cn('text-xs font-bold leading-snug break-words', isSelected ? 'text-primary' : 'text-on-surface')}>
+								{displayTitle}
+							</div>
+							{showRawModelId && (
+								<div className="text-[10px] font-mono text-on-surface-variant/75 break-all leading-tight">{item.model}</div>
+							)}
 						</div>
-						<div className="font-mono font-bold text-[11px] truncate w-full" title={item.model}>
-							{formattedName || item.model}
+						<div className="flex items-center gap-2 shrink-0">
+							<ModelQuotaMeta rpmLimit={item.rpmLimit} rpdLimit={item.rpdLimit} />
+							<div
+								className={cn(
+									'w-5 h-5 rounded-full flex items-center justify-center border transition-colors shrink-0',
+									isSelected ? 'bg-primary border-primary text-on-primary' : 'border-white/20 bg-white/[0.03]'
+								)}
+							>
+								{isSelected && <Check size={12} strokeWidth={2.75} />}
+							</div>
 						</div>
 					</button>
 				);
@@ -144,20 +175,21 @@ function AIModelPicker({
 		return Array.from(new Set(modelList.map((m) => m.platform).filter(Boolean)));
 	}, [modelList]);
 
-	const [activePlatform, setActivePlatform] = useState<string>(() => {
+	const [selectedPlatformTab, setSelectedPlatformTab] = useState<string | null>(null);
+
+	useEffect(() => {
+		setSelectedPlatformTab(null);
+	}, [options.platform]);
+
+	const activePlatform = useMemo(() => {
+		if (selectedPlatformTab && availablePlatforms.includes(selectedPlatformTab)) {
+			return selectedPlatformTab;
+		}
 		if (options.platform && availablePlatforms.includes(options.platform)) {
 			return options.platform;
 		}
 		return availablePlatforms[0] || '';
-	});
-
-	useEffect(() => {
-		if (options.platform && availablePlatforms.includes(options.platform)) {
-			setActivePlatform(options.platform);
-		} else if (availablePlatforms.length > 0 && !availablePlatforms.includes(activePlatform)) {
-			setActivePlatform(availablePlatforms[0]);
-		}
-	}, [options.platform, availablePlatforms, activePlatform]);
+	}, [selectedPlatformTab, options.platform, availablePlatforms]);
 
 	const displayedModels = useMemo(() => {
 		if (!activePlatform) return modelList;
@@ -170,7 +202,7 @@ function AIModelPicker({
 				<span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Mô hình AI theo Platform:</span>
 			</div>
 
-			<PlatformFilterTabs platforms={availablePlatforms} activePlatform={activePlatform} onSelect={setActivePlatform} />
+			<PlatformFilterTabs platforms={availablePlatforms} activePlatform={activePlatform} onSelect={setSelectedPlatformTab} />
 
 			<AIModelGrid
 				models={displayedModels}

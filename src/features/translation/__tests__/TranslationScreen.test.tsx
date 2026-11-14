@@ -291,4 +291,64 @@ describe('TranslationScreen Full-Screen Implementation', () => {
 			platform: 'AI_STUDIO',
 		});
 	});
+
+	it('switches platform tabs and keeps the clicked platform models visible', async () => {
+		renderScreen();
+
+		const configToggle = await screen.findByText('2.5 FLASH');
+		fireEvent.click(configToggle);
+
+		const platformTabs = await screen.findByTestId('platform-filter-tabs');
+		expect(screen.queryByText('DS CHAT')).toBeNull();
+
+		fireEvent.click(within(platformTabs).getByRole('button', { name: 'DeployAI' }));
+
+		expect(await screen.findByText('DS CHAT')).toBeDefined();
+	});
+
+	it('renders compact model rows without redundant platform badges and shows full model info and limits', async () => {
+		vi.mocked(AIRepository.getQuotas).mockResolvedValueOnce({
+			availableModels: [
+				{ _id: 'q-1', model: 'gemini-2.5-flash', platform: 'AI_STUDIO', rpmLimit: 15, tpmLimit: 1000000, rpdLimit: 1500, isActive: true },
+				{
+					_id: 'q-2',
+					model: 'deepseek-ai/deepseek-v4.1-flash-1017',
+					platform: 'DEPLOYAI',
+					rpmLimit: 60,
+					tpmLimit: 2000000,
+					rpdLimit: 10000,
+					isActive: true,
+				},
+			],
+			currentConfig: {
+				model: 'gemini-2.5-flash',
+				platform: 'AI_STUDIO',
+				minWords: 100,
+				maxWords: 500,
+				temperature: 0.7,
+				forceRetranslate: false,
+			},
+		});
+
+		renderScreen();
+
+		const configToggle = await screen.findByText('2.5 FLASH');
+		fireEvent.click(configToggle);
+
+		const modelGrid = await screen.findByTestId('ai-model-grid');
+		expect(within(modelGrid).queryByText('AI Studio')).toBeNull();
+		expect(within(modelGrid).getByText('2.5 FLASH')).toBeDefined();
+		expect(within(modelGrid).getByText('gemini-2.5-flash')).toBeDefined();
+		expect(within(modelGrid).getByText(/15 RPM/)).toBeDefined();
+		expect(within(modelGrid).getByText(/1\.5k RPD/)).toBeDefined();
+
+		const platformTabs = screen.getByTestId('platform-filter-tabs');
+		fireEvent.click(within(platformTabs).getByRole('button', { name: 'DeployAI' }));
+
+		expect(await within(modelGrid).findByText('DS 4.1 FLASH (1017)')).toBeDefined();
+		expect(within(modelGrid).queryByText('DeployAI')).toBeNull();
+		expect(within(modelGrid).getByText('deepseek-ai/deepseek-v4.1-flash-1017')).toBeDefined();
+		expect(within(modelGrid).getByText(/60 RPM/)).toBeDefined();
+		expect(within(modelGrid).getByText(/10k RPD/)).toBeDefined();
+	});
 });
