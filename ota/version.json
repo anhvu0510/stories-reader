@@ -1,7 +1,7 @@
 {
-  "version": "1.0.403",
+  "version": "1.0.404",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "9c741a738af066f6389354d46d84501d5a09692401815f673b7fef46d7ed19ad",
-  "releaseNotes": "feat: restrict select all books to current bookId when routed via book translation",
-  "updatedAt": "2026-11-14T00:43:21Z"
+  "checksum": "c8e0a5f3ff9a575e71e31c76dd92490b63c13e8629faecfa1e930dcb71f38ce2",
+  "releaseNotes": "refactor: navigate to dedicated TranslationScreen instead of sheet in ReaderScreen",
+  "updatedAt": "2026-11-14T02:00:45Z"
 }
