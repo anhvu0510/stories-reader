@@ -246,4 +246,35 @@ describe('TranslationScreen Full-Screen Implementation', () => {
 		fireEvent.click(configCard);
 		expect(await screen.findByText(/Chưa có mô hình AI từ máy chủ/i)).toBeDefined();
 	});
+
+	it('restricts "Tất cả" book selection to current bookId when opened from /book/:bookId/translate', async () => {
+		renderScreen('/book/book-456/translate');
+
+		const storyTabBtn = await screen.findByRole('button', { name: /Toàn bộ truyện/i });
+		fireEvent.click(storyTabBtn);
+
+		await screen.findByText('Mục Thần Ký');
+
+		const selectAllBtn = screen.getByRole('button', { name: 'Tất cả' });
+		fireEvent.click(selectAllBtn);
+
+		await waitFor(() => {
+			expect(screen.getByText(/Đã chọn: 1\/2 truyện/i)).toBeDefined();
+			expect(screen.getByRole('button', { name: /Dịch \(1\)/i })).toBeDefined();
+		});
+	});
+
+	it('selects all books when opened at /translate without bookId', async () => {
+		renderScreen('/translate');
+
+		await screen.findByText('Mục Thần Ký');
+
+		const selectAllBtn = screen.getByRole('button', { name: 'Tất cả' });
+		fireEvent.click(selectAllBtn);
+
+		await waitFor(() => {
+			expect(screen.getByText(/Đã chọn: 2\/2 truyện/i)).toBeDefined();
+			expect(screen.getByRole('button', { name: /Dịch \(2\)/i })).toBeDefined();
+		});
+	});
 });

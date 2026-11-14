@@ -89,9 +89,11 @@ export function useTranslationScreenState() {
 
 	const handleSelectAllBooks = useCallback(() => {
 		triggerHaptic('selection');
-		const allIds = new Set(actions.books.map((b) => b.bookId));
+		// Nếu mở màn hình theo bookId cụ thể, nút "Tất cả" chỉ chọn đúng truyện đó để tránh dịch nhầm toàn bộ thư viện
+		const scopedBooks = bookId ? actions.books.filter((b) => b.bookId === bookId) : actions.books;
+		const allIds = new Set(scopedBooks.map((b) => b.bookId));
 		actions.setSelectedBooks(allIds);
-	}, [actions]);
+	}, [actions, bookId]);
 
 	const handleClearBooks = useCallback(() => {
 		triggerHaptic('selection');
