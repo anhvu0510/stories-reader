@@ -306,7 +306,7 @@ describe('TranslationScreen Full-Screen Implementation', () => {
 		expect(await screen.findByText('DS CHAT')).toBeDefined();
 	});
 
-	it('renders compact model rows without redundant platform badges and shows full model info and limits', async () => {
+	it('renders 2-column compact model buttons showing only the model name without platform badges or clutter', async () => {
 		vi.mocked(AIRepository.getQuotas).mockResolvedValueOnce({
 			availableModels: [
 				{ _id: 'q-1', model: 'gemini-2.5-flash', platform: 'AI_STUDIO', rpmLimit: 15, tpmLimit: 1000000, rpdLimit: 1500, isActive: true },
@@ -336,19 +336,18 @@ describe('TranslationScreen Full-Screen Implementation', () => {
 		fireEvent.click(configToggle);
 
 		const modelGrid = await screen.findByTestId('ai-model-grid');
+		expect(modelGrid.className).toContain('grid-cols-2');
 		expect(within(modelGrid).queryByText('AI Studio')).toBeNull();
 		expect(within(modelGrid).getByText('2.5 FLASH')).toBeDefined();
-		expect(within(modelGrid).getByText('gemini-2.5-flash')).toBeDefined();
-		expect(within(modelGrid).getByText(/15 RPM/)).toBeDefined();
-		expect(within(modelGrid).getByText(/1\.5k RPD/)).toBeDefined();
+		expect(within(modelGrid).queryByText('gemini-2.5-flash')).toBeNull();
+		expect(within(modelGrid).queryByText(/RPM/i)).toBeNull();
+		expect(within(modelGrid).queryByText(/RPD/i)).toBeNull();
 
 		const platformTabs = screen.getByTestId('platform-filter-tabs');
 		fireEvent.click(within(platformTabs).getByRole('button', { name: 'DeployAI' }));
 
 		expect(await within(modelGrid).findByText('DS 4.1 FLASH (1017)')).toBeDefined();
 		expect(within(modelGrid).queryByText('DeployAI')).toBeNull();
-		expect(within(modelGrid).getByText('deepseek-ai/deepseek-v4.1-flash-1017')).toBeDefined();
-		expect(within(modelGrid).getByText(/60 RPM/)).toBeDefined();
-		expect(within(modelGrid).getByText(/10k RPD/)).toBeDefined();
+		expect(within(modelGrid).queryByText('deepseek-ai/deepseek-v4.1-flash-1017')).toBeNull();
 	});
 });

@@ -71,27 +71,6 @@ function PlatformFilterTabs({
 	);
 }
 
-function ModelQuotaMeta({ rpmLimit, rpdLimit }: { rpmLimit?: number; rpdLimit?: number }) {
-	const hasRpm = typeof rpmLimit === 'number' && rpmLimit > 0;
-	const hasRpd = typeof rpdLimit === 'number' && rpdLimit > 0;
-	if (!hasRpm && !hasRpd) return null;
-
-	return (
-		<div className="flex flex-col items-end gap-0.5 shrink-0">
-			{hasRpm && (
-				<span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-white/[0.06] text-on-surface-variant border border-white/10 leading-none">
-					{formatCompactNumber(rpmLimit)} RPM
-				</span>
-			)}
-			{hasRpd && (
-				<span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-white/[0.06] text-on-surface-variant border border-white/10 leading-none">
-					{formatCompactNumber(rpdLimit)} RPD
-				</span>
-			)}
-		</div>
-	);
-}
-
 function AIModelGrid({
 	models,
 	selectedModel,
@@ -113,44 +92,33 @@ function AIModelGrid({
 	}
 
 	return (
-		<div data-testid="ai-model-grid" className="flex flex-col gap-1.5 max-h-52 overflow-y-auto hide-scrollbar p-0.5">
+		<div data-testid="ai-model-grid" className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto hide-scrollbar p-0.5">
 			{models.map((item) => {
 				const isSelected = selectedModel === item.model && (selectedPlatform ? selectedPlatform === item.platform : true);
-				const formattedName = formatModelDisplayName(item.model);
-				const displayTitle = formattedName || item.model;
-				const showRawModelId = Boolean(formattedName && item.model !== formattedName);
+				const displayTitle = formatModelDisplayName(item.model) || item.model;
 
 				return (
 					<button
 						key={`${item.platform}:::${item.model}`}
 						type="button"
+						title={item.model}
 						onClick={() => onSelect(item)}
 						className={cn(
-							'w-full px-3 py-2 rounded-xl text-left border transition-all flex items-center justify-between gap-2.5 active:scale-[0.99] cursor-pointer',
+							'group px-2.5 py-2 rounded-xl text-left border transition-all flex items-center justify-between gap-1.5 active:scale-[0.98] cursor-pointer min-h-[42px]',
 							isSelected
-								? 'bg-primary/15 border-primary/70 text-on-surface shadow-xs'
-								: 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-on-surface'
+								? 'bg-primary/15 border-primary/80 text-primary font-bold shadow-xs'
+								: 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 hover:border-white/20 text-on-surface font-medium'
 						)}
 					>
-						<div className="min-w-0 flex-1 space-y-0.5">
-							<div className={cn('text-xs font-bold leading-snug break-words', isSelected ? 'text-primary' : 'text-on-surface')}>
-								{displayTitle}
-							</div>
-							{showRawModelId && (
-								<div className="text-[10px] font-mono text-on-surface-variant/75 break-all leading-tight">{item.model}</div>
+						<span className="font-mono text-[11px] leading-tight line-clamp-2 break-words flex-1">{displayTitle}</span>
+						<span
+							className={cn(
+								'w-4 h-4 rounded-full flex items-center justify-center border transition-colors shrink-0',
+								isSelected ? 'bg-primary border-primary text-on-primary' : 'border-white/15 bg-white/[0.03] group-hover:border-white/30'
 							)}
-						</div>
-						<div className="flex items-center gap-2 shrink-0">
-							<ModelQuotaMeta rpmLimit={item.rpmLimit} rpdLimit={item.rpdLimit} />
-							<div
-								className={cn(
-									'w-5 h-5 rounded-full flex items-center justify-center border transition-colors shrink-0',
-									isSelected ? 'bg-primary border-primary text-on-primary' : 'border-white/20 bg-white/[0.03]'
-								)}
-							>
-								{isSelected && <Check size={12} strokeWidth={2.75} />}
-							</div>
-						</div>
+						>
+							{isSelected && <Check size={10} strokeWidth={3} />}
+						</span>
 					</button>
 				);
 			})}
