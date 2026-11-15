@@ -55,7 +55,7 @@ vi.mock('@/repositories/SettingsRepository', () => ({
 	},
 }));
 
-describe('ReaderScreen -> Full TranslationScreen Navigation & Back', () => {
+describe('ReaderScreen -> Translation BottomSheet Interaction', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		window.scrollTo = vi.fn();
@@ -98,7 +98,7 @@ describe('ReaderScreen -> Full TranslationScreen Navigation & Back', () => {
 		cleanup();
 	});
 
-	it('navigates from ReaderScreen to full TranslationScreen with current chapter selected and returns to ReaderScreen on Back', async () => {
+	it('opens TranslationSheet bottom sheet on ReaderScreen when clicking translation icon without navigating away', async () => {
 		render(
 			<MemoryRouter initialEntries={['/book/b1/chapter/c1']}>
 				<Routes>
@@ -116,16 +116,21 @@ describe('ReaderScreen -> Full TranslationScreen Navigation & Back', () => {
 		const translateBtn = screen.getByTitle('Dịch AI');
 		fireEvent.click(translateBtn);
 
+		// Assert bottom sheet opens with TranslationSheet tabs and ariaLabel
 		await waitFor(() => {
-			expect(screen.getByRole('button', { name: /Quay lại/i })).toBeDefined();
-			expect(screen.getByRole('button', { name: /Dịch \(1\)/i })).toBeDefined();
+			expect(screen.getByRole('dialog', { name: /Mở Dịch AI/i })).toBeDefined();
+			expect(screen.getByText('Nhiều chương')).toBeDefined();
 		});
 
-		const backBtn = screen.getByRole('button', { name: /Quay lại/i });
-		fireEvent.click(backBtn);
+		// Ensure we did not navigate to full TranslationScreen (which has 'Quay lại' back button)
+		expect(screen.queryByRole('button', { name: /Quay lại/i })).toBeNull();
+
+		// Clicking close button dismisses the bottom sheet
+		const closeBtn = screen.getByRole('button', { name: 'Đóng' });
+		fireEvent.click(closeBtn);
 
 		await waitFor(() => {
-			expect(screen.getAllByText('Đoạn văn 1 dài').length).toBeGreaterThan(0);
+			expect(screen.queryByRole('dialog', { name: /Mở Dịch AI/i })).toBeNull();
 		});
 	});
 });
