@@ -1,7 +1,7 @@
 {
-  "version": "1.0.408",
+  "version": "1.0.409",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "645bc3b61abf8471c6034f789e095a12770682a1108d82014abf205f3cb25cea",
-  "releaseNotes": "refactor: replace translation page navigation with TranslationSheet modal in reader",
-  "updatedAt": "2026-11-15T11:13:04Z"
+  "checksum": "a655ca7946764dbfcdfc10aee6ad6e59d3698e50c8ab2c667c6cd8593b53db4e",
+  "releaseNotes": "refactor: redesign TranslationSheet layout and modularize AI config components",
+  "updatedAt": "2026-11-15T11:24:22Z"
 }
