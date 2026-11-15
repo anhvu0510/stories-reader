@@ -86,20 +86,21 @@ function AIConfigDropdown({ options, setOptions, setPoolStatus, quotas = [] }: A
 		return Array.from(new Set(modelList.map((m) => m.platform).filter(Boolean)));
 	}, [modelList]);
 
-	const [activePlatform, setActivePlatform] = React.useState<string>(() => {
+	const [selectedPlatformTab, setSelectedPlatformTab] = React.useState<string | null>(null);
+
+	React.useEffect(() => {
+		setSelectedPlatformTab(null);
+	}, [options.platform]);
+
+	const activePlatform = React.useMemo(() => {
+		if (selectedPlatformTab && availablePlatforms.includes(selectedPlatformTab)) {
+			return selectedPlatformTab;
+		}
 		if (options.platform && availablePlatforms.includes(options.platform)) {
 			return options.platform;
 		}
 		return availablePlatforms[0] || '';
-	});
-
-	React.useEffect(() => {
-		if (options.platform && availablePlatforms.includes(options.platform)) {
-			setActivePlatform(options.platform);
-		} else if (availablePlatforms.length > 0 && !availablePlatforms.includes(activePlatform)) {
-			setActivePlatform(availablePlatforms[0]);
-		}
-	}, [options.platform, availablePlatforms, activePlatform]);
+	}, [selectedPlatformTab, options.platform, availablePlatforms]);
 
 	const displayedModels = React.useMemo(() => {
 		if (!activePlatform) return modelList;
@@ -125,7 +126,7 @@ function AIConfigDropdown({ options, setOptions, setPoolStatus, quotas = [] }: A
 									type="button"
 									onClick={() => {
 										triggerHaptic('selection');
-										setActivePlatform(plat);
+										setSelectedPlatformTab(plat);
 									}}
 									className={cn(
 										'px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer',

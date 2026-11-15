@@ -327,7 +327,7 @@ export function TranslationAiConfigCard({
 						animate={{ opacity: 1, height: 'auto' }}
 						exit={{ opacity: 0, height: 0 }}
 						transition={{ duration: 0.2 }}
-						className="p-3 border-t border-white/10 space-y-3 bg-black/20"
+						className="p-3 border-t border-white/10 space-y-3 bg-black/20 max-h-[46dvh] overflow-y-auto hide-scrollbar"
 					>
 						<AIModelPicker options={options} setOptions={setOptions} setPoolStatus={setPoolStatus} quotas={quotas} />
 						<AIParameterControls options={options} setOptions={setOptions} />

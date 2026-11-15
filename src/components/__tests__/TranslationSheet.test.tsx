@@ -275,4 +275,33 @@ describe('TranslationSheet Requirements', () => {
 			);
 		});
 	});
+
+	it('switches platform tab to select models from another platform in TranslationSheet', async () => {
+		const { fireEvent } = await import('@testing-library/react');
+		render(<TranslationSheet {...defaultProps} />);
+
+		// Open AI config section
+		const configToggle = await screen.findByText(/Cấu hình AI|Gemini|DeployAI|chưa chọn model/i);
+		fireEvent.click(configToggle);
+
+		// Switch platform to DeployAI
+		const deployAiTab = await screen.findByRole('button', { name: /DeployAI/i });
+		fireEvent.click(deployAiTab);
+
+		// Assert DeployAI model is displayed and selectable
+		await waitFor(() => {
+			expect(screen.getByText(/DS 4.1 Flash/i)).toBeDefined();
+		});
+
+		const modelBtn = screen.getByText(/DS 4.1 Flash/i);
+		fireEvent.click(modelBtn);
+
+		// Switch back to AI Studio
+		const aiStudioTab = screen.getByRole('button', { name: /AI Studio/i });
+		fireEvent.click(aiStudioTab);
+
+		await waitFor(() => {
+			expect(screen.getByText(/2.5 Flash Lite/i)).toBeDefined();
+		});
+	});
 });

@@ -2,10 +2,12 @@ import { X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 
+import { TranslationAiConfigCard } from '@/features/translation/components/TranslationAiConfigCard';
+import { TranslationQuickTools } from '@/features/translation/components/TranslationQuickTools';
 import { triggerHaptic } from '@/hooks/useHaptic';
 
 import { BottomSheet } from './BottomSheet';
-import { TranslationSheetActionButtons, TranslationSheetConfigBar } from './translation-sheet/TranslationConfigSection';
+import { TranslationSheetActionButtons } from './translation-sheet/TranslationConfigSection';
 import {
 	getAsyncButtonLabel,
 	getSyncButtonLabel,
@@ -141,29 +143,29 @@ export function TranslationSheet(props: TranslationSheetProps) {
 	const labels = computeSheetLabels(actions, activeTab, batch.selectedChapters.size);
 
 	return (
-		<BottomSheet
-			isOpen={true}
-			onClose={onClose}
-			ariaLabel="Mở Dịch AI"
-			maxHeight="h-[78vh] min-h-[520px] max-h-[85dvh]"
-			showDragHandle={false}
-		>
+		<BottomSheet isOpen={true} onClose={onClose} ariaLabel="Mở Dịch AI" maxHeight="h-[88dvh] max-h-[92dvh]" showDragHandle={false}>
 			<TranslationSheetHeader activeTab={activeTab} setActiveTab={setActiveTab} disableCurrent={disableCurrent} onClose={onClose} />
 
-			<TranslationSheetConfigBar
-				showConfig={showConfig}
-				onToggleConfig={() => setShowConfig(!showConfig)}
-				poolStatus={poolStatus}
-				currentModel={options.model}
-				onDetectProperNouns={actions.handleDetectProperNouns}
-				onTranslateChineseTitles={actions.handleTranslateChineseTitles}
-				options={options}
-				setOptions={setOptions}
-				setPoolStatus={setPoolStatus}
-				quotas={quotas}
-			/>
+			<div className="px-3.5 pt-2.5 pb-2 flex-shrink-0 space-y-2 border-b border-white/10 bg-white/[0.02]">
+				<TranslationAiConfigCard
+					options={options}
+					setOptions={setOptions}
+					showConfig={showConfig}
+					setShowConfig={setShowConfig}
+					poolStatus={poolStatus}
+					setPoolStatus={setPoolStatus}
+					quotas={quotas}
+				/>
 
-			<div className="flex-1 overflow-y-auto hide-scrollbar p-4 sm:p-5 flex flex-col min-h-0">
+				<TranslationQuickTools
+					onDetectProperNouns={actions.handleDetectProperNouns}
+					onTranslateChineseTitles={actions.handleTranslateChineseTitles}
+					onDetectTagsAndPov={actions.handleDetectTagsAndPov}
+					disabled={actions.isSubmitting}
+				/>
+			</div>
+
+			<div className="flex-1 overflow-hidden px-3.5 py-2.5 flex flex-col min-h-0">
 				{activeTab === 'current' && <CurrentTabContent currentChapterName={currentChapterName} currentBookName={currentBookName} />}
 
 				{activeTab === 'batch_chapter' && (
