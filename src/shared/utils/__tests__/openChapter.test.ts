@@ -28,8 +28,15 @@ describe('openChapter utility', () => {
 		});
 	});
 
-	it('updates window.location.hash without calling reload when bookId and chapterId are valid', () => {
+	it('updates window.location.hash and forces reload by default when bookId and chapterId are valid', () => {
 		openChapter('b123', 'c456');
+
+		expect(window.location.hash).toBe('#/book/b123/chapter/c456');
+		expect(window.location.reload).toHaveBeenCalledTimes(1);
+	});
+
+	it('skips reload only when forceReload is explicitly false', () => {
+		openChapter('b123', 'c456', { forceReload: false });
 
 		expect(window.location.hash).toBe('#/book/b123/chapter/c456');
 		expect(window.location.reload).not.toHaveBeenCalled();
@@ -45,7 +52,7 @@ describe('openChapter utility', () => {
 		expect(window.location.reload).not.toHaveBeenCalled();
 	});
 
-	it('openNextChapter clears previous and next chapter progress, resets scroll, and navigates without page reload', () => {
+	it('openNextChapter clears previous and next chapter progress, resets scroll, and forces page reload', () => {
 		localStorage.setItem('reading_progress_b1_c1', JSON.stringify({ chapterId: 'c1', scrollY: 3000 }));
 		localStorage.setItem('reading_progress_b1_c2', JSON.stringify({ chapterId: 'c2', scrollY: 2000 }));
 
@@ -55,14 +62,14 @@ describe('openChapter utility', () => {
 		expect(localStorage.getItem('reading_progress_b1_c2')).toBeNull();
 		expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
 		expect(window.location.hash).toBe('#/book/b1/chapter/c2');
-		// Không còn reload trang để tránh double-loading
-		expect(window.location.reload).not.toHaveBeenCalled();
+		expect(window.location.reload).toHaveBeenCalledTimes(1);
 	});
 
-	it('openPrevChapter resets scroll and navigates to previous chapter', () => {
+	it('openPrevChapter resets scroll, navigates to previous chapter, and forces page reload', () => {
 		openPrevChapter('b1', 'c2', 'c1');
 
 		expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
 		expect(window.location.hash).toBe('#/book/b1/chapter/c1');
+		expect(window.location.reload).toHaveBeenCalledTimes(1);
 	});
 });

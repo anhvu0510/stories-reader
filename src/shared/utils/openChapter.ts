@@ -5,8 +5,8 @@ export interface OpenChapterOptions {
 	forceReload?: boolean;
 }
 
-function reloadCurrentPage() {
-	if (typeof window === 'undefined' || typeof window.location.reload !== 'function') return;
+export function reloadCurrentPage() {
+	if (typeof window === 'undefined' || typeof window.location?.reload !== 'function') return;
 
 	try {
 		window.location.reload();
@@ -29,7 +29,7 @@ export function openChapter(bookId: string, chapterId: string, options?: OpenCha
 		window.location.hash = targetHash;
 	}
 
-	if (options?.forceReload) {
+	if (options?.forceReload !== false) {
 		reloadCurrentPage();
 	}
 }
@@ -39,8 +39,7 @@ export function openChapter(bookId: string, chapterId: string, options?: OpenCha
  * 1. Clear previous chapter's completed progress
  * 2. Clear any stale progress for next chapter
  * 3. Immediately reset window scroll to 0
- * 4. Navigate to next chapter via hash (React Router re-renders → useEffect loads chapter)
- *    — KHÔNG gọi window.location.reload() để tránh double-loading
+ * 4. Navigate to next chapter via hash and force reload to clear old cache
  */
 export function openNextChapter(bookId: string, currentChapterId?: string, nextChapterId?: string) {
 	if (!bookId || !nextChapterId) return;
@@ -54,12 +53,11 @@ export function openNextChapter(bookId: string, currentChapterId?: string, nextC
 		window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 	}
 
-	// resetScroll: true nhưng bỏ forceReload để tránh giật 2 lần
-	openChapter(bookId, nextChapterId, { resetScroll: true });
+	openChapter(bookId, nextChapterId, { resetScroll: true, forceReload: true });
 }
 
 /**
- * Cleanly navigate to the previous chapter with scroll reset
+ * Cleanly navigate to the previous chapter with scroll reset and force reload
  */
 export function openPrevChapter(bookId: string, currentChapterId?: string, prevChapterId?: string) {
 	if (!bookId || !prevChapterId) return;
@@ -68,5 +66,5 @@ export function openPrevChapter(bookId: string, currentChapterId?: string, prevC
 		window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 	}
 
-	openChapter(bookId, prevChapterId, { resetScroll: true });
+	openChapter(bookId, prevChapterId, { resetScroll: true, forceReload: true });
 }

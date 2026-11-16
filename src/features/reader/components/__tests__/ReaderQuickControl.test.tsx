@@ -110,7 +110,7 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 		expect(screen.queryByTitle('Bật đọc thành tiếng (VieNeu AI TTS)')).toBeNull();
 	});
 
-	it('navigates to next chapter using openNextChapter with scroll reset (no page reload) when clicking next button', () => {
+	it('navigates to next chapter using openNextChapter with scroll reset and force reload when clicking next button', () => {
 		const originalLocation = window.location;
 		const reloadSpy = vi.fn();
 		Object.defineProperty(window, 'location', {
@@ -146,8 +146,7 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 		expect(localStorage.getItem('reading_progress_b1_c551')).toBeNull();
 		expect(localStorage.getItem('reading_progress_b1_c552')).toBeNull();
 		expect(window.location.hash).toBe('#/book/b1/chapter/c552');
-		// Không còn reload trang — tránh double-loading khi chuyển chương
-		expect(reloadSpy).not.toHaveBeenCalled();
+		expect(reloadSpy).toHaveBeenCalledTimes(1);
 
 		Object.defineProperty(window, 'location', {
 			writable: true,

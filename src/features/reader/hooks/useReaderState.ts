@@ -6,6 +6,7 @@ import { offlineDb } from '@/lib/offlineDb';
 import { BookRepository } from '@/repositories/BookRepository';
 import { ChapterRepository } from '@/repositories/ChapterRepository';
 import { hasNativeReaderGestures } from '@/services/nativeReaderGestures';
+import { reloadCurrentPage } from '@/shared/utils/openChapter';
 import { useReaderConfigStore } from '@/stores/useReaderConfigStore';
 
 import { locateActiveReadingElement, resolveLatestReadingChapter } from '../utils/readerHelpers';
@@ -300,6 +301,7 @@ export function useTitleBarActions({
 			}
 			forceFreshNextLoadRef.current = true;
 			navigate(`/book/${bookId}/chapter/${targetChapId}`);
+			reloadCurrentPage();
 		} catch (err: unknown) {
 			console.error('Lỗi khi tải lại chương:', err);
 		} finally {
