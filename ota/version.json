@@ -1,7 +1,7 @@
 {
-  "version": "1.0.409",
+  "version": "1.0.410",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "a655ca7946764dbfcdfc10aee6ad6e59d3698e50c8ab2c667c6cd8593b53db4e",
-  "releaseNotes": "refactor: redesign TranslationSheet layout and modularize AI config components",
-  "updatedAt": "2026-11-15T11:24:22Z"
+  "checksum": "9511143952330b9d7ae02c528ed3ed014aae9e2bedc8b84d77787ef3b0a22f40",
+  "releaseNotes": "refactor: optimize translation sheet options hook and add caching for model formatters",
+  "updatedAt": "2026-11-16T04:59:17Z"
 }
