@@ -95,7 +95,7 @@ function AIModelGrid({
 		<div data-testid="ai-model-grid" className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto hide-scrollbar p-0.5">
 			{models.map((item) => {
 				const isSelected = selectedModel === item.model && (selectedPlatform ? selectedPlatform === item.platform : true);
-				const displayTitle = formatModelDisplayName(item.model) || item.model;
+				const displayTitle = formatModelDisplayName(item.model, item.displayName) || item.model;
 
 				return (
 					<button

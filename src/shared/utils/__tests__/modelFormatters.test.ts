@@ -10,6 +10,19 @@ describe('formatModelDisplayName utility', () => {
 		expect(formatModelDisplayName('deepseek-reasoner')).toBe('DS REASONER');
 	});
 
+	it('should format GLM models into concise shortnames for UI cards', () => {
+		expect(formatModelDisplayName('zai-org/glm-5.3-flash')).toBe('GLM 5.3 FLASH');
+		expect(formatModelDisplayName('glm-5.3-flash')).toBe('GLM 5.3 FLASH');
+	});
+
+	it('should prioritize explicit displayName if provided', () => {
+		expect(formatModelDisplayName('custom/xyz-123', 'My Custom Model')).toBe('My Custom Model');
+	});
+
+	it('should generically format unknown vendor models by stripping prefix', () => {
+		expect(formatModelDisplayName('meta-llama/llama-3.3-70b-instruct')).toBe('LLAMA 3.3 70B INSTRUCT');
+	});
+
 	it('should maintain backward compatibility for Gemini models', () => {
 		expect(formatModelDisplayName('gemini-2.5-flash')).toBe('2.5 FLASH');
 		expect(formatModelDisplayName('gemini-1.5-flash')).toBe('1.5 FLASH');

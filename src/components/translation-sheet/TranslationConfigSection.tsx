@@ -151,7 +151,7 @@ function AIConfigDropdown({ options, setOptions, setPoolStatus, quotas = [] }: A
 					<div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto hide-scrollbar p-0.5">
 						{displayedModels.map((item) => {
 							const isSelected = options.model === item.model && (options.platform ? options.platform === item.platform : true);
-							const formattedName = formatModelDisplayName(item.model);
+							const formattedName = formatModelDisplayName(item.model, item.displayName);
 							const badgeClass = getPlatformBadgeClass(item.platform);
 							const platName = formatPlatformDisplayName(item.platform);
 

@@ -10,7 +10,7 @@ import type { AIQuota } from '@/shared/types';
 
 function useQuotaManagerState(initialQuotas: AIQuota[], onQuotasUpdated: () => void) {
 	const [quotas, setQuotas] = useState<AIQuota[]>(initialQuotas);
-	const [activeTab, setActiveTab] = useState<'VERTEX_API' | 'AI_STUDIO'>('AI_STUDIO');
+	const [activeTab, setActiveTab] = useState<string>('AI_STUDIO');
 	const [isLoading, setIsLoading] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [formData, setFormData] = useState<Partial<AIQuota>>({});
@@ -18,6 +18,23 @@ function useQuotaManagerState(initialQuotas: AIQuota[], onQuotasUpdated: () => v
 	const showToast = useToastStore((state) => state.showToast);
 	const onQuotasUpdatedRef = useRef(onQuotasUpdated);
 	onQuotasUpdatedRef.current = onQuotasUpdated;
+
+	const availablePlatforms = React.useMemo(() => {
+		const set = new Set<string>();
+		quotas.forEach((q) => {
+			if (q.platform) set.add(q.platform);
+		});
+		if (set.size === 0) {
+			set.add('AI_STUDIO');
+		}
+		return Array.from(set);
+	}, [quotas]);
+
+	useEffect(() => {
+		if (availablePlatforms.length > 0 && !availablePlatforms.includes(activeTab)) {
+			setActiveTab(availablePlatforms[0]);
+		}
+	}, [availablePlatforms, activeTab]);
 
 	const fetchQuotas = useCallback(async () => {
 		setIsLoading(true);
@@ -74,7 +91,9 @@ function useQuotaManagerState(initialQuotas: AIQuota[], onQuotasUpdated: () => v
 		setEditingId('new');
 		setFormData({
 			model: '',
-			platform: 'AI_STUDIO',
+			displayName: '',
+			platform: activeTab || 'AI_STUDIO',
+			protocol: ['AI_STUDIO', 'VERTEX_API'].includes(activeTab) ? 'gemini' : 'openai_compat',
 			rpmLimit: 15,
 			tpmLimit: 1000000,
 			rpdLimit: 1500,
@@ -86,6 +105,7 @@ function useQuotaManagerState(initialQuotas: AIQuota[], onQuotasUpdated: () => v
 		quotas,
 		activeTab,
 		setActiveTab,
+		availablePlatforms,
 		isLoading,
 		editingId,
 		setEditingId,
@@ -113,6 +133,7 @@ export function QuotaSettingsSheet({
 		quotas,
 		activeTab,
 		setActiveTab,
+		availablePlatforms,
 		isLoading,
 		editingId,
 		setEditingId,
@@ -133,6 +154,7 @@ export function QuotaSettingsSheet({
 			<QuotaHeader
 				activeTab={activeTab}
 				setActiveTab={setActiveTab}
+				availableTabs={availablePlatforms}
 				onStartCreate={startCreate}
 				isCreating={editingId === 'new'}
 				onRefresh={fetchQuotas}

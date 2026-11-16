@@ -102,7 +102,7 @@ export function useTranslationActions({
 		requestFn({
 			bookId: targetBookId,
 			model: options.model,
-			platform: options.platform || (options.model?.includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO'),
+			platform: options.platform,
 		}).catch((e: unknown) => {
 			console.warn(`${toolName} bg error:`, e);
 		});
@@ -136,7 +136,7 @@ export function useTranslationActions({
 			return;
 		}
 
-		const platform = options.platform || (options.model?.includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO');
+		const platform = options.platform || '';
 		try {
 			if (isSync) {
 				await executeSyncTranslate(

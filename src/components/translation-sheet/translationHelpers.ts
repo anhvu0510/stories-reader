@@ -37,6 +37,8 @@ export const DEFAULT_VERTEX_MODELS: string[] = [];
 export interface ModelPlatformOption {
 	model: string;
 	platform: string;
+	displayName?: string;
+	protocol?: string;
 	rpdLimit?: number;
 	rpmLimit?: number;
 }
@@ -45,11 +47,26 @@ export const DEFAULT_PLATFORM_MODELS: ModelPlatformOption[] = [];
 
 function parseQuotaItem(raw: unknown): ModelPlatformOption | null {
 	if (!raw || typeof raw !== 'object') return null;
-	const item = raw as { model?: string; platform?: string; rpdLimit?: number; rpmLimit?: number; isActive?: boolean };
+	const item = raw as {
+		model?: string;
+		platform?: string;
+		displayName?: string;
+		protocol?: string;
+		rpdLimit?: number;
+		rpmLimit?: number;
+		isActive?: boolean;
+	};
 	if (item.isActive === false || !item.model) return null;
 	const cleanModel = item.model.replace(/\s*\([VA]\)$/i, '').trim();
-	const platform = item.platform || (cleanModel.toLowerCase().includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO');
-	return { model: cleanModel, platform, rpdLimit: item.rpdLimit, rpmLimit: item.rpmLimit };
+	const platform = item.platform || '';
+	return {
+		model: cleanModel,
+		platform,
+		displayName: item.displayName,
+		protocol: item.protocol,
+		rpdLimit: item.rpdLimit,
+		rpmLimit: item.rpmLimit,
+	};
 }
 
 function parseAvailableModelItem(raw: unknown): ModelPlatformOption | null {
@@ -57,8 +74,7 @@ function parseAvailableModelItem(raw: unknown): ModelPlatformOption | null {
 	const cleanModel = String(raw)
 		.replace(/\s*\([VA]\)$/i, '')
 		.trim();
-	const platform = cleanModel.toLowerCase().includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO';
-	return { model: cleanModel, platform };
+	return { model: cleanModel, platform: '' };
 }
 
 export function buildModelPlatformList(quotas?: unknown[], availableModels?: string[]): ModelPlatformOption[] {
@@ -125,8 +141,8 @@ export function resolveTranslationSheetProps(props: TranslationSheetProps) {
 export function extractRawQuotas(res: unknown): (string | { model?: string })[] {
 	if (!res || typeof res !== 'object') return [];
 	const p = res as QuotasPayload;
+	if (Array.isArray(p.quotas) && p.quotas.length > 0) return p.quotas;
 	if (Array.isArray(p.availableModels)) return p.availableModels;
-	if (Array.isArray(p.quotas)) return p.quotas;
 	if (Array.isArray(res)) return res;
 	return [];
 }
@@ -144,12 +160,7 @@ export function extractConfig(res: unknown) {
 	const p = res as QuotasPayload;
 	const cfg = p.currentConfig || p.config;
 	if (!cfg || typeof cfg !== 'object') return null;
-	let loadedPlatform = cfg.platform;
-	if (loadedPlatform === 'VERTEX_API' || !loadedPlatform) loadedPlatform = 'AI_STUDIO';
-	if (typeof cfg.model === 'string' && cfg.model.includes('deepseek')) {
-		loadedPlatform = 'DEPLOYAI';
-	}
-	return { ...cfg, platform: loadedPlatform };
+	return { ...cfg };
 }
 
 export function validateSubmitParams(

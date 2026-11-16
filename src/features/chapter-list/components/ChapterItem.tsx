@@ -108,7 +108,7 @@ export const ChapterItem = forwardRef<HTMLDivElement, ChapterItemProps>(
 						>
 							{chapter.title || `Chương ${chapter.chapterNumber}`}
 						</h4>
-						{(chapter.model?.toLowerCase().includes('deepseek') || chapter.isContinuation) && (
+						{(Boolean(chapter.isContinuation) || Boolean(chapter.model)) && (
 							<span
 								className="px-1.5 py-0.5 rounded text-[9px] font-mono font-black uppercase tracking-wider bg-violet-500/20 text-violet-300 border border-violet-400/40 flex-shrink-0"
 								title="Chương viết tiếp bằng AI Autopilot"

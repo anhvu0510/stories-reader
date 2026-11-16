@@ -4,7 +4,10 @@
  * - deepseek-ai/deepseek-v4.1-flash-1017 -> DS 4.1 FLASH (1017)
  * - gemini-2.5-flash -> 2.5 FLASH
  */
-export function formatModelDisplayName(model: string): string {
+export function formatModelDisplayName(model: string, displayName?: string): string {
+	if (displayName?.trim()) {
+		return displayName.trim();
+	}
 	if (!model) {
 		return '';
 	}
@@ -15,7 +18,10 @@ export function formatModelDisplayName(model: string): string {
 		.replace(/^deepseek-ai\/deepseek-v?/, 'DS ')
 		.replace(/^deepseek-ai\//, 'DS ')
 		.replace(/^deepseek-v?/, 'DS ')
+		.replace(/^zai-org\//, '')
+		.replace(/^glm-/, 'GLM ')
 		.replace(/^gemini-/, '')
+		.replace(/^[^/]+\//, '')
 		.replace(/-/g, ' ')
 		.replace(/\s+/g, ' ')
 		.trim()

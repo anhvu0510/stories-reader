@@ -8,8 +8,9 @@ import { AIPlatformSheetHeader } from '../AIPlatformSheetHeader';
 import type { AIQuota } from '@/shared/types';
 
 export function QuotaHeader(props: {
-	activeTab: 'VERTEX_API' | 'AI_STUDIO';
-	setActiveTab: (tab: 'VERTEX_API' | 'AI_STUDIO') => void;
+	activeTab: string;
+	setActiveTab: (tab: string) => void;
+	availableTabs?: string[];
 	onStartCreate: () => void;
 	isCreating: boolean;
 	onRefresh: () => void;
@@ -33,27 +34,48 @@ export function QuotaEditor({
 }) {
 	return (
 		<div className="bg-white/10 p-3 rounded-2xl border border-white/20 shadow-xs space-y-3">
-			<div>
+			<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 				<input
 					autoFocus
 					type="text"
 					value={formData.model || ''}
 					onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-					placeholder="Tên Model (vd: gemini-1.5-flash)"
+					placeholder="Mã Model (vd: zai-org/glm-5.3-flash)"
 					className="w-full bg-white/10 border border-white/15 px-2.5 py-1.5 rounded-xl text-xs font-bold text-on-surface focus:border-primary/60 focus:outline-none shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]"
+				/>
+				<input
+					type="text"
+					value={formData.displayName || ''}
+					onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+					placeholder="Tên hiển thị UI (vd: GLM 5.3 Flash)"
+					className="w-full bg-white/10 border border-white/15 px-2.5 py-1.5 rounded-xl text-xs font-medium text-on-surface focus:border-primary/60 focus:outline-none shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]"
 				/>
 			</div>
 
-			<div className="grid grid-cols-[1fr_min-content] gap-3 items-center">
-				<select
-					value={formData.platform || 'AI_STUDIO'}
-					onChange={(e) => setFormData({ ...formData, platform: e.target.value as 'AI_STUDIO' | 'VERTEX_API' })}
-					className="w-full bg-white/10 border border-white/15 px-2.5 py-1.5 rounded-xl text-xs font-medium text-on-surface focus:border-primary/60 focus:outline-none appearance-none shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]"
-				>
-					<option value="AI_STUDIO">AI Studio</option>
-					<option value="VERTEX_API">Vertex API</option>
-				</select>
-				<label className="flex items-center gap-1.5 cursor-pointer bg-white/10 px-2 py-1.5 rounded-xl border border-white/15 hover:bg-white/20 transition-colors whitespace-nowrap shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]">
+			<div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
+				<div>
+					<input
+						type="text"
+						value={formData.platform || ''}
+						onChange={(e) => setFormData({ ...formData, platform: e.target.value.toUpperCase() })}
+						placeholder="Platform (vd: DEPLOYAI, OPENROUTER)"
+						className="w-full bg-white/10 border border-white/15 px-2.5 py-1.5 rounded-xl text-xs font-bold text-on-surface focus:border-primary/60 focus:outline-none shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]"
+					/>
+				</div>
+
+				<div>
+					<select
+						value={formData.protocol || 'openai_compat'}
+						onChange={(e) => setFormData({ ...formData, protocol: e.target.value })}
+						className="w-full bg-white/10 border border-white/15 px-2.5 py-1.5 rounded-xl text-xs font-medium text-on-surface focus:border-primary/60 focus:outline-none appearance-none shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)]"
+					>
+						<option value="openai_compat">Giao thức: OpenAI Compat</option>
+						<option value="gemini">Giao thức: Gemini Native</option>
+						<option value="anthropic">Giao thức: Anthropic</option>
+					</select>
+				</div>
+
+				<label className="flex items-center gap-1.5 cursor-pointer bg-white/10 px-2.5 py-1.5 rounded-xl border border-white/15 hover:bg-white/20 transition-colors whitespace-nowrap shadow-[inset_0_1px_0.5px_rgba(255,255,255,0.2)] justify-center">
 					<input
 						type="checkbox"
 						checked={formData.isActive !== false}
@@ -135,7 +157,7 @@ export function QuotaItemCard({
 		return <QuotaEditor formData={formData} setFormData={setFormData} onSave={onSave} onCancel={onCancel} />;
 	}
 
-	const modelTitle = formatModelDisplayName(quota.model) || quota.model;
+	const modelTitle = formatModelDisplayName(quota.model, quota.displayName) || quota.model;
 
 	return (
 		<div

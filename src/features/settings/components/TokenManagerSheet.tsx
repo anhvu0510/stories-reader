@@ -1,35 +1,61 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { BottomSheet } from '@/components/BottomSheet';
+import { extractRawQuotas } from '@/components/translation-sheet/translationHelpers';
 import { AIRepository } from '@/repositories/AIRepository';
 import { useToastStore } from '@/stores/useToastStore';
 
 import { TokenEditor, TokenHeader, TokenItemCard } from './token-manager/TokenManagerComponents';
 
-import type { AIToken } from '@/shared/types';
+import type { AIToken, AIQuota } from '@/shared/types';
 
 function useTokenManagerState() {
 	const [tokens, setTokens] = useState<AIToken[]>([]);
-	const [activeTab, setActiveTab] = useState<'VERTEX_API' | 'AI_STUDIO'>('VERTEX_API');
+	const [quotas, setQuotas] = useState<AIQuota[]>([]);
+	const [activeTab, setActiveTab] = useState<string>('AI_STUDIO');
 	const [isLoading, setIsLoading] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [formData, setFormData] = useState<Partial<AIToken>>({});
 
 	const showToast = useToastStore((state) => state.showToast);
 
+	const availablePlatforms = useMemo(() => {
+		const set = new Set<string>();
+		tokens.forEach((t) => {
+			if (t.platform) set.add(t.platform);
+		});
+		quotas.forEach((q) => {
+			if (q.platform) set.add(q.platform);
+		});
+		if (set.size === 0) {
+			set.add('AI_STUDIO');
+		}
+		return Array.from(set);
+	}, [tokens, quotas]);
+
+	useEffect(() => {
+		if (availablePlatforms.length > 0 && !availablePlatforms.includes(activeTab)) {
+			setActiveTab(availablePlatforms[0]);
+		}
+	}, [availablePlatforms, activeTab]);
+
 	const fetchTokens = useCallback(async () => {
 		setIsLoading(true);
 		try {
-			const res = await AIRepository.getTokens(activeTab);
-			if (res) {
-				setTokens(res.tokens || []);
+			const [tokenRes, quotaRes] = await Promise.all([AIRepository.getTokens(), AIRepository.getQuotas().catch(() => null)]);
+			if (tokenRes) {
+				setTokens(tokenRes.tokens || []);
+			}
+			if (quotaRes) {
+				const raw = extractRawQuotas(quotaRes);
+				setQuotas(raw as AIQuota[]);
 			}
 		} catch {
 			showToast('Lỗi khi tải danh sách token API', 'error');
 		} finally {
 			setIsLoading(false);
 		}
-	}, [activeTab, showToast]);
+	}, [showToast]);
 
 	useEffect(() => {
 		fetchTokens();
@@ -81,7 +107,8 @@ function useTokenManagerState() {
 		setFormData({
 			name: '',
 			email: '',
-			platform: activeTab,
+			platform: activeTab || availablePlatforms[0] || 'AI_STUDIO',
+			protocol: ['AI_STUDIO', 'VERTEX_API'].includes(activeTab) ? 'gemini' : 'openai_compat',
 			model: '*',
 			status: 'active',
 			priority: 0,
@@ -93,6 +120,7 @@ function useTokenManagerState() {
 		tokens,
 		activeTab,
 		setActiveTab,
+		availablePlatforms,
 		isLoading,
 		editingId,
 		setEditingId,
@@ -111,6 +139,7 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
 		tokens,
 		activeTab,
 		setActiveTab,
+		availablePlatforms,
 		isLoading,
 		editingId,
 		setEditingId,
@@ -123,6 +152,10 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
 		startCreate,
 	} = useTokenManagerState();
 
+	const displayedTokens = useMemo(() => {
+		return tokens.filter((t) => (t.platform || 'AI_STUDIO') === activeTab);
+	}, [tokens, activeTab]);
+
 	const content = (
 		<div
 			className={`relative bg-surface/50 dark:bg-surface/50 backdrop-blur-xl text-on-surface w-full flex flex-col ${isEmbedded ? 'h-full max-w-full bg-transparent' : 'flex-1 overflow-hidden border border-white/20 h-[85vh] sm:h-[80vh] rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-[600px] z-10'}`}
@@ -130,6 +163,7 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
 			<TokenHeader
 				activeTab={activeTab}
 				setActiveTab={setActiveTab}
+				availableTabs={availablePlatforms}
 				onStartCreate={startCreate}
 				isCreating={editingId === 'new'}
 				onRefresh={fetchTokens}
@@ -150,7 +184,7 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
 						/>
 					)}
 
-					{tokens.map((t) => (
+					{displayedTokens.map((t) => (
 						<div key={t._id}>
 							<TokenItemCard
 								token={t}
@@ -169,7 +203,7 @@ export function TokenManagerSheet({ onClose, isEmbedded = false }: { onClose?: (
 						</div>
 					))}
 
-					{tokens.length === 0 && editingId !== 'new' && (
+					{displayedTokens.length === 0 && editingId !== 'new' && (
 						<div className="text-center py-12 text-on-surface-variant">
 							<p className="text-sm border border-dashed border-outline-variant/30 p-4 rounded-xl">
 								Chưa có token nào được cấu hình cho tab này

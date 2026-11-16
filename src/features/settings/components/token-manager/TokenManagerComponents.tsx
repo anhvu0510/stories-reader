@@ -1,15 +1,16 @@
 import { Edit2, Trash2, Check, PlayCircle, PauseCircle } from 'lucide-react';
 import React from 'react';
 
-import { formatModelDisplayName } from '@/shared/utils/modelFormatters';
+import { formatModelDisplayName, formatPlatformDisplayName } from '@/shared/utils/modelFormatters';
 
 import { AIPlatformSheetHeader } from '../AIPlatformSheetHeader';
 
 import type { AIToken } from '@/shared/types';
 
 export function TokenHeader(props: {
-	activeTab: 'VERTEX_API' | 'AI_STUDIO';
-	setActiveTab: (tab: 'VERTEX_API' | 'AI_STUDIO') => void;
+	activeTab: string;
+	setActiveTab: (tab: string) => void;
+	availableTabs?: string[];
 	onStartCreate: () => void;
 	isCreating: boolean;
 	onRefresh: () => void;
@@ -62,7 +63,13 @@ function TokenUsageItem({
 	);
 }
 
-function parseConfigAI(raw: unknown): { apiKey?: string; project?: string; location?: string; vertexai?: boolean } {
+function parseConfigAI(raw: unknown): {
+	apiKey?: string;
+	baseURL?: string;
+	project?: string;
+	location?: string;
+	vertexai?: boolean;
+} {
 	if (typeof raw === 'string') {
 		try {
 			return JSON.parse(raw);
@@ -71,7 +78,7 @@ function parseConfigAI(raw: unknown): { apiKey?: string; project?: string; locat
 		}
 	}
 	if (raw && typeof raw === 'object') {
-		return raw as { apiKey?: string; project?: string; location?: string; vertexai?: boolean };
+		return raw as { apiKey?: string; baseURL?: string; project?: string; location?: string; vertexai?: boolean };
 	}
 	return {};
 }
@@ -82,11 +89,32 @@ function TokenPlatformConfigInputs({
 	onChangeConfig,
 }: {
 	platform?: string;
-	configAI: { apiKey?: string; project?: string; location?: string; vertexai?: boolean };
-	onChangeConfig: (updated: { apiKey?: string; project?: string; location?: string; vertexai?: boolean }) => void;
+	configAI: { apiKey?: string; baseURL?: string; project?: string; location?: string; vertexai?: boolean };
+	onChangeConfig: (updated: { apiKey?: string; baseURL?: string; project?: string; location?: string; vertexai?: boolean }) => void;
 }) {
-	if (platform === 'AI_STUDIO') {
+	if (platform === 'VERTEX_API') {
 		return (
+			<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+				<input
+					type="text"
+					value={configAI.project || ''}
+					onChange={(e) => onChangeConfig({ ...configAI, vertexai: true, project: e.target.value })}
+					placeholder="GCP Project ID"
+					className="w-full bg-surface-container-low border border-outline-variant/30 px-2.5 py-1.5 rounded-lg text-sm font-medium focus:border-primary focus:outline-none font-mono"
+				/>
+				<input
+					type="text"
+					value={configAI.location || ''}
+					onChange={(e) => onChangeConfig({ ...configAI, vertexai: true, location: e.target.value })}
+					placeholder="Location (vd: global)"
+					className="w-full bg-surface-container-low border border-outline-variant/30 px-2.5 py-1.5 rounded-lg text-sm font-medium focus:border-primary focus:outline-none font-mono"
+				/>
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-2">
 			<input
 				type="text"
 				value={configAI.apiKey || ''}
@@ -94,24 +122,15 @@ function TokenPlatformConfigInputs({
 				placeholder="API Key"
 				className="w-full bg-surface-container-low border border-outline-variant/30 px-2.5 py-1.5 rounded-lg text-sm font-medium focus:border-primary focus:outline-none font-mono"
 			/>
-		);
-	}
-	return (
-		<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-			<input
-				type="text"
-				value={configAI.project || ''}
-				onChange={(e) => onChangeConfig({ ...configAI, vertexai: true, project: e.target.value })}
-				placeholder="GCP Project ID"
-				className="w-full bg-surface-container-low border border-outline-variant/30 px-2.5 py-1.5 rounded-lg text-sm font-medium focus:border-primary focus:outline-none font-mono"
-			/>
-			<input
-				type="text"
-				value={configAI.location || ''}
-				onChange={(e) => onChangeConfig({ ...configAI, vertexai: true, location: e.target.value })}
-				placeholder="Location (vd: global)"
-				className="w-full bg-surface-container-low border border-outline-variant/30 px-2.5 py-1.5 rounded-lg text-sm font-medium focus:border-primary focus:outline-none font-mono"
-			/>
+			{platform !== 'AI_STUDIO' && (
+				<input
+					type="text"
+					value={configAI.baseURL || ''}
+					onChange={(e) => onChangeConfig({ ...configAI, baseURL: e.target.value })}
+					placeholder="Base URL (vd: https://api-cdn.deploy.com/api/v1)"
+					className="w-full bg-surface-container-low border border-outline-variant/30 px-2.5 py-1.5 rounded-lg text-sm font-medium focus:border-primary focus:outline-none font-mono"
+				/>
+			)}
 		</div>
 	);
 }
@@ -173,9 +192,28 @@ export function TokenEditor({
 				/>
 			</div>
 
+			<div className="grid grid-cols-2 gap-2">
+				<input
+					type="text"
+					value={formData.platform || ''}
+					onChange={(e) => setFormData({ ...formData, platform: e.target.value.toUpperCase() })}
+					placeholder="Platform (vd: DEPLOYAI, OPENROUTER)"
+					className="w-full bg-surface-container-low border border-outline-variant/30 px-2.5 py-1.5 rounded-lg text-xs font-medium focus:border-primary focus:outline-none font-mono"
+				/>
+				<select
+					value={formData.protocol || (['AI_STUDIO', 'VERTEX_API'].includes(formData.platform || '') ? 'gemini' : 'openai_compat')}
+					onChange={(e) => setFormData({ ...formData, protocol: e.target.value as AIToken['protocol'] })}
+					className="w-full bg-surface-container-low border border-outline-variant/30 px-2.5 py-1.5 rounded-lg text-xs font-medium focus:border-primary focus:outline-none appearance-none"
+				>
+					<option value="openai_compat">OpenAI Compatible</option>
+					<option value="gemini">Gemini</option>
+					<option value="anthropic">Anthropic</option>
+				</select>
+			</div>
+
 			<div className="pt-2 border-t border-outline-variant/10">
 				<label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5 block">
-					{formData.platform === 'AI_STUDIO' ? 'AI Studio Configuration' : 'Vertex API Configuration'}
+					{formatPlatformDisplayName(formData.platform)} Configuration
 				</label>
 				<TokenPlatformConfigInputs
 					platform={formData.platform}

@@ -22,10 +22,7 @@ function parseSavedSettings(settingVal: unknown): Record<string, unknown> | null
 	if (!settingVal) return null;
 	const parsed = typeof settingVal === 'string' ? JSON.parse(settingVal) : settingVal;
 	if (!parsed || typeof parsed !== 'object') return null;
-	const opts = parsed as Record<string, unknown>;
-	if (opts.platform === 'VERTEX_API') opts.platform = 'AI_STUDIO';
-	if (typeof opts.model === 'string' && opts.model.includes('deepseek')) opts.platform = 'DEPLOYAI';
-	return opts;
+	return parsed as Record<string, unknown>;
 }
 
 function loadSavedTranslationSettings(isActive: () => boolean, setOptions: React.Dispatch<React.SetStateAction<TranslationOptions>>) {
@@ -54,7 +51,7 @@ export function useTranslationOptions(activeTab: Tab) {
 		let active = true;
 		if (options.model && isOptionsLoaded) {
 			const matched = quotas.find((q) => q.model === options.model);
-			const platform = options.platform || matched?.platform || (options.model.includes('deepseek') ? 'DEPLOYAI' : 'AI_STUDIO');
+			const platform = options.platform || matched?.platform || '';
 			ChapterRepository.getPoolStatus(options.model, platform)
 				.then((res) => {
 					if (active && res) setPoolStatus(res as PoolStatus);
@@ -142,7 +139,7 @@ export function useTranslationOptions(activeTab: Tab) {
 		const t = setTimeout(() => {
 			const payload = {
 				model: options.model,
-				platform: options.platform || 'AI_STUDIO',
+				platform: options.platform,
 				minWords: options.minWords,
 				maxWords: options.maxWords,
 				temperature: options.temperature,
