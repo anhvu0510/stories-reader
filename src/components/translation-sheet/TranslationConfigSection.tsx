@@ -81,7 +81,9 @@ function AIWordsAndTempInputs({
 }
 
 function AIConfigDropdown({ options, setOptions, setPoolStatus, quotas = [] }: AIConfigDropdownProps) {
-	const modelList = buildModelPlatformList(quotas, options.availableModels);
+	const modelList = React.useMemo(() => {
+		return buildModelPlatformList(quotas, options.availableModels);
+	}, [quotas, options.availableModels]);
 	const availablePlatforms = React.useMemo(() => {
 		return Array.from(new Set(modelList.map((m) => m.platform).filter(Boolean)));
 	}, [modelList]);

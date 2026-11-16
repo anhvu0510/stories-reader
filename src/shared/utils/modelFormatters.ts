@@ -1,3 +1,7 @@
+const modelFormatCache = new Map<string, string>();
+const platformLabelCache = new Map<string, string>();
+const platformBadgeCache = new Map<string, string>();
+
 /**
  * Chuẩn hóa tên hiển thị ngắn gọn cho các model AI trên UI (tránh bị tràn hoặc cắt ngang).
  * - deepseek-ai/deepseek-v4.1-flash -> DS 4.1 FLASH
@@ -12,9 +16,14 @@ export function formatModelDisplayName(model: string, displayName?: string): str
 		return '';
 	}
 
+	const cached = modelFormatCache.get(model);
+	if (cached !== undefined) {
+		return cached;
+	}
+
 	const withSnapshotParen = model.replace(/-(\d{4})$/, ' ($1)');
 
-	return withSnapshotParen
+	const formatted = withSnapshotParen
 		.replace(/^deepseek-ai\/deepseek-v?/, 'DS ')
 		.replace(/^deepseek-ai\//, 'DS ')
 		.replace(/^deepseek-v?/, 'DS ')
@@ -26,6 +35,9 @@ export function formatModelDisplayName(model: string, displayName?: string): str
 		.replace(/\s+/g, ' ')
 		.trim()
 		.toUpperCase();
+
+	modelFormatCache.set(model, formatted);
+	return formatted;
 }
 
 const KNOWN_PLATFORM_LABELS: Record<string, string> = {
@@ -44,13 +56,24 @@ const KNOWN_PLATFORM_LABELS: Record<string, string> = {
 export function formatPlatformDisplayName(platform?: string): string {
 	if (!platform) return 'AI Studio';
 	const key = platform.toUpperCase().trim();
-	if (KNOWN_PLATFORM_LABELS[key]) {
-		return KNOWN_PLATFORM_LABELS[key];
+	const cached = platformLabelCache.get(key);
+	if (cached !== undefined) {
+		return cached;
 	}
-	return key
+
+	if (KNOWN_PLATFORM_LABELS[key]) {
+		const label = KNOWN_PLATFORM_LABELS[key];
+		platformLabelCache.set(key, label);
+		return label;
+	}
+
+	const formatted = key
 		.replace(/[_-]+/g, ' ')
 		.toLowerCase()
 		.replace(/\b\w/g, (c) => c.toUpperCase());
+
+	platformLabelCache.set(key, formatted);
+	return formatted;
 }
 
 const BADGE_COLOR_PALETTE = [
@@ -67,18 +90,29 @@ const BADGE_COLOR_PALETTE = [
 export function getPlatformBadgeClass(platform?: string): string {
 	if (!platform) return BADGE_COLOR_PALETTE[0];
 	const key = platform.toUpperCase().trim();
-	if (key === 'AI_STUDIO') return 'text-sky-400 bg-sky-500/15 border-sky-500/30';
-	if (key === 'VERTEX_API') return 'text-indigo-400 bg-indigo-500/15 border-indigo-500/30';
-	if (key === 'DEPLOYAI') return 'text-amber-400 bg-amber-500/15 border-amber-500/30';
-	if (key === 'OPENAI_COMPAT') return 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30';
-
-	let hash = 0;
-	for (let i = 0; i < key.length; i++) {
-		hash = (hash << 5) - hash + key.charCodeAt(i);
-		hash |= 0;
+	const cached = platformBadgeCache.get(key);
+	if (cached !== undefined) {
+		return cached;
 	}
-	const index = Math.abs(hash) % BADGE_COLOR_PALETTE.length;
-	return BADGE_COLOR_PALETTE[index];
+
+	let badge = '';
+	if (key === 'AI_STUDIO') badge = 'text-sky-400 bg-sky-500/15 border-sky-500/30';
+	if (key === 'VERTEX_API') badge = 'text-indigo-400 bg-indigo-500/15 border-indigo-500/30';
+	if (key === 'DEPLOYAI') badge = 'text-amber-400 bg-amber-500/15 border-amber-500/30';
+	if (key === 'OPENAI_COMPAT') badge = 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30';
+
+	if (!badge) {
+		let hash = 0;
+		for (let i = 0; i < key.length; i++) {
+			hash = (hash << 5) - hash + key.charCodeAt(i);
+			hash |= 0;
+		}
+		const index = Math.abs(hash) % BADGE_COLOR_PALETTE.length;
+		badge = BADGE_COLOR_PALETTE[index];
+	}
+
+	platformBadgeCache.set(key, badge);
+	return badge;
 }
 
 export function formatCompactNumber(num: number): string {

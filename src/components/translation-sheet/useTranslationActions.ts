@@ -17,7 +17,7 @@ import {
 } from './translationHelpers';
 
 import type { useTranslationBatchPagination } from './useTranslationSheet';
-import type { Book, Chapter } from '@/shared/types';
+import type { Book, Chapter, AIQuota } from '@/shared/types';
 
 function useTabDataSync(
 	activeTab: Tab,
@@ -66,6 +66,7 @@ interface UseTranslationActionsProps {
 	batch: ReturnType<typeof useTranslationBatchPagination>;
 	onClose: () => void;
 	onSuccess?: () => void;
+	quotas?: AIQuota[];
 }
 
 export function useTranslationActions({
@@ -77,6 +78,7 @@ export function useTranslationActions({
 	batch,
 	onClose,
 	onSuccess,
+	quotas = [],
 }: UseTranslationActionsProps) {
 	const showToast = useToastStore((state) => state.showToast);
 	const [books, setBooks] = useState<Book[]>([]);
@@ -87,6 +89,12 @@ export function useTranslationActions({
 	const isSubmittingRef = useRef(false);
 
 	useTabDataSync(activeTab, currentBookId, searchBook, batch.loadInitialChapters, setBooks);
+
+	const resolvePlatform = () => {
+		if (options.platform) return options.platform;
+		const matched = quotas.find((q) => q.model === options.model);
+		return matched?.platform || '';
+	};
 
 	const dispatchBookAiTool = (
 		toolName: string,
@@ -102,7 +110,7 @@ export function useTranslationActions({
 		requestFn({
 			bookId: targetBookId,
 			model: options.model,
-			platform: options.platform,
+			platform: resolvePlatform(),
 		}).catch((e: unknown) => {
 			console.warn(`${toolName} bg error:`, e);
 		});
@@ -136,7 +144,7 @@ export function useTranslationActions({
 			return;
 		}
 
-		const platform = options.platform || '';
+		const platform = resolvePlatform();
 		try {
 			if (isSync) {
 				await executeSyncTranslate(

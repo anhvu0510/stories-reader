@@ -16,7 +16,6 @@ import {
 } from './translationHelpers';
 
 import type { AIQuota } from '@/shared/types';
-import type React from 'react';
 
 function parseSavedSettings(settingVal: unknown): Record<string, unknown> | null {
 	if (!settingVal) return null;
@@ -25,21 +24,7 @@ function parseSavedSettings(settingVal: unknown): Record<string, unknown> | null
 	return parsed as Record<string, unknown>;
 }
 
-function loadSavedTranslationSettings(isActive: () => boolean, setOptions: React.Dispatch<React.SetStateAction<TranslationOptions>>) {
-	SettingsRepository.getSettings<{ value?: unknown }>('stories.ui.translate', true)
-		.then((savedSettings) => {
-			if (!isActive() || !savedSettings?.value) return;
-			try {
-				const opts = parseSavedSettings(savedSettings.value);
-				if (opts) setOptions((prev) => ({ ...prev, ...opts }));
-			} catch (err) {
-				console.warn('[TranslationSheet] Parse saved settings error:', err);
-			}
-		})
-		.catch(() => {});
-}
-
-export function useTranslationOptions(activeTab: Tab) {
+export function useTranslationOptions(_activeTab?: Tab) {
 	const [options, setOptions] = useState<TranslationOptions>(defaultOptions);
 	const [isOptionsLoaded, setIsOptionsLoaded] = useState(false);
 	const [showConfig, setShowConfig] = useState(false);
@@ -61,69 +46,45 @@ export function useTranslationOptions(activeTab: Tab) {
 		return () => {
 			active = false;
 		};
-	}, [options.model, options.platform, activeTab, isOptionsLoaded, quotas]);
+	}, [options.model, options.platform, isOptionsLoaded, quotas]);
 
 	useEffect(() => {
 		let active = true;
-		loadSavedTranslationSettings(() => active, setOptions);
 
-		AIRepository.getQuotas()
-			.then((res) => {
-				if (!active) return;
-				const rawQuotas = extractRawQuotas(res);
-				setQuotas(rawQuotas as AIQuota[]);
-				const cfg = extractConfig(res);
-				const modelList = buildModelPlatformList(rawQuotas, extractUniqueModels(rawQuotas));
-
-				setOptions((prev) => {
-					const newOptions = { ...prev, ...(cfg || {}) };
-					if (prev.model) {
-						newOptions.model = prev.model;
-						newOptions.platform = prev.platform;
-					}
-					newOptions.availableModels = modelList.map((m) => m.model);
-
-					const matched = modelList.find((m) => m.model === newOptions.model);
-					if (matched) {
-						newOptions.platform = matched.platform;
-					} else if (modelList.length > 0) {
-						newOptions.model = modelList[0].model;
-						newOptions.platform = modelList[0].platform;
-					} else {
-						newOptions.model = '';
-						newOptions.platform = '';
-					}
-					return newOptions;
-				});
-				setIsOptionsLoaded(true);
-			})
-			.catch((err) => {
+		Promise.all([
+			SettingsRepository.getSettings<{ value?: unknown }>('stories.ui.translate', true).catch(() => null),
+			AIRepository.getQuotas().catch((err) => {
 				console.warn('AIRepository.getQuotas error, repairing database setting:', err);
-				SettingsRepository.updateSettings('stories.ui.translate', defaultOptions)
+				return SettingsRepository.updateSettings('stories.ui.translate', defaultOptions)
 					.then(() => AIRepository.getQuotas())
-					.then((res) => {
-						if (!active || !res) return;
-						const rawQuotas = extractRawQuotas(res);
-						setQuotas(rawQuotas as AIQuota[]);
-						const modelList = buildModelPlatformList(rawQuotas, extractUniqueModels(rawQuotas));
-						setOptions((prev) => {
-							const newOptions = { ...prev };
-							newOptions.availableModels = modelList.map((m) => m.model);
-							if (modelList.length > 0) {
-								newOptions.model = modelList[0].model;
-								newOptions.platform = modelList[0].platform;
-							} else {
-								newOptions.model = '';
-								newOptions.platform = '';
-							}
-							return newOptions;
-						});
-					})
-					.catch(() => {})
-					.finally(() => {
-						if (active) setIsOptionsLoaded(true);
-					});
+					.catch(() => null);
+			}),
+		]).then(([savedSettings, res]) => {
+			if (!active) return;
+			const savedOpts = parseSavedSettings(savedSettings?.value);
+			const rawQuotas = extractRawQuotas(res);
+			const cfg = extractConfig(res);
+			const modelList = buildModelPlatformList(rawQuotas, extractUniqueModels(rawQuotas));
+
+			setQuotas(rawQuotas as AIQuota[]);
+			setOptions((prev) => {
+				const merged = { ...prev, ...(cfg || {}), ...(savedOpts || {}) };
+				merged.availableModels = modelList.map((m) => m.model);
+
+				const matched = modelList.find((m) => m.model === merged.model);
+				if (matched) {
+					merged.platform = matched.platform;
+				} else if (modelList.length > 0) {
+					merged.model = modelList[0].model;
+					merged.platform = modelList[0].platform;
+				} else {
+					merged.model = '';
+					merged.platform = '';
+				}
+				return merged;
 			});
+			setIsOptionsLoaded(true);
+		});
 
 		return () => {
 			active = false;
@@ -150,7 +111,7 @@ export function useTranslationOptions(activeTab: Tab) {
 			SettingsRepository.updateSettings('stories.ui.translate', payload).catch(() => {});
 		}, 500);
 		return () => clearTimeout(t);
-	}, [options, isOptionsLoaded, quotas]);
+	}, [options, isOptionsLoaded]);
 
 	return {
 		options,

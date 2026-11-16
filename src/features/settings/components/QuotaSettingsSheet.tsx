@@ -145,7 +145,9 @@ export function QuotaSettingsSheet({
 		startCreate,
 	} = useQuotaManagerState(initialQuotas, onQuotasUpdated);
 
-	const filteredQuotas = quotas.filter((q) => q.platform === activeTab);
+	const filteredQuotas = React.useMemo(() => {
+		return quotas.filter((q) => (q.platform || 'AI_STUDIO') === activeTab);
+	}, [quotas, activeTab]);
 
 	const content = (
 		<div

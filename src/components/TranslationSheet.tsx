@@ -130,6 +130,7 @@ export function TranslationSheet(props: TranslationSheetProps) {
 		batch,
 		onClose,
 		onSuccess,
+		quotas,
 	});
 	const selection = useBatchSelectionHandlers(currentBookId, batch, actions.setIsSubmitting);
 
