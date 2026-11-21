@@ -1,7 +1,7 @@
 {
-  "version": "1.0.411",
+  "version": "1.0.412",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "cf4c1f0d6dcadc4912e59dee35ddcf15cffa742753a1c232ff47ade04ef60ff1",
-  "releaseNotes": "fix: re-enable page reload by default when opening chapters",
-  "updatedAt": "2026-11-16T13:53:59Z"
+  "checksum": "df0de31ecd9894a35e46f53f4cd37de84fb1bef4b777211e571942393e49cc75",
+  "releaseNotes": "refactor: use history.pushState instead of hash mutation for chapter navigation reloads",
+  "updatedAt": "2026-11-21T06:17:54Z"
 }
