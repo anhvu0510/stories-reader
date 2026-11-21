@@ -2,12 +2,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { openChapter, openNextChapter, openPrevChapter } from '@/shared/utils/openChapter';
+import { useAppStore } from '@/stores/useAppStore';
 
 describe('openChapter utility', () => {
 	const originalLocation = window.location;
 
 	beforeEach(() => {
 		localStorage.clear();
+		useAppStore.setState({ apiLoadingCount: 0 });
 		window.scrollTo = vi.fn();
 		// Mock window.location reload
 		Object.defineProperty(window, 'location', {
@@ -38,6 +40,7 @@ describe('openChapter utility', () => {
 		expect(pushStateSpy).toHaveBeenCalledWith(null, '', '#/book/b1/chapter/c2');
 		expect(hashChangeSpy).not.toHaveBeenCalled();
 		expect(window.scrollTo).not.toHaveBeenCalled();
+		expect(useAppStore.getState().apiLoadingCount).toBe(1);
 		expect(window.location.reload).toHaveBeenCalledTimes(1);
 
 		window.removeEventListener('hashchange', hashChangeSpy);

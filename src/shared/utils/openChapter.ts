@@ -1,4 +1,5 @@
 import { clearReadingProgress } from '@/hooks/useReadingProgress';
+import { useAppStore } from '@/stores/useAppStore';
 
 export interface OpenChapterOptions {
 	resetScroll?: boolean;
@@ -35,6 +36,7 @@ export function openChapter(bookId: string, chapterId: string, options?: OpenCha
 
 	if (shouldForceReload) {
 		updateTargetHashForReload(targetHash);
+		useAppStore.getState().incrementApiLoading();
 		reloadCurrentPage();
 		return;
 	}
