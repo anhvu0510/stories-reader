@@ -110,9 +110,10 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 		expect(screen.queryByTitle('Bật đọc thành tiếng (VieNeu AI TTS)')).toBeNull();
 	});
 
-	it('navigates to next chapter using openNextChapter with scroll reset and force reload when clicking next button', () => {
+	it('navigates to next chapter using openNextChapter with pushState and force reload without pre-reload scroll', () => {
 		const originalLocation = window.location;
 		const reloadSpy = vi.fn();
+		const pushStateSpy = vi.spyOn(window.history, 'pushState');
 		Object.defineProperty(window, 'location', {
 			writable: true,
 			value: {
@@ -142,12 +143,13 @@ describe('ReaderQuickControl - Horizontal Chapter Circles above Range Button', (
 		const nextBtn = screen.getByTitle('Chương sau');
 		fireEvent.click(nextBtn);
 
-		expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' });
+		expect(window.scrollTo).not.toHaveBeenCalled();
 		expect(localStorage.getItem('reading_progress_b1_c551')).toBeNull();
 		expect(localStorage.getItem('reading_progress_b1_c552')).toBeNull();
-		expect(window.location.hash).toBe('#/book/b1/chapter/c552');
+		expect(pushStateSpy).toHaveBeenCalledWith(null, '', '#/book/b1/chapter/c552');
 		expect(reloadSpy).toHaveBeenCalledTimes(1);
 
+		pushStateSpy.mockRestore();
 		Object.defineProperty(window, 'location', {
 			writable: true,
 			value: originalLocation,

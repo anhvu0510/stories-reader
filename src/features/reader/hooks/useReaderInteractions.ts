@@ -130,9 +130,6 @@ function navigateNextIfAvailable(bookId?: string, chapterId?: string, nextChapte
 	if (!bookId || !nextChapterId) return;
 	onSwipe?.();
 	triggerHaptic('medium');
-	if (typeof window !== 'undefined' && window.scrollTo) {
-		window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-	}
 	openNextChapter(bookId, chapterId, nextChapterId);
 }
 
@@ -150,9 +147,6 @@ function navigatePrevIfAvailable(
 	}
 	onSwipe?.();
 	triggerHaptic('medium');
-	if (typeof window !== 'undefined' && window.scrollTo) {
-		window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-	}
 	openPrevChapter(bookId, chapterId, prevChapterId);
 }
 

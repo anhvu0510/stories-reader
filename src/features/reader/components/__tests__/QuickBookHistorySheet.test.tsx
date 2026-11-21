@@ -185,7 +185,9 @@ describe('QuickBookHistorySheet', () => {
 
 	it('navigates to book chapter when clicked', async () => {
 		const onClose = vi.fn();
+		const originalLocation = window.location;
 		const reloadSpy = vi.fn();
+		const pushStateSpy = vi.spyOn(window.history, 'pushState');
 		Object.defineProperty(window, 'location', {
 			writable: true,
 			value: {
@@ -207,7 +209,13 @@ describe('QuickBookHistorySheet', () => {
 		fireEvent.click(screen.getByText('Truyện Cũ Hơn'));
 
 		expect(onClose).toHaveBeenCalled();
-		expect(window.location.hash).toBe('#/book/book-2/chapter/chap-10');
+		expect(pushStateSpy).toHaveBeenCalledWith(null, '', '#/book/book-2/chapter/chap-10');
 		expect(reloadSpy).toHaveBeenCalledTimes(1);
+
+		pushStateSpy.mockRestore();
+		Object.defineProperty(window, 'location', {
+			writable: true,
+			value: originalLocation,
+		});
 	});
 });
