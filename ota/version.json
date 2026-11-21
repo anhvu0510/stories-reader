@@ -1,7 +1,7 @@
 {
-  "version": "1.0.414",
+  "version": "1.0.415",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "89bc0d43642fbc83dcbf8072618116ba19e0725cb1db3c0001cb03dc08a96986",
-  "releaseNotes": "feat: add SSE streaming option to translation configuration and request payload",
-  "updatedAt": "2026-11-21T11:02:10Z"
+  "checksum": "32ce8efad6649cd63bf2adfe2f20231781c37c152a034d680c27c3eb992419c3",
+  "releaseNotes": "feat: add CompactToggleSwitch component and batchingGroup translation option",
+  "updatedAt": "2026-11-21T21:14:11Z"
 }
