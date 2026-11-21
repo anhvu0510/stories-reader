@@ -1,7 +1,7 @@
 {
-  "version": "1.0.413",
+  "version": "1.0.414",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "69beb0dbd75b0bb16e6285292af700bd327f8a3e4800b03da437c548efbd1ff8",
-  "releaseNotes": "feat: increment api loading count on chapter reload in openChapter utility",
-  "updatedAt": "2026-11-21T06:53:37Z"
+  "checksum": "89bc0d43642fbc83dcbf8072618116ba19e0725cb1db3c0001cb03dc08a96986",
+  "releaseNotes": "feat: add SSE streaming option to translation configuration and request payload",
+  "updatedAt": "2026-11-21T11:02:10Z"
 }
