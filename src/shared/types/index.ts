@@ -128,6 +128,7 @@ export interface QuotaResponse {
 		maxWords: number;
 		temperature: number;
 		forceRetranslate: boolean;
+		stream?: boolean;
 	};
 	availableModels: AIQuota[];
 }

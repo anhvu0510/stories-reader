@@ -10,6 +10,7 @@ export interface TranslationOptions {
 	temperature: number;
 	forceRetranslate: boolean;
 	batchingGroup?: boolean;
+	stream?: boolean;
 	availableModels?: string[];
 }
 
@@ -107,6 +108,7 @@ export const defaultOptions: TranslationOptions = {
 	temperature: 0.7,
 	forceRetranslate: false,
 	batchingGroup: true,
+	stream: true,
 	availableModels: [],
 };
 
@@ -223,6 +225,7 @@ export function buildAsyncTranslatePayload(
 		temperature: options.temperature,
 		retryTranslate: options.forceRetranslate,
 		batchingGroup: options.batchingGroup,
+		stream: options.stream ?? true,
 		currentChapterId: initialSelectedChapters?.[0],
 	};
 
@@ -272,6 +275,7 @@ export async function executeSyncTranslate(
 		temperature: options.temperature,
 		retryTranslate: options.forceRetranslate,
 		batchingGroup: options.batchingGroup,
+		stream: options.stream ?? true,
 		bookId: activeTab === 'story' ? Array.from(selectedBooks || []) : currentBookId,
 		chapterId: chapterIds.length > 0 ? chapterIds : undefined,
 		currentChapterId: chapterIdToUse,

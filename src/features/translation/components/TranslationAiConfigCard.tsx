@@ -235,6 +235,16 @@ function AIParameterControls({
 					/>
 				</div>
 			</div>
+
+			<label className="col-span-2 flex items-center justify-between bg-white/5 rounded-lg px-2.5 py-1.5 border border-white/10 cursor-pointer">
+				<span className="text-[10px] font-bold text-on-surface-variant uppercase">Stream SSE</span>
+				<input
+					type="checkbox"
+					checked={options.stream !== false}
+					onChange={(e) => setOptions({ ...options, stream: e.target.checked })}
+					className="accent-primary w-3.5 h-3.5 cursor-pointer"
+				/>
+			</label>
 		</div>
 	);
 }

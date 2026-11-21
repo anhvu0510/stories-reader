@@ -106,6 +106,7 @@ export function useTranslationOptions(_activeTab?: Tab) {
 				temperature: options.temperature,
 				forceRetranslate: options.forceRetranslate,
 				batchingGroup: options.batchingGroup,
+				stream: options.stream ?? true,
 				availableModels: options.availableModels,
 			};
 			SettingsRepository.updateSettings('stories.ui.translate', payload).catch(() => {});

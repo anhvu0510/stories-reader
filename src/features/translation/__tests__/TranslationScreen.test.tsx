@@ -350,4 +350,27 @@ describe('TranslationScreen Full-Screen Implementation', () => {
 		expect(within(modelGrid).queryByText('DeployAI')).toBeNull();
 		expect(within(modelGrid).queryByText('deepseek-ai/deepseek-v4.1-flash-1017')).toBeNull();
 	});
+
+	it('allows toggling Stream SSE in AI config and sends stream flag in translate payload', async () => {
+		renderScreen();
+
+		const configToggle = await screen.findByText('2.5 FLASH');
+		fireEvent.click(configToggle);
+
+		const streamCheckbox = await screen.findByLabelText(/Stream SSE/i);
+		expect((streamCheckbox as HTMLInputElement).checked).toBe(true);
+
+		fireEvent.click(streamCheckbox);
+		expect((streamCheckbox as HTMLInputElement).checked).toBe(false);
+
+		const pendingBtn = screen.getByRole('button', { name: 'Chưa dịch' });
+		fireEvent.click(pendingBtn);
+
+		const syncBtn = await screen.findByRole('button', { name: /Dịch \(2\)/i });
+		fireEvent.click(syncBtn);
+
+		await waitFor(() => {
+			expect(ChapterRepository.translate).toHaveBeenCalledWith(expect.objectContaining({ stream: false }));
+		});
+	});
 });
