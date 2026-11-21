@@ -373,4 +373,30 @@ describe('TranslationScreen Full-Screen Implementation', () => {
 			expect(ChapterRepository.translate).toHaveBeenCalledWith(expect.objectContaining({ stream: false }));
 		});
 	});
+
+	it('renders Stream SSE and Gộp Batch as switch toggles side by side and sends batchingGroup=false when turned off', async () => {
+		renderScreen();
+
+		const configToggle = await screen.findByText('2.5 FLASH');
+		fireEvent.click(configToggle);
+
+		const streamSwitch = await screen.findByRole('switch', { name: /Stream SSE/i });
+		const batchSwitch = await screen.findByRole('switch', { name: /Gộp Batch/i });
+
+		expect((streamSwitch as HTMLInputElement).checked).toBe(true);
+		expect((batchSwitch as HTMLInputElement).checked).toBe(true);
+
+		fireEvent.click(batchSwitch);
+		expect((batchSwitch as HTMLInputElement).checked).toBe(false);
+
+		const pendingBtn = screen.getByRole('button', { name: 'Chưa dịch' });
+		fireEvent.click(pendingBtn);
+
+		const syncBtn = await screen.findByRole('button', { name: /Dịch \(2\)/i });
+		fireEvent.click(syncBtn);
+
+		await waitFor(() => {
+			expect(ChapterRepository.translate).toHaveBeenCalledWith(expect.objectContaining({ batchingGroup: false }));
+		});
+	});
 });

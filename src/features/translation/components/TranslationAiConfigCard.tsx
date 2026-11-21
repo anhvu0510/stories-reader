@@ -2,6 +2,7 @@ import { Check, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import React, { useEffect, useMemo, useState } from 'react';
 
+import { CompactToggleSwitch } from '@/components/translation-sheet/CompactToggleSwitch';
 import {
 	buildModelPlatformList,
 	type ModelPlatformOption,
@@ -236,15 +237,17 @@ function AIParameterControls({
 				</div>
 			</div>
 
-			<label className="col-span-2 flex items-center justify-between bg-white/5 rounded-lg px-2.5 py-1.5 border border-white/10 cursor-pointer">
-				<span className="text-[10px] font-bold text-on-surface-variant uppercase">Stream SSE</span>
-				<input
-					type="checkbox"
-					checked={options.stream !== false}
-					onChange={(e) => setOptions({ ...options, stream: e.target.checked })}
-					className="accent-primary w-3.5 h-3.5 cursor-pointer"
-				/>
-			</label>
+			<CompactToggleSwitch
+				label="Stream SSE"
+				checked={options.stream !== false}
+				onChange={(checked) => setOptions({ ...options, stream: checked })}
+			/>
+
+			<CompactToggleSwitch
+				label="Gộp Batch"
+				checked={options.batchingGroup !== false}
+				onChange={(checked) => setOptions({ ...options, batchingGroup: checked })}
+			/>
 		</div>
 	);
 }

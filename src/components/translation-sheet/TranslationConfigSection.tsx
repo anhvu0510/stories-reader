@@ -6,6 +6,7 @@ import { triggerHaptic } from '@/hooks/useHaptic';
 import { cn } from '@/lib/utils';
 import { formatModelDisplayName, formatPlatformDisplayName, getPlatformBadgeClass } from '@/shared/utils/modelFormatters';
 
+import { CompactToggleSwitch } from './CompactToggleSwitch';
 import { buildModelPlatformList, type PoolStatus, type TranslationOptions } from './translationHelpers';
 
 import type { AIQuota } from '@/shared/types';
@@ -77,15 +78,19 @@ function AIWordsAndTempInputs({
 				</div>
 			</div>
 
-			<label className="col-span-2 flex items-center justify-between bg-surface-container-highest rounded-lg px-2.5 py-1.5 cursor-pointer">
-				<span className="text-[10px] font-bold text-on-surface-variant uppercase">Stream SSE</span>
-				<input
-					type="checkbox"
-					checked={options.stream !== false}
-					onChange={(e) => setOptions({ ...options, stream: e.target.checked })}
-					className="accent-primary w-3.5 h-3.5 cursor-pointer"
-				/>
-			</label>
+			<CompactToggleSwitch
+				label="Stream SSE"
+				checked={options.stream !== false}
+				onChange={(checked) => setOptions({ ...options, stream: checked })}
+				surfaceClassName="bg-surface-container-highest"
+			/>
+
+			<CompactToggleSwitch
+				label="Gộp Batch"
+				checked={options.batchingGroup !== false}
+				onChange={(checked) => setOptions({ ...options, batchingGroup: checked })}
+				surfaceClassName="bg-surface-container-highest"
+			/>
 		</div>
 	);
 }
