@@ -11,6 +11,7 @@ export interface TranslationOptions {
 	forceRetranslate: boolean;
 	batchingGroup?: boolean;
 	stream?: boolean;
+	promptVersion?: 'v1' | 'v2' | 'v3';
 	availableModels?: string[];
 }
 
@@ -109,6 +110,7 @@ export const defaultOptions: TranslationOptions = {
 	forceRetranslate: false,
 	batchingGroup: true,
 	stream: true,
+	promptVersion: 'v2',
 	availableModels: [],
 };
 
@@ -207,6 +209,20 @@ export function extractSyncTokensMessage(res: unknown, chapterId?: string): stri
 	return '🎉 Dịch thành công!';
 }
 
+function buildBaseTranslateParams(options: TranslationOptions, platform: string) {
+	return {
+		model: options.model,
+		platform,
+		minWords: options.minWords,
+		maxWords: options.maxWords,
+		temperature: options.temperature,
+		retryTranslate: options.forceRetranslate,
+		batchingGroup: options.batchingGroup,
+		stream: options.stream ?? true,
+		promptVersion: options.promptVersion || 'v2',
+	};
+}
+
 export function buildAsyncTranslatePayload(
 	activeTab: Tab,
 	options: TranslationOptions,
@@ -218,14 +234,7 @@ export function buildAsyncTranslatePayload(
 	initialSelectedChapters?: string[]
 ) {
 	const base = {
-		model: options.model,
-		platform,
-		minWords: options.minWords,
-		maxWords: options.maxWords,
-		temperature: options.temperature,
-		retryTranslate: options.forceRetranslate,
-		batchingGroup: options.batchingGroup,
-		stream: options.stream ?? true,
+		...buildBaseTranslateParams(options, platform),
 		currentChapterId: initialSelectedChapters?.[0],
 	};
 
@@ -267,15 +276,8 @@ export async function executeSyncTranslate(
 	showToast?.('Đang dịch AI trực tiếp (vui lòng chờ)...', 'info');
 	const chapterIds = resolveChapterIds(activeTab, selectedChapters || new Set(), chapterIdToUse);
 	const res = await ChapterRepository.translate({
+		...buildBaseTranslateParams(options, platform),
 		mode: 'current',
-		model: options.model,
-		platform,
-		minWords: options.minWords,
-		maxWords: options.maxWords,
-		temperature: options.temperature,
-		retryTranslate: options.forceRetranslate,
-		batchingGroup: options.batchingGroup,
-		stream: options.stream ?? true,
 		bookId: activeTab === 'story' ? Array.from(selectedBooks || []) : currentBookId,
 		chapterId: chapterIds.length > 0 ? chapterIds : undefined,
 		currentChapterId: chapterIdToUse,

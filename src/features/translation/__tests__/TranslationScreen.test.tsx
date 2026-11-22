@@ -399,4 +399,27 @@ describe('TranslationScreen Full-Screen Implementation', () => {
 			expect(ChapterRepository.translate).toHaveBeenCalledWith(expect.objectContaining({ batchingGroup: false }));
 		});
 	});
+
+	it('renders Flow dịch select (V1/V2/V3) in AI config and sends promptVersion in translate payload', async () => {
+		renderScreen();
+
+		const configToggle = await screen.findByText('2.5 FLASH');
+		fireEvent.click(configToggle);
+
+		const flowSelect = (await screen.findByLabelText(/Flow dịch/i)) as HTMLSelectElement;
+		expect(flowSelect.value).toBe('v2');
+
+		fireEvent.change(flowSelect, { target: { value: 'v3' } });
+		expect(flowSelect.value).toBe('v3');
+
+		const pendingBtn = screen.getByRole('button', { name: 'Chưa dịch' });
+		fireEvent.click(pendingBtn);
+
+		const syncBtn = await screen.findByRole('button', { name: /Dịch \(2\)/i });
+		fireEvent.click(syncBtn);
+
+		await waitFor(() => {
+			expect(ChapterRepository.translate).toHaveBeenCalledWith(expect.objectContaining({ promptVersion: 'v3' }));
+		});
+	});
 });

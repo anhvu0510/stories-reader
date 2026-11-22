@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { formatModelDisplayName, formatPlatformDisplayName, getPlatformBadgeClass } from '@/shared/utils/modelFormatters';
 
 import { CompactToggleSwitch } from './CompactToggleSwitch';
+import { PromptFlowSelect } from './PromptFlowSelect';
 import { buildModelPlatformList, type PoolStatus, type TranslationOptions } from './translationHelpers';
 
 import type { AIQuota } from '@/shared/types';
@@ -89,6 +90,12 @@ function AIWordsAndTempInputs({
 				label="Gộp Batch"
 				checked={options.batchingGroup !== false}
 				onChange={(checked) => setOptions({ ...options, batchingGroup: checked })}
+				surfaceClassName="bg-surface-container-highest"
+			/>
+
+			<PromptFlowSelect
+				value={options.promptVersion || 'v2'}
+				onChange={(promptVersion) => setOptions({ ...options, promptVersion })}
 				surfaceClassName="bg-surface-container-highest"
 			/>
 		</div>

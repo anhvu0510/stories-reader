@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { CompactToggleSwitch } from '@/components/translation-sheet/CompactToggleSwitch';
+import { PromptFlowSelect } from '@/components/translation-sheet/PromptFlowSelect';
 import {
 	buildModelPlatformList,
 	type ModelPlatformOption,
@@ -248,6 +249,8 @@ function AIParameterControls({
 				checked={options.batchingGroup !== false}
 				onChange={(checked) => setOptions({ ...options, batchingGroup: checked })}
 			/>
+
+			<PromptFlowSelect value={options.promptVersion || 'v2'} onChange={(promptVersion) => setOptions({ ...options, promptVersion })} />
 		</div>
 	);
 }

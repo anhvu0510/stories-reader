@@ -107,6 +107,7 @@ export function useTranslationOptions(_activeTab?: Tab) {
 				forceRetranslate: options.forceRetranslate,
 				batchingGroup: options.batchingGroup,
 				stream: options.stream ?? true,
+				promptVersion: options.promptVersion || 'v2',
 				availableModels: options.availableModels,
 			};
 			SettingsRepository.updateSettings('stories.ui.translate', payload).catch(() => {});
