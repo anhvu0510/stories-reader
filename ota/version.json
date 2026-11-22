@@ -1,7 +1,7 @@
 {
-  "version": "1.0.415",
+  "version": "1.0.416",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "32ce8efad6649cd63bf2adfe2f20231781c37c152a034d680c27c3eb992419c3",
-  "releaseNotes": "feat: add CompactToggleSwitch component and batchingGroup translation option",
-  "updatedAt": "2026-11-21T21:14:11Z"
+  "checksum": "86d937d2649913739f54f29937eb20d5cf085704035a79d4d1f5819b3184c15a",
+  "releaseNotes": "feat: add PromptFlowSelect component for choosing translation flow version",
+  "updatedAt": "2026-11-22T07:46:35Z"
 }
