@@ -1,7 +1,7 @@
 {
-  "version": "1.0.416",
+  "version": "1.0.417",
   "bundleUrl": "https://api-anhvu0510.duckdns.org/api/app-update/bundle.zip",
-  "checksum": "86d937d2649913739f54f29937eb20d5cf085704035a79d4d1f5819b3184c15a",
-  "releaseNotes": "feat: add PromptFlowSelect component for choosing translation flow version",
-  "updatedAt": "2026-11-22T07:46:35Z"
+  "checksum": "0d5dd677fde92c6ceecba7084a280d5dde74524e1a88ba7eb4d646e570cb8d34",
+  "releaseNotes": "fix: add aria-hidden to decorative chapter end divider",
+  "updatedAt": "2026-11-26T15:22:27Z"
 }
