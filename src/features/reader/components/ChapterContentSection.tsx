@@ -158,7 +158,7 @@ export const ChapterContentSection = memo(function ChapterContentSection({
 				);
 			})}
 
-			<div className="mt-12 mb-8 px-4 sm:px-6 md:px-8 text-center select-none">
+			<div aria-hidden="true" className="mt-12 mb-8 px-4 sm:px-6 md:px-8 text-center select-none">
 				<div className="p-5 rounded-2xl bg-surface-container/60 border border-outline-variant/30 backdrop-blur-xs space-y-3 max-w-md mx-auto shadow-md">
 					<div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-400 mx-auto flex items-center justify-center">
 						<Sparkles size={18} />
